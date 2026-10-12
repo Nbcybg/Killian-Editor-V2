@@ -20,6 +20,8 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var timing_exports = {};
 __export(timing_exports, {
   ATTENTION_MIN_MS: () => ATTENTION_MIN_MS,
+  BUG_CACHE_MS: () => BUG_CACHE_MS,
+  BUG_FETCH_TIMEOUT_MS: () => BUG_FETCH_TIMEOUT_MS,
   OSK_SPAWN_WAIT_MS: () => OSK_SPAWN_WAIT_MS,
   RETRY_BASE_MS: () => RETRY_BASE_MS,
   RETRY_MAX_MS: () => RETRY_MAX_MS,
@@ -33,6 +35,8 @@ __export(timing_exports, {
 module.exports = __toCommonJS(timing_exports);
 var SPLASH_MAX_MS = 3e4;
 var UPDATE_FETCH_TIMEOUT_MS = 2e4;
+var BUG_FETCH_TIMEOUT_MS = 15e3;
+var BUG_CACHE_MS = 5 * 60 * 1e3;
 var SCRATCH_SAVE_DELAY_MS = 3e3;
 var RETRY_BASE_MS = 500;
 var RETRY_MAX_MS = 8e3;
@@ -47,6 +51,8 @@ function retryBackoff(n) {
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   ATTENTION_MIN_MS,
+  BUG_CACHE_MS,
+  BUG_FETCH_TIMEOUT_MS,
   OSK_SPAWN_WAIT_MS,
   RETRY_BASE_MS,
   RETRY_MAX_MS,

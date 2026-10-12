@@ -793,6 +793,10 @@ export async function loadLanguage(lang, root) {
   try { await scanLanguages(root); } catch {}
   if (!i18n.available.length) i18n.available = [i18n.lang];
   try { globalThis.localStorage?.setItem(LANG_LS_KEY, i18n.lang); } catch {}
+  // [alpha.170 · ภาษา] ★ เมนูระบบ (สร้างในฝั่ง main) ต้องเป็นภาษาเดียวกับหน้าจอ **ทุกครั้ง** ที่โหลดภาษา
+  // เดิมบอก main เฉพาะตอนกดบันทึกในกล่องตั้งค่า — ทางอื่นที่โหลดภาษา (ตอนบูต · เปิดผลงาน) ไม่บอก
+  // → หน้าจออังกฤษ เมนูระบบค้างฝรั่งเศสทั้งเมนู · main ข้ามเองเมื่อเป็นภาษาเดิม (ไม่สร้างเมนูซ้ำ)
+  try { if (typeof kapi !== 'undefined' && kapi.langSet) await kapi.langSet(i18n.lang); } catch {}
   applyDocLang(i18n.lang);
   syncNestedStrings();
   applyDataI18n();

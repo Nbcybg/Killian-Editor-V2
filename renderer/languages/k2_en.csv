@@ -11,6 +11,8 @@ ui.a11y.msUnit,{0} s
 ui.a11y.oskFail,Could not open a system on-screen keyboard — none of the known ones is installed on this machine
 ui.a11y.oskOpened,Opened the system on-screen keyboard
 ui.a11y.oskSettings,Could not open the on-screen keyboard directly — opened the system keyboard settings instead; switch it on there
+ui.about.bugReport,Report a bug
+ui.about.bugStatus,Bug status
 ui.about.changelog,What's new
 ui.about.checkUpdate,Check for updates
 ui.about.credits,Credits
@@ -2353,6 +2355,73 @@ ui.branch.warnOpen,choices with no target
 ui.branch.zoomFit,Fit to screen
 ui.branch.zoomIn,Zoom in
 ui.branch.zoomOut,Zoom out
+ui.bug.btnCopy,Copy report
+ui.bug.btnSend,Send report
+ui.bug.btnStatus,View bug status
+ui.bug.clear,Clear filters
+ui.bug.colFixed,Fixed in
+ui.bug.colFound,Found in
+ui.bug.colId,Bug ID
+ui.bug.colReported,Reported
+ui.bug.colStatus,Status
+ui.bug.colTitle,Details
+ui.bug.contactLine,"If sending from the app does not work, copy the report and send it via"
+ui.bug.contactMailed,"Report copied. Paste it into the email that opened. If no email window appeared, send an email to {0} yourself."
+ui.bug.contactMailTip,Copies the report and opens a new email to this address
+ui.bug.copied,Report copied. Paste it into the channel you were given.
+ui.bug.copyFail,Could not copy the report
+ui.bug.count,Showing {0} of {1} {1|bug|bugs}
+ui.bug.empty,No bugs have been reported yet
+ui.bug.envHead,Environment
+ui.bug.envNote,This line is added to the report automatically. It contains no file names and none of your writing.
+ui.bug.errHttp,GitHub answered with error {0}
+ui.bug.errNet,Could not reach GitHub. Check your internet connection and try again.
+ui.bug.errParse,Could not read the list GitHub sent
+ui.bug.errRate,"GitHub is limiting requests for now. Try again later, or open the list on GitHub."
+ui.bug.fExpected,What you expected
+ui.bug.fExpectedPh,What should have happened instead (optional)
+ui.bug.fltAll,All statuses ({0})
+ui.bug.fltClosed,Closed ({0})
+ui.bug.fltFixedAll,Fixed in: any
+ui.bug.fltFixedNone,No fix version yet
+ui.bug.fltFoundAll,Found in: any
+ui.bug.fltOne,{0} ({1})
+ui.bug.fltOpen,Still open ({0})
+ui.bug.fSteps,Steps to reproduce
+ui.bug.fStepsPh,1. Open…  2. Click…  3. See…
+ui.bug.fTitle,Title
+ui.bug.fTitlePh,Sum up the problem in one line
+ui.bug.fWhat,What happened
+ui.bug.fWhatPh,"Describe what you saw, such as an error message or something that went missing"
+ui.bug.loading,Loading bugs…
+ui.bug.needTitle,Enter a title for the problem first
+ui.bug.noMatch,No bugs match these filters
+ui.bug.openFail,Could not open the browser
+ui.bug.openWeb,Open on GitHub
+ui.bug.refresh,Refresh
+ui.bug.reportIntro,Reports are sent straight from the app and appear in a bug list anyone can read — leave out personal details and unpublished story text.
+ui.bug.reportTitle,Report a bug
+ui.bug.rowTip,Open bug {0} in your browser
+ui.bug.searchPh,"Search ID, details, or version"
+ui.bug.sendClock,The report could not be sent because this computer's date and time are off. Set them correctly and try again — your text is still here.
+ui.bug.sendFail,"The report service answered with error {0}. Your text is still here — try again later, or copy the report and send it another way."
+ui.bug.sending,Sending…
+ui.bug.sendNet,Could not send the report. Check your internet connection and try again — your text is still here.
+ui.bug.sendOff,This version cannot send reports from the app yet. Copy the report and send it through the channel the developer has named.
+ui.bug.sendRate,Too many reports in a short time. Wait a moment and try again.
+ui.bug.sentOk,Report sent as bug {0}
+ui.bug.sortTip,Sort by this column
+ui.bug.source,Source: the app's GitHub Issues
+ui.bug.stale,(The list shown was loaded {0})
+ui.bug.statusTitle,Bug status
+ui.bug.stConfirmed,Confirmed
+ui.bug.stDuplicate,Duplicate
+ui.bug.stFixed,Fixed
+ui.bug.stNeedInfo,Needs more info
+ui.bug.stNew,Awaiting review
+ui.bug.stProgress,Being fixed
+ui.bug.stWontfix,Won't fix
+ui.bug.updated,Last updated {0}
 ui.central.allCurrent,Everything is up to date
 ui.central.backlinksSceneToWiki,Backlinks (scenes that reference this Wiki page)
 ui.central.busyNewIndexLink,Building the link index…
@@ -4588,6 +4657,8 @@ ui.menu.backVersionLatestRevert,Revert to the last saved version
 ui.menu.blockCode,Code block
 ui.menu.boardMoodMoodBoard,Mood Board — opens as a side panel; drag images onto it
 ui.menu.btnFloatCornerRight,"Floating button, bottom right (FAB)"
+ui.menu.bugReport,Report a bug…
+ui.menu.bugStatus,Bug status…
 ui.menu.cancelSplitPageScreen,Unsplit screen
 ui.menu.caseBigSmall,Upper/lower case (free)
 ui.menu.centerK,Center
@@ -6038,6 +6109,7 @@ ui.roster.showHeadingScene,Show the Scene heading
 ui.roster.showHeadingTime,Show the Time heading
 ui.sb.autoFit,Auto fit to width
 ui.sb.autosave,Auto-save
+ui.sb.bugReport,Report a bug
 ui.sb.home,Home
 ui.sb.lineNumbers,Line numbers
 ui.sb.mdCodes,Show Markdown codes
@@ -7412,6 +7484,8 @@ ui.tip.blockStyle,Turns the whole paragraph into a heading level or a quote. Hea
 ui.tip.books,"Manage books and drafts — covers, blurbs, status, and drag to reorder."
 ui.tip.branch-sync,Reads the choices written in this scene as [text] in square brackets and turns them into paths on the branch map.
 ui.tip.branching,"Opens the branching story map, showing where each scene’s choices lead — for visual novels and story games."
+ui.tip.bug-report,Write up a problem you found and send it to the developer straight from the app.
+ui.tip.bug-status,"Lists reported bugs with their status, the version they were found in, and the version that fixed them, with filters."
 ui.tip.changelog,See what each version of the app added or fixed.
 ui.tip.chapter,Creates a new chapter in the book you choose and opens it. A chapter groups several scenes together.
 ui.tip.chapters,"Opens the chapter manager — chapter covers, order, and statistics for every chapter in the book."

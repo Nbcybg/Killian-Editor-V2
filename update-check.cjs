@@ -24,6 +24,8 @@ __export(update_check_exports, {
   UPDATE_ASSET_PREFIX: () => UPDATE_ASSET_PREFIX,
   UPDATE_GIT_URL: () => UPDATE_GIT_URL,
   UPDATE_HOME_URL: () => UPDATE_HOME_URL,
+  UPDATE_ISSUES_API_URL: () => UPDATE_ISSUES_API_URL,
+  UPDATE_ISSUES_URL: () => UPDATE_ISSUES_URL,
   UPDATE_MANIFEST_URL: () => UPDATE_MANIFEST_URL,
   UPDATE_OWNER: () => UPDATE_OWNER,
   UPDATE_RELEASES_URL: () => UPDATE_RELEASES_URL,
@@ -55,6 +57,8 @@ var UPDATE_RELEASES_URL = `https://github.com/${R}/releases`;
 var UPDATE_API_URL = `https://api.github.com/repos/${R}/releases?per_page=30`;
 var UPDATE_MANIFEST_URL = `https://raw.githubusercontent.com/${R}/HEAD/package.json`;
 var UPDATE_ASSET_PREFIX = `https://github.com/${R}/releases/download/`;
+var UPDATE_ISSUES_URL = `https://github.com/${R}/issues`;
+var UPDATE_ISSUES_API_URL = `https://api.github.com/repos/${R}/issues?state=all&per_page=100&sort=created&direction=desc`;
 function normalizeTag(tag) {
   return String(tag == null ? "" : tag).trim().replace(/^[vV](?=\d)/, "");
 }
@@ -216,6 +220,8 @@ function progressText(received, total) {
   UPDATE_ASSET_PREFIX,
   UPDATE_GIT_URL,
   UPDATE_HOME_URL,
+  UPDATE_ISSUES_API_URL,
+  UPDATE_ISSUES_URL,
   UPDATE_MANIFEST_URL,
   UPDATE_OWNER,
   UPDATE_RELEASES_URL,

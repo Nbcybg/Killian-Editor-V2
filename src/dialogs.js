@@ -1290,8 +1290,13 @@ export function settingsDialog(openTab, opts = {}) {
   };
   if (q('#st-lang-reload')) q('#st-lang-reload').onclick = async () => {
     try { await kapi.langReload(); } catch {}          // main แคชเนื้อไฟล์ไว้ — ต้องบอกให้ทิ้งก่อน
-    await loadLanguage(q('#st-lang').value || i18n.lang, state.root);
-    await fillLangs(); setStatus(t('ui.dlg.loadFileLangNew'));
+    // [alpha.170 · ภาษา] อ่านไฟล์ของ **ภาษาที่ใช้อยู่** ใหม่ — เดิมโหลดภาษาที่ช่องเลือกชี้อยู่ = เปลี่ยนภาษาโดยไม่ได้บันทึก
+    // (กดยกเลิกแล้วหน้าจอค้างภาษาใหม่ แต่เปิดโปรแกรมใหม่กลับเป็นภาษาเดิม) · เปลี่ยนภาษา = กดบันทึก → setAppLanguage
+    const keep = q('#st-lang').value;
+    await loadLanguage(i18n.lang, state.root);
+    await fillLangs();
+    if (keep && keep !== q('#st-lang').value) { q('#st-lang').value = keep; q('#st-lang').dispatchEvent(new Event('change')); }
+    setStatus(t('ui.dlg.loadFileLangNew'));
   };
   if (q('#st-lang-export')) q('#st-lang-export').onclick = () => exportLangCsv();
   const origLang = i18n.lang;
@@ -1426,6 +1431,18 @@ export function settingsDialog(openTab, opts = {}) {
     box.querySelector('.k-set-nav')?.prepend(note);
     if (openTab && projPages.has(openTab)) openTab = 'gen';
   }
+  // ══ [alpha.170 · งาน 2] ★ ผู้เรียกบอก "ช่อง" → หน้าอ่านจากตำแหน่งของช่องในเทมเพลตเอง ══
+  // ผู้ใช้: *"ปุ่มที่ไปหน้า setting เช่น autosave ยังไม่ยิงไปหน้า setting ที่ถูกต้อง"*
+  // เดิมผู้เรียกต้องบอกทั้งหน้าและช่อง — พอช่องถูกย้ายหน้า (ช่องถังขยะ/บันทึกอัตโนมัติย้ายไปหน้า
+  // "บันทึกและสำรอง" ตอน alpha.162) ผู้เรียกยังชี้หน้าเดิม = เปิดผิดหน้าแล้วโฟกัสช่องที่มองไม่เห็น
+  // ตอนนี้ช่องเป็นความจริงตัวเดียว: ช่องอยู่หน้าไหน เปิดหน้านั้น (ชนะ openTab ที่ส่งมา)
+  const focusEl = opts.focus ? q(opts.focus) : null;
+  const focusPage = focusEl ? focusEl.closest('.k-set-page') : null;
+  const focusOK = !!(focusPage && !focusPage.dataset.noproj);   // หน้าของผลงานตอนไม่มีผลงาน = ถูกซ่อน
+  if (focusOK) openTab = focusPage.dataset.p;
+  // [alpha.170 · bug hunt] ชื่อหน้าที่ไม่มีจริง (พิมพ์ผิด · หน้าถูกถอด · ค่าที่ไม่ใช่ข้อความหลุดมาจากคำสั่ง) = gotoTab ปิดทุกหน้า
+  // แล้วไม่เปิดหน้าไหน → กล่องว่างทั้งกล่อง · ไม่รู้จัก = ทำเหมือนไม่ได้ระบุ (หน้าที่ค้างไว้ล่าสุด)
+  if (openTab && ![...box.querySelectorAll('.k-set-tab')].some((x) => x.dataset.p === openTab)) openTab = null;
   if (openTab) gotoTab(openTab);      // เปิดตรงแท็บที่ผู้เรียกระบุ (ex. เมนู "ข้อมูลผลงาน")
   else {
     let last = '';
@@ -1433,7 +1450,7 @@ export function settingsDialog(openTab, opts = {}) {
     if (last && box.querySelector(`.k-set-tab[data-p="${CSS.escape(last)}"]`)) gotoTab(last);
   }
   // [alpha.120 ข้อ 13] กระโดดมาที่ช่องใดช่องหนึ่งโดยตรง (เมนูถังขยะ → "ตั้งเวลาล้างถัง")
-  if (opts.focus) {
+  if (focusOK) {
     setTimeout(() => {
       const el2 = q(opts.focus);
       if (!el2) return;
@@ -1724,13 +1741,11 @@ export function settingsDialog(openTab, opts = {}) {
     // ---- บันทึกภาษา ----
     const selLang = q('#st-lang')?.value;
     if (selLang && selLang !== origLang) {
-      s.language = selLang;
-      await loadLanguage(selLang, state.root);
-      if (projOK) await saveProjectMeta();
-      // ⚠ ห้าม `writeGlobalSettings({ language })` ตรง ๆ — ตัวนั้นเขียนทับทั้งไฟล์ (ค่าผู้ใช้อื่นหายหมด)
-      else { try { const { saveGlobalSetting } = await import('./app.js'); await saveGlobalSetting('language', selLang); } catch (e) { log('warn', 'global language', e); } }
-      // เมนู OS สร้างในฝั่ง main (renderer แตะไม่ได้) → ต้องบอกให้โหลดตารางแล้วสร้างเมนูใหม่
-      try { await kapi.langSet(selLang); } catch {}
+      // [alpha.170 · ภาษา] ★ ทางเดียว: setAppLanguage (โหลด + ไฟล์ตั้งค่าผู้ใช้ + สำเนาในไฟล์ผลงาน + เมนูระบบ)
+      // เดิม: มีผลงานเปิดอยู่ = เขียนลงไฟล์ผลงาน **อย่างเดียว** · ไฟล์ผู้ใช้ค้างภาษาเก่า (ตัวเขียน globals ข้างบนเพิ่งเขียน
+      // ค่าเก่าลงไปด้วยซ้ำ) → เปิดโปรแกรมใหม่: หน้าแรก/เมนูระบบกลับเป็นภาษาเก่า แล้วสลับอีกทีตอนเปิดผลงาน
+      try { const { setAppLanguage } = await import('./app.js'); await setAppLanguage(selLang); }
+      catch (e) { log('error', 'language: set failed', e); setStatusError(failText(t('ui.dlg.saveSettingsFail'), e)); }
       // ค่าคงที่ระดับโมดูล (ชื่อสถานะ/ชื่อ element/ป้ายในตารางค่าคงที่) ถูกคำนวณตอนเปิดโปรแกรม
       // → เปลี่ยนภาษาแล้วบางป้ายยังเป็นภาษาเดิมจนกว่าจะเริ่มใหม่ · ถามผู้ใช้ตรง ๆ ดีกว่าปล่อยให้งง
       // (โหมดเทสไม่ถาม — กล่องยืนยันจะค้างรอคลิกตลอดกาล ดูกับดักเทสข้อ 1)

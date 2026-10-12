@@ -100,7 +100,7 @@ import { setSplashActive, splashProgress, $, el, state, smart, LOG_BUF, log, log
          SCENE_STATUSES, SCENE_COLORS, STATUS_COLORS, dataLabel, BUILTIN_CATS, CAT_ICON,
          REL_TYPES, REL_COLOR, REL_LABEL, categorizeRole, categorizeWith,
          t, i18n, loadLanguage, scanLanguages, languageCatalog, applyDataI18n, onLanguageChanged,
-         csvToTable, tableToCsv, langFileName, fallbackLangName,
+         csvToTable, tableToCsv, langFileName, fallbackLangName, LANG_LS_KEY,
          SHORTCUTS, SHORTCUT_LABELS, shortcutId, SHORTCUT_CATS, shortcutCat, needsAlt,
          SHORTCUT_PANEL_SKIP,
          formatShortcut, accelText, num,
@@ -368,6 +368,7 @@ import { runTest } from './selftest.js';   // [alpha.160] e2e แยกไฟล
 const tr = t;
 import { cmpText, fmtNum, fmtTime, fmtDate, fmtDateTime } from './locale.js';
 import { installStatusToggles, syncStatusToggles } from './status-toggles.js';   // [alpha.165]
+import { openBugReport, openBugStatus } from './bugs/bug-ui.js';   // [alpha.170] รายงานบั๊ก + สถานะบั๊ก
 import { installStatusBarLock, resetStatusBarLock, reserveStatusWidth } from './statusbar-lock.js';   // [alpha.166]
 
 // ---------------- (ย้ายไป core.js แล้ว: $, el, state, smart, log, setStatus, ค่าตั้งต้น) ----------------
@@ -386,6 +387,9 @@ async function loadSettings(meta) {
   // (saveProjectMeta เขียน settings ทั้งก้อนลงไฟล์ผลงาน → ผลงานที่เคยบันทึกตอนสวิตช์ยังปิด จะเปิดมาพร้อมค่า "ปิด"
   //  ทับค่าที่ผู้ใช้เพิ่งเปิดในผลงานอื่น = คนที่ต้องใช้ตัวช่วยต้องเปิดใหม่ทุกผลงาน)
   state.settings = userA11yWins({ ...DEFAULT_SETTINGS, ...globalSettings, ...(meta.settings || {}) }, globalSettings);
+  // [alpha.170 · ภาษา] ★ ภาษาเป็นของ "คน" ไม่ใช่ของผลงาน — ค่าในไฟล์ผลงานเป็นแค่สำเนา ห้ามทับภาษาที่ใช้อยู่
+  // (เดิมไฟล์ผลงานชนะ: เปิดผลงานที่เคยบันทึกตอนเป็นฝรั่งเศส = หน้าจอสลับเป็นฝรั่งเศส ทั้งที่เมนู/ค่าคงที่เป็นอังกฤษ)
+  state.settings.language = i18n.lang;
   state.goals = { ...DEFAULT_GOALS, ...(meta.goals || {}) };
   applySettings();
 }
@@ -2491,7 +2495,7 @@ export function spErrorMenu(x, y) {
   // (จุดที่เจอฟีเจอร์นี้ได้เองโดยไม่ต้องไปงมในตั้งค่า · ตั้งค่ามีช่องเดียวกันให้ด้วย)
   items.push({ label: (isSpErrorMarks() ? gi('checkbox-checked') + ' ' : gi('checkbox') + ' ') + tt('ui.app.spErrMarkToggle'),
                click: () => toggleSpErrorMarks() });
-  items.push({ label: iconHtml('clipboard', 14) + tt('ui.app.settingsFormatCheckChapter'), click: () => settingsDialog('page') });
+  items.push({ label: iconHtml('clipboard', 14) + tt('ui.app.settingsFormatCheckChapter'), click: () => settingsDialog('pagenum', { focus: '#st-sp-errmark' }) });   // [alpha.170] ช่องตรวจบทอยู่หน้า "เลขหน้าและการตัดหน้า" ไม่ใช่หน้ากระดาษ
   popupMenu(x, y, items);
   return items.length;                      // > 0 = เมนูถูกเปิดจริง (เทสใช้ตรวจ)
 }
@@ -3106,12 +3110,16 @@ async function loadProjectInner(root) {
   // [alpha.137] #projname ถูกลบทิ้ง — ชื่อโปรเจกต์อยู่กลางแถบชื่อหน้าต่างที่เดียว · [alpha.169] + เลขรุ่น (win-title.js)
   applyWindowTitle(state.title);
   await kapi.pushRecent(root);
-  // ---- โหลดภาษาของโปรเจกต์ (ถ้าเลือกไว้) ----
-  const projLang = state.settings.language || 'en';
-  if (projLang !== i18n.lang) {
-    setBusy(tt('ui.app.busyLoadLang'));
-    await loadLanguage(projLang, root);
-  }
+  // ---- คำแปลเฉพาะผลงาน (<ผลงาน>/languages/k2_<ภาษา>.csv) ----
+  // [alpha.170 · ภาษา] ผลงาน **ไม่เปลี่ยนภาษาของโปรแกรม** อีกแล้ว (ภาษาเป็นค่าระดับผู้ใช้ — setAppLanguage ทางเดียว)
+  // เหลือแค่ชั้นคำแปลที่ผู้ใช้แก้ไว้ในโฟลเดอร์ผลงาน: มีไฟล์ของภาษาที่ใช้อยู่ = โหลดซ้อนทับ
+  // (เดิมชั้นนี้ถูกโหลดเฉพาะเมื่อภาษาของผลงาน "ต่าง" จากที่ใช้อยู่ — ภาษาเดียวกันกลับไม่ได้คำแปลของผลงาน)
+  try {
+    if (await kapi.exists(await kapi.join(root, 'languages', langFileName(i18n.lang)))) {
+      setBusy(tt('ui.app.busyLoadLang'));
+      await loadLanguage(i18n.lang, root);
+    }
+  } catch (e) { log('warn', 'project language layer', e); }
   applyDataI18n();
   initIcons();
   applyToolbarShortcutTitles();
@@ -3304,6 +3312,23 @@ export function mergeGlobalSettings(patch) {
   _globalWriteChain = p.catch(() => false);
   return p;
 }
+/**
+ * [alpha.170 · ภาษา] ★ **ทางเดียว** ของการเปลี่ยนภาษาของโปรแกรม (กล่องตั้งค่า · ทางเข้าใหม่ในอนาคต)
+ *
+ * ภาษาเป็นค่าระดับผู้ใช้: ความจริงอยู่ที่ไฟล์ตั้งค่าผู้ใช้ (`language` + ธง `languagePicked`) ·
+ * main อ่านไฟล์นั้นตอนเปิด (`bootLangCode`) แล้วทั้งเมนูระบบและหน้าจอใช้ภาษาเดียวกันตั้งแต่เฟรมแรก
+ * `loadLanguage` บอก main ให้เอง (เมนูระบบ + lang.txt) · สำเนาในไฟล์ผลงานเขียนตามเพื่อให้ไฟล์ไม่ค้างค่าเก่า
+ * @returns {Promise<string>} ภาษาที่ใช้จริง (ไฟล์ภาษาหาย = ตกเป็น en)
+ */
+export async function setAppLanguage(code) {
+  await loadLanguage(code, state.root);
+  const real = i18n.lang;
+  state.settings.language = real;
+  await mergeGlobalSettings({ language: real, languagePicked: true });
+  if (state.root && state.meta) await saveProjectMetaSoon();
+  logAction('settings', 'language', { to: real });
+  return real;
+}
 // ══ [alpha.157] ลำดับเปิดโปรแกรมตามที่ผู้ใช้กำหนด ══
 //   1. เปิดโปรแกรม → 2. splash (บอกว่ากำลังโหลดอะไร) → 3. หน้า Home (มีปุ่มออกจากโปรแกรม)
 //   3.1 ติ๊ก "ไม่แสดงหน้า Home" (= openLastProject) → เปิดโปรเจกต์ล่าสุดเลย · ไม่มีโปรเจกต์ล่าสุด = แอปเปล่า
@@ -3328,10 +3353,14 @@ export async function bootSequence() {
   try { applyA11y(); } catch (e) { log('warn', 'boot a11y', e); }
   syncMenuToggles();
   splashProgress(tt('ui.splash.language'), 18);
-  // [alpha.164 · รอบต่อ 2] ภาษาเป็นค่าระดับผู้ใช้ — ต้องตรงกับไฟล์ตั้งค่าผู้ใช้ **ก่อน** หน้าแรก/โปรเจกต์โผล่
-  // (ตัวโหลดแบบ sync อ่านจาก localStorage ซึ่งหายได้ · ถ้ายังไม่ตรงก็โหลดใหม่ที่นี่)
-  if (g && g.language && g.language !== i18n.lang) {
-    try { await loadLanguage(g.language); } catch (e) { log('warn', 'boot language', e); }
+  // [alpha.170 · ภาษา] ★ ภาษาตอนเปิดถูกตัดสินไปแล้วที่ main (`bootLangCode` → ตัวโหลดแบบ sync) — **ไม่โหลดซ้ำที่นี่**
+  // เดิมโหลด `g.language` ทับตรงนี้ ทั้งที่ไฟล์ตั้งค่าผู้ใช้มักค้างค่าเก่า (กล่องตั้งค่าเขียนภาษาใหม่ลงไฟล์ผลงานอย่างเดียว)
+  // → หน้าแรกกลับเป็นภาษาเก่า แล้วสลับอีกทีตอนเปิดผลงาน = ภาษาปนทั้งโปรแกรม
+  // ไฟล์ตั้งค่าของรุ่นก่อน (ยังไม่มีธง) → จดภาษาที่ใช้อยู่จริงลงไฟล์ผู้ใช้ครั้งเดียว ต่อจากนี้ไฟล์นี้คือความจริง
+  state.settings.language = i18n.lang;
+  if (g.languagePicked !== true) {
+    try { await mergeGlobalSettings({ language: i18n.lang, languagePicked: true }); }
+    catch (e) { log('warn', 'boot language', e); }
   }
   try { await (document.fonts && document.fonts.ready); } catch {}
   // [alpha.135] **ตรวจอัปเดตก่อนเข้าโปรแกรม** — ก่อนเปิดโปรเจกต์/หน้าแรก ตามที่ผู้ใช้สั่ง
@@ -3767,7 +3796,8 @@ export async function captureSession() {
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith('k2-')) lsAll[k] = localStorage.getItem(k);
+      // [alpha.170 · ภาษา] ภาษาไม่ใช่ "สภาพของเซสชัน" — ความจริงอยู่ที่ไฟล์ตั้งค่าผู้ใช้ (ดู setAppLanguage)
+      if (k && k.startsWith('k2-') && k !== LANG_LS_KEY) lsAll[k] = localStorage.getItem(k);
     }
   } catch {}
   s.ui = {
@@ -3854,7 +3884,8 @@ export async function restoreSessionLayout(root) {
     const lsNewer = !!(lsTs && seenTs && lsTs > seenTs);
     if (!lsNewer) {
       for (const k of Object.keys(raw)) {
-        try { if (k.startsWith('k2-') && typeof raw[k] === 'string') localStorage.setItem(k, raw[k]); } catch {}
+        // [alpha.170 · ภาษา] ★ ห้ามกู้ `k2-lang` จากภาพของเซสชัน — เปลี่ยนภาษาแล้วเปิดใหม่ ภาพเก่ายัดภาษาเดิมกลับเข้ามา
+        try { if (k.startsWith('k2-') && k !== LANG_LS_KEY && typeof raw[k] === 'string') localStorage.setItem(k, raw[k]); } catch {}
       }
     }
     // ══ [alpha.154 ข้อ 1] ★★ ผู้ใช้: *"ขนาดของ panel และตำแหน่งไม่ถูกจัดเก็บ ... ย้ายที่เอง"* ══
@@ -4723,7 +4754,7 @@ function treeMenuItem(kind, id, c, e) {
       case 'play': return it(() => handleCommand('player-mode'));
       case 'playerHistory': return it(() => showPlayerHistory());
       case 'branchPanel': return it(() => openBranchingTree());
-      case 'projectSettings': return it(() => settingsDialog());
+      case 'projectSettings': return it(() => settingsDialog('setup'));   // [alpha.170] "ตั้งค่าโปรเจกต์" = หน้าข้อมูลผลงาน (เดิมเปิดหน้าที่ค้างไว้ล่าสุด)
       case 'aiSettings': return it(() => handleCommand('ai-settings'));
       case 'reveal': return it(() => kapi.revealInOS(state.root));
       case 'copyPath': return free(() => copyItemPath(state.root));
@@ -6017,7 +6048,7 @@ async function _buildTreeInner() {
     { label: tt('ui.tree.purgeNowByDays'), click: async () => {
         await purgeRecycle(state.root, { force: true }); await buildTree(); } },
     '-',
-    { label: tt('ui.tree.trashSettings'), click: () => settingsDialog('write', { focus: '#st-recycle' }) },
+    { label: tt('ui.tree.trashSettings'), click: () => settingsDialog(null, { focus: '#st-recycle' }) },   // [alpha.170] หน้าอ่านจากตำแหน่งของช่องเอง
     { label: tt('ui.app.findDiskFindOn'), click: () => kapi.revealInOS(recDir) },
   ]); };
   for (const f of all) {
@@ -14688,7 +14719,12 @@ export function aboutDialog(opts = {}) {
   pChange.onclick = async () => { ov.remove(); const { showChangelog } = await import('./dialogs.js'); showChangelog(); };
   const pUpdate = el('button', 'k-about-pill', tt('ui.about.checkUpdate'));
   pUpdate.onclick = () => { ov.remove(); handleCommand('check-update'); };
-  pills.append(pChange, pUpdate);
+  // [alpha.170] ผู้ใช้: "ใน เกี่ยวกับ เพิ่ม bug report และ pop up ตรวจสอบสถานะ bug" — สองปุ่มนี้เรียกคำสั่งเดียวกับปุ่มบนแถบสถานะ/เมนู
+  const pBug = el('button', 'k-about-pill k-about-bug-report', tt('ui.about.bugReport'));
+  pBug.onclick = () => { ov.remove(); handleCommand('bug-report'); };
+  const pBugStatus = el('button', 'k-about-pill k-about-bug-status', tt('ui.about.bugStatus'));
+  pBugStatus.onclick = () => { ov.remove(); handleCommand('bug-status'); };
+  pills.append(pChange, pUpdate, pBug, pBugStatus);
   left.append(title, tag, sub, ver, pills);
   const foot = el('div', 'k-about-foot');
   const dev = el('button', 'k-about-round', '');
@@ -15378,10 +15414,14 @@ export async function handleCommand(ch, ...a) {
     // [alpha.81 ข้อ 9] ทางส่งออกทั้งหมดรวมอยู่ในกล่องเดียว — เมนู ไฟล์ → ส่งออก… (Ctrl+Shift+E)
     case 'export-hub': await openExportHub(); break;
     case 'compile': openCompileDialog(); break;
-    case 'settings': settingsDialog(); break;
+    // [alpha.170] `settings` รับ (หน้า, ช่อง) ได้ — สวิตช์บนแถบสถานะส่งช่องของตัวเองมา (หน้าอ่านจากช่อง)
+    case 'settings': settingsDialog(typeof a[0] === 'string' && a[0] ? a[0] : undefined, typeof a[1] === 'string' && a[1] ? { focus: a[1] } : {}); break;
     case 'toggle-format': switchFormat(); break;
     case 'set-format': switchFormat(a[0]); break;
     case 'about': aboutDialog(); break;
+    // [alpha.170] รายงานบั๊ก / สถานะบั๊ก — ปุ่มท้ายแถบสถานะ · กล่อง "เกี่ยวกับ" · เมนู ช่วยเหลือ เรียกสองคำสั่งนี้ทางเดียวกัน
+    case 'bug-report': openBugReport(); break;
+    case 'bug-status': openBugStatus(); break;
     // [alpha.135] เมนู ช่วยเหลือ → ตรวจหาอัปเดต… (ไม่เงียบ — บอกผลทุกกรณี)
     case 'check-update': await checkForUpdates({ silent: false }); break;
     // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา (Ctrl+Shift+`) — อยู่เมนูเดียวกับ "เกี่ยวกับ"
@@ -17110,10 +17150,12 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#zoom-out').onclick = () => bumpPageScale(-1);
   $('#zoom-reset').onclick = () => resetPageScale();
   $('#zoom-ctl').oncontextmenu = zoomLabelMenu;     // [alpha.164 · รอบต่อ 3] สวิตช์ซูมพอดีความกว้างอัตโนมัติ
-  installStatusToggles((cmd) => handleCommand(cmd)); // [alpha.165] ช่องสวิตช์บนแถบสถานะ
+  installStatusToggles((cmd, ...args) => handleCommand(cmd, ...args)); // [alpha.165] ช่องสวิตช์บนแถบสถานะ
   installStatusBarLock();                             // [alpha.166] ช่องขวาของแถบสถานะกว้างได้ ห้ามหด (ไม่ขยับไปมา)
   // [alpha.165] ปุ่มหน้าแรกท้ายแถบสถานะ — `data-command` ให้แค่ไอคอน/ทูลทิป ไม่ผูกคลิกให้ (bug hunt: กดแล้วเงียบ)
   $('#status-home').onclick = () => handleCommand('home');
+  // [alpha.170] ปุ่มรายงานบั๊กถัดจากปุ่มหน้าแรก (data-command ให้แค่ไอคอน/ทูลทิป — ต้องผูกคลิกเอง)
+  $('#status-bug') && ($('#status-bug').onclick = () => handleCommand('bug-report'));
   $('#tree-search').oninput = (e) => filterTree(e.target.value);
   setupTreeInteractions();          // [alpha.120 ข้อ 11+16] คีย์ลัด + เมนูคลิกขวาพื้นที่ว่าง
 

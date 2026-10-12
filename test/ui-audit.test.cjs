@@ -500,8 +500,13 @@ const ck = (n, c, i = '') => { if (c) pass++; else { fail++; console.log('  ✗ 
     const html = fs.readFileSync(path.join(ROOT, 'renderer/index.html'), 'utf8');
     const sb = html.slice(html.indexOf('<div id="statusbar">'), html.indexOf('<!-- FAB -->'));
     const order = [...sb.matchAll(/id="([\w-]+)" class="k-sb-seg/g)].map((m) => m[1]);
-    ck('★★ [165-S] แถบสถานะเรียง พร้อม | สวิตช์ | ความคืบหน้า | สถานะ | ซูม | หน้าแรก',
-       JSON.stringify(order) === JSON.stringify(['sb-msg', 'status-toggles', 'status-mid', 'status-right', 'zoom-ctl', 'status-home']), order.join(','));
+    // [alpha.170] ผู้ใช้: "เพิ่มปุ่ม bug report ถัดจากปุ่ม home" → ช่องสุดท้ายคือปุ่มรายงานบั๊ก
+    ck('★★ [165-S] แถบสถานะเรียง พร้อม | สวิตช์ | ความคืบหน้า | สถานะ | ซูม | หน้าแรก | รายงานบั๊ก',
+       JSON.stringify(order) === JSON.stringify(['sb-msg', 'status-toggles', 'status-mid', 'status-right', 'zoom-ctl', 'status-home', 'status-bug']), order.join(','));
+    ck('★ [170] ปุ่มรายงานบั๊กบนแถบสถานะใช้คำสั่ง bug-report + มีทูลทิปจากไฟล์ภาษา',
+       /id="status-bug" class="k-sb-seg" data-command="bug-report" data-i18n-title="ui\.sb\.bugReport"/.test(sb));
+    ck('★ [170] ปุ่มรายงานบั๊กถูกผูกคลิกเอง (data-command ให้แค่ไอคอน/ทูลทิป)',
+       /\$\('#status-bug'\)\.onclick = \(\) => handleCommand\('bug-report'\)/.test(appSrc));
   }
 
   // ปุ่มบนหัวแผงต้องมาจาก makePanelButton ตัวเดียว (กฎถาวร alpha.161 · U2)

@@ -196,5 +196,88 @@ const dlg = fs.readFileSync(path.join(ROOT, 'src', 'dialogs.js'), 'utf8');
         /const foot = box\.querySelector\(':scope > \.k-dlg-btns'\);/.test(dlg) && !/const foot = box\.querySelector\('\.k-dlg-btns'\);/.test(dlg));
 }
 
+// ───────── [alpha.170 · งาน 2] ★ ปุ่มที่ "พาไปหน้าตั้งค่า" ต้องไปถูกหน้า ─────────
+//
+// ผู้ใช้: *"ปุ่มที่ไปหน้า setting เช่น autosave ยังไม่ยิงไปหน้า setting ที่ถูกต้อง check ให้หมด"*
+// ที่เจอ: สวิตช์บันทึกอัตโนมัติ/ตรวจคำผิดบนแถบสถานะเปิดกล่องเฉย ๆ (ได้หน้าที่ค้างไว้ล่าสุด) ·
+//          "ตั้งเวลาล้างถัง" ชี้หน้า `write` ทั้งที่ช่องย้ายไปหน้า `save` ตั้งแต่ .162 (e2e เดิมยืนยันหน้าผิดไว้ด้วย) ·
+//          "ตั้งค่ารูปแบบ/การตรวจบท" เปิดหน้ากระดาษ ทั้งที่ช่องตรวจบทอยู่หน้าเลขหน้า
+// ทางแก้: ผู้เรียกบอก "ช่อง" → กล่องอ่านหน้าจากตำแหน่งของช่องเอง · ด่านนี้กวาดผู้เรียกทุกตัวใน src/
+{
+  // หน้าของแต่ละช่อง อ่านจากเทมเพลตจริง
+  const pageOf = {};
+  const pageNames = [];
+  for (const chunk of tpl.split(/<div class="k-set-page[^"]*"\s+data-p="/).slice(1)) {
+    const p = /^(\w+)"/.exec(chunk)[1];
+    pageNames.push(p);
+    for (const m of chunk.matchAll(/id="(st-[\w-]+)"/g)) pageOf[m[1]] = p;
+  }
+  check('[170] อ่านหน้าของช่องจากเทมเพลตได้', pageNames.length >= 13 && Object.keys(pageOf).length >= 60,
+        pageNames.length + ' หน้า · ' + Object.keys(pageOf).length + ' ช่อง');
+
+  const files = [];
+  (function walk(dir) {
+    for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, f.name);
+      if (f.isDirectory()) { if (f.name !== 'generated') walk(p); }
+      else if (/\.js$/.test(f.name) && f.name !== 'selftest.js') files.push(p);
+    }
+  })(path.join(ROOT, 'src'));
+
+  const badPage = [], badFocus = [], mismatch = [];
+  let calls = 0, focusCalls = 0;
+  for (const f of files) {
+    const src = stripComments(fs.readFileSync(f, 'utf8'));
+    const rel = path.relative(ROOT, f).replace(/\\/g, '/');
+    // settingsDialog('หน้า' …) — หน้าต้องมีจริง
+    for (const m of src.matchAll(/settingsDialog\(\s*(?:'(\w+)'|null|undefined)?\s*(?:,\s*\{([^}]*)\})?/g)) {
+      if (/function\s+$/.test(src.slice(Math.max(0, m.index - 12), m.index))) continue;   // ตัวประกาศเอง
+      calls++;
+      const page = m[1] || '';
+      if (page && !pageNames.includes(page)) badPage.push(rel + ' → ' + page);
+      const fm = /focus:\s*'#(st-[\w-]+)'/.exec(m[2] || '');
+      if (!fm) continue;
+      focusCalls++;
+      if (!pageOf[fm[1]]) badFocus.push(rel + ' → #' + fm[1]);
+      else if (page && page !== pageOf[fm[1]]) mismatch.push(`${rel}: หน้า ${page} แต่ #${fm[1]} อยู่หน้า ${pageOf[fm[1]]}`);
+    }
+  }
+  check('[170] กวาดเจอผู้เรียก settingsDialog อย่างน้อย 12 จุด', calls >= 12, calls);
+  check('★★ [170] ทุกหน้าที่ผู้เรียกระบุมีจริงในเทมเพลต', badPage.length === 0, badPage.join(' · '));
+  check('★★ [170] ทุกช่องที่ผู้เรียกสั่งโฟกัสมีจริงในเทมเพลต', badFocus.length === 0, badFocus.join(' · '));
+  check('★★ [170] ผู้เรียกที่บอกทั้งหน้าและช่อง — หน้าต้องเป็นหน้าของช่องนั้น', mismatch.length === 0, mismatch.join(' · '));
+  check('[170] มีผู้เรียกที่กระโดดไปที่ช่องโดยตรงอย่างน้อย 2 จุด', focusCalls >= 2, focusCalls);
+
+  // กล่องอ่านหน้าจากตำแหน่งของช่องเอง (ผู้เรียกไม่ต้องรู้ว่าช่องอยู่หน้าไหน)
+  check('★★ [170] settingsDialog เปิดหน้าตามช่องที่สั่งโฟกัส (focusEl.closest(.k-set-page))',
+        /const focusPage = focusEl \? focusEl\.closest\('\.k-set-page'\) : null;/.test(dlg)
+        && /if \(focusOK\) openTab = focusPage\.dataset\.p;/.test(dlg));
+
+  // สวิตช์บนแถบสถานะที่ไม่มีคำสั่งสลับ = ต้องบอกช่องของตัวเอง
+  const stSrc = fs.readFileSync(path.join(ROOT, 'src/status-toggles.js'), 'utf8');
+  const rows = [...stSrc.matchAll(/\{ id: '([\w-]+)',[^\n]*\}/g)].map((m) => ({
+    id: m[1], cmd: /\bcmd: '/.test(m[0]), focus: (/focus: '#(st-[\w-]+)'/.exec(m[0]) || [])[1] || '' }));
+  check('[170] อ่านตารางสวิตช์บนแถบสถานะได้', rows.length >= 6, rows.length);
+  const noTarget = rows.filter((r) => !r.cmd && !pageOf[r.focus]).map((r) => r.id);
+  check('★★ [170] สวิตช์บนแถบสถานะที่ไม่มีคำสั่งสลับ ชี้ช่องตั้งค่าที่มีจริง', noTarget.length === 0, noTarget.join(' · '));
+  const want = { autosave: 'save', spell: 'write' };
+  for (const [id, page] of Object.entries(want)) {
+    const r = rows.find((x) => x.id === id);
+    check(`★ [170] สวิตช์ ${id} เปิดหน้า ${page}`, !!r && pageOf[r.focus] === page, r ? r.focus + ' → ' + pageOf[r.focus] : 'ไม่พบแถว');
+  }
+  check('★ [170] สวิตช์ที่ไม่มีคำสั่ง ส่งช่องของตัวเองไปกับคำสั่ง settings',
+        /_run\('settings', null, d\.focus\)/.test(stSrc) && !/_run\(d\.cmd \|\| 'settings'\)/.test(stSrc));
+  const app4 = fs.readFileSync(path.join(ROOT, 'src/app.js'), 'utf8');
+  check('★ [170] คำสั่ง settings รับ (หน้า, ช่อง) แล้วส่งต่อให้กล่อง',
+        /case 'settings': settingsDialog\(typeof a\[0\] === 'string' && a\[0\] \? a\[0\] : undefined, typeof a\[1\] === 'string' && a\[1\] \? \{ focus: a\[1\] \} : \{\}\); break;/.test(app4));
+  check('★ [170] ชื่อหน้าที่ไม่มีจริง = ไม่เปิดกล่องว่าง (ตกไปหน้าที่ค้างไว้)',
+        /if \(openTab && !\[\.\.\.box\.querySelectorAll\('\.k-set-tab'\)\]\.some\(\(x\) => x\.dataset\.p === openTab\)\) openTab = null;/.test(dlg));
+  check('★ [170] "ตั้งค่าโปรเจกต์" ในเมนูคลิกขวาของ Explorer เปิดหน้าข้อมูลผลงาน (ไม่ใช่หน้าที่ค้างไว้)',
+        /case 'projectSettings': return it\(\(\) => settingsDialog\('setup'\)\);/.test(app4));
+  check('★ [170] ช่องที่ผู้เรียกใช้อยู่หน้าที่คาด (ถังขยะ/บันทึกอัตโนมัติ = บันทึกและสำรอง · ตรวจบท = เลขหน้า)',
+        pageOf['st-recycle'] === 'save' && pageOf['st-auto'] === 'save' && pageOf['st-sp-errmark'] === 'pagenum',
+        [pageOf['st-recycle'], pageOf['st-auto'], pageOf['st-sp-errmark']].join(','));
+}
+
 console.log(`\nsettings-tpl: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -153,6 +153,9 @@ import { resetRecords } from './record/record-ui.js';
 import { sceneProps } from './scene-props.js';
 import { settingsDialog, versionDialog } from './dialogs.js';
 import { showHomeDialog } from './home-ui.js';
+import { setBugIo, clearBugCache, clearBugSent, resetBugView, openBugStatus } from './bugs/bug-ui.js';   // [alpha.170]
+import { BUG_LIST_URL, bugUrl, bugApiUrl } from './bugs/bug-core.js';
+import { fmtDate as fmtDate170 } from './locale.js';
 import * as spell from './spell.js';
 import { tipText } from './tooltip.js';
 import { tx } from './i18n-html.js';
@@ -190,6 +193,7 @@ import { APP_VERSION, CREDITS, FEATURE_PANELS, INV_C, aboutDialog, activate, act
          resetNavUi, resetPageScale, restoreFabPos, restoreInactivePanes, restoreSessionLayout,
          retunePagePads, revealFile, revertTab, rosterTextForDraft, safeName, saveAllTabs,
          saveGlobalSetting, saveMaps, saveProjectMeta, saveTab, saveTimeline, saveUiLayout, saveUiSession,
+         setAppLanguage,
          sceneCtx, sceneEventsFromProject, setTreeShowArchived, scheduleCount, screenplayTerms, scriptMeta, sectionPathOfFile,
          setElementBadge, setFmtbarAlign, setFmtbarOpacity, setLayoutPageCount, setModDown, setNavMark,
          setNavWholeBook, setPageScale, setPluginDisabled, setPropsTarget, setRowMemo, setSceneLock,
@@ -4958,7 +4962,19 @@ export async function runTest(projectPath) {
           `${state.title} tabs=${state.tabs.size} (ก่อน=${beforeTabs})`);
     check('โปรเจกต์ใหม่มี templates.json ตั้งแต่เกิด',
           await kapi.exists(await kapi.join(state.root, 'templates.json')));
+    // [170-L] ★ ไฟล์ผลงานที่ค้างภาษาอื่น (บันทึกไว้ตอนโปรแกรมเป็นอังกฤษ) ต้องไม่ดึงภาษาของโปรแกรมตาม —
+    // เดิม "ไฟล์ผลงานชนะ": เปิดผลงานแล้วหน้าจอสลับภาษา ทั้งที่เมนูระบบ/ค่าคงที่ระดับโมดูลยังเป็นภาษาเดิม = ภาษาปน
+    const langBefore170 = i18n.lang;
+    {
+      const pj = await kapi.join(projectPath, 'project.khn.json');
+      const m170 = await kapi.readJson(pj);
+      m170.settings = { ...(m170.settings || {}), language: langBefore170 === 'en' ? 'fr' : 'en' };
+      await kapi.writeFile(pj, JSON.stringify(m170, null, 2));
+    }
     await loadProject(projectPath);                // กลับโปรเจกต์ทดสอบหลัก (path มาจาก KILLIAN_TEST_PROJECT)
+    check('[170-L] ★ เปิดผลงานที่ค้างภาษาอื่น — ภาษาของโปรแกรมไม่เปลี่ยน (ภาษาเป็นค่าระดับผู้ใช้)',
+          i18n.lang === langBefore170 && state.settings.language === langBefore170 && document.documentElement.lang === langBefore170,
+          `${i18n.lang} / ${state.settings.language} / ${document.documentElement.lang} (ก่อน=${langBefore170})`);
     document.querySelector('.scene').click();
     await new Promise((r) => setTimeout(r, 500));
     const t2 = state.active;                       // แท็บใหม่ (ตัวเก่าถูก destroy ไปแล้ว)
@@ -9086,9 +9102,9 @@ export async function runTest(projectPath) {
         // (S) แถบสถานะ: คอลัมน์ตามลำดับที่ผู้ใช้กำหนด · ทุกช่องมีทูลทิป · สวิตช์บอกเปิด/ปิด · ปุ่มหน้าแรก
         const segIds = [...document.querySelectorAll('#statusbar > .k-sb-seg')].map((e2) => e2.id);
         check('[165-S] ★★ แถบสถานะเรียง พร้อม | สวิตช์ | ความคืบหน้า | สถานะ | ซูม | หน้าแรก',
-              JSON.stringify(segIds) === JSON.stringify(['sb-msg', 'status-toggles', 'status-mid', 'status-right', 'zoom-ctl', 'status-home']),
+              JSON.stringify(segIds) === JSON.stringify(['sb-msg', 'status-toggles', 'status-mid', 'status-right', 'zoom-ctl', 'status-home', 'status-bug']),   // [alpha.170] + ปุ่มรายงานบั๊ก
               JSON.stringify(segIds));
-        const noTip = ['sb-msg', 'prog-wrap', 'wc', 'status-page', 'status-mode', 'status-save', 'status-scenes', 'zoom-ctl', 'status-home']
+        const noTip = ['sb-msg', 'prog-wrap', 'wc', 'status-page', 'status-mode', 'status-save', 'status-scenes', 'zoom-ctl', 'status-home', 'status-bug']
           .filter((id) => { const e2 = document.getElementById(id); return !e2 || !(e2.getAttribute('title') || '').trim() || /^ui\./.test(e2.getAttribute('title')); });
         check('[165-S] ★ ทุกช่องของแถบสถานะมีทูลทิปบอกว่าคืออะไร (ข้อความจริง ไม่ใช่คีย์)', noTip.length === 0, noTip.join(','));
         const tgs = [...document.querySelectorAll('#status-toggles .k-sb-toggle')];
@@ -29684,13 +29700,13 @@ export async function runTest(projectPath) {
                 gotTab === wantTab, 'คาด ' + wantTab + ' ได้ ' + gotTab);
           box.querySelector('.k-cancel').click();
           await w120(250);
-          settingsDialog('write', { focus: '#st-recycle' });
+          settingsDialog(null, { focus: '#st-recycle' });   // [alpha.170] หน้าอ่านจากตำแหน่งของช่องเอง
           await w120(500);
           box = [...document.querySelectorAll('.k-dialog.k-settings')].pop();
           const recEl = box.querySelector('#st-recycle');
           const pageOn = box.querySelector('.k-set-tab.on') ? box.querySelector('.k-set-tab.on').dataset.p : '';
           check('[120-13] ★ "ตั้งเวลาล้างถัง" กระโดดมาถูกหน้าและถูกช่องจริง',
-                !!recEl && pageOn === 'write'
+                !!recEl && pageOn === 'save' && recEl.closest('.k-set-page').classList.contains('on') && recEl.getBoundingClientRect().width > 0
                 && (document.activeElement === recEl || recEl.classList.contains('k-set-flash')),
                 'หน้า=' + pageOn + ' คลาส=' + (recEl ? recEl.className : 'ไม่พบช่อง'));
           box.querySelector('.k-cancel').click();
@@ -36493,6 +36509,442 @@ export async function runTest(projectPath) {
         document.querySelectorAll('#k-toasts > *').forEach((x) => x.remove());
         await buildTree();
         check('[170-N] เก็บกวาดแล้วต้นไม้ไม่มีเล่มทดสอบค้าง', ![...document.querySelectorAll('#tree .sec-title')].some((h) => h.textContent.includes('170')));
+      }
+
+      // ══ [170-L] ★★ ภาษาเป็นค่าระดับผู้ใช้ — ทางเดียว setAppLanguage · เมนูระบบตามหน้าจอทุกครั้ง ══
+      // ผู้ใช้: "เลือกภาษาจากฝรั่งเศสเป็น english แล้วเริ่มโปรแกรมใหม่ จะยังคงติดภาษาฝรั่งเศสอยู่ หลายจุดเลย เช่นเมนู"
+      // ต้นตอ (ยืนยันบนแอปจริง): มีผลงานเปิดอยู่ = กล่องตั้งค่าเขียนภาษาใหม่ลงไฟล์ผลงานอย่างเดียว ไฟล์ผู้ใช้ค้างค่าเก่า ·
+      // เมนูระบบอ่าน lang.txt ซึ่งถูกเขียนสลับไปมา → หน้าจออังกฤษ เมนูฝรั่งเศสทั้ง 265 รายการ
+      if (kapi.menuLabels) {
+        const topL = async () => (await kapi.menuLabels()).filter((l) => !l.includes(' > '));
+        const has = async (label) => (await topL()).includes(label);
+        const lang0 = i18n.lang;
+        const file0 = tt('ui.menu.file2');
+        check('[170-L] ก่อนเริ่ม: เมนูระบบเป็นภาษาเดียวกับหน้าจอ', await has(file0), (await topL()).join(' | '));
+        const other = lang0 === 'en' ? 'th' : 'en';
+        const real = await setAppLanguage(other);
+        const g1 = await kapi.readGlobalSettings();
+        check('[170-L] ★ เปลี่ยนภาษาตอนมีผลงานเปิดอยู่ → ไฟล์ตั้งค่าผู้ใช้ได้ภาษาใหม่ + ธง languagePicked',
+              !!state.root && real === other && g1.language === other && g1.languagePicked === true, JSON.stringify({ l: g1.language, p: g1.languagePicked }));
+        const file1 = tt('ui.menu.file2');
+        check('[170-L] ★ เมนูระบบเปลี่ยนภาษาตามทันที (ไม่เหลือป้ายภาษาเดิม)',
+              file1 !== file0 && await has(file1) && !(await has(file0)), (await topL()).join(' | '));
+        await saveProjectMeta();
+        check('[170-L] สำเนาในไฟล์ผลงานตามภาษาใหม่ (ไม่ค้างค่าเก่า)',
+              ((await kapi.readJson(await kapi.join(state.root, 'project.khn.json'))).settings || {}).language === other);
+        check('[170-L] localStorage ตรงกับภาษาที่ใช้', localStorage.getItem('k2-lang') === other);
+        // ทางที่โหลดภาษาโดยไม่ผ่านกล่องตั้งค่า (เปิดผลงานที่มีคำแปลของตัวเอง · ปุ่มโหลดไฟล์ภาษาใหม่) ก็ต้องพาเมนูไปด้วย
+        await loadLanguage(lang0, state.root);
+        check('[170-L] ★ loadLanguage ทุกทางพาเมนูระบบไปด้วย', await has(file0) && !(await has(file1)), (await topL()).join(' | '));
+        // ภาพของเซสชันต้องไม่พก k2-lang (ไม่งั้นเปิดใหม่แล้วภาพเก่ายัดภาษาเดิมกลับ)
+        const sess170 = await captureSession();
+        const ls170 = (sess170 && sess170.ui && sess170.ui.ls) || {};
+        check('[170-L] ภาพของเซสชันไม่เก็บภาษา (k2-lang) แต่ยังเก็บค่าจำอื่นของ k2-*',
+              localStorage.getItem('k2-lang') === lang0 && !('k2-lang' in ls170) && Object.keys(ls170).some((k) => k.startsWith('k2-')),
+              Object.keys(ls170).slice(0, 6).join(','));
+        // คืนสภาพ: ภาษาเดิมทุกที่ (ไฟล์ผู้ใช้ · ไฟล์ผลงาน · เมนู)
+        await setAppLanguage(lang0);
+        await saveProjectMeta();
+        check('[170-L] คืนภาษาเดิมครบ (หน้าจอ · ไฟล์ผู้ใช้ · เมนูระบบ)',
+              i18n.lang === lang0 && (await kapi.readGlobalSettings()).language === lang0 && await has(file0));
+        applyDataI18n(); await buildTree();
+      }
+
+      // ══ [170-B] ★★ ปุ่มที่พาไปหน้าตั้งค่าต้องไปถูกหน้า · รายงานบั๊ก · สถานะบั๊ก ══
+      // ผู้ใช้: "เพิ่มปุ่ม bug report ถัดจากปุ่ม home" · "ปุ่มที่ไปหน้า setting เช่น autosave ยังไม่ยิงไปหน้า setting ที่ถูกต้อง check ให้หมด" ·
+      //          "ใน เกี่ยวกับ เพิ่ม bug report และ pop up ตรวจสอบสถานะ bug … และมี filter ด้วย"
+      // เน็ต/เบราว์เซอร์/คลิปบอร์ดของโมดูลบั๊กถูกสลับเป็นของปลอม (setBugIo) — เทสไม่เปิดเบราว์เซอร์และไม่ยิง GitHub จริง
+      {
+        const wB = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilB = async (fn, ms = 6000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { const v = await fn(); if (v) return v; } catch {} await wB(50); } return null; };
+        const seen = (e2) => { if (!e2 || !e2.isConnected) return false; const r = e2.getBoundingClientRect(); const cs = getComputedStyle(e2);
+          return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && +cs.opacity > 0; };
+        const rawKey = (root) => /(^|[\s>(])ui\.[a-z]+\.[A-Za-z]/.test(root.textContent || '')
+          || [...root.querySelectorAll('[title],[placeholder],[aria-label]')].some((e2) => /^ui\.[a-z]+\./.test(e2.title || e2.placeholder || e2.getAttribute('aria-label') || ''));
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        closeMenu();
+
+        // ───────── (ก) ปุ่มที่พาไปหน้าตั้งค่า ─────────
+        const setBox = () => [...document.querySelectorAll('.k-dialog.k-settings')].pop();
+        const pageOnB = (b) => { const tb = b && b.querySelector('.k-set-tab.on'); return tb ? tb.dataset.p : ''; };
+        const closeSet = async () => {
+          const b = setBox();
+          if (b) { const c = b.querySelector(':scope > .k-dlg-btns > .k-cancel'); if (c) c.click(); await untilB(() => !setBox(), 3000); }
+          document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        };
+        const lastTab0 = localStorage.getItem('k2-settings-tab');
+        // หน้า/ช่องส่งเป็นตัวแปร — ตัวกวาดทะเบียนคำสั่งอ่าน handleCommand('x', 'y') ที่เป็นข้อความตรง ๆ เป็นคำสั่งใหม่
+        const pgKeysB = 'keys', fMaxB = '#st-maxbak';
+        // หน้าที่ค้างไว้ล่าสุด = หน้าที่ "ไม่ใช่เป้า" ของทุกปุ่มข้างล่าง → ปุ่มไหนยังเปิดกล่องเฉย ๆ จะได้หน้านี้แล้วเทสแดง
+        localStorage.setItem('k2-settings-tab', 'fab');
+        const atField = async (label, open, sel, page) => {
+          await open();
+          const b = await untilB(() => setBox());
+          await wB(300);
+          const f = b && b.querySelector(sel);
+          const pg = f && f.closest('.k-set-page');
+          check('[170-B] ★★ ' + label + ' → เปิดหน้า "' + page + '" และเห็นช่องของมันจริง',
+                !!b && pageOnB(b) === page && !!pg && pg.dataset.p === page && pg.classList.contains('on') && seen(f)
+                && (document.activeElement === f || f.classList.contains('k-set-flash')),
+                'หน้าที่เปิด=' + pageOnB(b) + ' · หน้าของช่อง=' + (pg ? pg.dataset.p : '-') + ' · เห็นช่อง=' + seen(f));
+          await closeSet();
+        };
+        await atField('สวิตช์บันทึกอัตโนมัติบนแถบสถานะ', () => document.querySelector('#status-toggles [data-toggle="autosave"]').click(), '#st-auto', 'save');
+        await atField('สวิตช์ตรวจคำผิดบนแถบสถานะ', () => document.querySelector('#status-toggles [data-toggle="spell"]').click(), '#st-spelldict', 'write');
+        await atField('ตั้งเวลาล้างถังขยะ', () => settingsDialog(null, { focus: '#st-recycle' }), '#st-recycle', 'save');
+        await atField('ตั้งค่ารูปแบบ/การตรวจบท', () => settingsDialog('pagenum', { focus: '#st-sp-errmark' }), '#st-sp-errmark', 'pagenum');
+        await atField('ผู้เรียกบอกหน้าผิด (ช่องชนะหน้า)', () => settingsDialog('write', { focus: '#st-recycle' }), '#st-recycle', 'save');
+        await atField('คำสั่ง settings พร้อมช่อง', () => handleCommand('settings', null, fMaxB), fMaxB, 'save');
+        {
+          await handleCommand('settings', pgKeysB);
+          const b = await untilB(() => setBox()); await wB(200);
+          check('[170-B] คำสั่ง settings พร้อมชื่อหน้า = เปิดหน้านั้น', pageOnB(b) === 'keys', pageOnB(b));
+          await closeSet();
+          await handleCommand('settings');
+          const b2 = await untilB(() => setBox()); await wB(200);
+          check('[170-B] คำสั่ง settings เปล่า ๆ = หน้าที่ค้างไว้ล่าสุด (พฤติกรรมเดิม)', pageOnB(b2) === 'fab', pageOnB(b2));
+          await closeSet();
+          settingsDialog(null, { focus: '#st-ไม่มีช่องนี้' });
+          const b3 = await untilB(() => setBox()); await wB(200);
+          check('[170-B] ช่องที่ไม่มีจริง = ไม่พัง (เปิดหน้าที่ค้างไว้)', !!b3 && pageOnB(b3) === 'fab', pageOnB(b3));
+          await closeSet();
+        }
+        if (lastTab0 == null) localStorage.removeItem('k2-settings-tab'); else localStorage.setItem('k2-settings-tab', lastTab0);
+        // ทูลทิปของสวิตช์ที่ไม่มีคำสั่งสลับบอกว่า "คลิกแล้วเปิดตั้งค่า"
+        check('[170-B] สวิตช์ที่ตั้งได้ในกล่องตั้งค่าเท่านั้น บอกในทูลทิปว่าเปิดหน้าตั้งค่า',
+              ['autosave', 'spell'].every((id) => document.querySelector('#status-toggles [data-toggle="' + id + '"]').dataset.tip === 'ui.sb.tipSettings'));
+
+        // ───────── (ข) ปุ่มรายงานบั๊กบนแถบสถานะ + กล่องรายงาน (ส่งตรงจากโปรแกรมผ่านตัวกลาง) ─────────
+        // ผู้ใช้: "เราจะให้รายงานได้คือ จาก app ตรง กับทางที่กำหนด ดังนั้นคนที่ไม่ใช้ app จะรายงานไม่ได้"
+        const fetched = [], opened = [], copied = [], posted = [];
+        let fakeRes = { status: 200, ok: true, body: '[]' };
+        let relayB = 'https://relay.k2test.invalid';
+        let contactB = { label: '', url: '' };
+        let postRes = { status: 201, ok: true, body: '{"ok":true,"number":77}' };
+        const restoreIo = setBugIo({
+          fetch: async (url) => { fetched.push(url); return fakeRes; },
+          open: async (url) => { opened.push(url); return true; },
+          copy: async (text) => { copied.push(text); return true; },
+          relay: () => relayB,
+          contact: () => contactB,
+          post: async (url, options) => { posted.push({ url, options }); return postRes; },
+        });
+        const draft0 = localStorage.getItem('k2-bug-draft');
+        localStorage.removeItem('k2-bug-draft');
+        clearBugCache(); clearBugSent(); resetBugView();
+        try {
+          const segsB = [...document.querySelectorAll('#statusbar > .k-sb-seg')];
+          const bugBtn = document.getElementById('status-bug');
+          check('[170-B] ★★ ปุ่มรายงานบั๊กอยู่ถัดจากปุ่มหน้าแรก (ช่องสุดท้ายของแถบสถานะ)',
+                !!bugBtn && segsB[segsB.length - 1] === bugBtn && segsB[segsB.length - 2] === document.getElementById('status-home') && seen(bugBtn),
+                segsB.map((e2) => e2.id).join(','));
+          const rBtn = bugBtn.getBoundingClientRect(), rBar = document.getElementById('statusbar').getBoundingClientRect();
+          check('[170-B] ปุ่มรายงานบั๊กไม่ตกขอบแถบสถานะ + มีไอคอน + ทูลทิปเป็นข้อความจริง',
+                rBtn.right <= rBar.right + 1 && rBtn.left >= rBar.left && bugBtn.childElementCount > 0
+                && (bugBtn.getAttribute('title') || '').includes(tt('ui.sb.bugReport')),
+                Math.round(rBtn.right) + '/' + Math.round(rBar.right) + ' · ' + bugBtn.getAttribute('title'));
+          const repBox = () => document.querySelector('.k-overlay .k-dialog.k-bug-report');
+          const sendBtn = () => repBox().querySelector(':scope > .k-dlg-btns > .k-ok');
+          const errTxt = () => repBox().querySelector('.k-bug-err').textContent;
+          bugBtn.click();
+          const rb = await untilB(() => repBox());
+          check('[170-B] ★★ กดปุ่มรายงานบั๊กบนแถบสถานะ = เปิดกล่องรายงานจริง', !!rb);
+          await wB(150);
+          check('[170-B] กล่องรายงาน: ไม่มีคีย์ภาษาดิบ · ช่องทั้งสี่มีป้าย+คำใบ้ · บอกสิ่งที่แนบไปด้วย',
+                !rawKey(rb) && rb.querySelectorAll('.k-bug-field').length === 4
+                && [...rb.querySelectorAll('.k-bug-field')].every((f) => f.querySelector('label').textContent.trim() && f.querySelector('.k-dlg-input').placeholder.trim())
+                && rb.querySelector('.k-bug-env-line').textContent.includes(APP_VERSION),
+                rb.querySelector('.k-bug-env-line').textContent);
+          const btnsB = [...rb.querySelectorAll(':scope > .k-dlg-btns > button')];
+          check('[170-B] ปุ่มหลัก (ส่งรายงาน) อยู่ขวาสุด กดได้ · มีปุ่มยกเลิก · ไม่มีป้ายว่าส่งไม่ได้',
+                btnsB[btnsB.length - 1].classList.contains('k-ok') && btnsB[btnsB.length - 1].disabled === false
+                && btnsB[btnsB.length - 1].textContent === tt('ui.bug.btnSend') && btnsB.some((b) => b.classList.contains('k-cancel')) && !rb.querySelector('.k-bug-off'));
+          const fT = rb.querySelector('#k-bug-f-title'), fW = rb.querySelector('#k-bug-f-what');
+          check('[170-B] เปิดกล่องแล้วโฟกัสอยู่ที่ช่องหัวข้อ', await untilB(() => document.activeElement === fT, 1500) === true);
+          sendBtn().click(); await wB(200);
+          check('[170-B] ★ หัวข้อว่าง = ไม่ส่ง ไม่คัดลอก กล่องยังอยู่ และบอกเหตุในกล่อง',
+                posted.length === 0 && copied.length === 0 && !!repBox() && errTxt() === tt('ui.bug.needTitle'), errTxt());
+          const typeIn = (inp, v) => { inp.value = v; inp.dispatchEvent(new Event('input', { bubbles: true })); };
+          typeIn(fT, 'เทส170 กดบันทึกแล้วค้าง @octocat'); typeIn(fW, 'เนื้อเทส170');
+          check('[170-B] ข้อความที่พิมพ์ค้างถูกจำไว้ทันที · พิมพ์แล้วข้อความเตือนหาย',
+                (localStorage.getItem('k2-bug-draft') || '').includes('เทส170 กดบันทึกแล้วค้าง') && errTxt() === '');
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+          check('[170-B] Esc ปิดกล่องรายงาน', await untilB(() => !repBox(), 2000) === true);
+          await handleCommand('bug-report');
+          const rb2 = await untilB(() => repBox());
+          check('[170-B] ★ เปิดใหม่ = ข้อความที่พิมพ์ค้างไว้ยังอยู่ (ปิดกล่องโดยไม่ได้ส่ง งานไม่หาย)',
+                !!rb2 && rb2.querySelector('#k-bug-f-title').value === 'เทส170 กดบันทึกแล้วค้าง @octocat' && rb2.querySelector('#k-bug-f-what').value === 'เนื้อเทส170');
+          rb2.querySelector('.k-bug-copy').click();
+          await untilB(() => copied.length === 1, 2000);
+          check('[170-B] คัดลอกรายงาน = หัวข้อ + เนื้อ + รุ่นของโปรแกรม (ไม่ส่ง ไม่เปิดเบราว์เซอร์)',
+                copied.length === 1 && copied[0].startsWith('# เทส170 กดบันทึกแล้วค้าง') && copied[0].includes('เนื้อเทส170')
+                && copied[0].includes('<!-- k2-report version=' + APP_VERSION) && opened.length === 0 && posted.length === 0 && !!repBox(), (copied[0] || '').slice(0, 80));
+          // ส่งไม่สำเร็จสามแบบ — กล่องต้องยังอยู่ ข้อความที่พิมพ์ยังอยู่ ปุ่มกลับมากดได้ และบอกเหตุในกล่อง
+          const failCase = async (label, res, want) => {
+            postRes = res;
+            const n0 = posted.length;
+            sendBtn().click();
+            await untilB(() => posted.length === n0 + 1 && errTxt() !== '' && sendBtn().disabled === false, 3000);
+            check('[170-B] ★ ส่งไม่สำเร็จ (' + label + ') = กล่องยังอยู่ · ร่างยังอยู่ · ปุ่มกดได้อีก · บอกเหตุ',
+                  !!repBox() && errTxt() === want && (localStorage.getItem('k2-bug-draft') || '').includes('เนื้อเทส170')
+                  && sendBtn().disabled === false && sendBtn().textContent === tt('ui.bug.btnSend') && repBox().querySelector('#k-bug-f-what').value === 'เนื้อเทส170', errTxt());
+          };
+          await failCase('เน็ตล้ม', { status: 0, ok: false, netError: true, error: 'ENOTFOUND' }, tt('ui.bug.sendNet'));
+          await failCase('ส่งถี่เกิน', { status: 429, ok: false, body: '{"ok":false,"code":"rate"}' }, tt('ui.bug.sendRate'));
+          await failCase('ตัวกลางตอบผิดพลาด', { status: 502, ok: false, body: '{"ok":false,"code":"github"}' }, ttf('ui.bug.sendFail', 502));
+          await failCase('ตอบสำเร็จแต่ไม่มีเลขบั๊ก', { status: 200, ok: true, body: '<html>' }, ttf('ui.bug.sendFail', 200));
+          // [bug hunt] นาฬิกาเครื่องคลาด = บอกเหตุที่ผู้ใช้แก้ได้ ไม่ใช่ "ข้อผิดพลาด 400"
+          await failCase('นาฬิกาเครื่องคลาด', { status: 400, ok: false, body: '{"ok":false,"code":"ts"}' }, tt('ui.bug.sendClock'));
+          // ส่งสำเร็จ
+          localStorage.setItem('k2-bug-cache', JSON.stringify({ ts: Date.now(), bugs: [] }));
+          postRes = { status: 201, ok: true, body: '{"ok":true,"number":77}' };
+          const nOk = posted.length;
+          sendBtn().click();
+          await untilB(() => posted.length === nOk + 1 && !repBox(), 3000);
+          const lastPost = posted[posted.length - 1] || { options: { headers: {}, body: '{}' } };
+          const sentB = JSON.parse(lastPost.options.body);
+          check('[170-B] ★★ ส่งรายงาน = POST ตรงเข้าตัวกลาง (ไม่เปิดเบราว์เซอร์) พร้อมหัวข้อ+เนื้อ+รุ่น',
+                lastPost.url === relayB + '/report' && lastPost.options.method === 'POST' && lastPost.options.headers['X-K2-Client'] === 'killian2'
+                && sentB.title === 'เทส170 กดบันทึกแล้วค้าง @octocat' && sentB.body.includes('เนื้อเทส170') && sentB.body.includes('Version: ' + APP_VERSION)
+                && sentB.body.includes('<!-- k2-report version=' + APP_VERSION) && sentB.version === APP_VERSION && Math.abs(Date.now() - sentB.ts) < 60000 && opened.length === 0,
+                lastPost.url + ' · ' + JSON.stringify(sentB).slice(0, 120));
+          check('[170-B] ★ สิ่งที่ส่งออกไปมีแค่สี่ช่อง — ไม่มีทางไฟล์ของโปรเจกต์ ไม่มีชื่อโปรเจกต์',
+                Object.keys(sentB).sort().join() === 'body,title,ts,version' && !lastPost.options.body.includes(state.root.replace(/\\/g, '\\\\'))
+                && !lastPost.options.body.includes(state.root) && !(state.meta && state.meta.title && lastPost.options.body.includes(state.meta.title)));
+          const stMsg = document.getElementById('status');
+          check('[170-B] ★★ ส่งแล้ว: กล่องปิด · ร่างถูกล้าง · บอกเลขบั๊กบนแถบสถานะพร้อมลิงก์ดูสถานะ · รายการที่จำไว้ถูกล้าง',
+                !repBox() && localStorage.getItem('k2-bug-draft') == null && stMsg.textContent.includes(ttf('ui.bug.sentOk', '#77'))
+                && !!stMsg.querySelector('.k-status-link') && localStorage.getItem('k2-bug-cache') == null, stMsg.textContent);
+          { const nF = fetched.length;
+            stMsg.querySelector('.k-status-link').click();
+            const sbL = await untilB(() => document.querySelector('.k-overlay .k-dialog.k-bug-status'));
+            if (sbL) await sbL.closest('.k-overlay').k2ready;
+            check('[170-B] ลิงก์ "ดูสถานะบั๊ก" บนแถบสถานะ = เปิดกล่องสถานะและถามรายการใหม่', !!sbL && fetched.length === nF + 1);
+            // [bug hunt] GitHub ยังไม่ส่งบั๊กที่เพิ่งส่งมา (คำตอบถูกแคชราวหนึ่งนาที) — ผู้ใช้ต้องยังเห็นบั๊กของตัวเอง
+            const row77 = sbL && sbL.querySelector('tbody tr[data-num="77"]');
+            check('[170-B] ★★ บั๊กที่เพิ่งส่งขึ้นในรายการทันที แม้รายการจาก GitHub ยังไม่มี (รอตรวจสอบ · รุ่นของโปรแกรม)',
+                  !!row77 && row77.children[1].textContent.includes('เทส170 กดบันทึกแล้วค้าง') && row77.children[2].textContent.trim() === tt('ui.bug.stNew')
+                  && row77.children[3].textContent.trim() !== '—' && row77.children[4].textContent.trim() !== '',
+                  row77 ? [...row77.children].map((td) => td.textContent.trim()).join(' | ') : 'ไม่พบแถว #77');
+            document.querySelectorAll('.k-overlay').forEach((o) => o.remove()); clearBugCache(); clearBugSent(); }
+          // รุ่นที่ยังไม่ได้ตั้งตัวกลาง = บอกตรง ๆ + ปุ่มส่งกดไม่ได้ + คัดลอกยังใช้ได้
+          relayB = '';
+          await handleCommand('bug-report');
+          const rb3 = await untilB(() => repBox());
+          const nP3 = posted.length, nC3 = copied.length;
+          typeIn(rb3.querySelector('#k-bug-f-title'), 'เทส170 ไม่มีตัวกลาง');
+          rb3.querySelector(':scope > .k-dlg-btns > .k-ok').click(); await wB(150);
+          rb3.querySelector('.k-bug-copy').click();
+          await untilB(() => copied.length === nC3 + 1, 2000);
+          check('[170-B] ★★ ยังไม่ได้ตั้งตัวกลาง = บอกในกล่องว่าส่งจากโปรแกรมไม่ได้ · ปุ่มส่งกดไม่ได้ · คัดลอกยังใช้ได้',
+                seen(rb3.querySelector('.k-bug-off')) && rb3.querySelector('.k-bug-off').textContent === tt('ui.bug.sendOff')
+                && rb3.querySelector(':scope > .k-dlg-btns > .k-ok').disabled === true && posted.length === nP3 && copied.length === nC3 + 1);
+          typeIn(rb3.querySelector('#k-bug-f-title'), '');
+          rb3.closest('.k-overlay').remove();
+          // "ทางที่กำหนด" — ชื่อ/ลิงก์จากค่าของผู้ดูแล
+          relayB = 'https://relay.k2test.invalid';
+          contactB = { label: 'k2test@example.invalid <b>x</b>', url: 'https://contact.k2test.invalid/x' };
+          await handleCommand('bug-report');
+          const rb5 = await untilB(() => repBox());
+          const cName = rb5.querySelector('.k-bug-contact-name');
+          check('[170-B] ★ ทางที่กำหนด: โชว์ชื่อช่องทางเป็นข้อความล้วน (ไม่ถูกอ่านเป็น HTML) + คลิกเปิดลิงก์',
+                !!cName && cName.textContent === 'k2test@example.invalid <b>x</b>' && cName.childElementCount === 0
+                && rb5.querySelector('.k-bug-contact').textContent.startsWith(tt('ui.bug.contactLine')));
+          if (cName) { cName.click(); await wB(100); }
+          check('[170-B] คลิกชื่อช่องทาง = เปิดลิงก์ของช่องทางนั้น', opened[opened.length - 1] === 'https://contact.k2test.invalid/x');
+          contactB = { label: 'ไม่มีลิงก์', url: 'javascript:alert(1)' };
+          rb5.closest('.k-overlay').remove();
+          await handleCommand('bug-report');
+          const rb6 = await untilB(() => repBox());
+          check('[170-B] ลิงก์ของช่องทางที่ไม่ใช่ https = โชว์ชื่ออย่างเดียว คลิกไม่ได้',
+                !!rb6.querySelector('.k-bug-contact-name') && !rb6.querySelector('.k-bug-contact-name').classList.contains('k-bug-link'));
+          rb6.closest('.k-overlay').remove();
+          // ทางที่กำหนด = อีเมล (ผู้ใช้: "ไม่เอา github ดีกว่า เพราะมันใช้ยาก เอาเป็น email ปกติ")
+          contactB = { label: 'bugs@k2test.invalid', url: '' };
+          await handleCommand('bug-report');
+          const rb7 = await untilB(() => repBox());
+          const mName = rb7.querySelector('.k-bug-contact-name');
+          check('[170-B] ★★ ทางที่กำหนด = อีเมล: โชว์ที่อยู่ในกล่อง · คลิกได้ · มีทูลทิปบอกว่าจะเกิดอะไร',
+                !!mName && mName.textContent === 'bugs@k2test.invalid' && mName.dataset.kind === 'email' && mName.classList.contains('k-bug-link')
+                && mName.title === tt('ui.bug.contactMailTip') && seen(mName));
+          const nO7 = opened.length, nC7 = copied.length, nP7 = posted.length;
+          mName.click(); await wB(250);
+          check('[170-B] คลิกที่อยู่อีเมลตอนยังไม่มีหัวข้อ = ไม่เปิดอะไร บอกให้กรอกหัวข้อก่อน',
+                opened.length === nO7 && copied.length === nC7 && errTxt() === tt('ui.bug.needTitle'));
+          typeIn(rb7.querySelector('#k-bug-f-title'), 'เทส170 ส่งทางอีเมล'); typeIn(rb7.querySelector('#k-bug-f-what'), 'เนื้ออีเมล170');
+          document.querySelectorAll('.k-toast').forEach((x) => x.remove());
+          mName.click();
+          await untilB(() => opened.length === nO7 + 1 && copied.length === nC7 + 1, 3000);
+          check('[170-B] ★★ คลิกที่อยู่อีเมล = คัดลอกรายงานทั้งก้อน + เปิดอีเมลใหม่ถึงที่อยู่นั้น (หัวเรื่องใส่ให้ · ไม่ส่งเข้าตัวกลาง)',
+                opened[opened.length - 1] === 'mailto:bugs@k2test.invalid?subject=' + encodeURIComponent('[Killian 2] เทส170 ส่งทางอีเมล')
+                && copied[copied.length - 1].startsWith('# เทส170 ส่งทางอีเมล') && copied[copied.length - 1].includes('เนื้ออีเมล170')
+                && copied[copied.length - 1].includes('<!-- k2-report version=' + APP_VERSION) && posted.length === nP7 && !!repBox(),
+                String(opened[opened.length - 1]).slice(0, 90));
+          check('[170-B] บอกผู้ใช้ว่าต้องทำอะไรต่อ (วางในอีเมล · ที่อยู่สำรองถ้าไม่มีหน้าต่างอีเมล)',
+                [...document.querySelectorAll('.k-toast')].some((x) => x.textContent.includes(ttf('ui.bug.contactMailed', 'bugs@k2test.invalid'))));
+          typeIn(rb7.querySelector('#k-bug-f-title'), ''); typeIn(rb7.querySelector('#k-bug-f-what'), '');
+          rb7.closest('.k-overlay').remove();
+          contactB = { label: '', url: '' };
+          document.querySelectorAll('.k-toast').forEach((x) => x.remove());
+
+          // ───────── (ค) กล่อง "เกี่ยวกับ" → สถานะบั๊ก ─────────
+          const mkIssue = (o) => ({ state: 'open', labels: [], body: '', created_at: '2026-10-01T08:00:00Z', author_association: 'OWNER', ...o });
+          const ISSUES = [
+            mkIssue({ number: 9, title: 'เทส170 บันทึกแล้วค้าง', labels: [{ name: 'bug' }], created_at: '2026-10-05T03:00:00Z', body: '<!-- k2-report version=2.0.0-alpha.169 -->' }),
+            mkIssue({ number: 8, title: 'เทส170 Export PDF blank', state: 'closed', state_reason: 'completed', created_at: '2026-09-20T03:00:00Z',
+                      body: 'Version: 2.0.0-alpha.167', milestone: { title: '2.0.0-alpha.168' } }),
+            mkIssue({ number: 7, title: 'ขอโหมดมืด', labels: [{ name: 'enhancement' }] }),
+            mkIssue({ number: 6, title: 'PR', pull_request: {} }),
+            mkIssue({ number: 2, title: 'เทส170 คนนอกเปิดเองบนเว็บ', labels: [{ name: 'bug' }], author_association: 'NONE' }),
+            mkIssue({ number: 5, title: 'เทส170 ซ้ำ', labels: [{ name: 'duplicate' }], created_at: '2026-09-01T00:00:00Z' }),
+            mkIssue({ number: 4, title: 'เทส170 crash on open', labels: [{ name: 'in progress' }], created_at: '2026-08-15T00:00:00Z', body: '<!-- k2-report version=2.0.0-alpha.99 -->' }),
+            mkIssue({ number: 3, title: 'เทส170 ยังไม่มีใครดู', created_at: '2026-08-01T00:00:00Z' }),
+          ];
+          fakeRes = { status: 200, ok: true, body: JSON.stringify(ISSUES) };
+          fetched.length = 0; clearBugCache();      // ส่วน (ข) ถามรายการไปแล้วหนึ่งครั้ง — ส่วนนี้นับใหม่
+          const ovA170 = aboutDialog();
+          await wB(150);
+          const pR = ovA170.querySelector('.k-about-bug-report'), pS = ovA170.querySelector('.k-about-bug-status');
+          check('[170-B] ★★ กล่อง "เกี่ยวกับ" มีปุ่มรายงานบั๊ก + สถานะบั๊ก (มองเห็น · ข้อความจากไฟล์ภาษา)',
+                seen(pR) && seen(pS) && pR.textContent === tt('ui.about.bugReport') && pS.textContent === tt('ui.about.bugStatus'));
+          const rLeft = ovA170.querySelector('.k-about-left').getBoundingClientRect(), rFoot = ovA170.querySelector('.k-about-foot').getBoundingClientRect();
+          check('[170-B] ปุ่มในกล่อง "เกี่ยวกับ" ไม่ล้นฝั่งซ้ายและไม่ทับแถวล่าง',
+                [pR, pS].every((p) => { const r = p.getBoundingClientRect(); return r.left >= rLeft.left && r.right <= rLeft.right + 1 && r.bottom <= rFoot.top + 1; }),
+                Math.round(pS.getBoundingClientRect().bottom) + ' / ' + Math.round(rFoot.top));
+          const stBox = () => document.querySelector('.k-overlay .k-dialog.k-bug-status');
+          pS.click();
+          const sb1 = await untilB(() => stBox());
+          check('[170-B] ★★ กดสถานะบั๊กในกล่อง "เกี่ยวกับ" = กล่องเกี่ยวกับปิด แล้วเปิดกล่องสถานะ', !!sb1 && !ovA170.isConnected);
+          await sb1.closest('.k-overlay').k2ready;
+          await wB(100);
+          const rowsB = () => [...stBox().querySelectorAll('.k-bug-table tbody tr')];
+          const numsB = () => rowsB().map((r) => r.dataset.num).join();
+          const heads = [...sb1.querySelectorAll('.k-bug-table thead th')].map((th) => th.textContent.trim());
+          check('[170-B] ★★ หัวคอลัมน์ครบหกตามลำดับ: รหัส · รายละเอียด · สถานะ · พบในรุ่น · วันที่รายงาน · แก้ไขในรุ่น',
+                JSON.stringify(heads) === JSON.stringify([tt('ui.bug.colId'), tt('ui.bug.colTitle'), tt('ui.bug.colStatus'), tt('ui.bug.colFound'), tt('ui.bug.colReported'), tt('ui.bug.colFixed')]),
+                heads.join(' | '));
+          check('[170-B] ★★ รายการ = บั๊ก 5 ตัว (ไม่นับ PR/ข้อเสนอฟีเจอร์/ของที่คนนอกเปิดเองบนเว็บ) เรียงเลขใหม่ก่อน · ถาม GitHub ครั้งเดียว',
+                numsB() === '9,8,5,4,3' && fetched.length === 1 && fetched[0] === bugApiUrl(1), numsB() + ' · fetch=' + fetched.length);
+          const cellsOf = (num) => [...rowsB().find((r) => r.dataset.num === String(num)).children].map((td) => td.textContent.trim());
+          check('[170-B] ★★ แถวของบั๊กที่แก้แล้ว: ครบทุกช่อง (รหัส/รายละเอียด/สถานะ/รุ่นที่พบ/วันที่/รุ่นที่แก้)',
+                JSON.stringify(cellsOf(8)) === JSON.stringify(['#8', 'เทส170 Export PDF blank', tt('ui.bug.stFixed'), 'alpha.167', fmtDate170('2026-09-20T03:00:00Z'), 'alpha.168']),
+                cellsOf(8).join(' | '));
+          check('[170-B] แถวที่ยังไม่มีรุ่น = ขีด ไม่ใช่ช่องว่าง · สถานะตามป้ายของ Issue',
+                cellsOf(3)[2] === tt('ui.bug.stNew') && cellsOf(3)[3] === '—' && cellsOf(3)[5] === '—' && cellsOf(9)[2] === tt('ui.bug.stConfirmed')
+                && cellsOf(4)[2] === tt('ui.bug.stProgress') && cellsOf(5)[2] === tt('ui.bug.stDuplicate') && cellsOf(9)[3] === 'alpha.169', cellsOf(3).join(' | '));
+          check('[170-B] กล่องสถานะไม่มีคีย์ภาษาดิบ + บอกจำนวน + บอกเวลาอัปเดต',
+                !rawKey(sb1) && sb1.querySelector('.k-bug-count').textContent === ttf('ui.bug.count', 5, 5) && sb1.querySelector('.k-bug-stamp').textContent.trim() !== '',
+                sb1.querySelector('.k-bug-count').textContent);
+          const tblWrap = sb1.querySelector('.k-bug-wrap').getBoundingClientRect(), dlgR = sb1.getBoundingClientRect();
+          check('[170-B] ตารางอยู่ในกล่อง ไม่ล้นแนวนอน · ปุ่มปิดอยู่ในจอ',
+                tblWrap.left >= dlgR.left && tblWrap.right <= dlgR.right + 1 && sb1.querySelector('.k-bug-wrap').scrollWidth <= sb1.querySelector('.k-bug-wrap').clientWidth + 1
+                && sb1.querySelector(':scope > .k-dlg-btns > .k-ok').getBoundingClientRect().bottom <= innerHeight,
+                sb1.querySelector('.k-bug-wrap').scrollWidth + '/' + sb1.querySelector('.k-bug-wrap').clientWidth);
+          // ตัวกรอง
+          const pick = (sel, v) => { const s = sb1.querySelector(sel); s.value = v; s.dispatchEvent(new Event('change', { bubbles: true })); };
+          const optTexts = [...sb1.querySelector('.k-bug-f-status').options].map((o) => o.textContent);
+          check('[170-B] ★ ช่องกรองสถานะ: ทั้งหมด/ยังไม่ปิด/ปิดแล้ว + ทุกสถานะ พร้อมจำนวน',
+                optTexts.length === 10 && optTexts[0] === ttf('ui.bug.fltAll', 5) && optTexts[1] === ttf('ui.bug.fltOpen', 3) && optTexts[2] === ttf('ui.bug.fltClosed', 2)
+                && optTexts.includes(ttf('ui.bug.fltOne', tt('ui.bug.stFixed'), 1)), optTexts.join(' | '));
+          pick('.k-bug-f-status', 'open');
+          check('[170-B] ★★ กรอง "ยังไม่ปิด" = เหลือ 3', numsB() === '9,4,3' && sb1.querySelector('.k-bug-count').textContent === ttf('ui.bug.count', 3, 5), numsB());
+          pick('.k-bug-f-status', 'fixed');
+          check('[170-B] กรองสถานะ "แก้ไขแล้ว" = เหลือ 1', numsB() === '8', numsB());
+          pick('.k-bug-f-status', 'all');
+          const foundOpts = [...sb1.querySelector('.k-bug-f-found').options].map((o) => o.value);
+          check('[170-B] ช่องกรองรุ่นที่พบ: รายชื่อรุ่นจากข้อมูลจริง ใหม่ → เก่า', foundOpts.join() === 'all,alpha.169,alpha.167,alpha.99', foundOpts.join());
+          pick('.k-bug-f-found', 'alpha.99');
+          check('[170-B] ★ กรองรุ่นที่พบ', numsB() === '4', numsB());
+          pick('.k-bug-f-found', 'all');
+          pick('.k-bug-f-fixed', 'none');
+          check('[170-B] กรอง "ยังไม่ระบุรุ่นที่แก้ไข"', numsB() === '9,5,4,3', numsB());
+          pick('.k-bug-f-fixed', 'alpha.168');
+          check('[170-B] กรองรุ่นที่แก้ไข', numsB() === '8', numsB());
+          pick('.k-bug-f-fixed', 'all');
+          const qB = sb1.querySelector('.k-bug-q');
+          typeIn(qB, 'pdf');
+          check('[170-B] ★★ ค้นหาในรายละเอียด (ไม่สนตัวพิมพ์)', numsB() === '8', numsB());
+          typeIn(qB, '#4');
+          check('[170-B] ค้นหาด้วยรหัสบั๊ก', numsB() === '4', numsB());
+          typeIn(qB, 'ไม่มีคำนี้แน่');
+          check('[170-B] ไม่ตรงตัวกรอง = บอกเป็นข้อความ (หัวตารางยังอยู่)',
+                rowsB().length === 0 && sb1.querySelector('.k-bug-msg').textContent === tt('ui.bug.noMatch') && seen(sb1.querySelector('.k-bug-table thead')));
+          pick('.k-bug-f-status', 'open');
+          check('[170-B] ปุ่มล้างตัวกรองกดได้เมื่อมีตัวกรอง', sb1.querySelector('.k-bug-clear').disabled === false);
+          sb1.querySelector('.k-bug-clear').click();
+          check('[170-B] ★ ล้างตัวกรอง = กลับมาครบ + ช่องทุกช่องกลับค่าเดิม + ปุ่มล้างปิด',
+                numsB() === '9,8,5,4,3' && qB.value === '' && sb1.querySelector('.k-bug-f-status').value === 'all' && sb1.querySelector('.k-bug-clear').disabled === true, numsB());
+          // เรียงตามหัวคอลัมน์
+          const thBtn = (k) => sb1.querySelector('.k-bug-th[data-sort="' + k + '"]');
+          thBtn('foundIn').click();
+          check('[170-B] ★ คลิกหัว "พบในรุ่น" = เรียงตามรุ่น (ตัวเลข ไม่ใช่ตัวอักษร) + บอก aria-sort',
+                numsB() === '9,8,4,5,3' && thBtn('foundIn').closest('th').getAttribute('aria-sort') === 'descending' && thBtn('id').closest('th').getAttribute('aria-sort') === 'none', numsB());
+          thBtn('foundIn').click();
+          check('[170-B] คลิกซ้ำ = กลับทิศ', numsB() === '5,3,4,8,9' && thBtn('foundIn').closest('th').getAttribute('aria-sort') === 'ascending', numsB());
+          thBtn('reported').click();
+          check('[170-B] เรียงตามวันที่รายงาน (ใหม่ก่อน)', numsB() === '9,8,5,4,3', numsB());
+          thBtn('id').click();
+          // ลิงก์ของบั๊ก = ประกอบจากเลข
+          rowsB()[0].querySelector('.k-bug-link').click(); await wB(100);
+          check('[170-B] ★ คลิกรหัสบั๊ก = เปิด Issue ตัวนั้นในเบราว์เซอร์', opened[opened.length - 1] === bugUrl(9), opened[opened.length - 1]);
+          sb1.querySelector('.k-bug-web').click(); await wB(100);
+          check('[170-B] ปุ่ม "เปิดบน GitHub" = หน้ารายการ Issue ของรีโป', opened[opened.length - 1] === BUG_LIST_URL);
+          // เปิดซ้ำภายในอายุของรายการ = ไม่ยิงเน็ต · โหลดใหม่ = ยิง
+          sb1.querySelector(':scope > .k-dlg-btns > .k-ok').click();
+          check('[170-B] ปุ่มปิด ปิดกล่องสถานะ', await untilB(() => !stBox(), 2000) === true);
+          const ov2 = openBugStatus(); await ov2.k2ready; await wB(100);
+          check('[170-B] ★ เปิดซ้ำทันที = ใช้รายการที่จำไว้ (ไม่ถาม GitHub อีก)', fetched.length === 1 && numsB() === '9,8,5,4,3', 'fetch=' + fetched.length);
+          fakeRes = { status: 200, ok: true, body: JSON.stringify(ISSUES.concat([mkIssue({ number: 10, title: 'เทส170 ตัวใหม่', labels: [{ name: 'from-app' }] })])) };
+          stBox().querySelector('.k-bug-refresh').click();
+          check('[170-B] ★ ปุ่มโหลดใหม่ = ถาม GitHub แล้วรายการเปลี่ยนตาม', await untilB(() => fetched.length === 2 && numsB() === '10,9,8,5,4,3', 3000) === true, numsB());
+          // รอบล่าสุดล้ม แต่มีรายการเก่า = ยังเห็นรายการ + บอกเหตุ
+          fakeRes = { status: 0, ok: false, netError: true, error: 'ENOTFOUND' };
+          stBox().querySelector('.k-bug-refresh').click();
+          await untilB(() => fetched.length === 3 && stBox().querySelector('.k-bug-stamp').classList.contains('k-bug-stamp-warn'), 3000);
+          check('[170-B] ★★ ต่อเน็ตไม่ได้แต่มีรายการเก่า = รายการยังอยู่ + บอกเหตุและเวลาของรายการที่เห็น',
+                numsB() === '10,9,8,5,4,3' && stBox().querySelector('.k-bug-stamp').textContent.includes(tt('ui.bug.errNet')), stBox().querySelector('.k-bug-stamp').textContent);
+          stBox().closest('.k-overlay').remove();
+          // ไม่มีรายการเก่าเลย + เน็ตล้ม / โควตาเต็ม = ข้อความกลางตาราง
+          clearBugCache();
+          const ov3 = openBugStatus(); await ov3.k2ready; await wB(100);
+          check('[170-B] ★ ไม่มีรายการ + เน็ตล้ม = บอกเหตุกลางตาราง (ไม่ใช่ตารางเปล่า)',
+                rowsB().length === 0 && stBox().querySelector('.k-bug-msg').textContent === tt('ui.bug.errNet') && stBox().querySelector('.k-bug-msg').dataset.kind === 'error');
+          fakeRes = { status: 403, ok: false, body: '{"message":"API rate limit exceeded for 1.2.3.4"}' };
+          stBox().querySelector('.k-bug-refresh').click();
+          check('[170-B] โควตาของ GitHub เต็ม = ข้อความเฉพาะ', await untilB(() => stBox().querySelector('.k-bug-msg').textContent === tt('ui.bug.errRate'), 3000) === true);
+          fakeRes = { status: 200, ok: true, body: '[]' };
+          stBox().querySelector('.k-bug-refresh').click();
+          check('[170-B] ยังไม่มีบั๊กในรีโป = ข้อความสถานะว่าง', await untilB(() => stBox().querySelector('.k-bug-msg').textContent === tt('ui.bug.empty'), 3000) === true);
+          // เดินไปมาระหว่างสองกล่อง
+          stBox().querySelector('.k-bug-go-report').click();
+          const rb4 = await untilB(() => repBox());
+          check('[170-B] จากกล่องสถานะ → กล่องรายงาน', !!rb4 && !stBox());
+          rb4.querySelector('.k-bug-go-status').click();
+          check('[170-B] จากกล่องรายงาน → กล่องสถานะ', await untilB(() => stBox() && !repBox(), 2000) === true);
+          await stBox().closest('.k-overlay').k2ready;
+          document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+
+          // ───────── (ง) เมนูช่วยเหลือ (ของจริง) ─────────
+          if (kapi.menuLabels && kapi.menuTestClick) {
+            const labsB = await kapi.menuLabels();
+            check('[170-B] ★ เมนู ช่วยเหลือ มี รายงานบั๊ก + สถานะบั๊ก (ข้อความจริง ไม่ใช่คีย์)',
+                  [tt('ui.menu.bugReport'), tt('ui.menu.bugStatus')].every((x) => labsB.some((l) => l.endsWith(' > ' + x))) && !labsB.some((l) => /ui\.menu\.bug/.test(l)),
+                  labsB.filter((l) => /bug|บั๊ก/i.test(l)).join(' | '));
+            await kapi.menuTestClick('bug-status');
+            check('[170-B] ★ กดเมนู สถานะบั๊ก = เปิดกล่องสถานะ', await untilB(() => stBox(), 3000) !== null);
+            if (stBox()) await stBox().closest('.k-overlay').k2ready;
+            document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+            await kapi.menuTestClick('bug-report');
+            check('[170-B] กดเมนู รายงานบั๊ก = เปิดกล่องรายงาน', await untilB(() => repBox(), 3000) !== null);
+            document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+          }
+        } finally {
+          restoreIo();
+          clearBugCache(); clearBugSent(); resetBugView();
+          if (draft0 == null) localStorage.removeItem('k2-bug-draft'); else localStorage.setItem('k2-bug-draft', draft0);
+          document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+          document.querySelectorAll('.k-toast').forEach((x) => x.remove());
+        }
       }
 
       // ══ [169-BH] ★★ bug hunt รอบสี่ — พิมพ์ · ส่งออก (RTF/TXT) · นำเข้า Fountain · เปิดไฟล์ด่วน · กล่อง ══

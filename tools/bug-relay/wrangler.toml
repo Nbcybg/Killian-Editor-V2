@@ -1,0 +1,17 @@
+# ตัวกลางรับรายงานบั๊กของ Killian 2 — วิธีติดตั้งอยู่ใน README.md ของโฟลเดอร์นี้
+name = "k2-bug-relay"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+GITHUB_REPO = "Nbcybg/Killian-Editor-V2"
+
+# โทเคนของ GitHub ตั้งเป็น secret (ห้ามเขียนลงไฟล์นี้):
+#   npx wrangler secret put GITHUB_TOKEN
+
+# จำกัดจำนวนครั้งต่อ IP (แนะนำให้เปิด) — 5 รายงานต่อ 60 วินาทีต่อเครื่อง
+# ถ้า wrangler รุ่นที่ใช้ไม่รู้จักบล็อกนี้ ให้ลบออกได้ (ตัว Worker ทำงานได้โดยไม่มี RATE)
+[[ratelimits]]
+name = "RATE"
+namespace_id = "1001"
+simple = { limit = 5, period = 60 }

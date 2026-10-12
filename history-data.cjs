@@ -208,6 +208,10 @@ function initSyncFromHost() {
     const res = api.langSync(want);
     if (!res) return false;
     if (Array.isArray(res.catalog)) setCatalog(res.catalog);
+    try {
+      if (res.code && res.code !== want) globalThis.localStorage?.setItem(LANG_LS_KEY, res.code);
+    } catch {
+    }
     if (res.csv) {
       setTable(csvToTable(res.csv), res.code);
       return true;

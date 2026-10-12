@@ -1,0 +1,10 @@
+{
+  "name": "Manuscript report",
+  "entry": "main.js",
+  "version": "1.1.0",
+  "author": "Killian 2 docs",
+  "description": "Walks every book/chapter/scene of the project and writes a word-count report as a Markdown file — an example of the file API (English / ไทย)",
+  "minAppVersion": "2.0.0-alpha.169",
+  "homepage": "https://github.com/Nbcybg/Killian-Editor-V2/tree/main/docs/extension/examples/manuscript-report",
+  "hotReload": true
+}

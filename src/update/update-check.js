@@ -22,6 +22,10 @@ export const UPDATE_API_URL = `https://api.github.com/repos/${R}/releases?per_pa
 export const UPDATE_MANIFEST_URL = `https://raw.githubusercontent.com/${R}/HEAD/package.json`;
 /** คำนำหน้าของไฟล์แนบที่ยอมดาวน์โหลด — อย่างอื่นปฏิเสธหมด */
 export const UPDATE_ASSET_PREFIX = `https://github.com/${R}/releases/download/`;
+// [alpha.170 · bug report] รายงาน/สถานะบั๊ก = Issues ของรีโปเดียวกัน — ที่อยู่สร้างจากสองค่าเดิม (กฎถาวร alpha.135)
+/** หน้า Issues (ทุกคนเปิดดูได้) · API รายการ Issue ทั้งหมด (ทั้งเปิดและปิด) — การเปิด Issue ทำผ่านตัวกลางของผู้ดูแลเท่านั้น */
+export const UPDATE_ISSUES_URL = `https://github.com/${R}/issues`;
+export const UPDATE_ISSUES_API_URL = `https://api.github.com/repos/${R}/issues?state=all&per_page=100&sort=created&direction=desc`;
 
 // ───────────────────────── เวอร์ชัน ─────────────────────────
 

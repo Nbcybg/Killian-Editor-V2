@@ -238,6 +238,8 @@ export function initSyncFromHost() {
     const res = api.langSync(want);                 // { code, csv, catalog:[{code,file,name,nativeName}] }
     if (!res) return false;
     if (Array.isArray(res.catalog)) setCatalog(res.catalog);
+    // [alpha.170 · ภาษา] main เป็นคนตัดสินภาษา (ไฟล์ตั้งค่าผู้ใช้ก่อน — `want` เป็นแค่ตัวสำรอง) → จดผลกลับให้ตรงกัน
+    try { if (res.code && res.code !== want) globalThis.localStorage?.setItem(LANG_LS_KEY, res.code); } catch {}
     if (res.csv) { setTable(csvToTable(res.csv), res.code); return true; }
   } catch {}
   return false;

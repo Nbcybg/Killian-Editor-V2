@@ -1,0 +1,10 @@
+{
+  "name": "Word count on save",
+  "entry": "main.js",
+  "version": "1.1.0",
+  "author": "Killian 2 docs",
+  "description": "Reports the word count every time you save, with a summary panel, a command and a shortcut (English / ไทย)",
+  "minAppVersion": "2.0.0-alpha.169",
+  "homepage": "https://github.com/Nbcybg/Killian-Editor-V2/tree/main/docs/extension/examples/word-count-on-save",
+  "hotReload": true
+}

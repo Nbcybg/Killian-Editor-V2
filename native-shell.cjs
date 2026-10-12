@@ -116,5 +116,27 @@ function progressValue(v) {
   return Math.min(1, n);
 }
 
+/**
+ * [alpha.170 · ภาษา] ภาษาที่โปรแกรมต้องใช้ตอนเปิด — **ตัวตัดสินตัวเดียว** ของทั้งเมนูระบบ (main) และหน้าจอ (renderer)
+ *
+ * ที่มา: "ภาษาที่เลือก" เคยถูกจำไว้สี่ที่ (ไฟล์ตั้งค่าผู้ใช้ · ไฟล์ผลงาน · lang.txt · localStorage) โดยแต่ละทางเขียน
+ * ไม่ครบทุกที่ และแต่ละฝั่งอ่านคนละที่ → เปลี่ยน ฝรั่งเศส → อังกฤษ แล้วเปิดใหม่ = หน้าจออังกฤษ เมนูระบบฝรั่งเศส
+ * (และสลับกันไปมาทุกครั้งที่เปิด)
+ *
+ *   picked=true  (ผู้ใช้เลือกผ่านทางใหม่แล้ว — ไฟล์ตั้งค่าผู้ใช้คือความจริง):  settings → want → last
+ *   picked=false (ไฟล์ของรุ่นก่อน — ค่าในไฟล์ผู้ใช้เชื่อไม่ได้ มักค้างค่าเก่า):   project → want → settings → last
+ *     project = ภาษาในไฟล์ผลงานที่เปิดล่าสุด (รุ่นก่อน "ไฟล์ผลงานชนะ" = สิ่งที่ผู้ใช้เห็นครั้งสุดท้าย)
+ *     want    = ที่หน้าจอจำไว้ (localStorage) · last = lang.txt
+ * ค่าที่ไม่มีไฟล์ภาษาในเครื่อง = ข้าม · ไม่เหลือเลย = ไทย → ตัวแรกที่มี
+ * @param {{picked?:boolean, settings?:string, project?:string, want?:string, last?:string, codes?:string[]}} o
+ */
+function pickLang(o = {}) {
+  const codes = Array.isArray(o.codes) ? o.codes : [];
+  const ok = (c) => { const s = String(c || '').trim(); return s && codes.includes(s) ? s : ''; };
+  const order = o.picked ? [o.settings, o.want, o.last] : [o.project, o.want, o.settings, o.last];
+  for (const c of order) { const s = ok(c); if (s) return s; }
+  return ok('th') || codes[0] || '';
+}
+
 module.exports = { TITLEBAR_H, TRAFFIC_LIGHT, PROJECT_FILE, isHex, themeMode, cssVarHex, captionColors,
-  windowChrome, projectFromArgv, jumpTasks, progressValue };
+  windowChrome, projectFromArgv, jumpTasks, progressValue, pickLang };

@@ -1,0 +1,10 @@
+{
+  "name": "Focus timer",
+  "entry": "main.js",
+  "version": "1.1.0",
+  "author": "Killian 2 docs",
+  "description": "Counts down a writing round with a small floating badge — an example of cleaning up what a plugin creates itself (hotReload) (English / ไทย)",
+  "minAppVersion": "2.0.0-alpha.169",
+  "homepage": "https://github.com/Nbcybg/Killian-Editor-V2/tree/main/docs/extension/examples/focus-timer",
+  "hotReload": true
+}

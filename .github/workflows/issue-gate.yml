@@ -1,0 +1,33 @@
+# ปิด Issue ที่คนนอกเปิดเองบนเว็บ — รายงานบั๊กรับจากในโปรแกรม (ผ่านตัวกลาง tools/bug-relay) หรืออีเมลถึงผู้ดูแลเท่านั้น
+# Issue ที่ผู้ดูแล/ตัวกลางเปิด (author_association = OWNER/MEMBER/COLLABORATOR) ไม่ถูกแตะ
+# ไม่มีข้อความจากผู้ใช้ถูกนำไปรันเป็นคำสั่ง — สคริปต์อ่านแค่เลข Issue จาก payload
+name: issue-gate
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  issues: write
+
+jobs:
+  gate:
+    if: ${{ !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const base = { owner: context.repo.owner, repo: context.repo.repo, issue_number: context.payload.issue.number };
+            const body = [
+              'ขอบคุณที่แจ้งเข้ามา — รายงานบั๊กของ Killian 2 รับจากในโปรแกรมเท่านั้น',
+              'เปิดโปรแกรมแล้วกดปุ่มรายงานบั๊กท้ายแถบสถานะ หรือเมนู ช่วยเหลือ → รายงานบั๊ก แล้วกด "ส่งรายงาน" (รุ่นของโปรแกรมจะถูกแนบให้อัตโนมัติ)',
+              '',
+              'Thanks for reaching out — bug reports for Killian 2 are accepted from inside the app only.',
+              'Open the app and use the bug button at the end of the status bar, or Help → Report a bug, then choose Send report (the app version is attached for you).',
+              'This issue was closed automatically.',
+            ].join('\n');
+            await github.rest.issues.createComment({ ...base, body });
+            await github.rest.issues.addLabels({ ...base, labels: ['invalid'] });
+            await github.rest.issues.update({ ...base, state: 'closed', state_reason: 'not_planned' });
+            await github.rest.issues.lock({ ...base });

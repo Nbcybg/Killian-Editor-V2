@@ -626,6 +626,10 @@ function buildMenu() {
       { label: tt('ui.menu.openRepo'), click: () => { try { shell.openExternal(UPD.UPDATE_HOME_URL); } catch {} } },
       { label: tt('ui.menu.openReleases'), click: () => { try { shell.openExternal(UPD.UPDATE_RELEASES_URL); } catch {} } },
       { type: 'separator' },
+      // [alpha.170] รายงานบั๊ก / สถานะบั๊ก (Issues ของรีโปเดียวกัน) — ทางเดียวกับปุ่มท้ายแถบสถานะและกล่อง "เกี่ยวกับ"
+      { id: 'bug-report', label: tt('ui.menu.bugReport'), click: cmd('bug-report') },
+      { id: 'bug-status', label: tt('ui.menu.bugStatus'), click: cmd('bug-status') },
+      { type: 'separator' },
       // [alpha.162 · W4] ของนักพัฒนาแยกเป็นเมนูย่อย — ผู้ใช้ทั่วไปไม่ต้องเจอ DevTools ปนกับ "เกี่ยวกับ"
       { label: tt('ui.menu.developer'), submenu: [
         { label: tt('ui.menu.saveRunAppLog'), click: cmd('show-log') },
@@ -2435,8 +2439,10 @@ H('log:readDay', (day, maxLines) => {
 H('log:dir', () => { try { return logDir(); } catch { return ''; } });
 H('log:openDir', () => { try { require('electron').shell.openPath(logDir()); return true; } catch { return false; } });
 // เปิดลิงก์ในเบราว์เซอร์ของเครื่อง (กล่อง "เกี่ยวกับ" ใช้ลิงก์เครดิต) — จำกัดเฉพาะ http/https
+// [alpha.170] รายงานบั๊กทางอีเมล: ยอม `mailto:<ที่อยู่>?subject=…` รูปเดียว (ที่อยู่เดียว · มีแค่หัวเรื่อง · ไม่มี cc/bcc/body/ไฟล์แนบ)
+const MAILTO_OK = /^mailto:[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}(\?subject=[A-Za-z0-9%._~!*'()-]{0,1900})?$/;
 H('shell:openExternal', (url) => {
-  try { if (/^https?:\/\//i.test(String(url))) { shell.openExternal(String(url)); return true; } } catch {}
+  try { if (/^https?:\/\//i.test(String(url)) || MAILTO_OK.test(String(url))) { shell.openExternal(String(url)); return true; } } catch {}
   return false;
 });
 
@@ -2517,22 +2523,55 @@ function langRead(code, root) {
 }
 // จำภาษาที่เลือกไว้ในไฟล์ — main ต้องรู้ก่อนสร้างเมนู OS ซึ่งเกิดก่อน renderer จะบอกได้
 function langPrefFile() { try { return path.join(app.getPath('userData'), 'lang.txt'); } catch { return ''; } }
-function lastLangCode() {
-  try { const c = fs.readFileSync(langPrefFile(), 'utf-8').trim(); if (c) return c; } catch {}
-  // [alpha.164 · รอบต่อ 2] ยังไม่มีไฟล์จำภาษา (userData ใหม่/ย้ายเครื่องมาแค่ settings.json) → ดูภาษาในตั้งค่าผู้ใช้
-  // ก่อนตกเป็นไทย · ไม่งั้นค่าคงที่ระดับโมดูลทุกตัวถูกแปลเป็นไทยตอน import แล้วค้างจนเปิดโปรแกรมใหม่
-  try { const g = JSON.parse(fs.readFileSync(globalSettingsPath(), 'utf-8')); if (g && g.language) return String(g.language); } catch {}
-  return 'th';
+function lastLangFile() { try { return fs.readFileSync(langPrefFile(), 'utf-8').trim(); } catch { return ''; } }
+/**
+ * [alpha.170 · ภาษา] ★ ภาษาตอนเปิดโปรแกรม — ทางเดียวที่ทั้งเมนูระบบและหน้าจอถาม (ตรรกะ: NS.pickLang · unit `native-shell`)
+ *
+ * เดิม main อ่าน lang.txt · renderer อ่าน localStorage แล้วค่อยถูกไฟล์ตั้งค่าผู้ใช้ทับ แล้วถูกไฟล์ผลงานทับอีกชั้น
+ * และกล่องตั้งค่าเขียน "ภาษาใหม่" ลงไฟล์ผลงานอย่างเดียวเมื่อมีผลงานเปิดอยู่ (ไฟล์ผู้ใช้ค้างค่าเก่า)
+ * → เปลี่ยน ฝรั่งเศส → อังกฤษ แล้วเปิดใหม่: หน้าจออังกฤษ แต่เมนูระบบฝรั่งเศสทั้งเมนู สลับไปมาทุกครั้งที่เปิด
+ *
+ * ตอนนี้ความจริงอยู่ที่ไฟล์ตั้งค่าผู้ใช้ (`language` + ธง `languagePicked` ที่ setAppLanguage/bootSequence เขียน)
+ * ไฟล์ที่ยังไม่มีธง = ของรุ่นก่อน → เชื่อภาษาในไฟล์ผลงานที่เปิดล่าสุดก่อน (สิ่งที่ผู้ใช้เห็นครั้งสุดท้าย) แล้ว renderer ปักธงให้
+ * @param {string} [want] ที่หน้าจอจำไว้ (localStorage) · @param {string[]} [codes] รหัสภาษาที่มีไฟล์ในเครื่อง
+ */
+function bootLangCode(want, codes) {
+  let g = {};
+  try { g = JSON.parse(fs.readFileSync(globalSettingsPath(), 'utf-8')) || {}; } catch {}
+  const picked = g.languagePicked === true && !!g.language;
+  let project = '';
+  if (!picked) {
+    try {
+      const last = readRecent()[0];
+      const meta = last ? JSON.parse(fs.readFileSync(path.join(String(last), NS.PROJECT_FILE), 'utf-8')) : null;
+      project = String((meta && meta.settings && meta.settings.language) || '');
+    } catch {}
+  }
+  return NS.pickLang({ picked, settings: g.language, project, want, last: lastLangFile(),
+                       codes: codes || langScan('').map((c) => c.code) });
 }
 function saveLangCode(code) {
   try {
-    if (!code || code === lastLangCode()) return;
+    if (!code || code === lastLangFile()) return;
     fs.mkdirSync(path.dirname(langPrefFile()), { recursive: true });
     fs.writeFileSync(langPrefFile(), String(code), 'utf-8');
   } catch {}
 }
-/** renderer เปลี่ยนภาษา → main โหลดตารางใหม่แล้วสร้างเมนู OS ใหม่ (ไม่งั้นเมนูค้างภาษาเดิม) */
-H('lang:set', (code) => { clearLangCache(); saveLangCode(code); loadLangTable(code); buildMenu(); return true; });
+/**
+ * [alpha.170 · ภาษา] ภาษาของฝั่ง main (ตารางคำแปล + เมนูระบบ) := code — โหลดตาราง/สร้างเมนูใหม่เฉพาะเมื่อเปลี่ยนจริง
+ * (renderer เรียกทุกครั้งที่โหลดภาษา · ตอนบูตทุกหน้าต่างเรียกผ่าน lang:sync)
+ */
+function setMainLang(code) {
+  const c = String(code || '').trim();
+  if (!c) return false;
+  saveLangCode(c);
+  if (c === LANG_CODE) return false;
+  if (!loadLangTable(c)) return false;
+  try { buildMenu(); } catch {}
+  return true;
+}
+/** renderer โหลดภาษา (ทุกทาง — loadLanguage ใน core.js) → เมนู OS ต้องเป็นภาษาเดียวกับหน้าจอเสมอ */
+H('lang:set', (code) => { setMainLang(code); return true; });
 H('lang:list', (root) => langScan(root).map(({ code, file, name, nativeName }) => ({ code, file, name, nativeName })));
 H('lang:read', (code, root) => langRead(code, root));
 // "โหลดไฟล์ภาษาใหม่" — ผู้ใช้เพิ่งแก้ CSV นอกโปรแกรม ต้องทิ้งแคชก่อนอ่านซ้ำ
@@ -2544,9 +2583,9 @@ ipcMain.on('app:versionSync', (e) => { try { e.returnValue = app.getVersion(); }
 ipcMain.on('lang:sync', (e, want) => {
   try {
     const catalog = langScan('').map(({ code, file, name, nativeName }) => ({ code, file, name, nativeName }));
-    let code = String(want || '').trim() || lastLangCode();
-    if (!code || !catalog.some((c) => c.code === code)) code = catalog.some((c) => c.code === 'th') ? 'th' : (catalog[0]?.code || '');
-    saveLangCode(code);
+    // [alpha.170 · ภาษา] ตัวตัดสินเดียวกับตอน main สร้างเมนู (ไฟล์ตั้งค่าผู้ใช้ก่อน — `want` จาก localStorage เป็นแค่ตัวสำรอง)
+    const code = bootLangCode(String(want || '').trim(), catalog.map((c) => c.code));
+    setMainLang(code);                                 // เมนูระบบ = ภาษาเดียวกับที่หน้าจอกำลังจะใช้
     e.returnValue = { code, csv: code ? langRead(code, '') : '', catalog };
   } catch { e.returnValue = { code: '', csv: '', catalog: [] }; }
 });
@@ -2682,7 +2721,7 @@ if (SINGLE) app.whenReady().then(() => {
   logMain('info', 'start v' + app.getVersion() + ' · electron ' + process.versions.electron + ' · ' + process.platform + ' ' + process.arch
           + (app.isPackaged ? ' · packaged' : ' · dev') + (TEST ? ' · test' : ''));
   // โหลดตารางคำแปลก่อนสร้างหน้าต่าง/เมนู — เมนู OS ถูกสร้างครั้งเดียวตอนเปิด
-  try { loadLangTable(lastLangCode()); } catch {}
+  try { loadLangTable(bootLangCode('')); } catch {}
   // [alpha.169 · native] ตัวตนของโปรแกรมบนแถบงาน (จัดกลุ่มหน้าต่าง · การแจ้งเตือน · รายการคลิกขวาที่ไอคอน)
   try { nativeTheme.themeSource = CHROME_COLORS.mode; } catch {}
   try { if (process.platform === 'win32') app.setAppUserModelId('com.killian2.app'); } catch {}

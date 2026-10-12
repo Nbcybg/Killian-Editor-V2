@@ -144,11 +144,14 @@ const useLang = (code) => {
 {
   const app = fs.readFileSync(path.join(__dirname, '..', 'src', 'app.js'), 'utf8');
   check('★ บูตไม่เรียก loadLanguage(DEFAULT_SETTINGS.language) ตรง ๆ', !/loadLanguage\(DEFAULT_SETTINGS\.language\)/.test(app));
-  check('bootSequence โหลดภาษาของตั้งค่าผู้ใช้ก่อนหน้าแรก',
-        /g\.language && g\.language !== i18n\.lang/.test(app));
+  // [alpha.170 · ภาษา] กลไกเปลี่ยน เจตนาเดิม: ภาษาของตั้งค่าผู้ใช้ต้องมาถึง **ก่อน** หน้าแรก —
+  // ตอนนี้ main ตัดสินจากไฟล์ตั้งค่าผู้ใช้ตั้งแต่ตัวโหลดแบบ sync (bootLangCode) · bootSequence ไม่โหลดซ้ำ
+  // (รายละเอียดของลำดับอยู่ที่ unit `lang-pref`)
   const main = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
-  const fn = main.slice(main.indexOf('function lastLangCode'), main.indexOf('function saveLangCode'));
-  check('lastLangCode ดูภาษาในตั้งค่าผู้ใช้ก่อนตกเป็นไทย', /globalSettingsPath\(\)/.test(fn));
+  check('ภาษาของตั้งค่าผู้ใช้มาถึงก่อนหน้าแรก (ตัวโหลดแบบ sync ถาม bootLangCode)',
+        /ipcMain\.on\('lang:sync'[\s\S]{0,700}bootLangCode\(/.test(main));
+  const fn = main.slice(main.indexOf('function bootLangCode'), main.indexOf('function saveLangCode'));
+  check('bootLangCode ดูภาษาในตั้งค่าผู้ใช้ก่อนตกเป็นไทย', /globalSettingsPath\(\)/.test(fn) && /settings: g\.language/.test(fn));
 }
 
 console.log(`en-ui-round2: ${pass} passed, ${fail} failed`);

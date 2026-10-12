@@ -11,6 +11,8 @@ ui.a11y.msUnit,{0} วินาที
 ui.a11y.oskFail,เปิดแป้นพิมพ์บนจอของระบบไม่ได้ — เครื่องนี้ไม่มีโปรแกรมแป้นพิมพ์บนจอที่รู้จัก
 ui.a11y.oskOpened,เปิดแป้นพิมพ์บนจอของระบบแล้ว
 ui.a11y.oskSettings,เปิดแป้นพิมพ์บนจอตรง ๆ ไม่ได้ — เปิดหน้าตั้งค่าแป้นพิมพ์ของระบบให้แทน เปิดสวิตช์แป้นพิมพ์บนจอที่นั่น
+ui.about.bugReport,รายงานบั๊ก
+ui.about.bugStatus,สถานะบั๊ก
 ui.about.changelog,มีอะไรใหม่
 ui.about.checkUpdate,ตรวจรุ่นใหม่
 ui.about.credits,เครดิต
@@ -2353,6 +2355,73 @@ ui.branch.warnOpen,ทางเลือกยังไม่ระบุปล�
 ui.branch.zoomFit,พอดีจอ
 ui.branch.zoomIn,ขยายผัง
 ui.branch.zoomOut,ย่อผัง
+ui.bug.btnCopy,คัดลอกรายงาน
+ui.bug.btnSend,ส่งรายงาน
+ui.bug.btnStatus,ดูสถานะบั๊ก
+ui.bug.clear,ล้างตัวกรอง
+ui.bug.colFixed,แก้ไขในรุ่น
+ui.bug.colFound,พบในรุ่น
+ui.bug.colId,รหัสบั๊ก
+ui.bug.colReported,วันที่รายงาน
+ui.bug.colStatus,สถานะ
+ui.bug.colTitle,รายละเอียด
+ui.bug.contactLine,ถ้าส่งจากโปรแกรมไม่ได้ ให้คัดลอกรายงานแล้วส่งทาง
+ui.bug.contactMailed,คัดลอกรายงานแล้ว วางลงในเนื้ออีเมลที่เปิดขึ้น ถ้าไม่มีหน้าต่างอีเมลเปิดขึ้น ให้ส่งอีเมลถึง {0} เอง
+ui.bug.contactMailTip,คัดลอกรายงาน แล้วเปิดอีเมลใหม่ถึงที่อยู่นี้
+ui.bug.copied,คัดลอกรายงานแล้ว นำไปวางส่งทางช่องทางที่กำหนดได้เลย
+ui.bug.copyFail,คัดลอกรายงานไม่ได้
+ui.bug.count,แสดง {0} จาก {1} รายการ
+ui.bug.empty,ยังไม่มีบั๊กที่ถูกรายงาน
+ui.bug.envHead,สภาพแวดล้อม
+ui.bug.envNote,บรรทัดนี้แนบไปกับรายงานให้อัตโนมัติ ไม่มีชื่อไฟล์หรือเนื้อหาของผลงาน
+ui.bug.errHttp,GitHub ตอบกลับด้วยข้อผิดพลาด {0}
+ui.bug.errNet,ติดต่อ GitHub ไม่ได้ ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่
+ui.bug.errParse,อ่านรายการที่ GitHub ส่งมาไม่ได้
+ui.bug.errRate,GitHub จำกัดจำนวนครั้งที่ถามได้ชั่วคราว ลองใหม่ภายหลัง หรือเปิดดูบน GitHub
+ui.bug.fExpected,ที่ควรจะเป็น
+ui.bug.fExpectedPh,สิ่งที่คาดว่าจะเกิดขึ้นแทน (ไม่บังคับ)
+ui.bug.fltAll,ทุกสถานะ ({0})
+ui.bug.fltClosed,ปิดแล้ว ({0})
+ui.bug.fltFixedAll,แก้ไขในทุกรุ่น
+ui.bug.fltFixedNone,ยังไม่ระบุรุ่นที่แก้ไข
+ui.bug.fltFoundAll,พบในทุกรุ่น
+ui.bug.fltOne,{0} ({1})
+ui.bug.fltOpen,ยังไม่ปิด ({0})
+ui.bug.fSteps,ขั้นตอนทำซ้ำ
+ui.bug.fStepsPh,1. เปิด…  2. กด…  3. เห็นว่า…
+ui.bug.fTitle,หัวข้อ
+ui.bug.fTitlePh,สรุปปัญหาในบรรทัดเดียว
+ui.bug.fWhat,เกิดอะไรขึ้น
+ui.bug.fWhatPh,อธิบายสิ่งที่เห็น เช่น ข้อความผิดพลาด หรือสิ่งที่หายไป
+ui.bug.loading,กำลังโหลดรายการบั๊ก…
+ui.bug.needTitle,กรอกหัวข้อของปัญหาก่อน
+ui.bug.noMatch,ไม่มีบั๊กที่ตรงกับตัวกรอง
+ui.bug.openFail,เปิดเบราว์เซอร์ไม่ได้
+ui.bug.openWeb,เปิดบน GitHub
+ui.bug.refresh,โหลดใหม่
+ui.bug.reportIntro,รายงานถูกส่งจากโปรแกรมโดยตรง แล้วขึ้นในรายการบั๊กที่ทุกคนเปิดอ่านได้ — อย่าใส่ข้อมูลส่วนตัวหรือเนื้อเรื่องที่ยังไม่เผยแพร่
+ui.bug.reportTitle,รายงานบั๊ก
+ui.bug.rowTip,เปิดบั๊ก {0} ในเบราว์เซอร์
+ui.bug.searchPh,ค้นหารหัสบั๊ก รายละเอียด หรือรุ่น
+ui.bug.sendClock,ส่งรายงานไม่ได้เพราะวันเวลาของเครื่องไม่ตรง ตั้งวันเวลาของเครื่องให้ถูกแล้วลองใหม่ ข้อความที่พิมพ์ไว้ยังอยู่
+ui.bug.sendFail,ปลายทางรับรายงานตอบกลับด้วยข้อผิดพลาด {0} ข้อความที่พิมพ์ไว้ยังอยู่ ลองใหม่ภายหลังหรือคัดลอกรายงานส่งทางอื่น
+ui.bug.sending,กำลังส่ง…
+ui.bug.sendNet,ส่งรายงานไม่ได้ ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่ ข้อความที่พิมพ์ไว้ยังอยู่
+ui.bug.sendOff,รุ่นนี้ยังไม่ได้เปิดการส่งรายงานจากโปรแกรม ให้คัดลอกรายงานแล้วส่งทางช่องทางที่ผู้พัฒนากำหนด
+ui.bug.sendRate,ส่งรายงานถี่เกินไป รอสักครู่แล้วลองใหม่
+ui.bug.sentOk,ส่งรายงานแล้ว เป็นบั๊ก {0}
+ui.bug.sortTip,เรียงตามคอลัมน์นี้
+ui.bug.source,ที่มา: GitHub Issues ของโปรแกรม
+ui.bug.stale,(รายการที่เห็นโหลดไว้เมื่อ {0})
+ui.bug.statusTitle,สถานะบั๊ก
+ui.bug.stConfirmed,ยืนยันแล้ว
+ui.bug.stDuplicate,ซ้ำกับรายการอื่น
+ui.bug.stFixed,แก้ไขแล้ว
+ui.bug.stNeedInfo,ขอข้อมูลเพิ่ม
+ui.bug.stNew,รอตรวจสอบ
+ui.bug.stProgress,กำลังแก้ไข
+ui.bug.stWontfix,ไม่แก้ไข
+ui.bug.updated,อัปเดตล่าสุด {0}
 ui.central.allCurrent,ทุกอย่างเป็นปัจจุบัน
 ui.central.backlinksSceneToWiki,Backlinks (ฉากที่อ้างถึง Wiki นี้)
 ui.central.busyNewIndexLink,กำลังสร้างดัชนีเชื่อมโยง…
@@ -4588,6 +4657,8 @@ ui.menu.backVersionLatestRevert,กลับไปเวอร์ชันล่
 ui.menu.blockCode,บล็อกโค้ด
 ui.menu.boardMoodMoodBoard,กระดานอารมณ์ (Mood Board) — เปิดเป็นแผงข้าง ๆ แล้วลากรูปมาวางได้
 ui.menu.btnFloatCornerRight,ปุ่มลอยมุมขวาล่าง (FAB)
+ui.menu.bugReport,รายงานบั๊ก…
+ui.menu.bugStatus,สถานะบั๊ก…
 ui.menu.cancelSplitPageScreen,ยกเลิกแยกหน้าจอ
 ui.menu.caseBigSmall,ตัวพิมพ์ใหญ่/เล็ก (ให้อิสระ)
 ui.menu.centerK,กึ่งกลาง
@@ -6038,6 +6109,7 @@ ui.roster.showHeadingScene,แสดงหัวข้อ Scene
 ui.roster.showHeadingTime,แสดงหัวข้อ Time
 ui.sb.autoFit,ซูมพอดีความกว้างอัตโนมัติ
 ui.sb.autosave,บันทึกอัตโนมัติ
+ui.sb.bugReport,รายงานบั๊ก
 ui.sb.home,หน้าแรก
 ui.sb.lineNumbers,เลขบรรทัด
 ui.sb.mdCodes,แสดงรหัสมาร์กดาวน์
@@ -7412,6 +7484,8 @@ ui.tip.blockStyle,เปลี่ยนทั้งย่อหน้าเป�
 ui.tip.books,จัดการเล่มและฉบับร่าง ตั้งปก คำโปรย สถานะ และลากสลับลำดับเล่ม
 ui.tip.branch-sync,อ่านทางเลือกที่เขียนไว้ในฉากนี้ด้วยวงเล็บเหลี่ยม [ข้อความ] แล้วสร้างเป็นเส้นทางในผังแตกสาย
 ui.tip.branching,เปิดผังเรื่องแตกสาย ดูว่าแต่ละฉากมีทางเลือกพาไปฉากไหน เหมาะกับนิยายภาพหรือเกมเนื้อเรื่อง
+ui.tip.bug-report,เขียนรายงานปัญหาที่เจอ แล้วส่งตรงจากโปรแกรมให้ผู้พัฒนา
+ui.tip.bug-status,ดูรายการบั๊กที่ถูกรายงาน สถานะ รุ่นที่พบ และรุ่นที่แก้ไข พร้อมตัวกรอง
 ui.tip.changelog,ดูว่าแต่ละรุ่นของโปรแกรมเพิ่มหรือแก้อะไรไปบ้าง
 ui.tip.chapter,สร้างบทใหม่ในเล่มที่เลือก แล้วเปิดให้เริ่มเขียนทันที บทคือกล่องที่รวมหลายฉากไว้ด้วยกัน
 ui.tip.chapters,เปิดแผงจัดการบท ตั้งปกบท ลำดับบท และดูสถิติของทุกบทในเล่ม

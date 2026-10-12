@@ -6,6 +6,8 @@
 // ตาราง STATUS_TOGGLES = แหล่งเดียวของสวิตช์ที่โชว์ (ลำดับ = ลำดับบนแถบ)
 //   · `cmd`   คำสั่งใน handleCommand ที่สลับค่านั้นจริง (ทางเดียวกับเมนู/คีย์ลัด — กฎ "สวิตช์หลายทางเข้า")
 //             ไม่มีคำสั่งสลับ (ตั้งได้ในกล่องตั้งค่าเท่านั้น) = คลิกแล้วเปิดตั้งค่า
+//   · `focus` [alpha.170] ช่องในกล่องตั้งค่าของสวิตช์ที่ไม่มี `cmd` — กล่องเปิดหน้าที่ช่องนั้นอยู่แล้วโฟกัสให้
+//             (เดิมเปิดกล่องเฉย ๆ = ได้หน้าที่ค้างไว้ล่าสุด ซึ่งมักไม่ใช่หน้าของสวิตช์ที่กด) · unit `settings-tpl` ตรวจว่าช่องมีจริง
 //   · `on()`  อ่านสภาพจริงตอนนี้ (อ่านอย่างเดียว ไม่แคช)
 // ปุ่มถูกวาดครั้งเดียว · `syncStatusToggles()` แค่สลับคลาส/aria/ทูลทิป (ถูกเรียกบ่อยได้ — ไม่แตะเลย์เอาต์)
 import { state, el, t, tf } from './core.js';
@@ -13,8 +15,8 @@ import { icon } from './icons.js';
 import { isTypewriter } from './typewriter.js';
 
 export const STATUS_TOGGLES = [
-  { id: 'autosave',     label: 'ui.sb.autosave',    icon: 'save',    on: () => (Number(state.settings.autoSaveMinutes) || 0) > 0 },
-  { id: 'spell',        label: 'ui.sb.spell',       icon: 'check',   on: () => state.settings.spellCheckDict !== false },
+  { id: 'autosave',     label: 'ui.sb.autosave',    icon: 'save',    focus: '#st-auto', on: () => (Number(state.settings.autoSaveMinutes) || 0) > 0 },
+  { id: 'spell',        label: 'ui.sb.spell',       icon: 'check',   focus: '#st-spelldict', on: () => state.settings.spellCheckDict !== false },
   { id: 'line-numbers', label: 'ui.sb.lineNumbers', icon: 'list-ol', cmd: 'line-numbers', on: () => !!state.settings.lineNumbers },
   { id: 'typewriter',   label: 'ui.sb.typewriter',  icon: 'edit',    cmd: 'typewriter', on: () => !!isTypewriter() },
   { id: 'auto-fit',     label: 'ui.sb.autoFit',     icon: 'expand',  cmd: 'auto-fit-width', on: () => !!state.settings.autoFitWidth },
@@ -36,7 +38,7 @@ export function installStatusToggles(run) {
     b.append(icon(d.icon, 13));
     b.onclick = () => {
       if (!_run) return;
-      _run(d.cmd || 'settings');
+      if (d.cmd) _run(d.cmd); else _run('settings', null, d.focus);
       // คำสั่งบางตัวเปลี่ยนค่าแบบ async (บันทึกไฟล์ตั้งค่า) — อ่านสภาพใหม่อีกครั้งหลังจากนั้น
       setTimeout(syncStatusToggles, 50); setTimeout(syncStatusToggles, 400);
     };

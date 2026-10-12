@@ -318,6 +318,10 @@
       const res = api.langSync(want);
       if (!res) return false;
       if (Array.isArray(res.catalog)) setCatalog(res.catalog);
+      try {
+        if (res.code && res.code !== want) globalThis.localStorage?.setItem(LANG_LS_KEY, res.code);
+      } catch {
+      }
       if (res.csv) {
         setTable(csvToTable(res.csv), res.code);
         return true;
@@ -14078,12 +14082,12 @@
         const seg = parseInline3(String(text == null ? "" : text))[0];
         if (!seg) return "";
         const out = [];
-        const has3 = (n2) => (seg.marks || []).some((m) => (typeof m === "string" ? m : m.type) === n2);
+        const has4 = (n2) => (seg.marks || []).some((m) => (typeof m === "string" ? m : m.type) === n2);
         const col = (seg.marks || []).find((m) => m && typeof m === "object" && m.type === "color");
         const c = col ? normColor6((col.attrs || {}).color) : "";
         if (c) out.push("--k-mk-color:" + c);
-        if (has3("strong")) out.push("--k-mk-weight:700");
-        if (has3("em")) out.push("--k-mk-style:italic");
+        if (has4("strong")) out.push("--k-mk-weight:700");
+        if (has4("em")) out.push("--k-mk-style:italic");
         return out.join(";");
       }
       var HTML_ESC = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -14103,8 +14107,8 @@
           let s = seg.image ? `<img class="k-inline-img" alt="${ATTR_Q(HTML_ESC(seg.image.alt))}" src="${ATTR_Q(HTML_ESC(imgSrc(seg.image.src)))}" style="--k-img-h:${seg.image.h}">` : HTML_ESC(seg.text);
           if (!s) return "";
           const marks2 = seg.marks || [];
-          const has3 = (n2) => marks2.some((m) => (typeof m === "string" ? m : m.type) === n2);
-          for (const [name5, tag3] of MARK_TAGS) if (has3(name5)) s = `<${tag3}>${s}</${tag3}>`;
+          const has4 = (n2) => marks2.some((m) => (typeof m === "string" ? m : m.type) === n2);
+          for (const [name5, tag3] of MARK_TAGS) if (has4(name5)) s = `<${tag3}>${s}</${tag3}>`;
           const col = marks2.find((m) => m && typeof m === "object" && m.type === "color");
           const hex2 = col ? normColor6((col.attrs || {}).color) : "";
           if (hex2 && !mono) s = `<span style="color:${hex2}">${s}</span>`;
@@ -16247,8 +16251,8 @@
   function migrateSpThai(list3, spThai) {
     const rows = normalizeLangFonts(list3);
     if (!spThai || typeof spThai !== "object") return { rows, moved: false };
-    const has3 = rows.some((r) => rowAppliesTo(r, "screenplay") && normalizeRange(r.range) === SP_THAI_RANGE);
-    if (has3) return { rows, moved: false };
+    const has4 = rows.some((r) => rowAppliesTo(r, "screenplay") && normalizeRange(r.range) === SP_THAI_RANGE);
+    if (has4) return { rows, moved: false };
     const fam = cssFamilyName(spThai.family);
     rows.unshift(normalizeLangFonts([{
       id: "sp-thai",
@@ -16899,11 +16903,11 @@
     function setBreaks(next, view2) {
       use(view2);
       if (S10 !== detached) cur = S10;
-      const clean3 = (next || []).filter((b) => b && Number.isFinite(b.pos) && b.pos > 0);
-      const s = sigOf(clean3);
+      const clean4 = (next || []).filter((b) => b && Number.isFinite(b.pos) && b.pos > 0);
+      const s = sigOf(clean4);
       if (s === S10.sig) return false;
       S10.sig = s;
-      S10.list = clean3;
+      S10.list = clean4;
       return true;
     }
     function mapBreaks(I, mapping) {
@@ -17080,6 +17084,8 @@
         "briefcase": { "attrs": { "viewBox": "-167 -1805 2381 2381" }, "inner": '<path transform="scale(1,-1)" d="M1846 1178Q1933 1178 1990 1116Q2048 1052 2048 972L2048 -152Q2048 -233 1990 -298Q1933 -360 1846 -360L202 -360Q114 -360 58 -298Q0 -235 0 -152L0 972Q0 1054 58 1116Q114 1178 202 1178L616 1178L616 1386Q616 1472 672 1530Q730 1588 818 1588L1230 1588Q1316 1588 1374 1530Q1432 1472 1432 1386L1432 1178ZM202 972L202 -152L1846 -152L1846 972ZM1230 1178L1230 1386L818 1386L818 1178Z"/>' },
         "broom": { "attrs": { "viewBox": "-167 -1805 2381 2381" }, "inner": '<path transform="scale(1,-1)" d="M1892 1638L2048 1482L1412 846Q1501 715 1512 575Q1522 435 1448 336L746 1039Q844 1112 986 1102Q1126 1092 1256 1003ZM402 -14Q236 151 134 346Q32 539 0 726L542 961L1370 132L1136 -410Q953 -385 756 -279Q561 -174 402 -14Z"/>' },
         "bulb": { "attrs": { "viewBox": "-167 -1805 2381 2381" }, "inner": '<path transform="scale(1,-1)" d="M1024 1638Q1222 1638 1385 1542Q1547 1447 1644 1282Q1740 1118 1740 922Q1740 746 1658 588Q1576 430 1433 335L1433 100Q1433 57 1404 28Q1375 -1 1332 -1L717 -1Q674 -1 645 28Q616 57 616 100L616 335Q471 431 390 588Q308 746 308 922Q308 1118 404 1282Q500 1446 664 1542Q828 1638 1024 1638ZM717 -309L717 -208L1332 -208L1332 -309Q1332 -352 1303 -381Q1274 -410 1231 -410L818 -410Q774 -410 745 -381Q717 -353 717 -309ZM1024 1436Q886 1436 767 1366Q648 1296 580 1179Q510 1059 510 922Q510 766 596 640Q681 515 818 451L818 205L1231 205L1231 451Q1366 514 1452 640Q1538 766 1538 922Q1538 1060 1469 1179Q1401 1295 1281 1366Q1162 1436 1024 1436Z"/>' },
+        "bug": { "attrs": { "viewBox": "-167 -1805 2381 2381" }, "inner": '<path transform="scale(1,-1)" d="M1936 1067L1616 1067Q1536 1211 1408 1297L1594 1478L1434 1638L1184 1393Q1107 1409 1024.5 1409Q942 1409 864 1393L614 1638L454 1478L640 1297Q519 1218 432 1067L112 1067L112 843L352 843Q342 782 342 726L342 614L112 614L112 385L342 385L342 273Q342 218 352 161L112 161L112 -69L432 -69Q528 -229 686 -319Q845 -410 1024 -410Q1203 -410 1366 -319Q1526 -229 1616 -69L1936 -69L1936 161L1696 161Q1706 218 1706 273L1706 385L1936 385L1936 614L1706 614L1706 726Q1706 782 1696 843L1936 843ZM1478 273Q1478 86 1344 -47Q1210 -181 1024 -181Q838 -181 704 -47Q572 86 572 273L572 726Q572 918 704 1051Q838 1185 1024 1185Q1210 1185 1344 1051Q1478 918 1478 726ZM1254 843L1254 614L794 614L794 843ZM794 385L1254 385L1254 161L794 161Z"/>' },
+        "bug-check": { "attrs": { "viewBox": "-167 -1805 2381 2381" }, "inner": '<path transform="scale(1,-1)" d="M1657 1133L1371 1133Q1300 1261 1190 1333L1352 1495L1210 1638L991 1419Q921 1438 848 1438Q775 1438 705 1419L481 1638L338 1495L505 1333Q390 1260 319 1133L34 1133L34 928L248 928Q238 870 238 828L238 723L34 723L34 523L238 523L238 419Q238 377 248 319L34 319L34 114L319 114Q428 -76 636 -153Q844 -230 1048 -153L1048 -86Q1048 -3 1076 85Q972 14 848 14Q676 14 557 133Q438 252 438 419L438 828Q438 995 557 1114Q676 1233 845 1233Q1014 1233 1133 1114Q1252 995 1252 828L1252 419Q1252 379 1248 362Q1335 440 1457 485L1457 523L1657 523L1657 723L1457 723L1457 828Q1457 876 1448 928L1657 928ZM1895 219L1533 -148L1371 14L1252 -105L1533 -410L2014 76ZM1048 928L1048 723L643 723L643 928ZM1048 523L1048 319L643 319L643 523Z"/>' },
         "camera": { "attrs": { "viewBox": "-167 -1805 2381 2381" }, "inner": '<path transform="scale(1,-1)" d="M1846 1335L1518 1335L1332 1537L716 1537L528 1335L202 1335Q120 1335 60 1275Q0 1215 0 1128L0 -102Q0 -189 60 -249Q120 -309 202 -309L1846 -309Q1928 -309 1988 -249Q2048 -189 2048 -102L2048 1128Q2048 1215 1988 1275Q1928 1335 1846 1335ZM1846 -102L202 -102L202 1128L620 1128L808 1335L1240 1335L1428 1128L1846 1128ZM1024 1027Q884 1027 766 958Q648 888 580 770Q510 650 510 513Q510 376 580 256Q648 138 766 68Q884 -1 1024 -1Q1164 -1 1280 68Q1400 139 1468 256Q1538 374 1538 513Q1538 652 1468 770Q1400 887 1280 958Q1163 1027 1024 1027ZM1024 205Q894 205 804 294Q716 382 716 513Q716 644 804 732Q894 821 1024 821Q1154 821 1243 732Q1332 643 1332 513Q1332 383 1243 294Q1154 205 1024 205Z"/>' },
         "card": { "attrs": { "viewBox": "-167 -1805 2381 2381" }, "inner": '<path transform="scale(1,-1)" d="M1846 -208L202 -208Q120 -208 60 -148Q0 -88 0 -1L0 1229Q0 1316 60 1376Q120 1436 202 1436L1846 1436Q1928 1436 1988 1376Q2048 1316 2048 1229L2048 -1Q2048 -88 1988 -148Q1928 -208 1846 -208ZM202 1229L202 -1L1846 -1L1846 1229ZM408 922L1638 922L1638 715L408 715ZM408 513L1432 513L1432 306L408 306Z"/>' },
         "caret-down": { "attrs": { "viewBox": "-167 -1805 2381 2381" }, "inner": '<path transform="scale(1,-1)" d="M0 1126L1024 102L2048 1126Z"/>' },
@@ -17418,6 +17424,8 @@
         "briefcase": "\u{F0814}",
         "broom": "\u{F00E2}",
         "bulb": "\u{F0336}",
+        "bug": "\u{F0A30}",
+        "bug-check": "\u{F0A2F}",
         "camera": "\u{F0D5D}",
         "card": "\u{F0B78}",
         "caret-down": "\u{F035D}",
@@ -18170,6 +18178,8 @@
         "books": "",
         "branching": "branch",
         "branch-sync": "",
+        "bug-report": "bug",
+        "bug-status": "bug-check",
         "changelog": "",
         "chapters": "chapters",
         "char-map": "font",
@@ -22053,19 +22063,19 @@ ${BLOCK_END}
   function quoteAt(text, start, end) {
     return String(text || "").slice(start, end);
   }
-  async function writeMdKeepingComments(io, path, fullText, fromPath = null) {
+  async function writeMdKeepingComments(io2, path, fullText, fromPath = null) {
     let raw = "";
     try {
-      raw = await io.readFile(fromPath || path) || "";
+      raw = await io2.readFile(fromPath || path) || "";
     } catch {
       raw = "";
     }
     const comments = parseComments(raw);
     if (!comments.length) {
-      await io.writeFile(path, fullText);
+      await io2.writeFile(path, fullText);
       return false;
     }
-    await io.writeFile(path, mergeComments(fullText, reanchorAll(fullText, comments)));
+    await io2.writeFile(path, mergeComments(fullText, reanchorAll(fullText, comments)));
     return true;
   }
   function fromScenesJson(scenesJson, opts = {}) {
@@ -22097,8 +22107,8 @@ ${BLOCK_END}
       newId = (now) => "c" + Number(now).toString(36) + (_seq++).toString(36);
       num2 = (v2) => typeof v2 === "number" && isFinite(v2) ? v2 : 0;
       CommentStore = class {
-        constructor({ io, now = () => Date.now(), author = "" } = {}) {
-          this.io = io;
+        constructor({ io: io2, now = () => Date.now(), author = "" } = {}) {
+          this.io = io2;
           this.now = now;
           this.author = author;
         }
@@ -23058,8 +23068,8 @@ ${BLOCK_END}
   function tabPathParts(root, file) {
     const f = String(file || "");
     if (!f || f.startsWith("::")) return { rel: "", book: "", chapter: "" };
-    const norm4 = (p2) => String(p2 || "").replace(/\\/g, "/").replace(/\/+$/, "");
-    const r = norm4(root), p = norm4(f);
+    const norm5 = (p2) => String(p2 || "").replace(/\\/g, "/").replace(/\/+$/, "");
+    const r = norm5(root), p = norm5(f);
     const rel = r && p.toLowerCase().startsWith(r.toLowerCase() + "/") ? p.slice(r.length + 1) : p;
     const segs = rel.split("/");
     const di = segs.indexOf("Draft"), ci = segs.indexOf("Chapters");
@@ -26464,6 +26474,10 @@ ${BLOCK_END}
       globalThis.localStorage?.setItem(LANG_LS_KEY, i18n.lang);
     } catch {
     }
+    try {
+      if (typeof kapi !== "undefined" && kapi.langSet) await kapi.langSet(i18n.lang);
+    } catch {
+    }
     applyDocLang(i18n.lang);
     syncNestedStrings();
     applyDataI18n();
@@ -28188,22 +28202,22 @@ ${BLOCK_END}
     return { adopted: Object.keys(synced.images).length - before, captions: capsUsed };
   }
   async function createAlbum(api, root, name5, parent = "") {
-    const clean3 = sanitizeAlbumName(name5);
-    if (!clean3) throw new Error(t("ui.galleryAlbum.nameAlbumUseCant"));
+    const clean4 = sanitizeAlbumName(name5);
+    if (!clean4) throw new Error(t("ui.galleryAlbum.nameAlbumUseCant"));
     const albums = await listAlbums(api, root);
-    const id = albumId(parent, clean3);
+    const id = albumId(parent, clean4);
     if (albums.some((a) => a.id === id)) throw new Error(t("ui.galleryAlbum.hasAlbumName"));
     const dir2 = await albumDir(api, root, id);
     await api.mkdir(dir2);
     const rec = normalizeAlbum({
       id,
-      name: clean3,
+      name: clean4,
       parent: parent === ROOT_ALBUM ? "" : parent,
       order: childrenOf(albums, parent).length,
       created: Date.now()
     });
     const next = [...albums, rec];
-    await writeAlbumDoc(api, root, id, newAlbumDoc(clean3));
+    await writeAlbumDoc(api, root, id, newAlbumDoc(clean4));
     await saveAlbums(api, root, next);
     return rec;
   }
@@ -28249,9 +28263,9 @@ ${BLOCK_END}
   async function addImageFile(api, root, id, srcPath) {
     const dir2 = await albumDir(api, root, id);
     await api.mkdir(dir2);
-    const norm4 = (p) => String(p || "").replace(/\\/g, "/").replace(/\/+$/, "");
-    const src2 = norm4(srcPath);
-    const same = src2.slice(0, src2.lastIndexOf("/")) === norm4(dir2);
+    const norm5 = (p) => String(p || "").replace(/\\/g, "/").replace(/\/+$/, "");
+    const src2 = norm5(srcPath);
+    const same = src2.slice(0, src2.lastIndexOf("/")) === norm5(dir2);
     const name5 = same ? src2.slice(src2.lastIndexOf("/") + 1) : await api.copyInto(srcPath, dir2);
     let doc3 = await readAlbumDoc(api, root, id);
     doc3 = syncAlbumDoc(doc3, [...Object.keys(doc3.images), name5]);
@@ -28376,6 +28390,8 @@ ${BLOCK_END}
   var timing_exports = {};
   __export(timing_exports, {
     ATTENTION_MIN_MS: () => ATTENTION_MIN_MS,
+    BUG_CACHE_MS: () => BUG_CACHE_MS,
+    BUG_FETCH_TIMEOUT_MS: () => BUG_FETCH_TIMEOUT_MS,
     OSK_SPAWN_WAIT_MS: () => OSK_SPAWN_WAIT_MS,
     RETRY_BASE_MS: () => RETRY_BASE_MS,
     RETRY_MAX_MS: () => RETRY_MAX_MS,
@@ -28390,11 +28406,13 @@ ${BLOCK_END}
     const k = Number.isFinite(+n2) && +n2 > 0 ? Math.floor(+n2) : 0;
     return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * Math.pow(2, k));
   }
-  var SPLASH_MAX_MS, UPDATE_FETCH_TIMEOUT_MS, SCRATCH_SAVE_DELAY_MS, RETRY_BASE_MS, RETRY_MAX_MS, ATTENTION_MIN_MS, TIP_DELAY_MS, TIP_WARM_MS, OSK_SPAWN_WAIT_MS;
+  var SPLASH_MAX_MS, UPDATE_FETCH_TIMEOUT_MS, BUG_FETCH_TIMEOUT_MS, BUG_CACHE_MS, SCRATCH_SAVE_DELAY_MS, RETRY_BASE_MS, RETRY_MAX_MS, ATTENTION_MIN_MS, TIP_DELAY_MS, TIP_WARM_MS, OSK_SPAWN_WAIT_MS;
   var init_timing = __esm({
     "src/timing.js"() {
       SPLASH_MAX_MS = 3e4;
       UPDATE_FETCH_TIMEOUT_MS = 2e4;
+      BUG_FETCH_TIMEOUT_MS = 15e3;
+      BUG_CACHE_MS = 5 * 60 * 1e3;
       SCRATCH_SAVE_DELAY_MS = 3e3;
       RETRY_BASE_MS = 500;
       RETRY_MAX_MS = 8e3;
@@ -28466,14 +28484,14 @@ ${BLOCK_END}
     return !!m && SCREENPLAY_EXT.includes(m[1].toLowerCase());
   }
   function freeFileName(name5, taken) {
-    const has3 = new Set([...taken || []].map((x) => String(x).toLowerCase()));
+    const has4 = new Set([...taken || []].map((x) => String(x).toLowerCase()));
     const n2 = String(name5 || "image.png");
-    if (!has3.has(n2.toLowerCase())) return n2;
+    if (!has4.has(n2.toLowerCase())) return n2;
     const dot2 = n2.lastIndexOf(".");
     const base4 = dot2 > 0 ? n2.slice(0, dot2) : n2, ext = dot2 > 0 ? n2.slice(dot2) : "";
     for (let i5 = 2; i5 < 1e4; i5++) {
       const c = base4 + "-" + i5 + ext;
-      if (!has3.has(c.toLowerCase())) return c;
+      if (!has4.has(c.toLowerCase())) return c;
     }
     return base4 + "-" + Date.now() + ext;
   }
@@ -28858,27 +28876,27 @@ ${BLOCK_END}
     const stamp = date.getFullYear() + pad2(date.getMonth() + 1) + pad2(date.getDate()) + "-" + pad2(date.getHours()) + pad2(date.getMinutes()) + pad2(date.getSeconds());
     return dir2 + stem + ".unreadable-" + stamp + ext;
   }
-  async function readJsonGuarded(io, file, fallback, o = {}) {
+  async function readJsonGuarded(io2, file, fallback, o = {}) {
     const k = keyOf(file);
-    let has3 = false;
+    let has4 = false;
     try {
-      has3 = !!await io.exists(file);
+      has4 = !!await io2.exists(file);
     } catch {
-      has3 = false;
+      has4 = false;
     }
-    if (!has3) {
+    if (!has4) {
       done.delete(k);
       return { data: fallback(), state: "missing", backup: "", writable: true, fresh: false };
     }
     try {
-      const data2 = await io.readJson(file);
+      const data2 = await io2.readJson(file);
       if (data2 === null || typeof data2 !== "object") throw new Error("not an object");
       done.delete(k);
       return { data: data2, state: "ok", backup: "", writable: true, fresh: false };
     } catch (error2) {
       let sig = "";
       try {
-        sig = io.mtime ? String(await io.mtime(file)) : "";
+        sig = io2.mtime ? String(await io2.mtime(file)) : "";
       } catch {
         sig = "";
       }
@@ -28889,7 +28907,7 @@ ${BLOCK_END}
       let backup = "";
       try {
         const dst = brokenBackupName(file, o.now || /* @__PURE__ */ new Date());
-        await io.copyFile(file, dst);
+        await io2.copyFile(file, dst);
         backup = dst;
       } catch {
         backup = "";
@@ -28942,25 +28960,25 @@ ${BLOCK_END}
   function pendingLocks() {
     return queues.size;
   }
-  function mutateJson(io, file, fn, opts = {}) {
+  function mutateJson(io2, file, fn, opts = {}) {
     return withFileLock(file, async () => {
       let data2;
       try {
-        data2 = await io.readJson(file);
+        data2 = await io2.readJson(file);
       } catch (e) {
         if (!("fallback" in opts)) throw e;
-        let has3 = false;
+        let has4 = false;
         try {
-          has3 = typeof io.exists === "function" ? !!await io.exists(file) : false;
+          has4 = typeof io2.exists === "function" ? !!await io2.exists(file) : false;
         } catch {
-          has3 = false;
+          has4 = false;
         }
-        if (has3) {
+        if (has4) {
           let backup = "";
           try {
-            if (typeof io.copyFile === "function") {
+            if (typeof io2.copyFile === "function") {
               const dst = brokenBackupName(file);
-              await io.copyFile(file, dst);
+              await io2.copyFile(file, dst);
               backup = dst;
             }
           } catch {
@@ -28976,7 +28994,7 @@ ${BLOCK_END}
       }
       const result = await fn(data2);
       if (result === false) return { data: data2, changed: false, result };
-      await io.writeFile(file, JSON.stringify(data2, null, 2));
+      await io2.writeFile(file, JSON.stringify(data2, null, 2));
       return { data: data2, changed: true, result };
     });
   }
@@ -31235,9 +31253,9 @@ ${BLOCK_END}
       const a = s.indexOf("{"), b = s.lastIndexOf("}");
       if (a >= 0 && b > a) j = tryParse(s.slice(a, b + 1));
     }
-    const clean3 = (v2) => String(v2 == null ? "" : v2).replace(/\s+\n/g, "\n").trim();
-    const image = j ? clean3(j.image || j.still || j.image_prompt) : "";
-    const video = j ? clean3(j.video || j.video_prompt) : "";
+    const clean4 = (v2) => String(v2 == null ? "" : v2).replace(/\s+\n/g, "\n").trim();
+    const image = j ? clean4(j.image || j.still || j.image_prompt) : "";
+    const video = j ? clean4(j.video || j.video_prompt) : "";
     return { ok: !!(image || video), image, video };
   }
   function entityBrief(e, max2 = 600) {
@@ -35940,12 +35958,12 @@ ${BLOCK_END}
     return setImageMeta2(d, file, { tags: cur.filter((x) => x !== t3) });
   }
   function setTags(doc3, file, tags) {
-    const clean3 = [];
+    const clean4 = [];
     for (const raw of tags || []) {
       const t3 = normalizeTag(raw);
-      if (t3 && !clean3.includes(t3)) clean3.push(t3);
+      if (t3 && !clean4.includes(t3)) clean4.push(t3);
     }
-    return setImageMeta2(normalizeAlbumDoc(doc3), file, { tags: clean3 });
+    return setImageMeta2(normalizeAlbumDoc(doc3), file, { tags: clean4 });
   }
   function addTagMany(doc3, files, tag3) {
     let d = normalizeAlbumDoc(doc3);
@@ -35985,8 +36003,8 @@ ${BLOCK_END}
     if (!want.length) return [...items || []];
     const or = String(mode).toLowerCase() === "or";
     return (items || []).filter((it) => {
-      const has3 = new Set((it.tags || []).map((t3) => normalizeTag(t3)));
-      return or ? want.some((t3) => has3.has(t3)) : want.every((t3) => has3.has(t3));
+      const has4 = new Set((it.tags || []).map((t3) => normalizeTag(t3)));
+      return or ? want.some((t3) => has4.has(t3)) : want.every((t3) => has4.has(t3));
     });
   }
   function imagesForEntity(items, entityName2) {
@@ -36132,12 +36150,12 @@ ${BLOCK_END}
     if (!oldFile || !newRel2) return { text: s, changed: 0 };
     let changed = 0;
     const swap2 = (p) => {
-      const clean3 = cleanRef(p);
-      if (basename(clean3) !== oldFile) return null;
-      const i5 = clean3.toLowerCase().lastIndexOf("images/");
+      const clean4 = cleanRef(p);
+      if (basename(clean4) !== oldFile) return null;
+      const i5 = clean4.toLowerCase().lastIndexOf("images/");
       if (i5 < 0) return null;
       changed++;
-      return clean3.slice(0, i5 + "images/".length) + newRel2;
+      return clean4.slice(0, i5 + "images/".length) + newRel2;
     };
     let out = s.replace(MD_IMG, (m0, alt, p) => {
       const np = swap2(p);
@@ -36458,9 +36476,9 @@ ${BLOCK_END}
   async function activeSectionPath() {
     const f = state.active && (state.active.file || state.active.path);
     if (!f || !state.root) return "";
-    const norm4 = (p) => String(p).replace(/\\/g, "/");
-    const root = norm4(state.root).replace(/\/+$/, "");
-    const file = norm4(f);
+    const norm5 = (p) => String(p).replace(/\\/g, "/");
+    const root = norm5(state.root).replace(/\/+$/, "");
+    const file = norm5(f);
     if (!file.startsWith(root + "/")) return "";
     const first = file.slice(root.length + 1).split("/")[0];
     if (!first) return "";
@@ -37194,22 +37212,22 @@ ${BLOCK_END}
     sceneRenameTarget: () => sceneRenameTarget,
     sectionRenameTarget: () => sectionRenameTarget
   });
-  async function freeSceneFile(io, dPath, folderName, title2, taken = [], self2 = "") {
+  async function freeSceneFile(io2, dPath, folderName, title2, taken = [], self2 = "") {
     const used = /* @__PURE__ */ new Set();
     for (const n2 of taken || []) used.add(nameKey(n2));
-    for (const f of await mdOf(io, await io.join(dPath, "Chapters", folderName))) used.add(nameKey(f));
+    for (const f of await mdOf(io2, await io2.join(dPath, "Chapters", folderName))) used.add(nameKey(f));
     if (self2) used.delete(nameKey(self2));
     return freeName2(diskBase(title2, "scene"), used, ".md");
   }
-  async function freeChapterFolder(io, dPath, title2, taken = [], self2 = "") {
+  async function freeChapterFolder(io2, dPath, title2, taken = [], self2 = "") {
     const used = /* @__PURE__ */ new Set();
     for (const n2 of taken || []) used.add(nameKey(n2));
-    for (const f of await dirsOf(io, await io.join(dPath, "Chapters"))) used.add(nameKey(f));
+    for (const f of await dirsOf(io2, await io2.join(dPath, "Chapters"))) used.add(nameKey(f));
     if (self2) used.delete(nameKey(self2));
     return freeName2(diskBase(title2, "chapter"), used);
   }
-  async function freeBookName(io, root, title2) {
-    const dirs = await dirsOf(io, root);
+  async function freeBookName(io2, root, title2) {
+    const dirs = await dirsOf(io2, root);
     if (!title2) {
       const n3 = defaultBookName([...dirs]);
       return { title: n3, folder: n3, taken: false };
@@ -37220,50 +37238,50 @@ ${BLOCK_END}
     while (bookNameTaken(name5, dirs)) name5 = `${base4} ${++n2}`;
     return { title: `${String(title2).trim()} ${n2}`, folder: name5, taken: true };
   }
-  async function moveVis(io, fromDir, fromFile, toDir, toFile) {
+  async function moveVis(io2, fromDir, fromFile, toDir, toFile) {
     try {
-      const src2 = await io.join(fromDir, visFileName(fromFile));
-      if (!await has(io, src2)) return false;
-      const dst = await io.join(toDir, visFileName(toFile));
-      if (await has(io, dst)) return false;
-      await io.move(src2, dst);
+      const src2 = await io2.join(fromDir, visFileName(fromFile));
+      if (!await has(io2, src2)) return false;
+      const dst = await io2.join(toDir, visFileName(toFile));
+      if (await has(io2, dst)) return false;
+      await io2.move(src2, dst);
       return true;
     } catch {
       return false;
     }
   }
-  async function sceneRenameTarget(io, dPath, ch, sceneId, title2) {
+  async function sceneRenameTarget(io2, dPath, ch, sceneId, title2) {
     let d;
     try {
-      d = await io.readJson(await io.join(dPath, "scenes.json"));
+      d = await io2.readJson(await io2.join(dPath, "scenes.json"));
     } catch {
       return "";
     }
     const rows = (d && d.chapters || {})[ch.guid] || [];
     const row4 = rows.find((r) => r.id === sceneId);
     if (!row4 || !row4.fileName || nameFits(title2, row4.fileName, ".md")) return "";
-    return freeSceneFile(io, dPath, ch.folderName, title2, rows.filter((r) => r !== row4).map((r) => r.fileName), row4.fileName);
+    return freeSceneFile(io2, dPath, ch.folderName, title2, rows.filter((r) => r !== row4).map((r) => r.fileName), row4.fileName);
   }
-  async function renameSceneOnDisk(io, dPath, ch, sceneId, title2) {
-    const sf = await io.join(dPath, "scenes.json");
-    const dir2 = await io.join(dPath, "Chapters", ch.folderName);
+  async function renameSceneOnDisk(io2, dPath, ch, sceneId, title2) {
+    const sf = await io2.join(dPath, "scenes.json");
+    const dir2 = await io2.join(dPath, "Chapters", ch.folderName);
     const out = { ok: false, moved: false, from: "", to: "", fileName: "" };
-    await mutateJson(io, sf, async (d) => {
+    await mutateJson(io2, sf, async (d) => {
       const rows = (d && d.chapters || {})[ch.guid] || [];
       const row4 = rows.find((r) => r.id === sceneId);
       if (!row4 || !row4.fileName) {
         out.reason = "no-row";
         return false;
       }
-      const from2 = await io.join(dir2, row4.fileName);
+      const from2 = await io2.join(dir2, row4.fileName);
       out.from = from2;
       out.to = from2;
       out.fileName = row4.fileName;
       try {
-        const { meta: meta2, body } = (0, import_md6.parseMdFile)(await io.readFile(from2));
+        const { meta: meta2, body } = (0, import_md6.parseMdFile)(await io2.readFile(from2));
         if (meta2.title !== title2) {
           meta2.title = title2;
-          await writeMdKeepingComments(io, from2, (0, import_md6.dumpMdFile)(meta2, body));
+          await writeMdKeepingComments(io2, from2, (0, import_md6.dumpMdFile)(meta2, body));
         }
       } catch (e) {
         out.reason = "no-file";
@@ -37273,7 +37291,7 @@ ${BLOCK_END}
       let fileName = row4.fileName;
       if (!nameFits(title2, row4.fileName, ".md")) {
         fileName = await freeSceneFile(
-          io,
+          io2,
           dPath,
           ch.folderName,
           title2,
@@ -37281,9 +37299,9 @@ ${BLOCK_END}
           row4.fileName
         );
         if (!sameName(fileName, row4.fileName)) {
-          const to = await io.join(dir2, fileName);
-          await io.move(from2, to);
-          await moveVis(io, dir2, row4.fileName, dir2, fileName);
+          const to = await io2.join(dir2, fileName);
+          await io2.move(from2, to);
+          await moveVis(io2, dir2, row4.fileName, dir2, fileName);
           out.moved = true;
           out.to = to;
         }
@@ -37295,24 +37313,24 @@ ${BLOCK_END}
     });
     return out;
   }
-  async function renameChapterOnDisk(io, dPath, chGuid, title2) {
-    const df = await io.join(dPath, "draft.json");
+  async function renameChapterOnDisk(io2, dPath, chGuid, title2) {
+    const df = await io2.join(dPath, "draft.json");
     const out = { ok: false, moved: false, from: "", to: "", folderName: "" };
-    await mutateJson(io, df, async (d) => {
+    await mutateJson(io2, df, async (d) => {
       const list3 = d && d.chapters || [];
       const c = list3.find((x) => x.guid === chGuid);
       if (!c) return false;
       const cur = c.folderName || "";
-      const from2 = await io.join(dPath, "Chapters", cur);
+      const from2 = await io2.join(dPath, "Chapters", cur);
       out.from = from2;
       out.to = from2;
       let folderName = cur;
       if (!cur || !nameFits(title2, cur)) {
-        folderName = await freeChapterFolder(io, dPath, title2, list3.filter((x) => x !== c).map((x) => x.folderName), cur);
+        folderName = await freeChapterFolder(io2, dPath, title2, list3.filter((x) => x !== c).map((x) => x.folderName), cur);
         if (!sameName(folderName, cur)) {
-          const to = await io.join(dPath, "Chapters", folderName);
-          if (cur && await has(io, from2)) await io.move(from2, to);
-          else await io.mkdir(to);
+          const to = await io2.join(dPath, "Chapters", folderName);
+          if (cur && await has(io2, from2)) await io2.move(from2, to);
+          else await io2.mkdir(to);
           out.moved = !!cur;
           out.to = to;
         }
@@ -37324,62 +37342,62 @@ ${BLOCK_END}
     });
     return out;
   }
-  async function sectionRenameTarget(io, secPath, title2) {
+  async function sectionRenameTarget(io2, secPath, title2) {
     const cur = baseOf(secPath);
     const want = diskBase(title2, "Book");
     if (sameName(want, cur)) return { folder: cur, moves: false, taken: false };
-    return { folder: want, moves: true, taken: bookNameTaken(want, await dirsOf(io, parentOf2(secPath)), cur) };
+    return { folder: want, moves: true, taken: bookNameTaken(want, await dirsOf(io2, parentOf2(secPath)), cur) };
   }
-  async function renameSectionOnDisk(io, secPath, title2) {
-    const tg = await sectionRenameTarget(io, secPath, title2);
+  async function renameSectionOnDisk(io2, secPath, title2) {
+    const tg = await sectionRenameTarget(io2, secPath, title2);
     const out = { ok: false, moved: false, taken: tg.taken, from: secPath, to: secPath, folderName: tg.folder };
     if (tg.taken) return out;
     if (tg.moves) {
-      const to = await io.join(parentOf2(secPath), tg.folder);
-      await io.move(secPath, to);
+      const to = await io2.join(parentOf2(secPath), tg.folder);
+      await io2.move(secPath, to);
       out.moved = true;
       out.to = to;
     }
-    await mutateJson(io, await io.join(out.to, "section.json"), (d) => {
+    await mutateJson(io2, await io2.join(out.to, "section.json"), (d) => {
       d.title = title2;
       d.folderName = tg.folder;
     }, { fallback: {} });
     out.ok = true;
     return out;
   }
-  async function metaTitle(io, file) {
+  async function metaTitle(io2, file) {
     try {
-      const m = (0, import_md6.parseMdFile)(await io.readFile(file)).meta || {};
+      const m = (0, import_md6.parseMdFile)(await io2.readFile(file)).meta || {};
       return { title: m.title != null ? String(m.title) : "" };
     } catch {
       return null;
     }
   }
-  async function stampTitle(io, file, title2) {
+  async function stampTitle(io2, file, title2) {
     try {
-      const { meta: meta2, body } = (0, import_md6.parseMdFile)(await io.readFile(file));
+      const { meta: meta2, body } = (0, import_md6.parseMdFile)(await io2.readFile(file));
       if (meta2.title === title2) return false;
       meta2.title = title2;
-      await writeMdKeepingComments(io, file, (0, import_md6.dumpMdFile)(meta2, body));
+      await writeMdKeepingComments(io2, file, (0, import_md6.dumpMdFile)(meta2, body));
       return true;
     } catch {
       return false;
     }
   }
-  async function reconcileDraft(io, dPath, changes) {
-    const df = await io.join(dPath, "draft.json");
-    const sf = await io.join(dPath, "scenes.json");
-    const chRoot = await io.join(dPath, "Chapters");
+  async function reconcileDraft(io2, dPath, changes) {
+    const df = await io2.join(dPath, "draft.json");
+    const sf = await io2.join(dPath, "scenes.json");
+    const chRoot = await io2.join(dPath, "Chapters");
     let draft, scenes;
     try {
-      draft = await io.readJson(df);
-      scenes = await io.readJson(sf);
+      draft = await io2.readJson(df);
+      scenes = await io2.readJson(sf);
     } catch {
       return;
     }
     let chapters = draft && Array.isArray(draft.chapters) ? draft.chapters : [];
     const rowsBy = scenes && scenes.chapters && typeof scenes.chapters === "object" ? scenes.chapters : {};
-    const folders = await dirsOf(io, chRoot);
+    const folders = await dirsOf(io2, chRoot);
     const folderKeys = new Set(folders.map(nameKey));
     const exact = new Set(folders);
     if (chapters.some((c) => c && c.folderName && !exact.has(c.folderName))) {
@@ -37388,30 +37406,30 @@ ${BLOCK_END}
       const needMeta = chapters.some((c) => c && c.folderName && !folderKeys.has(nameKey(c.folderName)));
       for (const f of folders) {
         if (known2.has(nameKey(f)) || !needMeta) continue;
-        files[f] = await mdOf(io, await io.join(chRoot, f));
-        for (const fn of files[f]) metas[f + "/" + fn] = await metaTitle(io, await io.join(chRoot, f, fn));
+        files[f] = await mdOf(io2, await io2.join(chRoot, f));
+        for (const fn of files[f]) metas[f + "/" + fn] = await metaTitle(io2, await io2.join(chRoot, f, fn));
       }
       const res = pairChapterRenames(chapters, folders, rowsBy, (f) => files[f] || [], (f, fn) => metas[f + "/" + fn]);
       if (res.pairs.length) {
         const done3 = [];
-        await mutateJson(io, df, async (d) => {
+        await mutateJson(io2, df, async (d) => {
           let hit = false;
           for (const p of res.pairs) {
             const c = (d.chapters || []).find((x) => x.guid === p.guid);
             if (!c || !sameName(c.folderName, p.from)) continue;
-            if (!await has(io, await io.join(chRoot, p.to))) continue;
+            if (!await has(io2, await io2.join(chRoot, p.to))) continue;
             const oldTitle = c.title || "";
             const title2 = p.by === "case" && !nameFits(oldTitle, p.from) ? oldTitle : titleAfterRename("chapter", p.to, oldTitle);
             c.folderName = p.to;
             c.title = title2;
             hit = true;
-            done3.push({ kind: "chapter", from: await io.join(chRoot, p.from), to: await io.join(chRoot, p.to), oldTitle, title: title2 });
+            done3.push({ kind: "chapter", from: await io2.join(chRoot, p.from), to: await io2.join(chRoot, p.to), oldTitle, title: title2 });
           }
           return hit ? void 0 : false;
         });
         changes.push(...done3);
         try {
-          chapters = (await io.readJson(df)).chapters || chapters;
+          chapters = (await io2.readJson(df)).chapters || chapters;
         } catch {
         }
       }
@@ -37419,9 +37437,9 @@ ${BLOCK_END}
     const leftMissing = [], leftOrphans = [];
     for (const c of chapters) {
       if (!c || !c.folderName || !folderKeys.has(nameKey(c.folderName))) continue;
-      const dir2 = await io.join(chRoot, c.folderName);
+      const dir2 = await io2.join(chRoot, c.folderName);
       const rows = rowsBy[c.guid] || [];
-      const files = await mdOf(io, dir2);
+      const files = await mdOf(io2, dir2);
       const fileSet = new Set(files);
       const rowKeys = new Set(rows.map((r) => nameKey(r && r.fileName || "")));
       const anyGone = rows.some((r) => r && r.fileName && !fileSet.has(r.fileName));
@@ -37431,19 +37449,19 @@ ${BLOCK_END}
         continue;
       }
       const metas = {};
-      for (const f of strays) metas[f] = await metaTitle(io, await io.join(dir2, f));
+      for (const f of strays) metas[f] = await metaTitle(io2, await io2.join(dir2, f));
       const res = pairSceneRenames(rows, files, (f) => metas[f]);
       for (const r of res.missing) leftMissing.push({ chGuid: c.guid, folder: c.folderName, row: r });
       for (const f of res.orphans) leftOrphans.push({ chGuid: c.guid, folder: c.folderName, file: f, title: metas[f] && metas[f].title || "" });
       if (!res.pairs.length) continue;
       const done3 = [];
-      await mutateJson(io, sf, async (d) => {
+      await mutateJson(io2, sf, async (d) => {
         let hit = false;
         const live2 = (d && d.chapters || {})[c.guid] || [];
         for (const p of res.pairs) {
           const row4 = live2.find((r) => r.id === p.id);
           if (!row4 || !sameName(row4.fileName, p.from)) continue;
-          if (!await has(io, await io.join(dir2, p.to))) continue;
+          if (!await has(io2, await io2.join(dir2, p.to))) continue;
           if (live2.some((r) => r !== row4 && sameName(r.fileName, p.to))) continue;
           const oldTitle = row4.title || "";
           const nb = stripExt(p.to, ".md");
@@ -37451,13 +37469,13 @@ ${BLOCK_END}
           row4.fileName = p.to;
           row4.title = title2;
           hit = true;
-          done3.push({ kind: "scene", from: await io.join(dir2, p.from), to: await io.join(dir2, p.to), oldTitle, title: title2, _dir: dir2, _from: p.from, _to: p.to });
+          done3.push({ kind: "scene", from: await io2.join(dir2, p.from), to: await io2.join(dir2, p.to), oldTitle, title: title2, _dir: dir2, _from: p.from, _to: p.to });
         }
         return hit ? void 0 : false;
       });
       for (const ch of done3) {
-        await moveVis(io, ch._dir, ch._from, ch._dir, ch._to);
-        if (ch.title !== ch.oldTitle) await stampTitle(io, ch.to, ch.title);
+        await moveVis(io2, ch._dir, ch._from, ch._dir, ch._to);
+        if (ch.title !== ch.oldTitle) await stampTitle(io2, ch.to, ch.title);
         delete ch._dir;
         delete ch._from;
         delete ch._to;
@@ -37467,7 +37485,7 @@ ${BLOCK_END}
     if (leftMissing.length && leftOrphans.length) {
       for (const o of leftOrphans) {
         if (o.title === void 0) {
-          const m = await metaTitle(io, await io.join(chRoot, o.folder, o.file));
+          const m = await metaTitle(io2, await io2.join(chRoot, o.folder, o.file));
           o.title = m && m.title || "";
         }
       }
@@ -37478,15 +37496,15 @@ ${BLOCK_END}
           return c ? c.folderName : "";
         };
         const done3 = [];
-        await mutateJson(io, sf, async (d) => {
+        await mutateJson(io2, sf, async (d) => {
           let hit = false;
           d.chapters = d.chapters || {};
           for (const m of moves) {
             const src2 = d.chapters[m.fromCh] || [];
             const row4 = src2.find((r) => r.id === m.id);
             if (!row4 || !sameName(row4.fileName, m.from)) continue;
-            const toDir = await io.join(chRoot, folderOf(m.toCh));
-            if (!await has(io, await io.join(toDir, m.to))) continue;
+            const toDir = await io2.join(chRoot, folderOf(m.toCh));
+            if (!await has(io2, await io2.join(toDir, m.to))) continue;
             const dst = d.chapters[m.toCh] || [];
             if (dst.some((r) => sameName(r.fileName, m.to))) continue;
             d.chapters[m.fromCh] = src2.filter((r) => r !== row4);
@@ -37497,12 +37515,12 @@ ${BLOCK_END}
             hit = true;
             done3.push({
               kind: "scene",
-              from: await io.join(chRoot, folderOf(m.fromCh), m.from),
-              to: await io.join(toDir, m.to),
+              from: await io2.join(chRoot, folderOf(m.fromCh), m.from),
+              to: await io2.join(toDir, m.to),
               oldTitle: row4.title || "",
               title: row4.title || "",
               moved: true,
-              _fromDir: await io.join(chRoot, folderOf(m.fromCh)),
+              _fromDir: await io2.join(chRoot, folderOf(m.fromCh)),
               _toDir: toDir,
               _from: m.from,
               _to: m.to
@@ -37511,7 +37529,7 @@ ${BLOCK_END}
           return hit ? void 0 : false;
         });
         for (const ch of done3) {
-          await moveVis(io, ch._fromDir, ch._from, ch._toDir, ch._to);
+          await moveVis(io2, ch._fromDir, ch._from, ch._toDir, ch._to);
           delete ch._fromDir;
           delete ch._toDir;
           delete ch._from;
@@ -37521,16 +37539,16 @@ ${BLOCK_END}
       }
     }
   }
-  async function reconcileNames(io, root) {
+  async function reconcileNames(io2, root) {
     const changes = [];
     if (!root) return changes;
-    for (const name5 of await dirsOf(io, root)) {
-      const secPath = await io.join(root, name5);
-      const sf = await io.join(secPath, "section.json");
-      if (!await has(io, sf)) continue;
+    for (const name5 of await dirsOf(io2, root)) {
+      const secPath = await io2.join(root, name5);
+      const sf = await io2.join(secPath, "section.json");
+      if (!await has(io2, sf)) continue;
       let meta2;
       try {
-        meta2 = await io.readJson(sf);
+        meta2 = await io2.readJson(sf);
       } catch {
         continue;
       }
@@ -37539,9 +37557,9 @@ ${BLOCK_END}
       if (s.record) {
         const oldTitle = meta2 && meta2.title || "";
         try {
-          const from2 = s.renamed ? await io.join(root, meta2.folderName) : "";
-          const copied = s.renamed && await has(io, await io.join(from2, "section.json"));
-          await mutateJson(io, sf, (d) => {
+          const from2 = s.renamed ? await io2.join(root, meta2.folderName) : "";
+          const copied = s.renamed && await has(io2, await io2.join(from2, "section.json"));
+          await mutateJson(io2, sf, (d) => {
             d.folderName = name5;
             if (s.renamed) d.title = s.title;
             if (copied) d.guid = "k2-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -37550,46 +37568,46 @@ ${BLOCK_END}
         } catch {
         }
       }
-      for (const dn of await dirsOf(io, await io.join(secPath, "Draft"))) {
-        const dPath = await io.join(secPath, "Draft", dn);
-        if (!await has(io, await io.join(dPath, "draft.json"))) continue;
+      for (const dn of await dirsOf(io2, await io2.join(secPath, "Draft"))) {
+        const dPath = await io2.join(secPath, "Draft", dn);
+        if (!await has(io2, await io2.join(dPath, "draft.json"))) continue;
         try {
-          await reconcileDraft(io, dPath, changes);
+          await reconcileDraft(io2, dPath, changes);
         } catch {
         }
       }
     }
     return changes;
   }
-  async function listNameMismatches(io, root) {
+  async function listNameMismatches(io2, root) {
     const out = [];
     if (!root) return out;
-    for (const name5 of await dirsOf(io, root)) {
-      const secPath = await io.join(root, name5);
-      const sf = await io.join(secPath, "section.json");
-      if (!await has(io, sf)) continue;
+    for (const name5 of await dirsOf(io2, root)) {
+      const secPath = await io2.join(root, name5);
+      const sf = await io2.join(secPath, "section.json");
+      if (!await has(io2, sf)) continue;
       let meta2;
       try {
-        meta2 = await io.readJson(sf);
+        meta2 = await io2.readJson(sf);
       } catch {
         continue;
       }
       const title2 = meta2 && meta2.title || name5;
       if (!sameName(diskBase(title2, "Book"), name5)) out.push({ kind: "book", title: title2, disk: name5, secPath });
-      for (const dn of await dirsOf(io, await io.join(secPath, "Draft"))) {
-        const dPath = await io.join(secPath, "Draft", dn);
+      for (const dn of await dirsOf(io2, await io2.join(secPath, "Draft"))) {
+        const dPath = await io2.join(secPath, "Draft", dn);
         let draft, scenes;
         try {
-          draft = await io.readJson(await io.join(dPath, "draft.json"));
-          scenes = await io.readJson(await io.join(dPath, "scenes.json"));
+          draft = await io2.readJson(await io2.join(dPath, "draft.json"));
+          scenes = await io2.readJson(await io2.join(dPath, "scenes.json"));
         } catch {
           continue;
         }
-        const folders = new Set((await dirsOf(io, await io.join(dPath, "Chapters"))).map(nameKey));
+        const folders = new Set((await dirsOf(io2, await io2.join(dPath, "Chapters"))).map(nameKey));
         for (const c of draft && draft.chapters || []) {
           if (!c || !c.folderName || !folders.has(nameKey(c.folderName))) continue;
           if (c.title && !nameFits(c.title, c.folderName)) out.push({ kind: "chapter", title: c.title || "", disk: c.folderName, secPath, dPath, ch: c });
-          const files = new Set((await mdOf(io, await io.join(dPath, "Chapters", c.folderName))).map(nameKey));
+          const files = new Set((await mdOf(io2, await io2.join(dPath, "Chapters", c.folderName))).map(nameKey));
           for (const r of (scenes && scenes.chapters || {})[c.guid] || []) {
             if (!r || !r.fileName || !r.title || !files.has(nameKey(r.fileName))) continue;
             if (!nameFits(r.title || "", r.fileName, ".md")) out.push({ kind: "scene", title: r.title || "", disk: r.fileName, secPath, dPath, ch: c, id: r.id });
@@ -37607,23 +37625,23 @@ ${BLOCK_END}
       import_md6 = __toESM(require_md());
       init_comment_core();
       init_vis_core();
-      dirsOf = async (io, p) => {
+      dirsOf = async (io2, p) => {
         try {
-          return await io.listDirs(p) || [];
+          return await io2.listDirs(p) || [];
         } catch {
           return [];
         }
       };
-      mdOf = async (io, p) => {
+      mdOf = async (io2, p) => {
         try {
-          return await io.listFiles(p, ".md") || [];
+          return await io2.listFiles(p, ".md") || [];
         } catch {
           return [];
         }
       };
-      has = async (io, p) => {
+      has = async (io2, p) => {
         try {
-          return !!await io.exists(p);
+          return !!await io2.exists(p);
         } catch {
           return false;
         }
@@ -38479,7 +38497,7 @@ ${mdToHtmlBody(md, o)}
       const v2 = s && s.opts ? s.opts[k] : void 0;
       return v2 === void 0 || v2 === null ? dflt : v2;
     };
-    const has3 = (key2) => steps.some((s) => s.key === key2);
+    const has4 = (key2) => steps.some((s) => s.key === key2);
     const keepFor = (sc) => keepBlanks === void 0 ? true : !!keepBlanks;
     const squashAll = keepBlanks === void 0 ? false : !keepBlanks;
     for (const st of at("model")) {
@@ -38554,37 +38572,37 @@ ${mdToHtmlBody(md, o)}
     }
     const out = [];
     const st0 = modelStats(model);
-    if (has3("cover")) {
+    if (has4("cover")) {
       if (String(model.title || "").trim()) out.push("# " + model.title, "");
       const au = String(opt("cover", "author", "") || model.author || "").trim();
       if (au) out.push(au, "");
       out.push(tf("ui.compile.wordChapterScene", fmtNum(st0.words), st0.chapters, st0.scenes), "");
-      if (has3("page-break")) out.push(PAGE_BREAK, "");
+      if (has4("page-break")) out.push(PAGE_BREAK, "");
     }
-    if (has3("roster") && String(model.roster || "").trim()) {
+    if (has4("roster") && String(model.roster || "").trim()) {
       out.push(String(model.roster).trim(), "");
-      if (has3("page-break")) out.push(PAGE_BREAK, "");
+      if (has4("page-break")) out.push(PAGE_BREAK, "");
     }
     const sep = String(opt("scene-separator", "text", "* * *"));
     let cn = 0;
     for (const ch of model.chapters) {
       cn++;
-      if (has3("page-break") && cn > 1) out.push(PAGE_BREAK, "");
-      if (has3("chapter-heading") && String(ch.title || "").trim())
+      if (has4("page-break") && cn > 1) out.push(PAGE_BREAK, "");
+      if (has4("chapter-heading") && String(ch.title || "").trim())
         out.push(fill(opt("chapter-heading", "template", "## {title}"), cn, ch.title || "", varCtx), "");
       let sn = 0;
       for (const s of ch.scenes) {
         sn++;
-        if (has3("scene-separator") && sn > 1 && sep.trim()) out.push(sep, "");
-        if (has3("scene-heading") && String(s.title || "").trim())
+        if (has4("scene-separator") && sn > 1 && sep.trim()) out.push(sep, "");
+        if (has4("scene-heading") && String(s.title || "").trim())
           out.push(fill(opt("scene-heading", "template", "### {title}"), sn, s.title || "", varCtx), "");
-        if (has3("scene-meta"))
+        if (has4("scene-meta"))
           out.push(tf("ui.compile.word", s.status || t("ui.compile.notSpecifyStatus"), fmtNum(s.words || 0)), "");
         const b = keepFor(s) ? String(s.body || "").replace(/\s+$/, "") : String(s.body || "").trim();
         if (b) out.push(b, "");
       }
     }
-    if (has3("stats")) {
+    if (has4("stats")) {
       out.push(
         "---",
         "",
@@ -38872,11 +38890,11 @@ ${mdToHtmlBody(md, o)}
   function projectImageUrl(root, src2) {
     const s = String(src2 == null ? "" : src2).trim();
     if (!s || /^(data:|https?:|file:|blob:)/i.test(s)) return s;
-    const norm4 = s.replace(/\\/g, "/");
-    if (/^([A-Za-z]:\/|\/)/.test(norm4)) return fileUrlFromPath(norm4);
+    const norm5 = s.replace(/\\/g, "/");
+    if (/^([A-Za-z]:\/|\/)/.test(norm5)) return fileUrlFromPath(norm5);
     if (!root) return s;
-    const k = norm4.lastIndexOf("/Images/");
-    const rel = k >= 0 ? "Images/" + norm4.slice(k + 8) : norm4.startsWith("Images/") ? norm4 : norm4.replace(/^(\.\.?\/)+/, "");
+    const k = norm5.lastIndexOf("/Images/");
+    const rel = k >= 0 ? "Images/" + norm5.slice(k + 8) : norm5.startsWith("Images/") ? norm5 : norm5.replace(/^(\.\.?\/)+/, "");
     return fileUrlFromPath(String(root).replace(/[\\/]+$/, "") + "/" + rel);
   }
   var init_file_url = __esm({
@@ -41145,7 +41163,7 @@ ${mdToHtmlBody(md, o)}
         tab.tabBtn.querySelector(".tab-title").textContent = gi("dot") + " " + tab.title;
       }
     };
-    const clean3 = () => {
+    const clean4 = () => {
       tab.dirty = false;
       tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
     };
@@ -87809,9 +87827,9 @@ ${mdToHtmlBody(md, o)}
                 var result = input.map(function(g2) {
                   return g2.id;
                 });
-                var _cache5 = _this.inputCache[found2];
-                if (_cache5) {
-                  _cache5.push(result);
+                var _cache6 = _this.inputCache[found2];
+                if (_cache6) {
+                  _cache6.push(result);
                 } else {
                   _this.inputCache[found2] = [result];
                 }
@@ -95158,16 +95176,16 @@ ${mdToHtmlBody(md, o)}
     };
   }
   function makeDrawer(set, custom) {
-    const clean3 = (s) => custom ? String(s ?? "") : sanitizeForStandardFont(s);
+    const clean4 = (s) => custom ? String(s ?? "") : sanitizeForStandardFont(s);
     const widthOf = (font, text, size) => {
       try {
-        return font.widthOfTextAtSize(clean3(text), size);
+        return font.widthOfTextAtSize(clean4(text), size);
       } catch {
         return String(text ?? "").length * size * 0.6;
       }
     };
     const draw3 = (page2, text, { x, y, size, bold, italic, underline, align, boxWidth, color, opacity, rotate }) => {
-      const t3 = clean3(text);
+      const t3 = clean4(text);
       if (!t3) return 0;
       const runs = splitFontRuns(t3, !!set.latin);
       const fontFor2 = (r) => r.latin ? pickFont(set.latin, bold, italic) : pickFont(set, bold, italic);
@@ -95213,7 +95231,7 @@ ${mdToHtmlBody(md, o)}
       }
       return w;
     };
-    return { draw: draw3, widthOf, clean: clean3 };
+    return { draw: draw3, widthOf, clean: clean4 };
   }
   async function generatePdf(args = {}) {
     const fmt2 = args.fmt && args.fmt.elements ? args.fmt : mergeSpFormat(args.fmt);
@@ -102121,8 +102139,8 @@ ${cards.join("")}</div>${und}</body></html>`;
       return false;
     }
     const maps = data2.maps || [];
-    const norm4 = (p) => String(p || "").replace(/\\/g, "/").toLowerCase();
-    const mine = (f) => f && norm4(f) === norm4(entityFile);
+    const norm5 = (p) => String(p || "").replace(/\\/g, "/").toLowerCase();
+    const mine = (f) => f && norm5(f) === norm5(entityFile);
     const hits = maps.filter((m) => (m.pins || []).some((p) => p.kind === "entity" && mine(p.entityFile)) || mapZones(m).some((z) => mine(z.entityFile)));
     const head2 = el("div", "wiki-map-head");
     head2.append(el("span", "wiki-map-title", gi("map") + " " + t("ui.maps.wikiBlock")));
@@ -108423,10 +108441,10 @@ a.card:hover{border-color:${CARD_STRIPE}}
         provSel.append(o);
       }
       if (rows.length) provSel.value = activeId || rows[0].id;
-      const has3 = rows.length > 0;
-      provSel.style.display = has3 ? "" : "none";
-      editBtn.disabled = delBtn.disabled = !has3;
-      empty3.style.display = has3 ? "none" : "";
+      const has4 = rows.length > 0;
+      provSel.style.display = has4 ? "" : "none";
+      editBtn.disabled = delBtn.disabled = !has4;
+      empty3.style.display = has4 ? "none" : "";
       const cur = rows.find((p) => p.id === provSel.value);
       info.textContent = cur ? tf("ui.aiProvider.baseURLModel", cur.credential.baseUrl || "\u2014", cur.model || t("ui.aiProvider.notPick")) + tf("ui.aiProvider.domainAllow", (cur.credential.allowedDomains || []).join(", ") || t("ui.aiProvider.notRemember")) : "";
     }
@@ -110529,18 +110547,18 @@ a.card:hover{border-color:${CARD_STRIPE}}
     }
     return { text: out, changed };
   }
-  function renameEntityTask(io) {
+  function renameEntityTask(io2) {
     return async (payload) => {
       const { oldName, newName, files = [] } = payload || {};
       if (!oldName || !newName || oldName === newName) return { changed: 0, files: [], detail: t("ui.autoTaskEventQueue.notHasMustEdit") };
       const touched = [];
       let total = 0;
       for (const p of files) {
-        const text = await io.readFile(p);
+        const text = await io2.readFile(p);
         if (text == null) continue;
         const r = replaceName(text, oldName, newName);
         if (!r.changed) continue;
-        await io.writeFile(p, r.text);
+        await io2.writeFile(p, r.text);
         touched.push(p);
         total += r.changed;
       }
@@ -114056,7 +114074,7 @@ ${h.text}`;
     const out = [];
     for (const row4 of coerceArray(rows)) {
       if (!row4 || typeof row4 !== "object") continue;
-      const clean3 = {};
+      const clean4 = {};
       let ok2 = true;
       for (const [field3, rule] of Object.entries(schema2)) {
         let v2 = row4[field3];
@@ -114069,9 +114087,9 @@ ${h.text}`;
           ok2 = false;
           break;
         }
-        clean3[field3] = v2;
+        clean4[field3] = v2;
       }
-      if (ok2) out.push(clean3);
+      if (ok2) out.push(clean4);
     }
     return out;
   }
@@ -114264,8 +114282,8 @@ ${h.text}`;
       KEY_FILE3 = "ai-key.json";
       SECRET_KEYS = ["authorization", "x-api-key", "apikey", "api_key", "key", "token"];
       KeyStore = class {
-        constructor({ io = null, root = "", cache: cache3 = null } = {}) {
-          this.io = io;
+        constructor({ io: io2 = null, root = "", cache: cache3 = null } = {}) {
+          this.io = io2;
           this.root = root;
           this._cache = cache3;
         }
@@ -117566,8 +117584,8 @@ ${h.text}`;
         }
       };
       KanbanBoard = class {
-        constructor({ io, draftPath, statuses, storage, autoSave = true, onLog: onLog2 } = {}) {
-          this.io = io;
+        constructor({ io: io2, draftPath, statuses, storage, autoSave = true, onLog: onLog2 } = {}) {
+          this.io = io2;
           this.draftPath = draftPath;
           this.statuses = statuses || DEFAULT_STATUSES;
           this.store = new KanbanStore(storage);
@@ -117798,9 +117816,9 @@ ${h.text}`;
     try {
       kapi.onLocalWrite((p) => {
         if (!board || !p) return;
-        const norm4 = String(p).replace(/\\/g, "/");
+        const norm5 = String(p).replace(/\\/g, "/");
         const dp = String(board.draftPath || "").replace(/\\/g, "/");
-        if (dp && norm4.startsWith(dp) && /\/(scenes|draft)\.json$/.test(norm4)) scheduleSync(true);
+        if (dp && norm5.startsWith(dp) && /\/(scenes|draft)\.json$/.test(norm5)) scheduleSync(true);
       });
     } catch {
     }
@@ -118679,6 +118697,8 @@ ${h.text}`;
     UPDATE_ASSET_PREFIX: () => UPDATE_ASSET_PREFIX,
     UPDATE_GIT_URL: () => UPDATE_GIT_URL,
     UPDATE_HOME_URL: () => UPDATE_HOME_URL,
+    UPDATE_ISSUES_API_URL: () => UPDATE_ISSUES_API_URL,
+    UPDATE_ISSUES_URL: () => UPDATE_ISSUES_URL,
     UPDATE_MANIFEST_URL: () => UPDATE_MANIFEST_URL,
     UPDATE_OWNER: () => UPDATE_OWNER,
     UPDATE_RELEASES_URL: () => UPDATE_RELEASES_URL,
@@ -118836,8 +118856,8 @@ ${h.text}`;
   function safeAssetName(name5, fallback = "killian2-update.bin") {
     const base4 = String(name5 || "").split(/[\\/]/).pop().trim();
     if (!base4 || base4 === "." || base4 === "..") return fallback;
-    const clean3 = base4.replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "");
-    return clean3 || fallback;
+    const clean4 = base4.replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "");
+    return clean4 || fallback;
   }
   function looksLikeExe(bytes) {
     if (!bytes || bytes.length < 2) return false;
@@ -118848,7 +118868,7 @@ ${h.text}`;
     if (!total) return mb(received) + " MB";
     return mb(received) + " / " + mb(total) + " MB";
   }
-  var UPDATE_OWNER, UPDATE_REPO, R, UPDATE_GIT_URL, UPDATE_HOME_URL, UPDATE_RELEASES_URL, UPDATE_API_URL, UPDATE_MANIFEST_URL, UPDATE_ASSET_PREFIX, ASSET_RULES, OLD_SUFFIX;
+  var UPDATE_OWNER, UPDATE_REPO, R, UPDATE_GIT_URL, UPDATE_HOME_URL, UPDATE_RELEASES_URL, UPDATE_API_URL, UPDATE_MANIFEST_URL, UPDATE_ASSET_PREFIX, UPDATE_ISSUES_URL, UPDATE_ISSUES_API_URL, ASSET_RULES, OLD_SUFFIX;
   var init_update_check = __esm({
     "src/update/update-check.js"() {
       UPDATE_OWNER = "Nbcybg";
@@ -118860,6 +118880,8 @@ ${h.text}`;
       UPDATE_API_URL = `https://api.github.com/repos/${R}/releases?per_page=30`;
       UPDATE_MANIFEST_URL = `https://raw.githubusercontent.com/${R}/HEAD/package.json`;
       UPDATE_ASSET_PREFIX = `https://github.com/${R}/releases/download/`;
+      UPDATE_ISSUES_URL = `https://github.com/${R}/issues`;
+      UPDATE_ISSUES_API_URL = `https://api.github.com/repos/${R}/issues?state=all&per_page=100&sort=created&direction=desc`;
       ASSET_RULES = {
         win: [/portable.*\.exe$/i, /\.exe$/i, /win.*\.zip$/i],
         mac: [/\.dmg$/i, /mac.*\.zip$/i, /darwin.*\.zip$/i],
@@ -120601,8 +120623,8 @@ ${h.text}`;
   function labelOf2(id) {
     const b = btn(id);
     const raw = b && (b.title || b.getAttribute("aria-label")) || "";
-    const clean3 = raw.replace(/\s*\((?:Ctrl|⌘|Alt|⌥|Shift|⇧)[^)]*\)\s*$/i, "").trim();
-    return clean3 || id.replace(/^tb-/, "");
+    const clean4 = raw.replace(/\s*\((?:Ctrl|⌘|Alt|⌥|Shift|⇧)[^)]*\)\s*$/i, "").trim();
+    return clean4 || id.replace(/^tb-/, "");
   }
   function barSeq(bar) {
     return [...bar.children].map((k) => {
@@ -121293,8 +121315,8 @@ ${h.text}`;
     return { journal: { ...j, entries: keep }, dropped };
   }
   function relPath(p, root) {
-    const norm4 = (s) => String(s || "").replace(/\\/g, "/");
-    const a = norm4(p), b = norm4(root).replace(/\/+$/, "");
+    const norm5 = (s) => String(s || "").replace(/\\/g, "/");
+    const a = norm5(p), b = norm5(root).replace(/\/+$/, "");
     return b && a.toLowerCase().startsWith(b.toLowerCase() + "/") ? a.slice(b.length + 1) : a;
   }
   function describe(entry, root) {
@@ -123012,8 +123034,13 @@ ${h.text}`;
         await kapi.langReload();
       } catch {
       }
-      await loadLanguage(q2("#st-lang").value || i18n.lang, state.root);
+      const keep = q2("#st-lang").value;
+      await loadLanguage(i18n.lang, state.root);
       await fillLangs();
+      if (keep && keep !== q2("#st-lang").value) {
+        q2("#st-lang").value = keep;
+        q2("#st-lang").dispatchEvent(new Event("change"));
+      }
       setStatus(t("ui.dlg.loadFileLangNew"));
     };
     if (q2("#st-lang-export")) q2("#st-lang-export").onclick = () => exportLangCsv();
@@ -123167,6 +123194,11 @@ ${h.text}`;
       box2.querySelector(".k-set-nav")?.prepend(note);
       if (openTab && projPages.has(openTab)) openTab = "gen";
     }
+    const focusEl = opts.focus ? q2(opts.focus) : null;
+    const focusPage = focusEl ? focusEl.closest(".k-set-page") : null;
+    const focusOK = !!(focusPage && !focusPage.dataset.noproj);
+    if (focusOK) openTab = focusPage.dataset.p;
+    if (openTab && ![...box2.querySelectorAll(".k-set-tab")].some((x) => x.dataset.p === openTab)) openTab = null;
     if (openTab) gotoTab(openTab);
     else {
       let last2 = "";
@@ -123176,7 +123208,7 @@ ${h.text}`;
       }
       if (last2 && box2.querySelector(`.k-set-tab[data-p="${CSS.escape(last2)}"]`)) gotoTab(last2);
     }
-    if (opts.focus) {
+    if (focusOK) {
       setTimeout(() => {
         const el2 = q2(opts.focus);
         if (!el2) return;
@@ -123448,20 +123480,12 @@ ${h.text}`;
       }
       const selLang = q2("#st-lang")?.value;
       if (selLang && selLang !== origLang) {
-        s.language = selLang;
-        await loadLanguage(selLang, state.root);
-        if (projOK) await saveProjectMeta();
-        else {
-          try {
-            const { saveGlobalSetting: saveGlobalSetting2 } = await Promise.resolve().then(() => (init_app(), app_exports));
-            await saveGlobalSetting2("language", selLang);
-          } catch (e) {
-            log("warn", "global language", e);
-          }
-        }
         try {
-          await kapi.langSet(selLang);
-        } catch {
+          const { setAppLanguage: setAppLanguage2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+          await setAppLanguage2(selLang);
+        } catch (e) {
+          log("error", "language: set failed", e);
+          setStatusError(failText(t("ui.dlg.saveSettingsFail"), e));
         }
         const inTest = location.search.includes("k2test") || !!globalThis.__k2testing;
         if (!inTest && await confirmBox(t("ui.dlg.changeLangDoneStart"), t("ui.common.restart"))) {
@@ -134600,9 +134624,9 @@ ${h.text}`;
          * @param {object} io    kapi adapter (รับเข้ามาเพื่อ unit test)
          * @param {string} path  path ไฟล์กระดาน (ไม่ใส่ = <root>/planner.json)
          */
-        constructor(root, io, path) {
+        constructor(root, io2, path) {
           this._root = root;
-          this._io = io;
+          this._io = io2;
           this._path = path || null;
           this._nodes = [];
           this._edges = [];
@@ -134933,10 +134957,10 @@ ${h.text}`;
           return n2;
         }
         addNodeRaw(n2) {
-          const norm4 = this._normNode(n2);
-          this._nodes.push(norm4);
+          const norm5 = this._normNode(n2);
+          this._nodes.push(norm5);
           this._dirty = true;
-          return norm4;
+          return norm5;
         }
         removeNode(id) {
           const idx4 = this._nodes.findIndex((n2) => n2.id === id);
@@ -167799,9 +167823,9 @@ ${h.text}`;
     return names.every((n2) => n2.startsWith(p)) ? p : "";
   }
   function safeRel(name5) {
-    const clean3 = String(name5 || "").replace(/\\/g, "/").replace(/^[/]+/, "");
-    if (!clean3 || clean3.endsWith("/")) return "";
-    const parts = clean3.split("/").filter((x) => x && x !== ".");
+    const clean4 = String(name5 || "").replace(/\\/g, "/").replace(/^[/]+/, "");
+    if (!clean4 || clean4.endsWith("/")) return "";
+    const parts = clean4.split("/").filter((x) => x && x !== ".");
     if (parts.includes("..")) return "";
     if (/^[a-zA-Z]:/.test(parts[0] || "")) return "";
     return parts.join("/");
@@ -171504,9 +171528,9 @@ details>summary::-webkit-details-marker{display:none}
   }
   function sceneNodeFor(graph, it) {
     if (it.id && graph.byId.has(it.id)) return graph.byId.get(it.id);
-    const norm4 = (p) => String(p || "").replace(/\\/g, "/").toLowerCase();
-    const f = norm4(it.path || it.file);
-    return f ? graph.nodes.find((x) => norm4(x.filePath) === f) || null : null;
+    const norm5 = (p) => String(p || "").replace(/\\/g, "/").toLowerCase();
+    const f = norm5(it.path || it.file);
+    return f ? graph.nodes.find((x) => norm5(x.filePath) === f) || null : null;
   }
   async function dropChoiceOn(target, graph, redraw3) {
     const d = dragChoice;
@@ -176167,9 +176191,9 @@ ${preview2}` + (found2.length > 8 ? `
   }
   function computeScoreSingle(matches2, { ignoreFieldNorm = Config.ignoreFieldNorm }) {
     let totalScore = 1;
-    matches2.forEach(({ key: key2, norm: norm4, score }) => {
+    matches2.forEach(({ key: key2, norm: norm5, score }) => {
       const weight = key2 ? key2.weight : null;
-      totalScore *= Math.pow(score === 0 && weight ? Number.EPSILON : score, (weight || 1) * (ignoreFieldNorm ? 1 : norm4));
+      totalScore *= Math.pow(score === 0 && weight ? Number.EPSILON : score, (weight || 1) * (ignoreFieldNorm ? 1 : norm5));
     });
     return totalScore;
   }
@@ -177120,14 +177144,14 @@ ${preview2}` + (found2.length > 8 ? `
           const requireAllTokens = this.options.useTokenSearch && this.options.tokenMatch === "all";
           const { records } = this._myIndex;
           const results = heap ? null : [];
-          records.forEach(({ v: text, i: idx4, n: norm4 }) => {
+          records.forEach(({ v: text, i: idx4, n: norm5 }) => {
             if (!isDefined(text)) return;
             const searchResult = searcher.searchIn(text);
             if (searchResult.isMatch) {
               const match = {
                 score: searchResult.score,
                 value: text,
-                norm: norm4,
+                norm: norm5,
                 indices: searchResult.indices
               };
               if (requireAllTokens) {
@@ -177252,7 +177276,7 @@ ${preview2}` + (found2.length > 8 ? `
         _findMatches({ key: key2, value, searcher }) {
           if (!isDefined(value)) return [];
           const matches2 = [];
-          if (isArray2(value)) value.forEach(({ v: text, i: idx4, n: norm4 }) => {
+          if (isArray2(value)) value.forEach(({ v: text, i: idx4, n: norm5 }) => {
             if (!isDefined(text)) return;
             const searchResult = searcher.searchIn(text);
             if (searchResult.isMatch) {
@@ -177261,7 +177285,7 @@ ${preview2}` + (found2.length > 8 ? `
                 key: key2,
                 value: text,
                 idx: idx4,
-                norm: norm4,
+                norm: norm5,
                 indices: searchResult.indices,
                 hasInverse: searchResult.hasInverse
               };
@@ -177274,14 +177298,14 @@ ${preview2}` + (found2.length > 8 ? `
             }
           });
           else {
-            const { v: text, n: norm4 } = value;
+            const { v: text, n: norm5 } = value;
             const searchResult = searcher.searchIn(text);
             if (searchResult.isMatch) {
               const match = {
                 score: searchResult.score,
                 key: key2,
                 value: text,
-                norm: norm4,
+                norm: norm5,
                 indices: searchResult.indices,
                 hasInverse: searchResult.hasInverse
               };
@@ -177858,8 +177882,8 @@ ${preview2}` + (found2.length > 8 ? `
             try {
               const raw = await kapi.readFile(fp);
               const { body: md } = (0, import_md22.parseMdFile)(raw);
-              const clean3 = stripMentions(stripComments2(md));
-              let inner = mdToHtmlBody(clean3);
+              const clean4 = stripMentions(stripComments2(md));
+              let inner = mdToHtmlBody(clean4);
               if (o.embedImages) inner = await embedImages(inner, imgCache);
               const head2 = o.sceneHeads ? `<h3>${escapeHtml2(sc.title || "")}</h3>
 ` : "";
@@ -178366,23 +178390,23 @@ img{max-width:100%}` }
       ""
     ].join("\n");
   }
-  async function ensureSkillDir(root, io = typeof kapi !== "undefined" ? kapi : null) {
-    if (!root || !io) return "";
-    const d = await io.join(root, SKILL_DIR);
-    if (!await io.exists(d)) await io.mkdir(d);
+  async function ensureSkillDir(root, io2 = typeof kapi !== "undefined" ? kapi : null) {
+    if (!root || !io2) return "";
+    const d = await io2.join(root, SKILL_DIR);
+    if (!await io2.exists(d)) await io2.mkdir(d);
     return d;
   }
-  async function loadSkills(root, io = typeof kapi !== "undefined" ? kapi : null) {
-    if (!root || !io) return [];
+  async function loadSkills(root, io2 = typeof kapi !== "undefined" ? kapi : null) {
+    if (!root || !io2) return [];
     try {
-      const d = await io.join(root, SKILL_DIR);
-      if (!await io.exists(d)) return [];
+      const d = await io2.join(root, SKILL_DIR);
+      if (!await io2.exists(d)) return [];
       const out = [];
-      for (const f of await io.listFiles(d)) {
+      for (const f of await io2.listFiles(d)) {
         if (!/\.md$/i.test(f)) continue;
         try {
-          const p = await io.join(d, f);
-          const s = parseSkillFile(await io.readFile(p), f);
+          const p = await io2.join(d, f);
+          const s = parseSkillFile(await io2.readFile(p), f);
           s.file = p;
           out.push(s);
         } catch {
@@ -179419,11 +179443,11 @@ img{max-width:100%}` }
       SYSTEM = t("ui.aiChat.youAssistantKnownWorld") + t("ui.aiChat.replyThaiUseOnly") + t("ui.aiChat.dataNotAtNot") + t("ui.aiChat.toScenePageSpecify");
       MAX_HISTORY_TOKENS = 2e3;
       ChatSession = class {
-        constructor({ client, index = null, k = 6, io = null, root = "", maxHistoryTokens = MAX_HISTORY_TOKENS } = {}) {
+        constructor({ client, index = null, k = 6, io: io2 = null, root = "", maxHistoryTokens = MAX_HISTORY_TOKENS } = {}) {
           this.client = client;
           this.rag = new RagPipeline({ client, index: index || new VectorIndex({}) });
           this.k = k;
-          this.io = io;
+          this.io = io2;
           this.root = root;
           this.history = [];
           this.maxHistoryTokens = maxHistoryTokens;
@@ -179559,8 +179583,8 @@ img{max-width:100%}` }
     const d = await sessionsDir();
     if (!d) return false;
     delete s._draft;
-    const { _draft, ...clean3 } = s;
-    await kapi.writeFile(await kapi.join(d, sessionFileName(s)), JSON.stringify(clean3, null, 2));
+    const { _draft, ...clean4 } = s;
+    await kapi.writeFile(await kapi.join(d, sessionFileName(s)), JSON.stringify(clean4, null, 2));
     const i5 = S3.sessions.findIndex((x) => x.id === s.id);
     if (i5 === -1) S3.sessions.push(s);
     else S3.sessions[i5] = s;
@@ -181587,8 +181611,8 @@ img{max-width:100%}` }
     return { kind: "want-scene", id: id || "" };
   }
   function samePath(a, b) {
-    const norm4 = (s) => String(s || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
-    return !!a && !!b && norm4(a) === norm4(b);
+    const norm5 = (s) => String(s || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+    return !!a && !!b && norm5(a) === norm5(b);
   }
   function tabsToReload(tabs2, changedPath) {
     if (!changedPath) return [];
@@ -187751,7 +187775,10 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         "line-band",
         "osk",
         "a11y-settings",
-        "type-sound"
+        "type-sound",
+        // [alpha.170] รายงาน/สถานะบั๊กไม่แตะเนื้อเอกสาร
+        "bug-report",
+        "bug-status"
       ]);
       chipTimer = null;
       COLOR_NAME = {
@@ -188269,8 +188296,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         return href ? `<img alt="${a}" src="${xmlEsc(href)}"/>` : a;
       });
       const marks2 = seg.marks || [];
-      const has3 = (n2) => marks2.some((m) => markName(m) === n2);
-      for (const [n2, tag3] of X_TAGS) if (has3(n2)) s = `<${tag3}>${s}</${tag3}>`;
+      const has4 = (n2) => marks2.some((m) => markName(m) === n2);
+      for (const [n2, tag3] of X_TAGS) if (has4(n2)) s = `<${tag3}>${s}</${tag3}>`;
       const col = marks2.find((m) => m && typeof m === "object" && m.type === "color");
       const h = col ? hex6((col.attrs || {}).color) : "";
       if (h) s = `<span style="color:#${h}">${s}</span>`;
@@ -188436,18 +188463,18 @@ ${chapters.map((c) => `<itemref idref="${c.id}"/>`).join("\n")}
     return { files, sections: sections.length, images: used.size };
   }
   function runXml(text, marks2, fontPt) {
-    const has3 = (n2) => (marks2 || []).some((m) => markName(m) === n2);
+    const has4 = (n2) => (marks2 || []).some((m) => markName(m) === n2);
     const rp = [];
-    if (has3("strong")) rp.push("<w:b/><w:bCs/>");
-    if (has3("em")) rp.push("<w:i/><w:iCs/>");
-    if (has3("underline")) rp.push('<w:u w:val="single"/>');
-    if (has3("strike")) rp.push("<w:strike/>");
+    if (has4("strong")) rp.push("<w:b/><w:bCs/>");
+    if (has4("em")) rp.push("<w:i/><w:iCs/>");
+    if (has4("underline")) rp.push('<w:u w:val="single"/>');
+    if (has4("strike")) rp.push("<w:strike/>");
     const col = (marks2 || []).find((m) => m && typeof m === "object" && m.type === "color");
     const h = col ? hex6((col.attrs || {}).color) : "";
     if (h) rp.push(`<w:color w:val="${h}"/>`);
     if (fontPt) rp.push(`<w:sz w:val="${Math.round(fontPt * 2)}"/><w:szCs w:val="${Math.round(fontPt * 2)}"/>`);
-    if (has3("sup")) rp.push('<w:vertAlign w:val="superscript"/>');
-    else if (has3("sub")) rp.push('<w:vertAlign w:val="subscript"/>');
+    if (has4("sup")) rp.push('<w:vertAlign w:val="superscript"/>');
+    else if (has4("sub")) rp.push('<w:vertAlign w:val="subscript"/>');
     const rPr = rp.length ? `<w:rPr>${rp.join("")}</w:rPr>` : "";
     return String(text).split("	").map((part, i5) => (i5 ? `<w:r>${rPr}<w:tab/></w:r>` : "") + (part ? `<w:r>${rPr}<w:t xml:space="preserve">${xmlEsc(part)}</w:t></w:r>` : "")).join("");
   }
@@ -188813,14 +188840,14 @@ ${body}
     };
     const run3 = (text, marks2) => {
       if (!text) return "";
-      const has3 = (n2) => (marks2 || []).some((x) => markName2(x) === n2);
+      const has4 = (n2) => (marks2 || []).some((x) => markName2(x) === n2);
       let c = "";
-      if (has3("strong")) c += "\\b";
-      if (has3("em")) c += "\\i";
-      if (has3("underline")) c += "\\ul";
-      if (has3("strike")) c += "\\strike";
-      if (has3("sup")) c += "\\super";
-      else if (has3("sub")) c += "\\sub";
+      if (has4("strong")) c += "\\b";
+      if (has4("em")) c += "\\i";
+      if (has4("underline")) c += "\\ul";
+      if (has4("strike")) c += "\\strike";
+      if (has4("sup")) c += "\\super";
+      else if (has4("sub")) c += "\\sub";
       const col = (marks2 || []).find((x) => x && typeof x === "object" && x.type === "color");
       const ci = col ? colorIdx((col.attrs || {}).color) : 0;
       if (ci) c += "\\cf" + ci;
@@ -190717,21 +190744,21 @@ ${pages.join("\n")}
       if (typeof v2 === "string" && !(k in fields)) fields[k] = v2;
     }
     const keys4 = tpl ? tpl.fields.map((f) => f.key).filter((k) => k !== "name") : Object.keys(fields);
-    const clean3 = {};
-    for (const k of keys4) clean3[k] = str2(fields[k]);
+    const clean4 = {};
+    for (const k of keys4) clean4[k] = str2(fields[k]);
     const sections = validate(obj.sections, {
       title: { required: true, type: "string" },
       body: { required: true, type: "string" }
     });
     const missing = [
-      ...keys4.filter((k) => !clean3[k]),
+      ...keys4.filter((k) => !clean4[k]),
       ...(tpl ? tpl.sections : []).filter((s) => !sections.some((x) => x.title.includes(s) || s.includes(x.title)))
     ];
     return {
       type,
       template: tpl ? tpl.label : type,
       name: str2(obj.name) || str2(fields.name) || "",
-      fields: clean3,
+      fields: clean4,
       sections,
       tags: (Array.isArray(obj.tags) ? obj.tags : []).map(str2).filter(Boolean),
       missing,
@@ -193699,11 +193726,11 @@ ${s.body}`).join("\n\n");
     const src2 = stripHtml(text);
     if (!src2) return [];
     const limit = Number.isFinite(o.limit) ? o.limit : 8;
-    const norm4 = (s) => String(s || "").replace(/\s+/g, "").toLowerCase();
-    const skip = new Set((o.exclude || []).map(norm4).filter(Boolean));
+    const norm5 = (s) => String(s || "").replace(/\s+/g, "").toLowerCase();
+    const skip = new Set((o.exclude || []).map(norm5).filter(Boolean));
     const found2 = /* @__PURE__ */ new Map();
     const add2 = (name5, source, rank) => {
-      const key2 = norm4(name5);
+      const key2 = norm5(name5);
       if (!key2 || skip.has(key2)) return;
       const old = found2.get(key2);
       if (old) {
@@ -197274,11 +197301,11 @@ ${s.body}`).join("\n\n");
   function getAntonyms(word) {
     return shared().getAntonyms(word);
   }
-  async function loadExtra(io, root) {
+  async function loadExtra(io2, root) {
     try {
-      const p = io.join(root, "Plugins", "thesaurus.json");
-      if (!await io.exists(p)) return null;
-      const j = await io.readJson(p);
+      const p = io2.join(root, "Plugins", "thesaurus.json");
+      if (!await io2.exists(p)) return null;
+      const j = await io2.readJson(p);
       if (!j) return null;
       return { synonyms: j.synonyms || {}, antonyms: j.antonyms || {} };
     } catch {
@@ -197469,13 +197496,13 @@ ${s.body}`).join("\n\n");
   // src/tools/thesaurus-ui.js
   async function showThesaurusPopup(word, x, y) {
     if (!word) return;
-    const norm4 = word.trim();
-    if (!norm4) return;
+    const norm5 = word.trim();
+    if (!norm5) return;
     let syns = [], ants = [];
     try {
       const [synRes, antRes] = await Promise.all([
-        getSynonyms(norm4).catch(() => []),
-        getAntonyms(norm4).catch(() => [])
+        getSynonyms(norm5).catch(() => []),
+        getAntonyms(norm5).catch(() => [])
       ]);
       syns = Array.isArray(synRes) ? synRes : synRes?.words || [];
       ants = Array.isArray(antRes) ? antRes : antRes?.words || [];
@@ -197483,7 +197510,7 @@ ${s.body}`).join("\n\n");
       log("warn", t("ui.thes.thesaurusSearchNotOk"), e);
     }
     if (!syns.length && !ants.length) {
-      setStatus(t("ui.thes.notFound") + norm4 + '"');
+      setStatus(t("ui.thes.notFound") + norm5 + '"');
       return;
     }
     const old = document.querySelector(".k-thes-popup");
@@ -197752,18 +197779,18 @@ ${s.body}`).join("\n\n");
     return draft ? draft.children : binder;
   }
   async function importScrivener(filePath, options = {}) {
-    const io = options.io;
-    if (!io) return { ok: false, error: t("ui.impOrtScrivener.mustSendIoAdapter"), code: "no-io" };
+    const io2 = options.io;
+    if (!io2) return { ok: false, error: t("ui.impOrtScrivener.mustSendIoAdapter"), code: "no-io" };
     const warnings = [];
     let files = [];
     try {
-      files = await io.listFiles(filePath);
+      files = await io2.listFiles(filePath);
     } catch {
       files = [];
     }
     const scrivx = files.find((f) => f.toLowerCase().endsWith(".scrivx"));
     if (!scrivx) return { ok: false, error: t("ui.impOrtScrivener.notFoundFileScrivx"), code: "no-scrivx" };
-    const xml = await io.readFile(io.join(filePath, scrivx));
+    const xml = await io2.readFile(io2.join(filePath, scrivx));
     const binder = parseBinder(xml);
     if (!binder.length) return { ok: false, error: t("ui.impOrtScrivener.readOutlineBinderCant"), code: "bad-binder" };
     const mapped = mapBinder(binder, options);
@@ -197771,7 +197798,7 @@ ${s.body}`).join("\n\n");
     for (const sec2 of mapped.sections) {
       for (const ch of sec2.chapters) {
         for (const sc of ch.scenes) {
-          const rtf = await readDocRtf(io, filePath, sc.srcId);
+          const rtf = await readDocRtf(io2, filePath, sc.srcId);
           if (rtf == null) {
             warnings.push(tf("ui.impOrtScrivener.notFoundBody", sc.title, sc.srcId));
             sc.body = "";
@@ -197787,18 +197814,18 @@ ${s.body}`).join("\n\n");
     if (!dest) return { ok: false, error: t("ui.impOrtScrivener.cantPickFolderTo"), code: "no-dest", plan, counts: mapped.counts };
     let written = 0;
     for (const f of plan.files) {
-      const full = io.join(dest, ...f.path);
-      if (io.mkdir) await io.mkdir(dirOf3(io, dest, f.path));
-      await io.writeFile(full, f.content);
+      const full = io2.join(dest, ...f.path);
+      if (io2.mkdir) await io2.mkdir(dirOf3(io2, dest, f.path));
+      await io2.writeFile(full, f.content);
       written++;
       if (options.onProgress) options.onProgress(written, plan.files.length, f.path.join("/"));
     }
     return { ok: true, plan, counts: mapped.counts, warnings, written, title: title2, dest };
   }
-  function dirOf3(io, dest, parts) {
-    return io.join(dest, ...parts.slice(0, -1));
+  function dirOf3(io2, dest, parts) {
+    return io2.join(dest, ...parts.slice(0, -1));
   }
-  async function readDocRtf(io, root, id) {
+  async function readDocRtf(io2, root, id) {
     const candidates = [
       ["Files", "Data", id, "content.rtf"],
       // Scrivener 3
@@ -197807,9 +197834,9 @@ ${s.body}`).join("\n\n");
       ["Files", "Docs", id, "content.rtf"]
     ];
     for (const parts of candidates) {
-      const p = io.join(root, ...parts);
+      const p = io2.join(root, ...parts);
       try {
-        if (await io.exists(p)) return await io.readFile(p);
+        if (await io2.exists(p)) return await io2.readFile(p);
       } catch {
       }
     }
@@ -197888,10 +197915,10 @@ ${sc.body || ""}
     const src2 = await kapi.openProjectDialog();
     if (!src2) return null;
     setBusy(t("ui.impOrt.busyReadProjectScrivener"));
-    const io = makeIo();
+    const io2 = makeIo();
     let preview2;
     try {
-      preview2 = await importScrivener(src2, { io, dryRun: true });
+      preview2 = await importScrivener(src2, { io: io2, dryRun: true });
     } finally {
       clearBusy();
     }
@@ -197910,14 +197937,14 @@ ${sc.body || ""}
     if (!await confirmBox(lines.join("\n") + t("ui.impOrt.pickFolderToDone"), t("ui.common.importBtn"))) return null;
     const dest = await kapi.openProjectDialog();
     if (!dest) return null;
-    if (await kapi.exists(io.join(dest, "project.khn.json"))) {
+    if (await kapi.exists(io2.join(dest, "project.khn.json"))) {
       if (!await confirmBox(t("ui.imp.overwrite"), t("ui.common.overwrite"))) return null;
     }
     setBusy(t("ui.imp.working"));
     let res;
     try {
       res = await importScrivener(src2, {
-        io,
+        io: io2,
         dest,
         title: preview2.title,
         now: (/* @__PURE__ */ new Date()).toISOString(),
@@ -199236,6 +199263,937 @@ ${css}
         // 1 = กลางหน้าเดียว · >1 = ปูทั้งหน้า
       };
       esc9 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+  });
+
+  // src/bugs/bug-config.js
+  var BUG_RELAY_URL, BUG_CONTACT;
+  var init_bug_config = __esm({
+    "src/bugs/bug-config.js"() {
+      BUG_RELAY_URL = "https://k2-bug-relay.noobcyborg.workers.dev";
+      BUG_CONTACT = { label: "", url: "" };
+    }
+  });
+
+  // src/bugs/bug-core.js
+  function bugApiUrl(page2 = 1) {
+    const p = Math.max(1, Math.min(BUG_MAX_PAGES, parseInt(page2, 10) || 1));
+    return UPDATE_ISSUES_API_URL + "&page=" + p;
+  }
+  function bugUrl(num5) {
+    const n2 = parseInt(num5, 10);
+    return Number.isInteger(n2) && n2 > 0 ? BUG_LIST_URL + "/" + n2 : BUG_LIST_URL;
+  }
+  function isOpenStatus(st) {
+    return BUG_OPEN_STATUSES.includes(st);
+  }
+  function labelNames(issue) {
+    const ls = issue && Array.isArray(issue.labels) ? issue.labels : [];
+    return ls.map((l) => norm4(typeof l === "string" ? l : l && l.name)).filter(Boolean);
+  }
+  function statusOf3(issue) {
+    const ls = labelNames(issue);
+    const closed = String(issue && issue.state).toLowerCase() === "closed";
+    const reason = norm4(issue && issue.state_reason);
+    if (has3(ls, "duplicate") || reason === "duplicate") return "duplicate";
+    if (closed) return reason === "not-planned" || has3(ls, "wontfix", "invalid", "not-a-bug") ? "wontfix" : "fixed";
+    if (has3(ls, "in-progress", "wip", "fixing")) return "progress";
+    if (has3(ls, "need-info", "needs-info", "more-info", "question")) return "needinfo";
+    if (has3(ls, "confirmed", "bug")) return "confirmed";
+    return "new";
+  }
+  function isTrustedAuthor(issue) {
+    return TRUSTED_AUTHORS.includes(String(issue && issue.author_association).toUpperCase());
+  }
+  function isBugIssue(issue) {
+    if (!issue || typeof issue !== "object" || issue.pull_request) return false;
+    if (!Number.isInteger(issue.number)) return false;
+    if (!isTrustedAuthor(issue)) return false;
+    const ls = labelNames(issue);
+    if (has3(ls, ...HIDDEN_LABELS)) return false;
+    if (has3(ls, "bug", "confirmed")) return true;
+    return !has3(ls, "enhancement", "feature", "feature-request", "documentation");
+  }
+  function shortVersion(v2) {
+    const s = normalizeTag2(v2);
+    if (!s) return "";
+    const m = /^\d+(?:\.\d+){0,2}-([0-9A-Za-z.-]+)$/.exec(s);
+    return m ? m[1] : s;
+  }
+  function versionKey(v2) {
+    const s = normalizeTag2(v2);
+    return /^\d/.test(s) ? s : s ? "0.0.0-" + s : "";
+  }
+  function cmpBugVersion(a, b) {
+    const A = versionKey(shortVersion(a)), B = versionKey(shortVersion(b));
+    if (!A || !B) return A ? 1 : B ? -1 : 0;
+    return cmpVersion(A, B) || (A < B ? -1 : A > B ? 1 : 0);
+  }
+  function parseReportMark(body) {
+    const out = { version: "", platform: "", lang: "" };
+    const m = RE_MARK.exec(String(body || ""));
+    if (!m) return out;
+    for (const kv of m[1].trim().split(/\s+/)) {
+      const i5 = kv.indexOf("=");
+      if (i5 < 1) continue;
+      const k = kv.slice(0, i5).toLowerCase();
+      if (k in out) out[k] = kv.slice(i5 + 1).replace(/[^0-9A-Za-z.+_-]/g, "").slice(0, 40);
+    }
+    return out;
+  }
+  function foundVersion(issue) {
+    const ls = labelNames(issue);
+    const fromLabel = labelValue(ls, /^found(?:-in)?[:=-]+v?(.+)$/);
+    if (fromLabel) return shortVersion(fromLabel);
+    const body = String(issue && issue.body || "");
+    const mark = parseReportMark(body).version;
+    if (mark) return shortVersion(mark);
+    const m = RE_VER_LINE.exec(body);
+    return m ? shortVersion(m[1].slice(0, 40)) : "";
+  }
+  function fixedVersion(issue) {
+    const ms = issue && issue.milestone && issue.milestone.title;
+    if (ms && String(ms).trim()) return shortVersion(String(ms).trim().slice(0, 40));
+    return shortVersion(labelValue(labelNames(issue), /^fixed(?:-in)?[:=-]+v?(.+)$/));
+  }
+  function issueToBug(issue) {
+    const num5 = issue.number;
+    return {
+      num: num5,
+      id: "#" + num5,
+      title: String(issue.title || "").replace(/\s+/g, " ").trim().slice(0, 300),
+      status: statusOf3(issue),
+      foundIn: foundVersion(issue),
+      reported: String(issue.created_at || ""),
+      fixedIn: fixedVersion(issue),
+      url: bugUrl(num5)
+    };
+  }
+  function readIssuesResponse(res) {
+    if (!res || res.netError || res.aborted || !res.status) {
+      return { ok: false, code: "net", detail: String(res && res.error || "") };
+    }
+    if (res.status === 429 || res.status === 403 && /rate limit/i.test(String(res.body || ""))) {
+      return { ok: false, code: "rate", status: res.status };
+    }
+    if (!res.ok) return { ok: false, code: "http", status: res.status };
+    let arr = null;
+    try {
+      arr = JSON.parse(String(res.body || "").replace(BOM_RE, ""));
+    } catch {
+      arr = null;
+    }
+    if (!Array.isArray(arr)) return { ok: false, code: "parse", status: res.status };
+    return { ok: true, bugs: arr.filter(isBugIssue).map(issueToBug), more: arr.length >= BUG_PAGE_SIZE };
+  }
+  function mergeBugs(...lists) {
+    const seen = /* @__PURE__ */ new Set(), out = [];
+    for (const l of lists) for (const b of l || []) {
+      if (!b || seen.has(b.num)) continue;
+      seen.add(b.num);
+      out.push(b);
+    }
+    return out;
+  }
+  function bugVersions(list3, field3 = "foundIn") {
+    const set = /* @__PURE__ */ new Set();
+    for (const b of list3 || []) if (b && b[field3]) set.add(b[field3]);
+    return [...set].sort((a, b) => cmpBugVersion(b, a));
+  }
+  function filterBugs(list3, f = {}) {
+    const words = String(f.q || "").toLowerCase().split(/\s+/).filter(Boolean);
+    const st = f.status || "all", found2 = f.found || "all", fixed = f.fixed || "all";
+    return (list3 || []).filter((b) => {
+      if (st === "open" ? !isOpenStatus(b.status) : st === "closed" ? isOpenStatus(b.status) : st !== "all" && b.status !== st) return false;
+      if (found2 !== "all" && b.foundIn !== found2) return false;
+      if (fixed === "none" ? !!b.fixedIn : fixed !== "all" && b.fixedIn !== fixed) return false;
+      if (!words.length) return true;
+      const hay = (b.id + " " + b.num + " " + b.title + " " + b.foundIn + " " + b.fixedIn).toLowerCase();
+      return words.every((w) => hay.includes(w));
+    });
+  }
+  function sortBugs(list3, key2 = "id", dir2 = "desc", cmpTitle) {
+    const sign = dir2 === "asc" ? 1 : -1;
+    const text = cmpTitle || ((a, b) => a < b ? -1 : a > b ? 1 : 0);
+    const by = {
+      id: (a, b) => a.num - b.num,
+      title: (a, b) => text(a.title, b.title),
+      status: (a, b) => BUG_STATUSES.indexOf(a.status) - BUG_STATUSES.indexOf(b.status),
+      foundIn: (a, b) => cmpBugVersion(a.foundIn, b.foundIn),
+      reported: (a, b) => a.reported < b.reported ? -1 : a.reported > b.reported ? 1 : 0,
+      fixedIn: (a, b) => cmpBugVersion(a.fixedIn, b.fixedIn)
+    }[BUG_SORT_KEYS.includes(key2) ? key2 : "id"];
+    return [...list3 || []].sort((a, b) => by(a, b) * sign || b.num - a.num);
+  }
+  function countByStatus(list3) {
+    const out = { all: 0, open: 0, closed: 0 };
+    for (const s of BUG_STATUSES) out[s] = 0;
+    for (const b of list3 || []) {
+      out.all++;
+      if (b.status in out) out[b.status]++;
+      if (isOpenStatus(b.status)) out.open++;
+      else out.closed++;
+    }
+    return out;
+  }
+  function reportTitle(title2) {
+    return clean3(title2, 200).replace(/\s+/g, " ");
+  }
+  function buildReportBody(r = {}) {
+    const L2 = r.labels || {}, env2 = r.env || {};
+    const parts = [];
+    const sec2 = (head2, text) => {
+      const v2 = clean3(text, 6e3);
+      if (v2) parts.push("### " + (head2 || "").trim() + "\n" + v2);
+    };
+    sec2(L2.what, r.what);
+    sec2(L2.steps, r.steps);
+    sec2(L2.expected, r.expected);
+    parts.push("### " + String(L2.env || "").trim() + "\n" + envLine(env2));
+    parts.push(reportMark(env2));
+    return parts.join("\n\n");
+  }
+  function envLine(env2 = {}) {
+    const bits3 = ["Version: " + (clean3(env2.version, 40) || "?")];
+    if (env2.platform) bits3.push("OS: " + clean3(env2.platform, 20) + (env2.os ? " (" + clean3(env2.os, 60) + ")" : ""));
+    if (env2.lang) bits3.push("Language: " + clean3(env2.lang, 12));
+    if (env2.runtime) bits3.push(clean3(env2.runtime, 60));
+    return bits3.join(" \xB7 ");
+  }
+  function reportMark(env2 = {}) {
+    return "<!-- k2-report version=" + (markVal(env2.version) || "?") + (env2.platform ? " platform=" + markVal(env2.platform) : "") + (env2.lang ? " lang=" + markVal(env2.lang) : "") + " -->";
+  }
+  function isRelayUrl(u) {
+    const s = String(u == null ? "" : u).trim();
+    return /^https:\/\/[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{1,5})?(\/[^\s?#@]*)?$/i.test(s);
+  }
+  function buildRelayRequest({ relay = "", title: title2 = "", body = "", env: env2 = {}, now = Date.now() } = {}) {
+    const ttl = reportTitle(title2);
+    if (!isRelayUrl(relay) || !ttl) return null;
+    return {
+      url: String(relay).trim().replace(/\/+$/, "") + RELAY_PATH,
+      options: {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-K2-Client": RELAY_CLIENT },
+        body: JSON.stringify({ title: ttl, body: clean3(body, RELAY_MAX_BODY), version: markVal(env2.version), ts: now })
+      }
+    };
+  }
+  function readRelayResponse(res) {
+    if (!res || res.netError || res.aborted || !res.status) return { ok: false, code: "net" };
+    if (res.status === 429) return { ok: false, code: "rate", status: 429 };
+    if (!res.ok) {
+      let why = "";
+      try {
+        why = String((JSON.parse(String(res.body || "")) || {}).code || "");
+      } catch {
+        why = "";
+      }
+      return { ok: false, code: /^ts$/.test(why) ? "clock" : "http", status: res.status };
+    }
+    let d = null;
+    try {
+      d = JSON.parse(String(res.body || "").replace(BOM_RE, ""));
+    } catch {
+      d = null;
+    }
+    const num5 = d && d.ok === true ? parseInt(d.number, 10) : NaN;
+    return Number.isInteger(num5) && num5 > 0 ? { ok: true, num: num5 } : { ok: false, code: "parse", status: res.status };
+  }
+  function pendingBug(num5, title2, version2, now = Date.now()) {
+    const n2 = parseInt(num5, 10);
+    if (!Number.isInteger(n2) || n2 <= 0) return null;
+    return {
+      num: n2,
+      id: "#" + n2,
+      title: reportTitle(title2),
+      status: "new",
+      foundIn: shortVersion(markVal(version2)),
+      reported: new Date(now).toISOString(),
+      fixedIn: "",
+      url: bugUrl(n2),
+      ts: now
+    };
+  }
+  function prunePending(list3, now = Date.now()) {
+    const seen = /* @__PURE__ */ new Set(), out = [];
+    for (const p of Array.isArray(list3) ? list3 : []) {
+      if (!p || !Number.isInteger(p.num) || p.num <= 0 || seen.has(p.num)) continue;
+      if (!Number.isFinite(p.ts) || now - p.ts < 0 || now - p.ts >= PENDING_MS) continue;
+      seen.add(p.num);
+      out.push(pendingBug(p.num, p.title, p.foundIn, p.ts));
+    }
+    return out.sort((a, b) => b.ts - a.ts).slice(0, PENDING_MAX);
+  }
+  function withPending(bugs, pending, now = Date.now()) {
+    const have = new Set((bugs || []).map((b) => b.num));
+    const extra = prunePending(pending, now).filter((p) => !have.has(p.num)).map(({ ts, ...row4 }) => row4);
+    return extra.length ? [...extra, ...bugs || []] : bugs || [];
+  }
+  function isEmail(s) {
+    return /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/.test(String(s == null ? "" : s).trim());
+  }
+  function contactKind(contact) {
+    const label2 = String(contact && contact.label || "").trim();
+    if (!label2) return "";
+    if (isEmail(label2)) return "email";
+    return /^https:\/\//i.test(String(contact && contact.url || "")) ? "link" : "text";
+  }
+  function buildMailto(address, title2 = "", max2 = 1900) {
+    const to = String(address == null ? "" : address).trim();
+    if (!isEmail(to)) return "";
+    const make = (tt) => "mailto:" + to + "?subject=" + encodeURIComponent(MAIL_SUBJECT_PREFIX + tt);
+    let chars3 = [...reportTitle(title2)];
+    while (chars3.length && make(chars3.join("")).length > max2) chars3 = chars3.slice(0, Math.max(0, chars3.length - 8));
+    return make(chars3.join("")).replace(/%20$/, "");
+  }
+  function cacheFresh(cache3, now = Date.now()) {
+    return !!(cache3 && Number.isFinite(cache3.ts) && Array.isArray(cache3.bugs) && now - cache3.ts >= 0 && now - cache3.ts < BUG_CACHE_MS);
+  }
+  function parseCache(text) {
+    let c = null;
+    try {
+      c = JSON.parse(String(text || ""));
+    } catch {
+      return null;
+    }
+    if (!c || !Number.isFinite(c.ts) || !Array.isArray(c.bugs)) return null;
+    const bugs = c.bugs.filter((b) => b && Number.isInteger(b.num) && b.num > 0 && BUG_STATUSES.includes(b.status)).map((b) => ({
+      num: b.num,
+      id: "#" + b.num,
+      title: String(b.title || "").slice(0, 300),
+      status: b.status,
+      foundIn: String(b.foundIn || "").slice(0, 40),
+      reported: String(b.reported || "").slice(0, 40),
+      fixedIn: String(b.fixedIn || "").slice(0, 40),
+      url: bugUrl(b.num)
+    }));
+    return { ts: c.ts, bugs };
+  }
+  var BOM_RE, BUG_LIST_URL, BUG_PAGE_SIZE, BUG_MAX_PAGES, BUG_STATUSES, BUG_STATUS_KEYS, BUG_OPEN_STATUSES, norm4, has3, TRUSTED_AUTHORS, HIDDEN_LABELS, RE_MARK, RE_VER_LINE, labelValue, BUG_SORT_KEYS, clean3, markVal, RELAY_CLIENT, RELAY_PATH, RELAY_MAX_BODY, PENDING_MS, PENDING_MAX, MAIL_SUBJECT_PREFIX;
+  var init_bug_core = __esm({
+    "src/bugs/bug-core.js"() {
+      init_timing();
+      init_update_check();
+      BOM_RE = new RegExp("^" + String.fromCharCode(65279));
+      BUG_LIST_URL = UPDATE_ISSUES_URL;
+      BUG_PAGE_SIZE = 100;
+      BUG_MAX_PAGES = 5;
+      BUG_STATUSES = ["new", "confirmed", "progress", "needinfo", "fixed", "wontfix", "duplicate"];
+      BUG_STATUS_KEYS = {
+        new: "ui.bug.stNew",
+        confirmed: "ui.bug.stConfirmed",
+        progress: "ui.bug.stProgress",
+        needinfo: "ui.bug.stNeedInfo",
+        fixed: "ui.bug.stFixed",
+        wontfix: "ui.bug.stWontfix",
+        duplicate: "ui.bug.stDuplicate"
+      };
+      BUG_OPEN_STATUSES = ["new", "confirmed", "progress", "needinfo"];
+      norm4 = (s) => String(s == null ? "" : s).trim().toLowerCase().replace(/[\s_]+/g, "-");
+      has3 = (ls, ...names) => names.some((n2) => ls.includes(n2));
+      TRUSTED_AUTHORS = ["OWNER", "MEMBER", "COLLABORATOR"];
+      HIDDEN_LABELS = ["hidden", "spam", "test"];
+      RE_MARK = /<!--\s*k2-report\b([^>]*?)-->/i;
+      RE_VER_LINE = /^[\s>*_-]*(?:app\s+)?version[*_\s]*[:：][*_\s]*([^\s*_`<]+)/im;
+      labelValue = (ls, re) => {
+        for (const l of ls) {
+          const m = re.exec(l);
+          if (m) return m[1];
+        }
+        return "";
+      };
+      BUG_SORT_KEYS = ["id", "title", "status", "foundIn", "reported", "fixedIn"];
+      clean3 = (s, max2) => String(s == null ? "" : s).replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").trim().slice(0, max2);
+      markVal = (s) => String(s == null ? "" : s).replace(/[^0-9A-Za-z.+_-]/g, "").slice(0, 40);
+      RELAY_CLIENT = "killian2";
+      RELAY_PATH = "/report";
+      RELAY_MAX_BODY = 2e4;
+      PENDING_MS = 60 * 60 * 1e3;
+      PENDING_MAX = 20;
+      MAIL_SUBJECT_PREFIX = "[Killian 2] ";
+    }
+  });
+
+  // src/bugs/bug-ui.js
+  function setBugIo(patch) {
+    const old = { ...io };
+    Object.assign(io, patch || {});
+    return () => {
+      Object.assign(io, old);
+    };
+  }
+  function readCache2() {
+    if (_cache5) return _cache5;
+    try {
+      _cache5 = parseCache(localStorage.getItem(CACHE_KEY2));
+    } catch {
+      _cache5 = null;
+    }
+    return _cache5;
+  }
+  function writeCache2(bugs) {
+    _cache5 = { ts: Date.now(), bugs };
+    try {
+      localStorage.setItem(CACHE_KEY2, JSON.stringify(_cache5));
+    } catch {
+    }
+  }
+  function clearBugCache() {
+    _cache5 = null;
+    try {
+      localStorage.removeItem(CACHE_KEY2);
+    } catch {
+    }
+  }
+  function readSent() {
+    try {
+      return prunePending(JSON.parse(localStorage.getItem(SENT_KEY) || "[]"));
+    } catch {
+      return [];
+    }
+  }
+  function rememberSent(num5, title2, version2) {
+    const row4 = pendingBug(num5, title2, version2);
+    if (!row4) return;
+    try {
+      localStorage.setItem(SENT_KEY, JSON.stringify(prunePending([row4, ...readSent()])));
+    } catch {
+    }
+  }
+  function clearBugSent() {
+    try {
+      localStorage.removeItem(SENT_KEY);
+    } catch {
+    }
+  }
+  function bugEnv() {
+    const ua = typeof navigator !== "undefined" && navigator.userAgent || "";
+    const os2 = /\(([^)]+)\)/.exec(ua);
+    const elv = /Electron\/([\d.]+)/.exec(ua);
+    return {
+      version: typeof kapi !== "undefined" && kapi.appVersion || "",
+      platform: typeof kapi !== "undefined" && kapi.platform || "",
+      os: os2 ? os2[1].split(";")[0].trim() : "",
+      lang: langInfo.code || "",
+      runtime: elv ? "Electron " + elv[1] : ""
+    };
+  }
+  async function fetchBugs() {
+    let all = [];
+    for (let p = 1; p <= BUG_MAX_PAGES; p++) {
+      let res = null;
+      try {
+        res = await io.fetch(bugApiUrl(p));
+      } catch (e) {
+        res = { status: 0, netError: true, error: String(e && e.message || e) };
+      }
+      const r = readIssuesResponse(res);
+      if (!r.ok) {
+        if (p === 1) return r;
+        break;
+      }
+      all = mergeBugs(all, r.bugs);
+      if (!r.more) break;
+    }
+    return { ok: true, bugs: all };
+  }
+  function errorText(r) {
+    const key2 = ERR_KEYS[r && r.code] || "ui.bug.errNet";
+    return r && r.code === "http" ? tf(key2, r.status || "?") : t(key2);
+  }
+  async function openInBrowser(url) {
+    try {
+      if (await io.open(url) === false) throw new Error("refused");
+      return true;
+    } catch (e) {
+      log("warn", "bug: open browser failed", e);
+      setStatusError(t("ui.bug.openFail"));
+      return false;
+    }
+  }
+  function readDraft() {
+    try {
+      const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+      return d && typeof d === "object" ? d : {};
+    } catch {
+      return {};
+    }
+  }
+  function saveDraft2(d) {
+    try {
+      if (d && (d.title || d.what || d.steps || d.expected)) localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+      else localStorage.removeItem(DRAFT_KEY);
+    } catch {
+    }
+  }
+  function sendErrorText(r) {
+    const key2 = SEND_ERR_KEYS[r && r.code] || "ui.bug.sendNet";
+    return key2 === "ui.bug.sendFail" ? tf(key2, r && r.status || "?") : t(key2);
+  }
+  function openBugReport() {
+    document.querySelectorAll(".k-overlay.k-bug-report-ov").forEach((o) => o.remove());
+    const ov = el("div", "k-overlay k-bug-report-ov");
+    const box2 = el("div", "k-dialog k-wide k-bug-report");
+    box2.append(el("div", "k-dlg-title", t("ui.bug.reportTitle")));
+    const body = el("div", "k-bug-form");
+    body.append(el("div", "k-hint k-bug-intro", t("ui.bug.reportIntro")));
+    const relay = String(io.relay() || "");
+    const canSend = isRelayUrl(relay);
+    if (!canSend) body.append(el("div", "k-bug-off", t("ui.bug.sendOff")));
+    const contact = io.contact() || {};
+    const cKind = contactKind(contact);
+    let contactName = null;
+    if (cKind) {
+      const line = el("div", "k-hint k-bug-intro k-bug-contact");
+      line.append(document.createTextNode(t("ui.bug.contactLine") + " "));
+      contactName = el("span", "k-bug-contact-name k-selectable", String(contact.label).trim().slice(0, 120));
+      contactName.dataset.kind = cKind;
+      line.append(contactName);
+      body.append(line);
+    }
+    const draft = readDraft();
+    const field3 = (id, labelKey2, phKey, rows, value) => {
+      const wrap2 = el("div", "k-bug-field");
+      const lb = el("label", "k-bug-label", t(labelKey2));
+      lb.htmlFor = id;
+      const inp = el(rows ? "textarea" : "input", "k-dlg-input" + (rows ? " k-bug-ta" : ""));
+      inp.id = id;
+      if (rows) inp.rows = rows;
+      else inp.type = "text";
+      inp.placeholder = t(phKey);
+      inp.value = String(value || "");
+      wrap2.append(lb, inp);
+      body.append(wrap2);
+      return inp;
+    };
+    const fTitle = field3("k-bug-f-title", "ui.bug.fTitle", "ui.bug.fTitlePh", 0, draft.title);
+    fTitle.maxLength = 200;
+    const fWhat = field3("k-bug-f-what", "ui.bug.fWhat", "ui.bug.fWhatPh", 3, draft.what);
+    const fSteps = field3("k-bug-f-steps", "ui.bug.fSteps", "ui.bug.fStepsPh", 3, draft.steps);
+    const fExpected = field3("k-bug-f-expected", "ui.bug.fExpected", "ui.bug.fExpectedPh", 2, draft.expected);
+    const env2 = bugEnv();
+    const envBox = el("div", "k-bug-env");
+    envBox.append(
+      el("div", "k-bug-label", t("ui.bug.envHead")),
+      el("div", "k-bug-env-line k-selectable", envLine(env2)),
+      el("div", "k-hint", t("ui.bug.envNote"))
+    );
+    body.append(envBox);
+    const errBox = el("div", "k-bug-err");
+    errBox.setAttribute("role", "alert");
+    body.append(errBox);
+    const showErr = (msg) => {
+      errBox.textContent = msg || "";
+      if (msg) setStatusError(msg);
+    };
+    const values2 = () => ({ title: fTitle.value, what: fWhat.value, steps: fSteps.value, expected: fExpected.value });
+    for (const f of [fTitle, fWhat, fSteps, fExpected]) f.addEventListener("input", () => {
+      saveDraft2(values2());
+      if (errBox.textContent) errBox.textContent = "";
+    });
+    const labels = { what: t("ui.bug.fWhat"), steps: t("ui.bug.fSteps"), expected: t("ui.bug.fExpected"), env: t("ui.bug.envHead") };
+    const fullBody = () => buildReportBody({ ...values2(), env: env2, labels });
+    const ready2 = () => {
+      if (reportTitle(fTitle.value)) return true;
+      showErr(t("ui.bug.needTitle"));
+      fTitle.classList.add("k-set-flash");
+      setTimeout(() => fTitle.classList.remove("k-set-flash"), 1800);
+      fTitle.focus();
+      return false;
+    };
+    const close2 = () => ov.remove();
+    if (contactName && cKind !== "text") {
+      contactName.classList.add("k-bug-link");
+      contactName.tabIndex = 0;
+      contactName.setAttribute("role", "link");
+      if (cKind === "email") contactName.title = t("ui.bug.contactMailTip");
+      const go = async () => {
+        if (cKind === "link") {
+          openInBrowser(String(contact.url));
+          return;
+        }
+        if (!ready2()) return;
+        const to = String(contact.label).trim();
+        try {
+          await io.copy("# " + reportTitle(fTitle.value) + "\n\n" + fullBody());
+        } catch (e) {
+          log("warn", "bug: copy failed", e);
+          showErr(t("ui.bug.copyFail"));
+          return;
+        }
+        let opened = false;
+        try {
+          opened = await io.open(buildMailto(to, fTitle.value)) !== false;
+        } catch (e) {
+          log("warn", "bug: open mail failed", e);
+        }
+        log("info", "bug: report copied for email", { opened });
+        toast(tf("ui.bug.contactMailed", to));
+      };
+      contactName.onclick = go;
+      contactName.onkeydown = (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          go();
+        }
+      };
+    }
+    const btns = el("div", "k-dlg-btns");
+    const bStatus = el("button", "k-bug-go-status", t("ui.bug.btnStatus"));
+    bStatus.onclick = () => {
+      close2();
+      openBugStatus();
+    };
+    const bCancel = el("button", "k-cancel", t("ui.dialogs.cancel"));
+    bCancel.onclick = close2;
+    const bCopy = el("button", "k-bug-copy", t("ui.bug.btnCopy"));
+    bCopy.onclick = async () => {
+      if (!ready2()) return;
+      try {
+        await io.copy("# " + reportTitle(fTitle.value) + "\n\n" + fullBody());
+        toast(t("ui.bug.copied"));
+        log("info", "bug: report copied");
+      } catch (e) {
+        log("warn", "bug: copy failed", e);
+        showErr(t("ui.bug.copyFail"));
+      }
+    };
+    const bSend = el("button", "k-ok", t("ui.bug.btnSend"));
+    bSend.disabled = !canSend;
+    let sending = false;
+    bSend.onclick = async () => {
+      if (sending || !canSend || !ready2()) return;
+      const req = buildRelayRequest({ relay, title: fTitle.value, body: fullBody(), env: env2 });
+      if (!req) {
+        showErr(t("ui.bug.sendOff"));
+        return;
+      }
+      sending = true;
+      showErr("");
+      bSend.disabled = true;
+      bCopy.disabled = true;
+      bSend.textContent = t("ui.bug.sending");
+      let res = null;
+      try {
+        res = await io.post(req.url, req.options);
+      } catch (e) {
+        res = { status: 0, netError: true, error: String(e && e.message || e) };
+      }
+      const r = readRelayResponse(res);
+      sending = false;
+      bSend.disabled = false;
+      bCopy.disabled = false;
+      bSend.textContent = t("ui.bug.btnSend");
+      if (!r.ok) {
+        log("warn", "bug: report send failed", { code: r.code, status: r.status || 0 });
+        showErr(sendErrorText(r));
+        return;
+      }
+      log("info", "bug: report sent", { num: r.num });
+      saveDraft2(null);
+      rememberSent(r.num, fTitle.value, env2.version);
+      clearBugCache();
+      close2();
+      const msg = tf("ui.bug.sentOk", "#" + r.num);
+      setStatusAction(msg, t("ui.bug.btnStatus"), () => openBugStatus({ force: true }));
+      toast(msg);
+    };
+    btns.append(bStatus, bCancel, bCopy, bSend);
+    box2.append(body, btns);
+    ov.append(box2);
+    ov.addEventListener("mousedown", (e) => {
+      if (e.target === ov) close2();
+    });
+    escClose(ov, close2);
+    document.body.append(ov);
+    setTimeout(() => {
+      try {
+        fTitle.focus();
+      } catch {
+      }
+    }, 0);
+    return ov;
+  }
+  function resetBugView() {
+    Object.assign(VIEW2, { q: "", status: "all", found: "all", fixed: "all", sort: "id", dir: "desc" });
+  }
+  function openBugStatus(opts = {}) {
+    document.querySelectorAll(".k-overlay.k-bug-status-ov").forEach((o) => o.remove());
+    const ov = el("div", "k-overlay k-bug-status-ov");
+    const box2 = el("div", "k-dialog k-wide k-bug-status");
+    box2.append(el("div", "k-dlg-title", t("ui.bug.statusTitle")));
+    const bar = el("div", "k-bug-bar");
+    const q2 = el("input", "k-dlg-input k-bug-q");
+    q2.type = "search";
+    q2.placeholder = t("ui.bug.searchPh");
+    q2.value = VIEW2.q;
+    q2.setAttribute("aria-label", t("ui.bug.searchPh"));
+    const mkSel = (cls, titleKey) => {
+      const s = el("select", "k-dlg-select " + cls);
+      s.title = t(titleKey);
+      s.setAttribute("aria-label", t(titleKey));
+      return s;
+    };
+    const selStatus = mkSel("k-bug-f-status", "ui.bug.colStatus");
+    const selFound = mkSel("k-bug-f-found", "ui.bug.colFound");
+    const selFixed = mkSel("k-bug-f-fixed", "ui.bug.colFixed");
+    const bClear = el("button", "cmp-mini k-bug-clear", t("ui.bug.clear"));
+    const bRefresh = el("button", "cmp-mini k-bug-refresh");
+    bRefresh.append(icon("refresh", 14), document.createTextNode(" " + t("ui.bug.refresh")));
+    bar.append(q2, selStatus, selFound, selFixed, bClear, bRefresh);
+    const wrap2 = el("div", "k-bug-wrap");
+    const table9 = el("table", "k-bug-table");
+    const thead = el("thead"), headRow = el("tr");
+    const ths = {};
+    for (const c of COLS) {
+      const th = el("th", "k-bug-c-" + c.key);
+      th.scope = "col";
+      const b = el("button", "k-bug-th");
+      b.type = "button";
+      b.dataset.sort = c.key;
+      b.title = t("ui.bug.sortTip");
+      b.append(el("span", "k-bug-th-text", t(c.label)), el("span", "k-bug-th-arrow"));
+      b.onclick = () => {
+        if (VIEW2.sort === c.key) VIEW2.dir = VIEW2.dir === "asc" ? "desc" : "asc";
+        else {
+          VIEW2.sort = c.key;
+          VIEW2.dir = c.key === "title" ? "asc" : "desc";
+        }
+        draw3();
+      };
+      th.append(b);
+      headRow.append(th);
+      ths[c.key] = th;
+    }
+    thead.append(headRow);
+    const tbody = el("tbody");
+    table9.append(thead, tbody);
+    const msg = el("div", "k-bug-msg");
+    wrap2.append(table9, msg);
+    const note = el("div", "k-bug-note");
+    const count = el("span", "k-bug-count");
+    const stamp = el("span", "k-bug-stamp dim");
+    note.append(count, stamp, el("span", "k-bug-src dim", t("ui.bug.source")));
+    const btns = el("div", "k-dlg-btns");
+    const bWeb = el("button", "k-bug-web", t("ui.bug.openWeb"));
+    bWeb.onclick = () => openInBrowser(BUG_LIST_URL);
+    const bReport = el("button", "k-bug-go-report", t("ui.bug.reportTitle"));
+    const bClose = el("button", "k-ok k-cancel", t("ui.common.close"));
+    const close2 = () => ov.remove();
+    bReport.onclick = () => {
+      close2();
+      openBugReport();
+    };
+    bClose.onclick = close2;
+    btns.append(bWeb, bReport, bClose);
+    box2.append(bar, wrap2, note, btns);
+    ov.append(box2);
+    const S10 = { bugs: null, loading: false, error: "", ts: 0, stale: false };
+    const fillSelect = (sel2, options, value) => {
+      sel2.replaceChildren();
+      for (const [v2, label2] of options) {
+        const o = el("option", null, label2);
+        o.value = v2;
+        sel2.append(o);
+      }
+      sel2.value = options.some(([v2]) => v2 === value) ? value : "all";
+      return sel2.value;
+    };
+    const fillFilters = () => {
+      const list3 = S10.bugs || [];
+      const n2 = countByStatus(list3);
+      VIEW2.status = fillSelect(selStatus, [
+        ["all", tf("ui.bug.fltAll", n2.all)],
+        ["open", tf("ui.bug.fltOpen", n2.open)],
+        ["closed", tf("ui.bug.fltClosed", n2.closed)],
+        ...BUG_STATUSES.map((s) => [s, tf("ui.bug.fltOne", t(BUG_STATUS_KEYS[s]), n2[s])])
+      ], VIEW2.status);
+      VIEW2.found = fillSelect(selFound, [["all", t("ui.bug.fltFoundAll")], ...bugVersions(list3, "foundIn").map((v2) => [v2, v2])], VIEW2.found);
+      VIEW2.fixed = fillSelect(selFixed, [
+        ["all", t("ui.bug.fltFixedAll")],
+        ["none", t("ui.bug.fltFixedNone")],
+        ...bugVersions(list3, "fixedIn").map((v2) => [v2, v2])
+      ], VIEW2.fixed);
+    };
+    const cell = (cls, text) => el("td", cls, text || DASH);
+    function draw3() {
+      const all = S10.bugs || [];
+      const shown = sortBugs(filterBugs(all, VIEW2), VIEW2.sort, VIEW2.dir, cmpText);
+      for (const c of COLS) {
+        const on2 = VIEW2.sort === c.key;
+        ths[c.key].setAttribute("aria-sort", on2 ? VIEW2.dir === "asc" ? "ascending" : "descending" : "none");
+        const arrow2 = ths[c.key].querySelector(".k-bug-th-arrow");
+        arrow2.replaceChildren();
+        if (on2) arrow2.append(icon(VIEW2.dir === "asc" ? "arrow-up" : "arrow-down", 12));
+      }
+      tbody.replaceChildren();
+      for (const b of shown) {
+        const tr4 = el("tr", "k-bug-row");
+        tr4.dataset.num = String(b.num);
+        tr4.dataset.status = b.status;
+        const idCell = el("td", "k-bug-c-id");
+        const link = el("span", "k-bug-link", b.id);
+        link.tabIndex = 0;
+        link.setAttribute("role", "link");
+        link.title = tf("ui.bug.rowTip", b.id);
+        const go = () => openInBrowser(bugUrl(b.num));
+        link.onclick = go;
+        link.onkeydown = (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            go();
+          }
+        };
+        idCell.append(link);
+        const stCell = el("td", "k-bug-c-status");
+        const chip = el("span", "k-bug-st", t(BUG_STATUS_KEYS[b.status]));
+        chip.dataset.st = b.status;
+        if (b.status === "fixed") chip.prepend(icon("check", 11));
+        stCell.append(chip);
+        const ttl = el("td", "k-bug-c-title k-selectable", b.title || DASH);
+        ttl.title = b.title || "";
+        tr4.append(
+          idCell,
+          ttl,
+          stCell,
+          cell("k-bug-c-foundIn", b.foundIn),
+          cell("k-bug-c-reported", fmtDate(b.reported)),
+          cell("k-bug-c-fixedIn", b.fixedIn)
+        );
+        tbody.append(tr4);
+      }
+      let m = "";
+      if (S10.loading && !all.length) m = t("ui.bug.loading");
+      else if (S10.error && !all.length) m = S10.error;
+      else if (!all.length) m = t("ui.bug.empty");
+      else if (!shown.length) m = t("ui.bug.noMatch");
+      msg.textContent = m;
+      msg.dataset.kind = S10.loading && !all.length ? "loading" : S10.error && !all.length ? "error" : m ? "empty" : "";
+      msg.style.display = m ? "" : "none";
+      table9.classList.toggle("k-bug-table-empty", !all.length);
+      count.textContent = all.length ? tf("ui.bug.count", shown.length, all.length) : "";
+      stamp.textContent = !S10.ts ? "" : S10.stale ? S10.error + " " + tf("ui.bug.stale", fmtDateTime(S10.ts)) : tf("ui.bug.updated", fmtDateTime(S10.ts));
+      stamp.classList.toggle("k-bug-stamp-warn", !!S10.stale);
+      bRefresh.disabled = S10.loading;
+      bClear.disabled = !(VIEW2.q || VIEW2.status !== "all" || VIEW2.found !== "all" || VIEW2.fixed !== "all");
+    }
+    let round = 0;
+    async function load(force) {
+      const cache3 = readCache2();
+      if (!S10.bugs) {
+        const first = withPending(cache3 ? cache3.bugs : [], readSent());
+        if (cache3 || first.length) {
+          S10.bugs = first;
+          S10.ts = cache3 ? cache3.ts : 0;
+          fillFilters();
+        }
+      }
+      if (!force && cacheFresh(cache3)) {
+        S10.loading = false;
+        draw3();
+        return;
+      }
+      const my = ++round;
+      S10.loading = true;
+      S10.error = "";
+      S10.stale = false;
+      draw3();
+      const r = await fetchBugs();
+      if (my !== round || !ov.isConnected) return;
+      S10.loading = false;
+      if (r.ok) {
+        writeCache2(r.bugs);
+        S10.bugs = withPending(r.bugs, readSent());
+        S10.ts = Date.now();
+        S10.error = "";
+        S10.stale = false;
+        log("info", "bug: status loaded", { count: r.bugs.length });
+      } else {
+        S10.error = errorText(r);
+        S10.stale = !!(S10.bugs && S10.bugs.length);
+        log("warn", "bug: status load failed", { code: r.code, status: r.status || 0 });
+      }
+      fillFilters();
+      draw3();
+    }
+    q2.oninput = () => {
+      VIEW2.q = q2.value;
+      draw3();
+    };
+    selStatus.onchange = () => {
+      VIEW2.status = selStatus.value;
+      draw3();
+    };
+    selFound.onchange = () => {
+      VIEW2.found = selFound.value;
+      draw3();
+    };
+    selFixed.onchange = () => {
+      VIEW2.fixed = selFixed.value;
+      draw3();
+    };
+    bClear.onclick = () => {
+      const keep = { sort: VIEW2.sort, dir: VIEW2.dir };
+      resetBugView();
+      Object.assign(VIEW2, keep);
+      q2.value = "";
+      fillFilters();
+      draw3();
+      q2.focus();
+    };
+    bRefresh.onclick = () => load(true);
+    ov.addEventListener("mousedown", (e) => {
+      if (e.target === ov) close2();
+    });
+    escClose(ov, close2);
+    document.body.append(ov);
+    fillFilters();
+    draw3();
+    ov.k2ready = load(!!opts.force);
+    setTimeout(() => {
+      try {
+        q2.focus();
+      } catch {
+      }
+    }, 0);
+    return ov;
+  }
+  var io, CACHE_KEY2, DRAFT_KEY, _cache5, SENT_KEY, ERR_KEYS, SEND_ERR_KEYS, COLS, DASH, VIEW2;
+  var init_bug_ui = __esm({
+    "src/bugs/bug-ui.js"() {
+      init_core();
+      init_i18n();
+      init_ui();
+      init_icons();
+      init_locale();
+      init_timing();
+      init_bug_config();
+      init_bug_core();
+      io = {
+        relay: () => BUG_RELAY_URL,
+        contact: () => BUG_CONTACT,
+        post: (url, options) => kapi.httpFetch(url, { ...options, __timeoutMs: BUG_FETCH_TIMEOUT_MS }),
+        fetch: (url) => kapi.httpFetch(url, { headers: { Accept: "application/vnd.github+json" }, __timeoutMs: BUG_FETCH_TIMEOUT_MS }),
+        open: (url) => kapi.openExternal(url),
+        copy: (text) => kapi.clipboardWrite(text)
+      };
+      CACHE_KEY2 = "k2-bug-cache";
+      DRAFT_KEY = "k2-bug-draft";
+      _cache5 = null;
+      SENT_KEY = "k2-bug-sent";
+      ERR_KEYS = { net: "ui.bug.errNet", rate: "ui.bug.errRate", http: "ui.bug.errHttp", parse: "ui.bug.errParse" };
+      SEND_ERR_KEYS = { net: "ui.bug.sendNet", rate: "ui.bug.sendRate", clock: "ui.bug.sendClock", http: "ui.bug.sendFail", parse: "ui.bug.sendFail" };
+      COLS = [
+        { key: "id", label: "ui.bug.colId" },
+        { key: "title", label: "ui.bug.colTitle" },
+        { key: "status", label: "ui.bug.colStatus" },
+        { key: "foundIn", label: "ui.bug.colFound" },
+        { key: "reported", label: "ui.bug.colReported" },
+        { key: "fixedIn", label: "ui.bug.colFixed" }
+      ];
+      DASH = "\u2014";
+      VIEW2 = { q: "", status: "all", found: "all", fixed: "all", sort: "id", dir: "desc" };
     }
   });
 
@@ -205375,7 +206333,19 @@ ${css}
         "\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E43\u0E2B\u0E21\u0E48\u0E21\u0E35 templates.json \u0E15\u0E31\u0E49\u0E07\u0E41\u0E15\u0E48\u0E40\u0E01\u0E34\u0E14",
         await kapi.exists(await kapi.join(state.root, "templates.json"))
       );
+      const langBefore170 = i18n.lang;
+      {
+        const pj2 = await kapi.join(projectPath, "project.khn.json");
+        const m170 = await kapi.readJson(pj2);
+        m170.settings = { ...m170.settings || {}, language: langBefore170 === "en" ? "fr" : "en" };
+        await kapi.writeFile(pj2, JSON.stringify(m170, null, 2));
+      }
       await loadProject(projectPath);
+      check2(
+        "[170-L] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E1C\u0E25\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E04\u0E49\u0E32\u0E07\u0E20\u0E32\u0E29\u0E32\u0E2D\u0E37\u0E48\u0E19 \u2014 \u0E20\u0E32\u0E29\u0E32\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19 (\u0E20\u0E32\u0E29\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49)",
+        i18n.lang === langBefore170 && state.settings.language === langBefore170 && document.documentElement.lang === langBefore170,
+        `${i18n.lang} / ${state.settings.language} / ${document.documentElement.lang} (\u0E01\u0E48\u0E2D\u0E19=${langBefore170})`
+      );
       document.querySelector(".scene").click();
       await new Promise((r) => setTimeout(r, 500));
       const t22 = state.active;
@@ -209828,10 +210798,10 @@ ${css}
           await w165(120);
           const m = [...document.querySelectorAll(".k-menu")].pop();
           const labels = m ? [...m.querySelectorAll(".k-menu-item")].map((x) => (x.querySelector(".k-menu-text") || x).textContent) : [];
-          const has3 = (k) => labels.includes(t(k));
+          const has4 = (k) => labels.includes(t(k));
           check2(
             "[165-P1] \u2605\u2605 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E41\u0E25\u0E49\u0E27\u0E04\u0E25\u0E34\u0E01\u0E02\u0E27\u0E32: \u0E21\u0E35 \u0E15\u0E31\u0E14 \xB7 \u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01 \xB7 \u0E27\u0E32\u0E07 \xB7 \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14",
-            has3("ui.menu.cut") && has3("ui.common.copy") && has3("ui.menu.paste") && has3("ui.menu.pickAll"),
+            has4("ui.menu.cut") && has4("ui.common.copy") && has4("ui.menu.paste") && has4("ui.menu.pickAll"),
             labels.join(" | ")
           );
           const selWord = (window.getSelection().toString() || "").trim();
@@ -210069,10 +211039,11 @@ ${css}
           const segIds = [...document.querySelectorAll("#statusbar > .k-sb-seg")].map((e22) => e22.id);
           check2(
             "[165-S] \u2605\u2605 \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E40\u0E23\u0E35\u0E22\u0E07 \u0E1E\u0E23\u0E49\u0E2D\u0E21 | \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C | \u0E04\u0E27\u0E32\u0E21\u0E04\u0E37\u0E1A\u0E2B\u0E19\u0E49\u0E32 | \u0E2A\u0E16\u0E32\u0E19\u0E30 | \u0E0B\u0E39\u0E21 | \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01",
-            JSON.stringify(segIds) === JSON.stringify(["sb-msg", "status-toggles", "status-mid", "status-right", "zoom-ctl", "status-home"]),
+            JSON.stringify(segIds) === JSON.stringify(["sb-msg", "status-toggles", "status-mid", "status-right", "zoom-ctl", "status-home", "status-bug"]),
+            // [alpha.170] + ปุ่มรายงานบั๊ก
             JSON.stringify(segIds)
           );
-          const noTip = ["sb-msg", "prog-wrap", "wc", "status-page", "status-mode", "status-save", "status-scenes", "zoom-ctl", "status-home"].filter((id) => {
+          const noTip = ["sb-msg", "prog-wrap", "wc", "status-page", "status-mode", "status-save", "status-scenes", "zoom-ctl", "status-home", "status-bug"].filter((id) => {
             const e22 = document.getElementById(id);
             return !e22 || !(e22.getAttribute("title") || "").trim() || /^ui\./.test(e22.getAttribute("title"));
           });
@@ -220593,14 +221564,14 @@ ${css}
             {
               T3.editor.setMarkdown("H~2~O \u0E41\u0E25\u0E30 x^2^");
               await w97(250);
-              const has3 = (mk2) => {
+              const has4 = (mk2) => {
                 let found2 = false;
                 T3.editor.view.state.doc.descendants((n2) => {
                   if (n2.isText && (n2.marks || []).some((m) => m.type.name === mk2)) found2 = true;
                 });
                 return found2;
               };
-              check2("[97-4] \u2605 \u0E2D\u0E48\u0E32\u0E19 ^\u0E22\u0E01^ / ~\u0E2B\u0E49\u0E2D\u0E22~ \u0E08\u0E32\u0E01 .md \u0E40\u0E02\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19 mark \u0E08\u0E23\u0E34\u0E07", has3("sup") && has3("sub"));
+              check2("[97-4] \u2605 \u0E2D\u0E48\u0E32\u0E19 ^\u0E22\u0E01^ / ~\u0E2B\u0E49\u0E2D\u0E22~ \u0E08\u0E32\u0E01 .md \u0E40\u0E02\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19 mark \u0E08\u0E23\u0E34\u0E07", has4("sup") && has4("sub"));
               check2(
                 "[97-4] \u2605 \u0E40\u0E02\u0E35\u0E22\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 .md \u0E44\u0E14\u0E49\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21",
                 T3.editor.getMarkdown() === "H~2~O \u0E41\u0E25\u0E30 x^2^",
@@ -220628,12 +221599,12 @@ ${css}
               ));
               T3.editor.cmd("sup");
               await w97(120);
-              check2("[97-4] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 sup \u0E43\u0E2A\u0E48 mark \u0E43\u0E2B\u0E49\u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01", has3("sup"));
+              check2("[97-4] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 sup \u0E43\u0E2A\u0E48 mark \u0E43\u0E2B\u0E49\u0E0A\u0E48\u0E27\u0E07\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01", has4("sup"));
               T3.editor.cmd("sub");
               await w97(120);
               check2(
                 "[97-4] \u2605 sup \u0E01\u0E31\u0E1A sub \u0E01\u0E31\u0E19\u0E40\u0E2D\u0E07\u0E2D\u0E2D\u0E01 (\u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)",
-                has3("sub") && !has3("sup")
+                has4("sub") && !has4("sup")
               );
             }
             {
@@ -234129,14 +235100,14 @@ ${css}
           );
           box2.querySelector(".k-cancel").click();
           await w120(250);
-          settingsDialog("write", { focus: "#st-recycle" });
+          settingsDialog(null, { focus: "#st-recycle" });
           await w120(500);
           box2 = [...document.querySelectorAll(".k-dialog.k-settings")].pop();
           const recEl = box2.querySelector("#st-recycle");
           const pageOn = box2.querySelector(".k-set-tab.on") ? box2.querySelector(".k-set-tab.on").dataset.p : "";
           check2(
             '[120-13] \u2605 "\u0E15\u0E31\u0E49\u0E07\u0E40\u0E27\u0E25\u0E32\u0E25\u0E49\u0E32\u0E07\u0E16\u0E31\u0E07" \u0E01\u0E23\u0E30\u0E42\u0E14\u0E14\u0E21\u0E32\u0E16\u0E39\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E30\u0E16\u0E39\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E08\u0E23\u0E34\u0E07',
-            !!recEl && pageOn === "write" && (document.activeElement === recEl || recEl.classList.contains("k-set-flash")),
+            !!recEl && pageOn === "save" && recEl.closest(".k-set-page").classList.contains("on") && recEl.getBoundingClientRect().width > 0 && (document.activeElement === recEl || recEl.classList.contains("k-set-flash")),
             "\u0E2B\u0E19\u0E49\u0E32=" + pageOn + " \u0E04\u0E25\u0E32\u0E2A=" + (recEl ? recEl.className : "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E0A\u0E48\u0E2D\u0E07")
           );
           box2.querySelector(".k-cancel").click();
@@ -242161,6 +243132,559 @@ ${css}
         await buildTree2();
         check2("[170-N] \u0E40\u0E01\u0E47\u0E1A\u0E01\u0E27\u0E32\u0E14\u0E41\u0E25\u0E49\u0E27\u0E15\u0E49\u0E19\u0E44\u0E21\u0E49\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E48\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E04\u0E49\u0E32\u0E07", ![...document.querySelectorAll("#tree .sec-title")].some((h) => h.textContent.includes("170")));
       }
+      if (kapi.menuLabels) {
+        const topL = async () => (await kapi.menuLabels()).filter((l) => !l.includes(" > "));
+        const has4 = async (label2) => (await topL()).includes(label2);
+        const lang0 = i18n.lang;
+        const file0 = t("ui.menu.file2");
+        check2("[170-L] \u0E01\u0E48\u0E2D\u0E19\u0E40\u0E23\u0E34\u0E48\u0E21: \u0E40\u0E21\u0E19\u0E39\u0E23\u0E30\u0E1A\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E20\u0E32\u0E29\u0E32\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D", await has4(file0), (await topL()).join(" | "));
+        const other = lang0 === "en" ? "th" : "en";
+        const real = await setAppLanguage(other);
+        const g1 = await kapi.readGlobalSettings();
+        check2(
+          "[170-L] \u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E20\u0E32\u0E29\u0E32\u0E15\u0E2D\u0E19\u0E21\u0E35\u0E1C\u0E25\u0E07\u0E32\u0E19\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E44\u0E14\u0E49\u0E20\u0E32\u0E29\u0E32\u0E43\u0E2B\u0E21\u0E48 + \u0E18\u0E07 languagePicked",
+          !!state.root && real === other && g1.language === other && g1.languagePicked === true,
+          JSON.stringify({ l: g1.language, p: g1.languagePicked })
+        );
+        const file1 = t("ui.menu.file2");
+        check2(
+          "[170-L] \u2605 \u0E40\u0E21\u0E19\u0E39\u0E23\u0E30\u0E1A\u0E1A\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E20\u0E32\u0E29\u0E32\u0E15\u0E32\u0E21\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E1B\u0E49\u0E32\u0E22\u0E20\u0E32\u0E29\u0E32\u0E40\u0E14\u0E34\u0E21)",
+          file1 !== file0 && await has4(file1) && !await has4(file0),
+          (await topL()).join(" | ")
+        );
+        await saveProjectMeta();
+        check2(
+          "[170-L] \u0E2A\u0E33\u0E40\u0E19\u0E32\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E1C\u0E25\u0E07\u0E32\u0E19\u0E15\u0E32\u0E21\u0E20\u0E32\u0E29\u0E32\u0E43\u0E2B\u0E21\u0E48 (\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E04\u0E48\u0E32\u0E40\u0E01\u0E48\u0E32)",
+          ((await kapi.readJson(await kapi.join(state.root, "project.khn.json"))).settings || {}).language === other
+        );
+        check2("[170-L] localStorage \u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E20\u0E32\u0E29\u0E32\u0E17\u0E35\u0E48\u0E43\u0E0A\u0E49", localStorage.getItem("k2-lang") === other);
+        await loadLanguage(lang0, state.root);
+        check2("[170-L] \u2605 loadLanguage \u0E17\u0E38\u0E01\u0E17\u0E32\u0E07\u0E1E\u0E32\u0E40\u0E21\u0E19\u0E39\u0E23\u0E30\u0E1A\u0E1A\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22", await has4(file0) && !await has4(file1), (await topL()).join(" | "));
+        const sess170 = await captureSession();
+        const ls170 = sess170 && sess170.ui && sess170.ui.ls || {};
+        check2(
+          "[170-L] \u0E20\u0E32\u0E1E\u0E02\u0E2D\u0E07\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E44\u0E21\u0E48\u0E40\u0E01\u0E47\u0E1A\u0E20\u0E32\u0E29\u0E32 (k2-lang) \u0E41\u0E15\u0E48\u0E22\u0E31\u0E07\u0E40\u0E01\u0E47\u0E1A\u0E04\u0E48\u0E32\u0E08\u0E33\u0E2D\u0E37\u0E48\u0E19\u0E02\u0E2D\u0E07 k2-*",
+          localStorage.getItem("k2-lang") === lang0 && !("k2-lang" in ls170) && Object.keys(ls170).some((k) => k.startsWith("k2-")),
+          Object.keys(ls170).slice(0, 6).join(",")
+        );
+        await setAppLanguage(lang0);
+        await saveProjectMeta();
+        check2(
+          "[170-L] \u0E04\u0E37\u0E19\u0E20\u0E32\u0E29\u0E32\u0E40\u0E14\u0E34\u0E21\u0E04\u0E23\u0E1A (\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D \xB7 \u0E44\u0E1F\u0E25\u0E4C\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49 \xB7 \u0E40\u0E21\u0E19\u0E39\u0E23\u0E30\u0E1A\u0E1A)",
+          i18n.lang === lang0 && (await kapi.readGlobalSettings()).language === lang0 && await has4(file0)
+        );
+        applyDataI18n();
+        await buildTree2();
+      }
+      {
+        const wB = (ms) => new Promise((r) => setTimeout(r, ms));
+        const untilB = async (fn, ms = 6e3) => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < ms) {
+            try {
+              const v4 = await fn();
+              if (v4) return v4;
+            } catch {
+            }
+            await wB(50);
+          }
+          return null;
+        };
+        const seen = (e22) => {
+          if (!e22 || !e22.isConnected) return false;
+          const r = e22.getBoundingClientRect();
+          const cs = getComputedStyle(e22);
+          return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none" && +cs.opacity > 0;
+        };
+        const rawKey = (root) => /(^|[\s>(])ui\.[a-z]+\.[A-Za-z]/.test(root.textContent || "") || [...root.querySelectorAll("[title],[placeholder],[aria-label]")].some((e22) => /^ui\.[a-z]+\./.test(e22.title || e22.placeholder || e22.getAttribute("aria-label") || ""));
+        document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        closeMenu();
+        const setBox = () => [...document.querySelectorAll(".k-dialog.k-settings")].pop();
+        const pageOnB = (b) => {
+          const tb2 = b && b.querySelector(".k-set-tab.on");
+          return tb2 ? tb2.dataset.p : "";
+        };
+        const closeSet = async () => {
+          const b = setBox();
+          if (b) {
+            const c = b.querySelector(":scope > .k-dlg-btns > .k-cancel");
+            if (c) c.click();
+            await untilB(() => !setBox(), 3e3);
+          }
+          document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+        };
+        const lastTab0 = localStorage.getItem("k2-settings-tab");
+        const pgKeysB = "keys", fMaxB = "#st-maxbak";
+        localStorage.setItem("k2-settings-tab", "fab");
+        const atField = async (label2, open, sel2, page2) => {
+          await open();
+          const b = await untilB(() => setBox());
+          await wB(300);
+          const f = b && b.querySelector(sel2);
+          const pg = f && f.closest(".k-set-page");
+          check2(
+            "[170-B] \u2605\u2605 " + label2 + ' \u2192 \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32 "' + page2 + '" \u0E41\u0E25\u0E30\u0E40\u0E2B\u0E47\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E21\u0E31\u0E19\u0E08\u0E23\u0E34\u0E07',
+            !!b && pageOnB(b) === page2 && !!pg && pg.dataset.p === page2 && pg.classList.contains("on") && seen(f) && (document.activeElement === f || f.classList.contains("k-set-flash")),
+            "\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14=" + pageOnB(b) + " \xB7 \u0E2B\u0E19\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E0A\u0E48\u0E2D\u0E07=" + (pg ? pg.dataset.p : "-") + " \xB7 \u0E40\u0E2B\u0E47\u0E19\u0E0A\u0E48\u0E2D\u0E07=" + seen(f)
+          );
+          await closeSet();
+        };
+        await atField("\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30", () => document.querySelector('#status-toggles [data-toggle="autosave"]').click(), "#st-auto", "save");
+        await atField("\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E15\u0E23\u0E27\u0E08\u0E04\u0E33\u0E1C\u0E34\u0E14\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30", () => document.querySelector('#status-toggles [data-toggle="spell"]').click(), "#st-spelldict", "write");
+        await atField("\u0E15\u0E31\u0E49\u0E07\u0E40\u0E27\u0E25\u0E32\u0E25\u0E49\u0E32\u0E07\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30", () => settingsDialog(null, { focus: "#st-recycle" }), "#st-recycle", "save");
+        await atField("\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A/\u0E01\u0E32\u0E23\u0E15\u0E23\u0E27\u0E08\u0E1A\u0E17", () => settingsDialog("pagenum", { focus: "#st-sp-errmark" }), "#st-sp-errmark", "pagenum");
+        await atField("\u0E1C\u0E39\u0E49\u0E40\u0E23\u0E35\u0E22\u0E01\u0E1A\u0E2D\u0E01\u0E2B\u0E19\u0E49\u0E32\u0E1C\u0E34\u0E14 (\u0E0A\u0E48\u0E2D\u0E07\u0E0A\u0E19\u0E30\u0E2B\u0E19\u0E49\u0E32)", () => settingsDialog("write", { focus: "#st-recycle" }), "#st-recycle", "save");
+        await atField("\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 settings \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E0A\u0E48\u0E2D\u0E07", () => handleCommand("settings", null, fMaxB), fMaxB, "save");
+        {
+          await handleCommand("settings", pgKeysB);
+          const b = await untilB(() => setBox());
+          await wB(200);
+          check2("[170-B] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 settings \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E0A\u0E37\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32 = \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E19\u0E31\u0E49\u0E19", pageOnB(b) === "keys", pageOnB(b));
+          await closeSet();
+          await handleCommand("settings");
+          const b22 = await untilB(() => setBox());
+          await wB(200);
+          check2("[170-B] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 settings \u0E40\u0E1B\u0E25\u0E48\u0E32 \u0E46 = \u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E04\u0E49\u0E32\u0E07\u0E44\u0E27\u0E49\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 (\u0E1E\u0E24\u0E15\u0E34\u0E01\u0E23\u0E23\u0E21\u0E40\u0E14\u0E34\u0E21)", pageOnB(b22) === "fab", pageOnB(b22));
+          await closeSet();
+          settingsDialog(null, { focus: "#st-\u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49" });
+          const b3 = await untilB(() => setBox());
+          await wB(200);
+          check2("[170-B] \u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E23\u0E34\u0E07 = \u0E44\u0E21\u0E48\u0E1E\u0E31\u0E07 (\u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E04\u0E49\u0E32\u0E07\u0E44\u0E27\u0E49)", !!b3 && pageOnB(b3) === "fab", pageOnB(b3));
+          await closeSet();
+        }
+        if (lastTab0 == null) localStorage.removeItem("k2-settings-tab");
+        else localStorage.setItem("k2-settings-tab", lastTab0);
+        check2(
+          "[170-B] \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07\u0E44\u0E14\u0E49\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E40\u0E17\u0E48\u0E32\u0E19\u0E31\u0E49\u0E19 \u0E1A\u0E2D\u0E01\u0E43\u0E19\u0E17\u0E39\u0E25\u0E17\u0E34\u0E1B\u0E27\u0E48\u0E32\u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32",
+          ["autosave", "spell"].every((id) => document.querySelector('#status-toggles [data-toggle="' + id + '"]').dataset.tip === "ui.sb.tipSettings")
+        );
+        const fetched = [], opened = [], copied = [], posted = [];
+        let fakeRes = { status: 200, ok: true, body: "[]" };
+        let relayB = "https://relay.k2test.invalid";
+        let contactB = { label: "", url: "" };
+        let postRes = { status: 201, ok: true, body: '{"ok":true,"number":77}' };
+        const restoreIo = setBugIo({
+          fetch: async (url) => {
+            fetched.push(url);
+            return fakeRes;
+          },
+          open: async (url) => {
+            opened.push(url);
+            return true;
+          },
+          copy: async (text) => {
+            copied.push(text);
+            return true;
+          },
+          relay: () => relayB,
+          contact: () => contactB,
+          post: async (url, options) => {
+            posted.push({ url, options });
+            return postRes;
+          }
+        });
+        const draft0 = localStorage.getItem("k2-bug-draft");
+        localStorage.removeItem("k2-bug-draft");
+        clearBugCache();
+        clearBugSent();
+        resetBugView();
+        try {
+          const segsB = [...document.querySelectorAll("#statusbar > .k-sb-seg")];
+          const bugBtn = document.getElementById("status-bug");
+          check2(
+            "[170-B] \u2605\u2605 \u0E1B\u0E38\u0E48\u0E21\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E1A\u0E31\u0E4A\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E16\u0E31\u0E14\u0E08\u0E32\u0E01\u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01 (\u0E0A\u0E48\u0E2D\u0E07\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22\u0E02\u0E2D\u0E07\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30)",
+            !!bugBtn && segsB[segsB.length - 1] === bugBtn && segsB[segsB.length - 2] === document.getElementById("status-home") && seen(bugBtn),
+            segsB.map((e22) => e22.id).join(",")
+          );
+          const rBtn = bugBtn.getBoundingClientRect(), rBar = document.getElementById("statusbar").getBoundingClientRect();
+          check2(
+            "[170-B] \u0E1B\u0E38\u0E48\u0E21\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E1A\u0E31\u0E4A\u0E01\u0E44\u0E21\u0E48\u0E15\u0E01\u0E02\u0E2D\u0E1A\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30 + \u0E21\u0E35\u0E44\u0E2D\u0E04\u0E2D\u0E19 + \u0E17\u0E39\u0E25\u0E17\u0E34\u0E1B\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E08\u0E23\u0E34\u0E07",
+            rBtn.right <= rBar.right + 1 && rBtn.left >= rBar.left && bugBtn.childElementCount > 0 && (bugBtn.getAttribute("title") || "").includes(t("ui.sb.bugReport")),
+            Math.round(rBtn.right) + "/" + Math.round(rBar.right) + " \xB7 " + bugBtn.getAttribute("title")
+          );
+          const repBox = () => document.querySelector(".k-overlay .k-dialog.k-bug-report");
+          const sendBtn = () => repBox().querySelector(":scope > .k-dlg-btns > .k-ok");
+          const errTxt = () => repBox().querySelector(".k-bug-err").textContent;
+          bugBtn.click();
+          const rb = await untilB(() => repBox());
+          check2("[170-B] \u2605\u2605 \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E1A\u0E31\u0E4A\u0E01\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30 = \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E08\u0E23\u0E34\u0E07", !!rb);
+          await wB(150);
+          check2(
+            "[170-B] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E20\u0E32\u0E29\u0E32\u0E14\u0E34\u0E1A \xB7 \u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E35\u0E48\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22+\u0E04\u0E33\u0E43\u0E1A\u0E49 \xB7 \u0E1A\u0E2D\u0E01\u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E41\u0E19\u0E1A\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22",
+            !rawKey(rb) && rb.querySelectorAll(".k-bug-field").length === 4 && [...rb.querySelectorAll(".k-bug-field")].every((f) => f.querySelector("label").textContent.trim() && f.querySelector(".k-dlg-input").placeholder.trim()) && rb.querySelector(".k-bug-env-line").textContent.includes(APP_VERSION),
+            rb.querySelector(".k-bug-env-line").textContent
+          );
+          const btnsB = [...rb.querySelectorAll(":scope > .k-dlg-btns > button")];
+          check2(
+            "[170-B] \u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E25\u0E31\u0E01 (\u0E2A\u0E48\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19) \u0E2D\u0E22\u0E39\u0E48\u0E02\u0E27\u0E32\u0E2A\u0E38\u0E14 \u0E01\u0E14\u0E44\u0E14\u0E49 \xB7 \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01 \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22\u0E27\u0E48\u0E32\u0E2A\u0E48\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49",
+            btnsB[btnsB.length - 1].classList.contains("k-ok") && btnsB[btnsB.length - 1].disabled === false && btnsB[btnsB.length - 1].textContent === t("ui.bug.btnSend") && btnsB.some((b) => b.classList.contains("k-cancel")) && !rb.querySelector(".k-bug-off")
+          );
+          const fT = rb.querySelector("#k-bug-f-title"), fW = rb.querySelector("#k-bug-f-what");
+          check2("[170-B] \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E25\u0E49\u0E27\u0E42\u0E1F\u0E01\u0E31\u0E2A\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E0A\u0E48\u0E2D\u0E07\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D", await untilB(() => document.activeElement === fT, 1500) === true);
+          sendBtn().click();
+          await wB(200);
+          check2(
+            "[170-B] \u2605 \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E27\u0E48\u0E32\u0E07 = \u0E44\u0E21\u0E48\u0E2A\u0E48\u0E07 \u0E44\u0E21\u0E48\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 \u0E41\u0E25\u0E30\u0E1A\u0E2D\u0E01\u0E40\u0E2B\u0E15\u0E38\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07",
+            posted.length === 0 && copied.length === 0 && !!repBox() && errTxt() === t("ui.bug.needTitle"),
+            errTxt()
+          );
+          const typeIn = (inp, v4) => {
+            inp.value = v4;
+            inp.dispatchEvent(new Event("input", { bubbles: true }));
+          };
+          typeIn(fT, "\u0E40\u0E17\u0E2A170 \u0E01\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E04\u0E49\u0E32\u0E07 @octocat");
+          typeIn(fW, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E17\u0E2A170");
+          check2(
+            "[170-B] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E16\u0E39\u0E01\u0E08\u0E33\u0E44\u0E27\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35 \xB7 \u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E2B\u0E32\u0E22",
+            (localStorage.getItem("k2-bug-draft") || "").includes("\u0E40\u0E17\u0E2A170 \u0E01\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E04\u0E49\u0E32\u0E07") && errTxt() === ""
+          );
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+          check2("[170-B] Esc \u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19", await untilB(() => !repBox(), 2e3) === true);
+          await handleCommand("bug-report");
+          const rb2 = await untilB(() => repBox());
+          check2(
+            "[170-B] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E43\u0E2B\u0E21\u0E48 = \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E44\u0E27\u0E49\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E2A\u0E48\u0E07 \u0E07\u0E32\u0E19\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22)",
+            !!rb2 && rb2.querySelector("#k-bug-f-title").value === "\u0E40\u0E17\u0E2A170 \u0E01\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E04\u0E49\u0E32\u0E07 @octocat" && rb2.querySelector("#k-bug-f-what").value === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E17\u0E2A170"
+          );
+          rb2.querySelector(".k-bug-copy").click();
+          await untilB(() => copied.length === 1, 2e3);
+          check2(
+            "[170-B] \u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19 = \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D + \u0E40\u0E19\u0E37\u0E49\u0E2D + \u0E23\u0E38\u0E48\u0E19\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 (\u0E44\u0E21\u0E48\u0E2A\u0E48\u0E07 \u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C)",
+            copied.length === 1 && copied[0].startsWith("# \u0E40\u0E17\u0E2A170 \u0E01\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E04\u0E49\u0E32\u0E07") && copied[0].includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E17\u0E2A170") && copied[0].includes("<!-- k2-report version=" + APP_VERSION) && opened.length === 0 && posted.length === 0 && !!repBox(),
+            (copied[0] || "").slice(0, 80)
+          );
+          const failCase = async (label2, res, want) => {
+            postRes = res;
+            const n0 = posted.length;
+            sendBtn().click();
+            await untilB(() => posted.length === n0 + 1 && errTxt() !== "" && sendBtn().disabled === false, 3e3);
+            check2(
+              "[170-B] \u2605 \u0E2A\u0E48\u0E07\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08 (" + label2 + ") = \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 \xB7 \u0E23\u0E48\u0E32\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 \xB7 \u0E1B\u0E38\u0E48\u0E21\u0E01\u0E14\u0E44\u0E14\u0E49\u0E2D\u0E35\u0E01 \xB7 \u0E1A\u0E2D\u0E01\u0E40\u0E2B\u0E15\u0E38",
+              !!repBox() && errTxt() === want && (localStorage.getItem("k2-bug-draft") || "").includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E17\u0E2A170") && sendBtn().disabled === false && sendBtn().textContent === t("ui.bug.btnSend") && repBox().querySelector("#k-bug-f-what").value === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E17\u0E2A170",
+              errTxt()
+            );
+          };
+          await failCase("\u0E40\u0E19\u0E47\u0E15\u0E25\u0E49\u0E21", { status: 0, ok: false, netError: true, error: "ENOTFOUND" }, t("ui.bug.sendNet"));
+          await failCase("\u0E2A\u0E48\u0E07\u0E16\u0E35\u0E48\u0E40\u0E01\u0E34\u0E19", { status: 429, ok: false, body: '{"ok":false,"code":"rate"}' }, t("ui.bug.sendRate"));
+          await failCase("\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07\u0E15\u0E2D\u0E1A\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14", { status: 502, ok: false, body: '{"ok":false,"code":"github"}' }, tf("ui.bug.sendFail", 502));
+          await failCase("\u0E15\u0E2D\u0E1A\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u0E41\u0E15\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02\u0E1A\u0E31\u0E4A\u0E01", { status: 200, ok: true, body: "<html>" }, tf("ui.bug.sendFail", 200));
+          await failCase("\u0E19\u0E32\u0E2C\u0E34\u0E01\u0E32\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E04\u0E25\u0E32\u0E14", { status: 400, ok: false, body: '{"ok":false,"code":"ts"}' }, t("ui.bug.sendClock"));
+          localStorage.setItem("k2-bug-cache", JSON.stringify({ ts: Date.now(), bugs: [] }));
+          postRes = { status: 201, ok: true, body: '{"ok":true,"number":77}' };
+          const nOk = posted.length;
+          sendBtn().click();
+          await untilB(() => posted.length === nOk + 1 && !repBox(), 3e3);
+          const lastPost = posted[posted.length - 1] || { options: { headers: {}, body: "{}" } };
+          const sentB = JSON.parse(lastPost.options.body);
+          check2(
+            "[170-B] \u2605\u2605 \u0E2A\u0E48\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19 = POST \u0E15\u0E23\u0E07\u0E40\u0E02\u0E49\u0E32\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07 (\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C) \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D+\u0E40\u0E19\u0E37\u0E49\u0E2D+\u0E23\u0E38\u0E48\u0E19",
+            lastPost.url === relayB + "/report" && lastPost.options.method === "POST" && lastPost.options.headers["X-K2-Client"] === "killian2" && sentB.title === "\u0E40\u0E17\u0E2A170 \u0E01\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E04\u0E49\u0E32\u0E07 @octocat" && sentB.body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E17\u0E2A170") && sentB.body.includes("Version: " + APP_VERSION) && sentB.body.includes("<!-- k2-report version=" + APP_VERSION) && sentB.version === APP_VERSION && Math.abs(Date.now() - sentB.ts) < 6e4 && opened.length === 0,
+            lastPost.url + " \xB7 " + JSON.stringify(sentB).slice(0, 120)
+          );
+          check2(
+            "[170-B] \u2605 \u0E2A\u0E34\u0E48\u0E07\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E44\u0E1B\u0E21\u0E35\u0E41\u0E04\u0E48\u0E2A\u0E35\u0E48\u0E0A\u0E48\u0E2D\u0E07 \u2014 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E17\u0E32\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C \u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E37\u0E48\u0E2D\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C",
+            Object.keys(sentB).sort().join() === "body,title,ts,version" && !lastPost.options.body.includes(state.root.replace(/\\/g, "\\\\")) && !lastPost.options.body.includes(state.root) && !(state.meta && state.meta.title && lastPost.options.body.includes(state.meta.title))
+          );
+          const stMsg = document.getElementById("status");
+          check2(
+            "[170-B] \u2605\u2605 \u0E2A\u0E48\u0E07\u0E41\u0E25\u0E49\u0E27: \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1B\u0E34\u0E14 \xB7 \u0E23\u0E48\u0E32\u0E07\u0E16\u0E39\u0E01\u0E25\u0E49\u0E32\u0E07 \xB7 \u0E1A\u0E2D\u0E01\u0E40\u0E25\u0E02\u0E1A\u0E31\u0E4A\u0E01\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E14\u0E39\u0E2A\u0E16\u0E32\u0E19\u0E30 \xB7 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E35\u0E48\u0E08\u0E33\u0E44\u0E27\u0E49\u0E16\u0E39\u0E01\u0E25\u0E49\u0E32\u0E07",
+            !repBox() && localStorage.getItem("k2-bug-draft") == null && stMsg.textContent.includes(tf("ui.bug.sentOk", "#77")) && !!stMsg.querySelector(".k-status-link") && localStorage.getItem("k2-bug-cache") == null,
+            stMsg.textContent
+          );
+          {
+            const nF = fetched.length;
+            stMsg.querySelector(".k-status-link").click();
+            const sbL = await untilB(() => document.querySelector(".k-overlay .k-dialog.k-bug-status"));
+            if (sbL) await sbL.closest(".k-overlay").k2ready;
+            check2('[170-B] \u0E25\u0E34\u0E07\u0E01\u0E4C "\u0E14\u0E39\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E31\u0E4A\u0E01" \u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30 = \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E41\u0E25\u0E30\u0E16\u0E32\u0E21\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E43\u0E2B\u0E21\u0E48', !!sbL && fetched.length === nF + 1);
+            const row77 = sbL && sbL.querySelector('tbody tr[data-num="77"]');
+            check2(
+              "[170-B] \u2605\u2605 \u0E1A\u0E31\u0E4A\u0E01\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E2A\u0E48\u0E07\u0E02\u0E36\u0E49\u0E19\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E31\u0E19\u0E17\u0E35 \u0E41\u0E21\u0E49\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E08\u0E32\u0E01 GitHub \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35 (\u0E23\u0E2D\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A \xB7 \u0E23\u0E38\u0E48\u0E19\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21)",
+              !!row77 && row77.children[1].textContent.includes("\u0E40\u0E17\u0E2A170 \u0E01\u0E14\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E04\u0E49\u0E32\u0E07") && row77.children[2].textContent.trim() === t("ui.bug.stNew") && row77.children[3].textContent.trim() !== "\u2014" && row77.children[4].textContent.trim() !== "",
+              row77 ? [...row77.children].map((td) => td.textContent.trim()).join(" | ") : "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E41\u0E16\u0E27 #77"
+            );
+            document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+            clearBugCache();
+            clearBugSent();
+          }
+          relayB = "";
+          await handleCommand("bug-report");
+          const rb3 = await untilB(() => repBox());
+          const nP3 = posted.length, nC3 = copied.length;
+          typeIn(rb3.querySelector("#k-bug-f-title"), "\u0E40\u0E17\u0E2A170 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07");
+          rb3.querySelector(":scope > .k-dlg-btns > .k-ok").click();
+          await wB(150);
+          rb3.querySelector(".k-bug-copy").click();
+          await untilB(() => copied.length === nC3 + 1, 2e3);
+          check2(
+            "[170-B] \u2605\u2605 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E15\u0E31\u0E49\u0E07\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07 = \u0E1A\u0E2D\u0E01\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E2A\u0E48\u0E07\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 \xB7 \u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E48\u0E07\u0E01\u0E14\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 \xB7 \u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E22\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E44\u0E14\u0E49",
+            seen(rb3.querySelector(".k-bug-off")) && rb3.querySelector(".k-bug-off").textContent === t("ui.bug.sendOff") && rb3.querySelector(":scope > .k-dlg-btns > .k-ok").disabled === true && posted.length === nP3 && copied.length === nC3 + 1
+          );
+          typeIn(rb3.querySelector("#k-bug-f-title"), "");
+          rb3.closest(".k-overlay").remove();
+          relayB = "https://relay.k2test.invalid";
+          contactB = { label: "k2test@example.invalid <b>x</b>", url: "https://contact.k2test.invalid/x" };
+          await handleCommand("bug-report");
+          const rb5 = await untilB(() => repBox());
+          const cName = rb5.querySelector(".k-bug-contact-name");
+          check2(
+            "[170-B] \u2605 \u0E17\u0E32\u0E07\u0E17\u0E35\u0E48\u0E01\u0E33\u0E2B\u0E19\u0E14: \u0E42\u0E0A\u0E27\u0E4C\u0E0A\u0E37\u0E48\u0E2D\u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E32\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E49\u0E27\u0E19 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E2D\u0E48\u0E32\u0E19\u0E40\u0E1B\u0E47\u0E19 HTML) + \u0E04\u0E25\u0E34\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E25\u0E34\u0E07\u0E01\u0E4C",
+            !!cName && cName.textContent === "k2test@example.invalid <b>x</b>" && cName.childElementCount === 0 && rb5.querySelector(".k-bug-contact").textContent.startsWith(t("ui.bug.contactLine"))
+          );
+          if (cName) {
+            cName.click();
+            await wB(100);
+          }
+          check2("[170-B] \u0E04\u0E25\u0E34\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E32\u0E07 = \u0E40\u0E1B\u0E34\u0E14\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E02\u0E2D\u0E07\u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E32\u0E07\u0E19\u0E31\u0E49\u0E19", opened[opened.length - 1] === "https://contact.k2test.invalid/x");
+          contactB = { label: "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E25\u0E34\u0E07\u0E01\u0E4C", url: "javascript:alert(1)" };
+          rb5.closest(".k-overlay").remove();
+          await handleCommand("bug-report");
+          const rb6 = await untilB(() => repBox());
+          check2(
+            "[170-B] \u0E25\u0E34\u0E07\u0E01\u0E4C\u0E02\u0E2D\u0E07\u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E32\u0E07\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 https = \u0E42\u0E0A\u0E27\u0E4C\u0E0A\u0E37\u0E48\u0E2D\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E04\u0E25\u0E34\u0E01\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49",
+            !!rb6.querySelector(".k-bug-contact-name") && !rb6.querySelector(".k-bug-contact-name").classList.contains("k-bug-link")
+          );
+          rb6.closest(".k-overlay").remove();
+          contactB = { label: "bugs@k2test.invalid", url: "" };
+          await handleCommand("bug-report");
+          const rb7 = await untilB(() => repBox());
+          const mName = rb7.querySelector(".k-bug-contact-name");
+          check2(
+            "[170-B] \u2605\u2605 \u0E17\u0E32\u0E07\u0E17\u0E35\u0E48\u0E01\u0E33\u0E2B\u0E19\u0E14 = \u0E2D\u0E35\u0E40\u0E21\u0E25: \u0E42\u0E0A\u0E27\u0E4C\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07 \xB7 \u0E04\u0E25\u0E34\u0E01\u0E44\u0E14\u0E49 \xB7 \u0E21\u0E35\u0E17\u0E39\u0E25\u0E17\u0E34\u0E1B\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E40\u0E01\u0E34\u0E14\u0E2D\u0E30\u0E44\u0E23",
+            !!mName && mName.textContent === "bugs@k2test.invalid" && mName.dataset.kind === "email" && mName.classList.contains("k-bug-link") && mName.title === t("ui.bug.contactMailTip") && seen(mName)
+          );
+          const nO7 = opened.length, nC7 = copied.length, nP7 = posted.length;
+          mName.click();
+          await wB(250);
+          check2(
+            "[170-B] \u0E04\u0E25\u0E34\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E2D\u0E35\u0E40\u0E21\u0E25\u0E15\u0E2D\u0E19\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D = \u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E30\u0E44\u0E23 \u0E1A\u0E2D\u0E01\u0E43\u0E2B\u0E49\u0E01\u0E23\u0E2D\u0E01\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E01\u0E48\u0E2D\u0E19",
+            opened.length === nO7 && copied.length === nC7 && errTxt() === t("ui.bug.needTitle")
+          );
+          typeIn(rb7.querySelector("#k-bug-f-title"), "\u0E40\u0E17\u0E2A170 \u0E2A\u0E48\u0E07\u0E17\u0E32\u0E07\u0E2D\u0E35\u0E40\u0E21\u0E25");
+          typeIn(rb7.querySelector("#k-bug-f-what"), "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2D\u0E35\u0E40\u0E21\u0E25170");
+          document.querySelectorAll(".k-toast").forEach((x) => x.remove());
+          mName.click();
+          await untilB(() => opened.length === nO7 + 1 && copied.length === nC7 + 1, 3e3);
+          check2(
+            "[170-B] \u2605\u2605 \u0E04\u0E25\u0E34\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E2D\u0E35\u0E40\u0E21\u0E25 = \u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E17\u0E31\u0E49\u0E07\u0E01\u0E49\u0E2D\u0E19 + \u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E35\u0E40\u0E21\u0E25\u0E43\u0E2B\u0E21\u0E48\u0E16\u0E36\u0E07\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E19\u0E31\u0E49\u0E19 (\u0E2B\u0E31\u0E27\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E43\u0E2A\u0E48\u0E43\u0E2B\u0E49 \xB7 \u0E44\u0E21\u0E48\u0E2A\u0E48\u0E07\u0E40\u0E02\u0E49\u0E32\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07)",
+            opened[opened.length - 1] === "mailto:bugs@k2test.invalid?subject=" + encodeURIComponent("[Killian 2] \u0E40\u0E17\u0E2A170 \u0E2A\u0E48\u0E07\u0E17\u0E32\u0E07\u0E2D\u0E35\u0E40\u0E21\u0E25") && copied[copied.length - 1].startsWith("# \u0E40\u0E17\u0E2A170 \u0E2A\u0E48\u0E07\u0E17\u0E32\u0E07\u0E2D\u0E35\u0E40\u0E21\u0E25") && copied[copied.length - 1].includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2D\u0E35\u0E40\u0E21\u0E25170") && copied[copied.length - 1].includes("<!-- k2-report version=" + APP_VERSION) && posted.length === nP7 && !!repBox(),
+            String(opened[opened.length - 1]).slice(0, 90)
+          );
+          check2(
+            "[170-B] \u0E1A\u0E2D\u0E01\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E27\u0E48\u0E32\u0E15\u0E49\u0E2D\u0E07\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23\u0E15\u0E48\u0E2D (\u0E27\u0E32\u0E07\u0E43\u0E19\u0E2D\u0E35\u0E40\u0E21\u0E25 \xB7 \u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E2A\u0E33\u0E23\u0E2D\u0E07\u0E16\u0E49\u0E32\u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u0E2D\u0E35\u0E40\u0E21\u0E25)",
+            [...document.querySelectorAll(".k-toast")].some((x) => x.textContent.includes(tf("ui.bug.contactMailed", "bugs@k2test.invalid")))
+          );
+          typeIn(rb7.querySelector("#k-bug-f-title"), "");
+          typeIn(rb7.querySelector("#k-bug-f-what"), "");
+          rb7.closest(".k-overlay").remove();
+          contactB = { label: "", url: "" };
+          document.querySelectorAll(".k-toast").forEach((x) => x.remove());
+          const mkIssue2 = (o) => ({ state: "open", labels: [], body: "", created_at: "2026-10-01T08:00:00Z", author_association: "OWNER", ...o });
+          const ISSUES = [
+            mkIssue2({ number: 9, title: "\u0E40\u0E17\u0E2A170 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E41\u0E25\u0E49\u0E27\u0E04\u0E49\u0E32\u0E07", labels: [{ name: "bug" }], created_at: "2026-10-05T03:00:00Z", body: "<!-- k2-report version=2.0.0-alpha.169 -->" }),
+            mkIssue2({
+              number: 8,
+              title: "\u0E40\u0E17\u0E2A170 Export PDF blank",
+              state: "closed",
+              state_reason: "completed",
+              created_at: "2026-09-20T03:00:00Z",
+              body: "Version: 2.0.0-alpha.167",
+              milestone: { title: "2.0.0-alpha.168" }
+            }),
+            mkIssue2({ number: 7, title: "\u0E02\u0E2D\u0E42\u0E2B\u0E21\u0E14\u0E21\u0E37\u0E14", labels: [{ name: "enhancement" }] }),
+            mkIssue2({ number: 6, title: "PR", pull_request: {} }),
+            mkIssue2({ number: 2, title: "\u0E40\u0E17\u0E2A170 \u0E04\u0E19\u0E19\u0E2D\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E07\u0E1A\u0E19\u0E40\u0E27\u0E47\u0E1A", labels: [{ name: "bug" }], author_association: "NONE" }),
+            mkIssue2({ number: 5, title: "\u0E40\u0E17\u0E2A170 \u0E0B\u0E49\u0E33", labels: [{ name: "duplicate" }], created_at: "2026-09-01T00:00:00Z" }),
+            mkIssue2({ number: 4, title: "\u0E40\u0E17\u0E2A170 crash on open", labels: [{ name: "in progress" }], created_at: "2026-08-15T00:00:00Z", body: "<!-- k2-report version=2.0.0-alpha.99 -->" }),
+            mkIssue2({ number: 3, title: "\u0E40\u0E17\u0E2A170 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E43\u0E04\u0E23\u0E14\u0E39", created_at: "2026-08-01T00:00:00Z" })
+          ];
+          fakeRes = { status: 200, ok: true, body: JSON.stringify(ISSUES) };
+          fetched.length = 0;
+          clearBugCache();
+          const ovA170 = aboutDialog();
+          await wB(150);
+          const pR = ovA170.querySelector(".k-about-bug-report"), pS = ovA170.querySelector(".k-about-bug-status");
+          check2(
+            '[170-B] \u2605\u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07 "\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A" \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E1A\u0E31\u0E4A\u0E01 + \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E31\u0E4A\u0E01 (\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19 \xB7 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E20\u0E32\u0E29\u0E32)',
+            seen(pR) && seen(pS) && pR.textContent === t("ui.about.bugReport") && pS.textContent === t("ui.about.bugStatus")
+          );
+          const rLeft = ovA170.querySelector(".k-about-left").getBoundingClientRect(), rFoot = ovA170.querySelector(".k-about-foot").getBoundingClientRect();
+          check2(
+            '[170-B] \u0E1B\u0E38\u0E48\u0E21\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07 "\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A" \u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E1D\u0E31\u0E48\u0E07\u0E0B\u0E49\u0E32\u0E22\u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E41\u0E16\u0E27\u0E25\u0E48\u0E32\u0E07',
+            [pR, pS].every((p) => {
+              const r = p.getBoundingClientRect();
+              return r.left >= rLeft.left && r.right <= rLeft.right + 1 && r.bottom <= rFoot.top + 1;
+            }),
+            Math.round(pS.getBoundingClientRect().bottom) + " / " + Math.round(rFoot.top)
+          );
+          const stBox = () => document.querySelector(".k-overlay .k-dialog.k-bug-status");
+          pS.click();
+          const sb1 = await untilB(() => stBox());
+          check2('[170-B] \u2605\u2605 \u0E01\u0E14\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E31\u0E4A\u0E01\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07 "\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A" = \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E1B\u0E34\u0E14 \u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30', !!sb1 && !ovA170.isConnected);
+          await sb1.closest(".k-overlay").k2ready;
+          await wB(100);
+          const rowsB = () => [...stBox().querySelectorAll(".k-bug-table tbody tr")];
+          const numsB = () => rowsB().map((r) => r.dataset.num).join();
+          const heads = [...sb1.querySelectorAll(".k-bug-table thead th")].map((th) => th.textContent.trim());
+          check2(
+            "[170-B] \u2605\u2605 \u0E2B\u0E31\u0E27\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E04\u0E23\u0E1A\u0E2B\u0E01\u0E15\u0E32\u0E21\u0E25\u0E33\u0E14\u0E31\u0E1A: \u0E23\u0E2B\u0E31\u0E2A \xB7 \u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14 \xB7 \u0E2A\u0E16\u0E32\u0E19\u0E30 \xB7 \u0E1E\u0E1A\u0E43\u0E19\u0E23\u0E38\u0E48\u0E19 \xB7 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19 \xB7 \u0E41\u0E01\u0E49\u0E44\u0E02\u0E43\u0E19\u0E23\u0E38\u0E48\u0E19",
+            JSON.stringify(heads) === JSON.stringify([t("ui.bug.colId"), t("ui.bug.colTitle"), t("ui.bug.colStatus"), t("ui.bug.colFound"), t("ui.bug.colReported"), t("ui.bug.colFixed")]),
+            heads.join(" | ")
+          );
+          check2(
+            "[170-B] \u2605\u2605 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 = \u0E1A\u0E31\u0E4A\u0E01 5 \u0E15\u0E31\u0E27 (\u0E44\u0E21\u0E48\u0E19\u0E31\u0E1A PR/\u0E02\u0E49\u0E2D\u0E40\u0E2A\u0E19\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C/\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E04\u0E19\u0E19\u0E2D\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E07\u0E1A\u0E19\u0E40\u0E27\u0E47\u0E1A) \u0E40\u0E23\u0E35\u0E22\u0E07\u0E40\u0E25\u0E02\u0E43\u0E2B\u0E21\u0E48\u0E01\u0E48\u0E2D\u0E19 \xB7 \u0E16\u0E32\u0E21 GitHub \u0E04\u0E23\u0E31\u0E49\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27",
+            numsB() === "9,8,5,4,3" && fetched.length === 1 && fetched[0] === bugApiUrl(1),
+            numsB() + " \xB7 fetch=" + fetched.length
+          );
+          const cellsOf = (num5) => [...rowsB().find((r) => r.dataset.num === String(num5)).children].map((td) => td.textContent.trim());
+          check2(
+            "[170-B] \u2605\u2605 \u0E41\u0E16\u0E27\u0E02\u0E2D\u0E07\u0E1A\u0E31\u0E4A\u0E01\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49\u0E41\u0E25\u0E49\u0E27: \u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E0A\u0E48\u0E2D\u0E07 (\u0E23\u0E2B\u0E31\u0E2A/\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14/\u0E2A\u0E16\u0E32\u0E19\u0E30/\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E1A/\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48/\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49)",
+            JSON.stringify(cellsOf(8)) === JSON.stringify(["#8", "\u0E40\u0E17\u0E2A170 Export PDF blank", t("ui.bug.stFixed"), "alpha.167", fmtDate("2026-09-20T03:00:00Z"), "alpha.168"]),
+            cellsOf(8).join(" | ")
+          );
+          check2(
+            "[170-B] \u0E41\u0E16\u0E27\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E38\u0E48\u0E19 = \u0E02\u0E35\u0E14 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E0A\u0E48\u0E2D\u0E07\u0E27\u0E48\u0E32\u0E07 \xB7 \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E15\u0E32\u0E21\u0E1B\u0E49\u0E32\u0E22\u0E02\u0E2D\u0E07 Issue",
+            cellsOf(3)[2] === t("ui.bug.stNew") && cellsOf(3)[3] === "\u2014" && cellsOf(3)[5] === "\u2014" && cellsOf(9)[2] === t("ui.bug.stConfirmed") && cellsOf(4)[2] === t("ui.bug.stProgress") && cellsOf(5)[2] === t("ui.bug.stDuplicate") && cellsOf(9)[3] === "alpha.169",
+            cellsOf(3).join(" | ")
+          );
+          check2(
+            "[170-B] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E20\u0E32\u0E29\u0E32\u0E14\u0E34\u0E1A + \u0E1A\u0E2D\u0E01\u0E08\u0E33\u0E19\u0E27\u0E19 + \u0E1A\u0E2D\u0E01\u0E40\u0E27\u0E25\u0E32\u0E2D\u0E31\u0E1B\u0E40\u0E14\u0E15",
+            !rawKey(sb1) && sb1.querySelector(".k-bug-count").textContent === tf("ui.bug.count", 5, 5) && sb1.querySelector(".k-bug-stamp").textContent.trim() !== "",
+            sb1.querySelector(".k-bug-count").textContent
+          );
+          const tblWrap = sb1.querySelector(".k-bug-wrap").getBoundingClientRect(), dlgR = sb1.getBoundingClientRect();
+          check2(
+            "[170-B] \u0E15\u0E32\u0E23\u0E32\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07 \u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19 \xB7 \u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E08\u0E2D",
+            tblWrap.left >= dlgR.left && tblWrap.right <= dlgR.right + 1 && sb1.querySelector(".k-bug-wrap").scrollWidth <= sb1.querySelector(".k-bug-wrap").clientWidth + 1 && sb1.querySelector(":scope > .k-dlg-btns > .k-ok").getBoundingClientRect().bottom <= innerHeight,
+            sb1.querySelector(".k-bug-wrap").scrollWidth + "/" + sb1.querySelector(".k-bug-wrap").clientWidth
+          );
+          const pick2 = (sel2, v4) => {
+            const s = sb1.querySelector(sel2);
+            s.value = v4;
+            s.dispatchEvent(new Event("change", { bubbles: true }));
+          };
+          const optTexts = [...sb1.querySelector(".k-bug-f-status").options].map((o) => o.textContent);
+          check2(
+            "[170-B] \u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E01\u0E23\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30: \u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14/\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1B\u0E34\u0E14/\u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27 + \u0E17\u0E38\u0E01\u0E2A\u0E16\u0E32\u0E19\u0E30 \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E08\u0E33\u0E19\u0E27\u0E19",
+            optTexts.length === 10 && optTexts[0] === tf("ui.bug.fltAll", 5) && optTexts[1] === tf("ui.bug.fltOpen", 3) && optTexts[2] === tf("ui.bug.fltClosed", 2) && optTexts.includes(tf("ui.bug.fltOne", t("ui.bug.stFixed"), 1)),
+            optTexts.join(" | ")
+          );
+          pick2(".k-bug-f-status", "open");
+          check2('[170-B] \u2605\u2605 \u0E01\u0E23\u0E2D\u0E07 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1B\u0E34\u0E14" = \u0E40\u0E2B\u0E25\u0E37\u0E2D 3', numsB() === "9,4,3" && sb1.querySelector(".k-bug-count").textContent === tf("ui.bug.count", 3, 5), numsB());
+          pick2(".k-bug-f-status", "fixed");
+          check2('[170-B] \u0E01\u0E23\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30 "\u0E41\u0E01\u0E49\u0E44\u0E02\u0E41\u0E25\u0E49\u0E27" = \u0E40\u0E2B\u0E25\u0E37\u0E2D 1', numsB() === "8", numsB());
+          pick2(".k-bug-f-status", "all");
+          const foundOpts = [...sb1.querySelector(".k-bug-f-found").options].map((o) => o.value);
+          check2("[170-B] \u0E0A\u0E48\u0E2D\u0E07\u0E01\u0E23\u0E2D\u0E07\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E1A: \u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E23\u0E38\u0E48\u0E19\u0E08\u0E32\u0E01\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E08\u0E23\u0E34\u0E07 \u0E43\u0E2B\u0E21\u0E48 \u2192 \u0E40\u0E01\u0E48\u0E32", foundOpts.join() === "all,alpha.169,alpha.167,alpha.99", foundOpts.join());
+          pick2(".k-bug-f-found", "alpha.99");
+          check2("[170-B] \u2605 \u0E01\u0E23\u0E2D\u0E07\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E1E\u0E1A", numsB() === "4", numsB());
+          pick2(".k-bug-f-found", "all");
+          pick2(".k-bug-f-fixed", "none");
+          check2('[170-B] \u0E01\u0E23\u0E2D\u0E07 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49\u0E44\u0E02"', numsB() === "9,5,4,3", numsB());
+          pick2(".k-bug-f-fixed", "alpha.168");
+          check2("[170-B] \u0E01\u0E23\u0E2D\u0E07\u0E23\u0E38\u0E48\u0E19\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49\u0E44\u0E02", numsB() === "8", numsB());
+          pick2(".k-bug-f-fixed", "all");
+          const qB = sb1.querySelector(".k-bug-q");
+          typeIn(qB, "pdf");
+          check2("[170-B] \u2605\u2605 \u0E04\u0E49\u0E19\u0E2B\u0E32\u0E43\u0E19\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14 (\u0E44\u0E21\u0E48\u0E2A\u0E19\u0E15\u0E31\u0E27\u0E1E\u0E34\u0E21\u0E1E\u0E4C)", numsB() === "8", numsB());
+          typeIn(qB, "#4");
+          check2("[170-B] \u0E04\u0E49\u0E19\u0E2B\u0E32\u0E14\u0E49\u0E27\u0E22\u0E23\u0E2B\u0E31\u0E2A\u0E1A\u0E31\u0E4A\u0E01", numsB() === "4", numsB());
+          typeIn(qB, "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E33\u0E19\u0E35\u0E49\u0E41\u0E19\u0E48");
+          check2(
+            "[170-B] \u0E44\u0E21\u0E48\u0E15\u0E23\u0E07\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07 = \u0E1A\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 (\u0E2B\u0E31\u0E27\u0E15\u0E32\u0E23\u0E32\u0E07\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48)",
+            rowsB().length === 0 && sb1.querySelector(".k-bug-msg").textContent === t("ui.bug.noMatch") && seen(sb1.querySelector(".k-bug-table thead"))
+          );
+          pick2(".k-bug-f-status", "open");
+          check2("[170-B] \u0E1B\u0E38\u0E48\u0E21\u0E25\u0E49\u0E32\u0E07\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07\u0E01\u0E14\u0E44\u0E14\u0E49\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E21\u0E35\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07", sb1.querySelector(".k-bug-clear").disabled === false);
+          sb1.querySelector(".k-bug-clear").click();
+          check2(
+            "[170-B] \u2605 \u0E25\u0E49\u0E32\u0E07\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07 = \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E04\u0E23\u0E1A + \u0E0A\u0E48\u0E2D\u0E07\u0E17\u0E38\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E04\u0E48\u0E32\u0E40\u0E14\u0E34\u0E21 + \u0E1B\u0E38\u0E48\u0E21\u0E25\u0E49\u0E32\u0E07\u0E1B\u0E34\u0E14",
+            numsB() === "9,8,5,4,3" && qB.value === "" && sb1.querySelector(".k-bug-f-status").value === "all" && sb1.querySelector(".k-bug-clear").disabled === true,
+            numsB()
+          );
+          const thBtn = (k) => sb1.querySelector('.k-bug-th[data-sort="' + k + '"]');
+          thBtn("foundIn").click();
+          check2(
+            '[170-B] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E2B\u0E31\u0E27 "\u0E1E\u0E1A\u0E43\u0E19\u0E23\u0E38\u0E48\u0E19" = \u0E40\u0E23\u0E35\u0E22\u0E07\u0E15\u0E32\u0E21\u0E23\u0E38\u0E48\u0E19 (\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23) + \u0E1A\u0E2D\u0E01 aria-sort',
+            numsB() === "9,8,4,5,3" && thBtn("foundIn").closest("th").getAttribute("aria-sort") === "descending" && thBtn("id").closest("th").getAttribute("aria-sort") === "none",
+            numsB()
+          );
+          thBtn("foundIn").click();
+          check2("[170-B] \u0E04\u0E25\u0E34\u0E01\u0E0B\u0E49\u0E33 = \u0E01\u0E25\u0E31\u0E1A\u0E17\u0E34\u0E28", numsB() === "5,3,4,8,9" && thBtn("foundIn").closest("th").getAttribute("aria-sort") === "ascending", numsB());
+          thBtn("reported").click();
+          check2("[170-B] \u0E40\u0E23\u0E35\u0E22\u0E07\u0E15\u0E32\u0E21\u0E27\u0E31\u0E19\u0E17\u0E35\u0E48\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19 (\u0E43\u0E2B\u0E21\u0E48\u0E01\u0E48\u0E2D\u0E19)", numsB() === "9,8,5,4,3", numsB());
+          thBtn("id").click();
+          rowsB()[0].querySelector(".k-bug-link").click();
+          await wB(100);
+          check2("[170-B] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E23\u0E2B\u0E31\u0E2A\u0E1A\u0E31\u0E4A\u0E01 = \u0E40\u0E1B\u0E34\u0E14 Issue \u0E15\u0E31\u0E27\u0E19\u0E31\u0E49\u0E19\u0E43\u0E19\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C", opened[opened.length - 1] === bugUrl(9), opened[opened.length - 1]);
+          sb1.querySelector(".k-bug-web").click();
+          await wB(100);
+          check2('[170-B] \u0E1B\u0E38\u0E48\u0E21 "\u0E40\u0E1B\u0E34\u0E14\u0E1A\u0E19 GitHub" = \u0E2B\u0E19\u0E49\u0E32\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 Issue \u0E02\u0E2D\u0E07\u0E23\u0E35\u0E42\u0E1B', opened[opened.length - 1] === BUG_LIST_URL);
+          sb1.querySelector(":scope > .k-dlg-btns > .k-ok").click();
+          check2("[170-B] \u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14 \u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30", await untilB(() => !stBox(), 2e3) === true);
+          const ov2 = openBugStatus();
+          await ov2.k2ready;
+          await wB(100);
+          check2("[170-B] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E0B\u0E49\u0E33\u0E17\u0E31\u0E19\u0E17\u0E35 = \u0E43\u0E0A\u0E49\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E35\u0E48\u0E08\u0E33\u0E44\u0E27\u0E49 (\u0E44\u0E21\u0E48\u0E16\u0E32\u0E21 GitHub \u0E2D\u0E35\u0E01)", fetched.length === 1 && numsB() === "9,8,5,4,3", "fetch=" + fetched.length);
+          fakeRes = { status: 200, ok: true, body: JSON.stringify(ISSUES.concat([mkIssue2({ number: 10, title: "\u0E40\u0E17\u0E2A170 \u0E15\u0E31\u0E27\u0E43\u0E2B\u0E21\u0E48", labels: [{ name: "from-app" }] })])) };
+          stBox().querySelector(".k-bug-refresh").click();
+          check2("[170-B] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E42\u0E2B\u0E25\u0E14\u0E43\u0E2B\u0E21\u0E48 = \u0E16\u0E32\u0E21 GitHub \u0E41\u0E25\u0E49\u0E27\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E15\u0E32\u0E21", await untilB(() => fetched.length === 2 && numsB() === "10,9,8,5,4,3", 3e3) === true, numsB());
+          fakeRes = { status: 0, ok: false, netError: true, error: "ENOTFOUND" };
+          stBox().querySelector(".k-bug-refresh").click();
+          await untilB(() => fetched.length === 3 && stBox().querySelector(".k-bug-stamp").classList.contains("k-bug-stamp-warn"), 3e3);
+          check2(
+            "[170-B] \u2605\u2605 \u0E15\u0E48\u0E2D\u0E40\u0E19\u0E47\u0E15\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E41\u0E15\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E01\u0E48\u0E32 = \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 + \u0E1A\u0E2D\u0E01\u0E40\u0E2B\u0E15\u0E38\u0E41\u0E25\u0E30\u0E40\u0E27\u0E25\u0E32\u0E02\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E17\u0E35\u0E48\u0E40\u0E2B\u0E47\u0E19",
+            numsB() === "10,9,8,5,4,3" && stBox().querySelector(".k-bug-stamp").textContent.includes(t("ui.bug.errNet")),
+            stBox().querySelector(".k-bug-stamp").textContent
+          );
+          stBox().closest(".k-overlay").remove();
+          clearBugCache();
+          const ov3 = openBugStatus();
+          await ov3.k2ready;
+          await wB(100);
+          check2(
+            "[170-B] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 + \u0E40\u0E19\u0E47\u0E15\u0E25\u0E49\u0E21 = \u0E1A\u0E2D\u0E01\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E25\u0E32\u0E07\u0E15\u0E32\u0E23\u0E32\u0E07 (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E15\u0E32\u0E23\u0E32\u0E07\u0E40\u0E1B\u0E25\u0E48\u0E32)",
+            rowsB().length === 0 && stBox().querySelector(".k-bug-msg").textContent === t("ui.bug.errNet") && stBox().querySelector(".k-bug-msg").dataset.kind === "error"
+          );
+          fakeRes = { status: 403, ok: false, body: '{"message":"API rate limit exceeded for 1.2.3.4"}' };
+          stBox().querySelector(".k-bug-refresh").click();
+          check2("[170-B] \u0E42\u0E04\u0E27\u0E15\u0E32\u0E02\u0E2D\u0E07 GitHub \u0E40\u0E15\u0E47\u0E21 = \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E09\u0E1E\u0E32\u0E30", await untilB(() => stBox().querySelector(".k-bug-msg").textContent === t("ui.bug.errRate"), 3e3) === true);
+          fakeRes = { status: 200, ok: true, body: "[]" };
+          stBox().querySelector(".k-bug-refresh").click();
+          check2("[170-B] \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1A\u0E31\u0E4A\u0E01\u0E43\u0E19\u0E23\u0E35\u0E42\u0E1B = \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E27\u0E48\u0E32\u0E07", await untilB(() => stBox().querySelector(".k-bug-msg").textContent === t("ui.bug.empty"), 3e3) === true);
+          stBox().querySelector(".k-bug-go-report").click();
+          const rb4 = await untilB(() => repBox());
+          check2("[170-B] \u0E08\u0E32\u0E01\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30 \u2192 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19", !!rb4 && !stBox());
+          rb4.querySelector(".k-bug-go-status").click();
+          check2("[170-B] \u0E08\u0E32\u0E01\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19 \u2192 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30", await untilB(() => stBox() && !repBox(), 2e3) === true);
+          await stBox().closest(".k-overlay").k2ready;
+          document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+          if (kapi.menuLabels && kapi.menuTestClick) {
+            const labsB = await kapi.menuLabels();
+            check2(
+              "[170-B] \u2605 \u0E40\u0E21\u0E19\u0E39 \u0E0A\u0E48\u0E27\u0E22\u0E40\u0E2B\u0E25\u0E37\u0E2D \u0E21\u0E35 \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E1A\u0E31\u0E4A\u0E01 + \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E31\u0E4A\u0E01 (\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E35\u0E22\u0E4C)",
+              [t("ui.menu.bugReport"), t("ui.menu.bugStatus")].every((x) => labsB.some((l) => l.endsWith(" > " + x))) && !labsB.some((l) => /ui\.menu\.bug/.test(l)),
+              labsB.filter((l) => /bug|บั๊ก/i.test(l)).join(" | ")
+            );
+            await kapi.menuTestClick("bug-status");
+            check2("[170-B] \u2605 \u0E01\u0E14\u0E40\u0E21\u0E19\u0E39 \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E31\u0E4A\u0E01 = \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30", await untilB(() => stBox(), 3e3) !== null);
+            if (stBox()) await stBox().closest(".k-overlay").k2ready;
+            document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+            await kapi.menuTestClick("bug-report");
+            check2("[170-B] \u0E01\u0E14\u0E40\u0E21\u0E19\u0E39 \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E1A\u0E31\u0E4A\u0E01 = \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19", await untilB(() => repBox(), 3e3) !== null);
+            document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+          }
+        } finally {
+          restoreIo();
+          clearBugCache();
+          clearBugSent();
+          resetBugView();
+          if (draft0 == null) localStorage.removeItem("k2-bug-draft");
+          else localStorage.setItem("k2-bug-draft", draft0);
+          document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+          document.querySelectorAll(".k-toast").forEach((x) => x.remove());
+        }
+      }
       {
         const wBH = (ms) => new Promise((r) => setTimeout(r, ms));
         const untilBH = async (fn, ms = 8e3) => {
@@ -242541,6 +244065,9 @@ ${css}
       init_scene_props();
       init_dialogs();
       init_home_ui();
+      init_bug_ui();
+      init_bug_core();
+      init_locale();
       init_spell();
       init_tooltip();
       init_i18n_html();
@@ -242561,7 +244088,8 @@ ${css}
       b.append(icon(d.icon, 13));
       b.onclick = () => {
         if (!_run) return;
-        _run(d.cmd || "settings");
+        if (d.cmd) _run(d.cmd);
+        else _run("settings", null, d.focus);
         setTimeout(syncStatusToggles, 50);
         setTimeout(syncStatusToggles, 400);
       };
@@ -242598,8 +244126,8 @@ ${css}
       init_icons();
       init_typewriter();
       STATUS_TOGGLES = [
-        { id: "autosave", label: "ui.sb.autosave", icon: "save", on: () => (Number(state.settings.autoSaveMinutes) || 0) > 0 },
-        { id: "spell", label: "ui.sb.spell", icon: "check", on: () => state.settings.spellCheckDict !== false },
+        { id: "autosave", label: "ui.sb.autosave", icon: "save", focus: "#st-auto", on: () => (Number(state.settings.autoSaveMinutes) || 0) > 0 },
+        { id: "spell", label: "ui.sb.spell", icon: "check", focus: "#st-spelldict", on: () => state.settings.spellCheckDict !== false },
         { id: "line-numbers", label: "ui.sb.lineNumbers", icon: "list-ol", cmd: "line-numbers", on: () => !!state.settings.lineNumbers },
         { id: "typewriter", label: "ui.sb.typewriter", icon: "edit", cmd: "typewriter", on: () => !!isTypewriter() },
         { id: "auto-fit", label: "ui.sb.autoFit", icon: "expand", cmd: "auto-fit-width", on: () => !!state.settings.autoFitWidth },
@@ -243050,6 +244578,7 @@ ${css}
     seedTabView: () => seedTabView,
     setA11ySwitch: () => setA11ySwitch,
     setAllTreeCollapsed: () => setAllTreeCollapsed,
+    setAppLanguage: () => setAppLanguage,
     setAutoFitWidth: () => setAutoFitWidth,
     setElementBadge: () => setElementBadge,
     setFmtbarAlign: () => setFmtbarAlign,
@@ -243199,6 +244728,7 @@ ${css}
     } catch {
     }
     state.settings = userA11yWins({ ...DEFAULT_SETTINGS, ...globalSettings, ...meta2.settings || {} }, globalSettings);
+    state.settings.language = i18n.lang;
     state.goals = { ...DEFAULT_GOALS, ...meta2.goals || {} };
     applySettings();
   }
@@ -244867,7 +246397,7 @@ ${css}
       label: (isSpErrorMarks() ? gi("checkbox-checked") + " " : gi("checkbox") + " ") + t("ui.app.spErrMarkToggle"),
       click: () => toggleSpErrorMarks()
     });
-    items.push({ label: iconHtml("clipboard", 14) + t("ui.app.settingsFormatCheckChapter"), click: () => settingsDialog("page") });
+    items.push({ label: iconHtml("clipboard", 14) + t("ui.app.settingsFormatCheckChapter"), click: () => settingsDialog("pagenum", { focus: "#st-sp-errmark" }) });
     popupMenu(x, y, items);
     return items.length;
   }
@@ -245474,10 +247004,13 @@ ${css}
     applyWikiCats();
     applyWindowTitle(state.title);
     await kapi.pushRecent(root);
-    const projLang = state.settings.language || "en";
-    if (projLang !== i18n.lang) {
-      setBusy(t("ui.app.busyLoadLang"));
-      await loadLanguage(projLang, root);
+    try {
+      if (await kapi.exists(await kapi.join(root, "languages", langFileName(i18n.lang)))) {
+        setBusy(t("ui.app.busyLoadLang"));
+        await loadLanguage(i18n.lang, root);
+      }
+    } catch (e) {
+      log("warn", "project language layer", e);
     }
     applyDataI18n();
     initIcons();
@@ -245651,6 +247184,15 @@ ${css}
     _globalWriteChain = p.catch(() => false);
     return p;
   }
+  async function setAppLanguage(code3) {
+    await loadLanguage(code3, state.root);
+    const real = i18n.lang;
+    state.settings.language = real;
+    await mergeGlobalSettings({ language: real, languagePicked: true });
+    if (state.root && state.meta) await saveProjectMetaSoon();
+    logAction("settings", "language", { to: real });
+    return real;
+  }
   function startupPlan(g = {}, recent = [], launch = "") {
     if (launch) return { skipHome: true, last: String(launch), showHome: false, fromOs: true };
     const skipHome = g.openLastProject === true;
@@ -245671,9 +247213,10 @@ ${css}
     }
     syncMenuToggles();
     splashProgress(t("ui.splash.language"), 18);
-    if (g && g.language && g.language !== i18n.lang) {
+    state.settings.language = i18n.lang;
+    if (g.languagePicked !== true) {
       try {
-        await loadLanguage(g.language);
+        await mergeGlobalSettings({ language: i18n.lang, languagePicked: true });
       } catch (e) {
         log("warn", "boot language", e);
       }
@@ -246084,7 +247627,7 @@ ${css}
     try {
       for (let i5 = 0; i5 < localStorage.length; i5++) {
         const k = localStorage.key(i5);
-        if (k && k.startsWith("k2-")) lsAll[k] = localStorage.getItem(k);
+        if (k && k.startsWith("k2-") && k !== LANG_LS_KEY) lsAll[k] = localStorage.getItem(k);
       }
     } catch {
     }
@@ -246165,7 +247708,7 @@ ${css}
       if (!lsNewer) {
         for (const k of Object.keys(raw2)) {
           try {
-            if (k.startsWith("k2-") && typeof raw2[k] === "string") localStorage.setItem(k, raw2[k]);
+            if (k.startsWith("k2-") && k !== LANG_LS_KEY && typeof raw2[k] === "string") localStorage.setItem(k, raw2[k]);
           } catch {
           }
         }
@@ -247070,7 +248613,8 @@ ${css}
           case "branchPanel":
             return it(() => openBranchingTree());
           case "projectSettings":
-            return it(() => settingsDialog());
+            return it(() => settingsDialog("setup"));
+          // [alpha.170] "ตั้งค่าโปรเจกต์" = หน้าข้อมูลผลงาน (เดิมเปิดหน้าที่ค้างไว้ล่าสุด)
           case "aiSettings":
             return it(() => handleCommand("ai-settings"));
           case "reveal":
@@ -247684,10 +249228,10 @@ ${css}
     const items = [];
     for (const r of list3) {
       const f = await kapi.join(dPath, "Chapters", ch.folderName, r.fileName);
-      const has3 = await hasVis(f);
+      const has4 = await hasVis(f);
       items.push({
-        text: (has3 ? gi("film") + " " : "") + (r.title || ""),
-        click: () => has3 ? openVisual(f, r.title) : createVisual(f, r.title)
+        text: (has4 ? gi("film") + " " : "") + (r.title || ""),
+        click: () => has4 ? openVisual(f, r.title) : createVisual(f, r.title)
       });
     }
     popupMenu(ev.clientX, ev.clientY, items);
@@ -248797,7 +250341,8 @@ ${css}
           await buildTree2();
         } },
         "-",
-        { label: t("ui.tree.trashSettings"), click: () => settingsDialog("write", { focus: "#st-recycle" }) },
+        { label: t("ui.tree.trashSettings"), click: () => settingsDialog(null, { focus: "#st-recycle" }) },
+        // [alpha.170] หน้าอ่านจากตำแหน่งของช่องเอง
         { label: t("ui.app.findDiskFindOn"), click: () => kapi.revealInOS(recDir) }
       ]);
     };
@@ -252300,12 +253845,12 @@ ${css}
   }
   async function pluginPath(rel) {
     if (!state.root) return null;
-    const clean3 = String(rel || "").replace(/\\/g, "/").replace(/^[/]+/, "");
-    if (clean3.split("/").includes("..")) {
+    const clean4 = String(rel || "").replace(/\\/g, "/").replace(/^[/]+/, "");
+    if (clean4.split("/").includes("..")) {
       log("warn", t("ui.app.pluginPathMarginProject") + rel);
       return null;
     }
-    return kapi.join(state.root, ...clean3.split("/").filter(Boolean));
+    return kapi.join(state.root, ...clean4.split("/").filter(Boolean));
   }
   function aboutBox(msg) {
     setStatus(msg);
@@ -253157,8 +254702,8 @@ ${css}
     if (!cols.length) {
       const mc = rows.find((r) => String(r[0] == null ? "" : r[0]).trim() === "meta.code");
       const code3 = mc ? String(mc[1] == null ? "" : mc[1]).trim() : "";
-      const norm4 = /^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(code3) ? code3.split("-")[0].toLowerCase() + (code3.includes("-") ? "-" + code3.split("-")[1].toUpperCase() : "") : "";
-      cols.push([1, norm4 || i18n.lang || "th"]);
+      const norm5 = /^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(code3) ? code3.split("-")[0].toLowerCase() + (code3.includes("-") ? "-" + code3.split("-")[1].toUpperCase() : "") : "";
+      cols.push([1, norm5 || i18n.lang || "th"]);
     }
     const body = hasHead ? rows.slice(1) : rows;
     const res = { keys: [], skipped: 0, langs: [], added: 0, changed: 0 };
@@ -257648,7 +259193,17 @@ ${css}
       ov.remove();
       handleCommand("check-update");
     };
-    pills2.append(pChange, pUpdate);
+    const pBug = el("button", "k-about-pill k-about-bug-report", t("ui.about.bugReport"));
+    pBug.onclick = () => {
+      ov.remove();
+      handleCommand("bug-report");
+    };
+    const pBugStatus = el("button", "k-about-pill k-about-bug-status", t("ui.about.bugStatus"));
+    pBugStatus.onclick = () => {
+      ov.remove();
+      handleCommand("bug-status");
+    };
+    pills2.append(pChange, pUpdate, pBug, pBugStatus);
     left.append(title2, tag3, sub, ver, pills2);
     const foot = el("div", "k-about-foot");
     const dev = el("button", "k-about-round", "");
@@ -258522,8 +260077,9 @@ ${css}
       case "compile":
         openCompileDialog();
         break;
+      // [alpha.170] `settings` รับ (หน้า, ช่อง) ได้ — สวิตช์บนแถบสถานะส่งช่องของตัวเองมา (หน้าอ่านจากช่อง)
       case "settings":
-        settingsDialog();
+        settingsDialog(typeof a[0] === "string" && a[0] ? a[0] : void 0, typeof a[1] === "string" && a[1] ? { focus: a[1] } : {});
         break;
       case "toggle-format":
         switchFormat();
@@ -258533,6 +260089,13 @@ ${css}
         break;
       case "about":
         aboutDialog();
+        break;
+      // [alpha.170] รายงานบั๊ก / สถานะบั๊ก — ปุ่มท้ายแถบสถานะ · กล่อง "เกี่ยวกับ" · เมนู ช่วยเหลือ เรียกสองคำสั่งนี้ทางเดียวกัน
+      case "bug-report":
+        openBugReport();
+        break;
+      case "bug-status":
+        openBugStatus();
         break;
       // [alpha.135] เมนู ช่วยเหลือ → ตรวจหาอัปเดต… (ไม่เงียบ — บอกผลทุกกรณี)
       case "check-update":
@@ -260780,6 +262343,7 @@ ${css}
       init_selftest();
       init_locale();
       init_status_toggles();
+      init_bug_ui();
       init_statusbar_lock();
       tr3 = t;
       pageScale = 1;
@@ -261607,9 +263171,10 @@ ${css}
         $("#zoom-out").onclick = () => bumpPageScale(-1);
         $("#zoom-reset").onclick = () => resetPageScale();
         $("#zoom-ctl").oncontextmenu = zoomLabelMenu;
-        installStatusToggles((cmd) => handleCommand(cmd));
+        installStatusToggles((cmd, ...args) => handleCommand(cmd, ...args));
         installStatusBarLock();
         $("#status-home").onclick = () => handleCommand("home");
+        $("#status-bug") && ($("#status-bug").onclick = () => handleCommand("bug-report"));
         $("#tree-search").oninput = (e) => filterTree(e.target.value);
         setupTreeInteractions();
         setupFloatingFormatBar();

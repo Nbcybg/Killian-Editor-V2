@@ -8440,3 +8440,85 @@ body.k-menubar-on .tb-menu:focus { background:var(--hover); color:var(--bright);
 .k-cl-table th, .k-cl-table td { border:1px solid var(--border); padding:.4em .6em; vertical-align:top; text-align:start; }
 .k-cl-table th { background:var(--hover-soft, var(--side)); color:var(--bright); font-weight:600; white-space:nowrap; }
 .k-cl-table td:first-child { white-space:nowrap; }
+
+/* ══════════ [alpha.170] รายงานบั๊ก + สถานะบั๊ก ══════════
+   ปุ่มท้ายแถบสถานะ (ถัดจากปุ่มหน้าแรก) · กล่องรายงาน · กล่องสถานะ (ตาราง + ตัวกรอง)
+   สีทั้งหมดมาจากตัวแปรธีม — ป้ายสถานะบอกด้วยข้อความเสมอ สีเป็นแค่ตัวช่วย */
+#status-bug { background:transparent; border:0; color:var(--dim); cursor:default; padding-inline-end:0 !important; }
+#status-bug:hover { color:var(--bright); }
+#status-bug:focus-visible { outline:2px solid var(--accent-hi); outline-offset:-2px; }
+/* ปุ่มหน้าแรกไม่ใช่ช่องสุดท้ายแล้ว → คืนระยะด้านท้ายให้เท่าช่องอื่น (ช่องสุดท้าย = ปุ่มรายงานบั๊ก) */
+#statusbar > #status-home.k-sb-seg { padding-inline-end:calc(9px * var(--uis)) !important; }
+
+.k-dialog.k-bug-report { width:calc(640px * var(--uis)); max-width:94vw; }
+.k-bug-form { display:flex; flex-direction:column; gap:calc(10px * var(--uis)); }
+.k-bug-form > .k-bug-intro { margin:0; color:var(--dim); font-size:calc(12.5px * var(--uis)); line-height:1.5; }
+.k-bug-field { display:flex; flex-direction:column; gap:calc(4px * var(--uis)); }
+.k-bug-label { color:var(--dim); font-size:calc(12px * var(--uis)); font-weight:600; }
+.k-bug-field > .k-dlg-input { flex:none; }
+.k-bug-ta { resize:vertical; min-height:calc(48px * var(--uis)); max-height:40vh; font:inherit; line-height:1.5; }
+.k-bug-env { display:flex; flex-direction:column; gap:calc(3px * var(--uis)); padding:calc(8px * var(--uis)) calc(10px * var(--uis));
+  border:1px solid var(--border); border-radius:var(--r-md); background:var(--sunken); }
+.k-bug-env-line { color:var(--fg); font-size:calc(12.5px * var(--uis)); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.k-bug-env > .k-hint { color:var(--dim); font-size:calc(12px * var(--uis)); }
+.k-dialog > .k-dlg-btns > .k-bug-go-status,
+.k-dialog > .k-dlg-btns > .k-bug-web { margin-inline-end:auto; }
+
+/* กล่องสถานะ: สูงคงที่ · หัว/ตัวกรอง/ท้ายไม่หด · ตารางเป็นตัวที่เลื่อน */
+.k-dialog.k-bug-status { width:calc(1020px * var(--uis)); max-width:96vw; height:calc(640px * var(--uis)); max-height:88vh;
+  display:flex; flex-direction:column; overflow:hidden; }
+.k-dialog.k-bug-status > * { flex:none; }
+.k-dialog.k-bug-status > .k-dlg-btns { position:static; margin-bottom:0; padding-bottom:0; }
+.k-bug-bar { display:flex; align-items:center; flex-wrap:wrap; gap:calc(8px * var(--uis)); margin-bottom:calc(10px * var(--uis)); }
+.k-bug-bar > .k-bug-q { flex:2 1 calc(240px * var(--uis)); width:auto; min-width:calc(230px * var(--uis)); }
+.k-bug-bar > .k-dlg-select { flex:1 1 calc(170px * var(--uis)); width:auto; min-width:calc(150px * var(--uis)); }
+.k-bug-bar > .cmp-mini { flex:none; margin:0; display:inline-flex; align-items:center; gap:calc(4px * var(--uis)); }
+.k-bug-bar > .cmp-mini:disabled { opacity:.4; }
+.k-dialog.k-bug-status > .k-bug-wrap { flex:1 1 auto; min-height:calc(120px * var(--uis)); overflow:auto; position:relative;
+  border:1px solid var(--border); border-radius:var(--r-md); background:var(--bg); }
+.k-bug-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:calc(13px * var(--uis)); }
+.k-bug-table th { position:sticky; top:0; z-index:1; padding:0; background:var(--side); border-bottom:1px solid var(--border); text-align:start; }
+.k-bug-table td { padding:calc(6px * var(--uis)) calc(10px * var(--uis)); border-bottom:1px solid var(--border);
+  vertical-align:top; text-align:start; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.k-bug-table .k-bug-c-id { width:calc(112px * var(--uis)); }
+.k-bug-table .k-bug-c-status { width:calc(176px * var(--uis)); }
+.k-bug-table .k-bug-c-foundIn, .k-bug-table .k-bug-c-fixedIn { width:calc(118px * var(--uis)); }
+.k-bug-table .k-bug-c-reported { width:calc(124px * var(--uis)); }
+.k-bug-table td.k-bug-c-title { white-space:normal; overflow-wrap:anywhere; }
+.k-bug-table td.k-bug-c-foundIn, .k-bug-table td.k-bug-c-fixedIn, .k-bug-table td.k-bug-c-reported { font-variant-numeric:tabular-nums; color:var(--dim); }
+.k-bug-row:hover > td { background:var(--hover-soft, var(--hover)); }
+.k-bug-th { display:flex; align-items:center; gap:calc(4px * var(--uis)); width:100%; padding:calc(7px * var(--uis)) calc(10px * var(--uis));
+  background:transparent; border:0; border-radius:0; color:var(--dim); font:inherit; font-weight:600; text-align:start; cursor:default; white-space:nowrap; }
+.k-bug-th:hover { color:var(--bright); background:var(--hover-soft, var(--hover)); }
+.k-bug-th:focus-visible { outline:2px solid var(--accent-hi); outline-offset:-2px; }
+.k-bug-th-text { overflow:hidden; text-overflow:ellipsis; }
+.k-bug-th-arrow { display:inline-flex; flex:none; color:var(--accent-hi); }
+.k-bug-table th[aria-sort="ascending"] .k-bug-th, .k-bug-table th[aria-sort="descending"] .k-bug-th { color:var(--bright); }
+.k-bug-link { color:var(--link); cursor:pointer; font-variant-numeric:tabular-nums; }
+.k-bug-link:hover { text-decoration:underline; }
+.k-bug-link:focus-visible { outline:2px solid var(--accent-hi); outline-offset:1px; border-radius:var(--r-xs); }
+.k-bug-st { display:inline-block; max-width:100%; padding:calc(1px * var(--uis)) calc(8px * var(--uis)); border-radius:var(--r-pill);
+  border:1px solid var(--border); background:var(--chip); color:var(--fg); font-size:calc(12px * var(--uis));
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:top; }
+.k-bug-st[data-st="confirmed"] { border-color:var(--st-warn); color:var(--st-warn); background:color-mix(in srgb, var(--st-warn) 12%, transparent); }
+.k-bug-st[data-st="progress"] { border-color:var(--accent-hi); color:var(--accent-hi); background:color-mix(in srgb, var(--accent-hi) 12%, transparent); }
+.k-bug-st[data-st="needinfo"] { border-style:dashed; border-color:var(--st-warn); color:var(--st-warn); }
+.k-bug-st[data-st="fixed"] { border-color:transparent; color:var(--bright); background:color-mix(in srgb, var(--fg) 16%, transparent); }
+.k-bug-st > svg, .k-bug-st > .k-icon { vertical-align:-1px; margin-inline-end:calc(3px * var(--uis)); }
+.k-bug-st[data-st="wontfix"], .k-bug-st[data-st="duplicate"] { color:var(--dim); background:transparent; }
+.k-bug-msg { padding:calc(36px * var(--uis)) calc(20px * var(--uis)); text-align:center; color:var(--dim); line-height:1.6; }
+.k-bug-msg[data-kind="error"] { color:var(--st-danger); }
+.k-bug-table-empty thead { display:none; }
+.k-bug-note { display:flex; align-items:baseline; flex-wrap:wrap; gap:calc(4px * var(--uis)) calc(14px * var(--uis));
+  margin-top:calc(8px * var(--uis)); font-size:calc(12px * var(--uis)); color:var(--fg); }
+.k-bug-note > .k-bug-src { margin-inline-start:auto; }
+.k-bug-note > .k-bug-stamp-warn { color:var(--st-warn); }
+.k-bug-note > :empty { display:none; }
+/* [alpha.170] กล่องรายงาน: บอกว่ารุ่นนี้ยังส่งจากโปรแกรมไม่ได้ · ผลของการส่งที่ไม่สำเร็จ (อยู่ในกล่อง — แถบสถานะถูกกล่องบัง) */
+.k-bug-off { padding:calc(8px * var(--uis)) calc(10px * var(--uis)); border:1px solid var(--st-warn); border-radius:var(--r-md);
+  color:var(--st-warn); background:color-mix(in srgb, var(--st-warn) 10%, transparent); font-size:calc(12.5px * var(--uis)); line-height:1.5; }
+.k-bug-err { color:var(--st-danger); font-size:calc(12.5px * var(--uis)); line-height:1.5; }
+.k-bug-err:empty { display:none; }
+.k-bug-contact-name { color:var(--fg); font-weight:600; }
+.k-bug-contact-name.k-bug-link { color:var(--link); }
+.k-dialog.k-bug-report > .k-dlg-btns > button:disabled { opacity:.45; }
