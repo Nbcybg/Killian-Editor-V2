@@ -12,7 +12,7 @@ ui.a11y.oskFail,システムのスクリーンキーボードを開けません�
 ui.a11y.oskOpened,システムのスクリーンキーボードを開きました
 ui.a11y.oskSettings,スクリーンキーボードを直接開けなかったため、システムのキーボード設定を開きました。そこでオンにしてください
 ui.about.bugReport,バグを報告
-ui.about.bugStatus,バグの状況
+ui.about.bugStatus,バグと要望の状況
 ui.about.changelog,新機能
 ui.about.checkUpdate,アップデートを確認
 ui.about.credits,クレジット
@@ -1317,7 +1317,7 @@ ui.app.block, ブロック
 ui.app.boardItemHideItem,{0} 件のボードがフィルターで非表示になっています — 検索ボックスをクリアするとすべて表示されます
 ui.app.boardPlanner,プランニングボード
 ui.app.boardPlanner2,プランニングボード（{0}）
-ui.app.boardPlannerPlannerGraph,プランニングボード（プランナー）と間取り図
+ui.app.boardPlannerPlannerGraph,プランニングボード（プランナー）
 ui.app.boardPlannerReadCant,プランニングボード（読み取り不可）
 ui.app.bookNotHasDraft,この巻にはまだ下書きがありません
 ui.app.btnFloatFABClose,フローティングボタン（FAB）：オフ
@@ -1417,7 +1417,6 @@ ui.app.copyResult,結果をコピー
 ui.app.copyResultConsoleDone,コンソールの出力をコピーしました
 ui.app.copySaveDoneLine,ログをコピーしました（フィルターに一致する {0} 行）
 ui.app.corner,傾き（度）
-ui.app.courierMonoThaiProportionalThai,Courier MonoThai · ProportionalThai (1998)
 ui.app.coverBookReadNot,巻の表紙画像を読み込めませんでした
 ui.app.creditIcons,アプリのアイコンセット（K2 Icons フォント）
 ui.app.creditThree,3D ストーリーネットワーク（モデル · 背景）
@@ -1515,12 +1514,11 @@ ui.app.file,ファイル拡張子
 ui.app.fileLangK2Csv,言語ファイル（k2_*.csv）
 ui.app.fileNotHas,（このファイルにはまだ {0} がありません）
 ui.app.fileOpen,ファイルを開く
-ui.app.fileTaskMarkdownJSON,作業ファイルは Markdown + JSON で、Killian v1 と完全な互換性があります
+ui.app.fileTaskMarkdownJSON,作業ファイルは通常の Markdown + JSON です
 ui.app.filter,ソースで絞り込み
 ui.app.findDiskFindOn,ディスク上で検索
 ui.app.findRowNotFound,行が見つかりません → ツリーを修復しています
 ui.app.folderNotProjectKillian,このフォルダーは Killian のプロジェクトではありません（project.khn.json が見つかりません）
-ui.app.fontScreenplayPosView,脚本用フォント（タイ語）— 声調記号の位置を調整済み · renderer/assets/fonts/THAI-FONTS.txt を参照
 ui.app.fontScreenplayQuoteUnquote,脚本用フォント（ラテン文字）— Quote-Unquote Apps
 ui.app.forceCaseBig,大文字を強制
 ui.app.forcePrintBigFormat,標準の脚本形式に従って大文字を強制
@@ -1737,7 +1735,6 @@ ui.app.notRememberEditChapter,「{0}」を記憶しないようにしました�
 ui.app.notRememberFoundNot,まだ記憶されていません（出現回数が {0} 回未満）— 「記憶する」を押すと今すぐ記憶します
 ui.app.notSave,未保存
 ui.app.notSet,（未設定）
-ui.app.notSource,ソースのライセンスが不明
 ui.app.notUseTemplate2,— テンプレートなし —
 ui.app.novel, 小説
 ui.app.novel2, 小説 ▾
@@ -1962,6 +1959,7 @@ ui.app.startAppShowPage,起動時：最初にホームページを表示
 ui.app.status2,ステータス： 
 ui.app.styleWatermark,透かしのテンプレート
 ui.app.suggest, （推奨）
+ui.app.supportOpened,支援ページをブラウザーで開きました。ありがとうございます。
 ui.app.template,テンプレート
 ui.app.templateManage,テンプレート（管理）
 ui.app.templatesFillBlockProfile,テンプレート：このプロジェクトの標準テンプレートにプロフィールブロックを追加しました
@@ -2357,7 +2355,8 @@ ui.branch.zoomIn,拡大
 ui.branch.zoomOut,縮小
 ui.bug.btnCopy,レポートをコピー
 ui.bug.btnSend,レポートを送信
-ui.bug.btnStatus,バグの状況を見る
+ui.bug.btnSendFeature,要望を送信
+ui.bug.btnStatus,状況を見る
 ui.bug.clear,絞り込みを解除
 ui.bug.colFixed,修正バージョン
 ui.bug.colFound,発見バージョン
@@ -2371,13 +2370,14 @@ ui.bug.contactMailTip,レポートをコピーして、このアドレス宛て�
 ui.bug.copied,レポートをコピーしました。指定の連絡先に貼り付けて送ってください。
 ui.bug.copyFail,レポートをコピーできませんでした
 ui.bug.count,{1} 件中 {0} 件を表示
-ui.bug.empty,報告されたバグはまだありません
+ui.bug.empty,報告はまだありません
 ui.bug.envHead,環境
 ui.bug.envNote,この行は自動的に報告へ添えられます。ファイル名や作品の内容は含まれません。
 ui.bug.errHttp,GitHub がエラー {0} を返しました
 ui.bug.errNet,GitHub に接続できません。インターネット接続を確認して、もう一度お試しください。
 ui.bug.errParse,GitHub から届いた一覧を読み取れませんでした
 ui.bug.errRate,GitHub が一時的にリクエスト数を制限しています。しばらくしてから試すか、GitHub で一覧を開いてください。
+ui.bug.featureTitle,機能を要望
 ui.bug.fExpected,期待した結果
 ui.bug.fExpectedPh,本来どうなるはずだったか（任意）
 ui.bug.fltAll,すべての状況（{0}）
@@ -2385,23 +2385,37 @@ ui.bug.fltClosed,完了（{0}）
 ui.bug.fltFixedAll,修正バージョン: すべて
 ui.bug.fltFixedNone,修正バージョン未定
 ui.bug.fltFoundAll,発見バージョン: すべて
+ui.bug.fltKindAll,すべての種類（{0}）
+ui.bug.fltKindBug,バグ（{0}）
+ui.bug.fltKindFeature,機能の要望（{0}）
 ui.bug.fltOne,{0}（{1}）
 ui.bug.fltOpen,未完了（{0}）
+ui.bug.fNow,現在の対処方法
+ui.bug.fNowPh,回避策や代わりに使っているアプリ（任意）
 ui.bug.fSteps,再現手順
 ui.bug.fStepsPh,1. …を開く  2. …を押す  3. …になる
 ui.bug.fTitle,タイトル
 ui.bug.fTitlePh,問題を一行でまとめてください
+ui.bug.fTitlePhFeature,アイデアを一行でまとめてください
+ui.bug.fWant,ほしい機能
+ui.bug.fWantPh,考えている機能や変更を説明してください
 ui.bug.fWhat,起きたこと
 ui.bug.fWhatPh,表示されたエラーや消えてしまったものなど、見たままを書いてください
-ui.bug.loading,バグ一覧を読み込み中…
-ui.bug.needTitle,先に問題のタイトルを入力してください
-ui.bug.noMatch,条件に合うバグはありません
+ui.bug.fWhy,役立つ理由
+ui.bug.fWhyPh,やりたいことと、使う場面
+ui.bug.kindBug,バグ報告
+ui.bug.kindFeature,機能の要望
+ui.bug.kindLabel,報告の種類
+ui.bug.kindTag,要望
+ui.bug.loading,一覧を読み込み中…
+ui.bug.needTitle,先にタイトルを入力してください
+ui.bug.noMatch,条件に合う項目はありません
 ui.bug.openFail,ブラウザーを開けませんでした
 ui.bug.openWeb,GitHub で開く
 ui.bug.refresh,再読み込み
-ui.bug.reportIntro,報告はアプリから直接送信され、誰でも読めるバグ一覧に掲載されます。個人情報や未発表の本文は書かないでください。
+ui.bug.reportIntro,報告と要望はアプリから直接送信され、誰でも読める公開の一覧に掲載されます。個人情報や未発表の本文は書かないでください。
 ui.bug.reportTitle,バグを報告
-ui.bug.rowTip,バグ {0} をブラウザーで開く
+ui.bug.rowTip,{0} をブラウザーで開く
 ui.bug.searchPh,ID・詳細・バージョンで検索
 ui.bug.sendClock,このコンピューターの日付と時刻がずれているため、レポートを送信できませんでした。正しく設定してからもう一度お試しください。入力した内容は残っています。
 ui.bug.sendFail,報告の受付先がエラー {0} を返しました。入力した内容は残っています。しばらくしてから試すか、レポートをコピーして別の方法で送ってください。
@@ -2410,15 +2424,20 @@ ui.bug.sendNet,レポートを送信できませんでした。インターネ�
 ui.bug.sendOff,このバージョンでは、まだアプリからレポートを送信できません。レポートをコピーして、開発者が指定した連絡先へ送ってください。
 ui.bug.sendRate,短時間に送信しすぎています。少し待ってからもう一度お試しください。
 ui.bug.sentOk,レポートを送信しました（バグ {0}）
+ui.bug.sentOkFeature,要望を送信しました（{0}）
 ui.bug.sortTip,この列で並べ替え
 ui.bug.source,情報元: アプリの GitHub Issues
+ui.bug.stAdded,追加済み
 ui.bug.stale,（表示中の一覧は {0} に読み込んだものです）
-ui.bug.statusTitle,バグの状況
+ui.bug.statusTitle,バグと要望の状況
+ui.bug.stBuilding,対応中
 ui.bug.stConfirmed,確認済み
+ui.bug.stDeclined,対応しない
 ui.bug.stDuplicate,重複
 ui.bug.stFixed,修正済み
 ui.bug.stNeedInfo,情報待ち
 ui.bug.stNew,確認待ち
+ui.bug.stPlanned,対応予定
 ui.bug.stProgress,修正中
 ui.bug.stWontfix,対応なし
 ui.bug.updated,最終更新: {0}
@@ -3223,6 +3242,14 @@ ui.dlgBuilder.sceneOpenBare,シーンの始まり
 ui.dlgBuilder.selfMono,独白
 ui.dlgBuilder.unknownName,不明
 ui.dlgBuilder.untitled,無題
+ui.docs.back,戻る
+ui.docs.bookExtension,拡張機能ガイド
+ui.docs.bookManual,ユーザーマニュアル
+ui.docs.chapter,章
+ui.docs.language,マニュアルの言語
+ui.docs.next,次の章
+ui.docs.notFound,マニュアルのこのページを開けませんでした: {0}
+ui.docs.prev,前の章
 ui.doctor.allGood,問題は見つかりませんでした — インデックスはすべてのファイルと一致しています
 ui.doctor.badgeTip,プロジェクトの問題が {0} 件見つかりました（ファイル欠落 · 重複行 · ヘッダー破損など）— クリックして確認・修復します
 ui.doctor.confirmFix,選択した {0} 件の問題を修復しますか？
@@ -4658,7 +4685,7 @@ ui.menu.blockCode,コードブロック
 ui.menu.boardMoodMoodBoard,ムードボード — サイドパネルとして開きます。画像をドラッグして置けます
 ui.menu.btnFloatCornerRight,フローティングボタン（右下）（FAB）
 ui.menu.bugReport,バグを報告…
-ui.menu.bugStatus,バグの状況…
+ui.menu.bugStatus,バグと要望の状況…
 ui.menu.cancelSplitPageScreen,画面分割を解除
 ui.menu.caseBigSmall,大文字/小文字（自由）
 ui.menu.centerK,中央揃え
@@ -4706,6 +4733,8 @@ ui.menu.exportLayoutPanelJSON,パネルのレイアウトをエクスポート�
 ui.menu.exportProjectZip,プロジェクト全体を ZIP で…
 ui.menu.exportTop,エクスポート
 ui.menu.exportWorkFlowSteps,エクスポートのワークフローの手順を編集…
+ui.menu.extensionGuide,拡張機能ガイド…
+ui.menu.featureRequest,機能を要望…
 ui.menu.file,ファイル
 ui.menu.file2,ファイル
 ui.menu.fitWidePagePaper,ページ幅に合わせる
@@ -4854,6 +4883,7 @@ ui.menu.storyTools,ストーリーツール
 ui.menu.storyYoursDialogPrev,物語と会話（旧ダイアログ）…
 ui.menu.suggestTitle,タイトルを提案…
 ui.menu.summaryBodyProject,プロジェクトを要約…
+ui.menu.support,プロジェクトを支援
 ui.menu.tableCSV,CSV 表
 ui.menu.textCaseCycleU,大文字/小文字を順に切り替え
 ui.menu.textContCONTINUEDMORE,継続テキスト（CONTINUED · MORE · cont'd）
@@ -4864,6 +4894,7 @@ ui.menu.toggleModeNovelChapter,小説 ↔ 脚本 のモードを切り替え
 ui.menu.tool,ツール
 ui.menu.toolbarCfg,ツールバーをカスタマイズ…
 ui.menu.trialPlayStoryBreak,分岐する物語をテストプレイ（プレイヤーモード）
+ui.menu.userManual,ユーザーマニュアル…
 ui.menu.view,表示
 ui.menu.viewChapter,脚本の表示
 ui.menu.viewNoteAll,すべてのメモを表示…
@@ -6109,7 +6140,7 @@ ui.roster.showHeadingScene,「シーン」の見出しを表示
 ui.roster.showHeadingTime,「時間」の見出しを表示
 ui.sb.autoFit,幅に自動で合わせる
 ui.sb.autosave,自動保存
-ui.sb.bugReport,バグを報告
+ui.sb.bugReport,バグを報告・機能を要望
 ui.sb.home,ホーム
 ui.sb.lineNumbers,行番号
 ui.sb.mdCodes,Markdown のコードを表示
@@ -6871,7 +6902,6 @@ ui.starter.aiWriteIntro,AI にあらすじを書いてもらう
 ui.starter.aiWriteIntroShort,1 段落のみ
 ui.starter.aiWriteOpener,AI に冒頭の下書きを作ってもらう
 ui.starter.aiWriteSynopsis,AI にあらすじを書いてもらう
-ui.starter.artHint,アートワークの枠 — この名前のファイルをアプリのフォルダーに置いてください
 ui.starter.autoLinkAsk,「{0}」の Wiki ページも作成しますか？
 ui.starter.autoLinkGo,作成
 ui.starter.backToList,概要に戻る
@@ -7484,8 +7514,8 @@ ui.tip.blockStyle,段落全体を見出しレベルまたは引用に変えま�
 ui.tip.books,巻と下書きを管理します — 表紙、紹介文、ステータス、ドラッグで並べ替え。
 ui.tip.branch-sync,このシーンに [テキスト] のように角括弧で書かれた選択肢を読み取り、分岐マップ上の道筋に変換します。
 ui.tip.branching,分岐ストーリーマップを開き、各シーンの選択肢がどこにつながるかを表示します — ビジュアルノベルやストーリーゲーム向け。
-ui.tip.bug-report,見つけた問題を書いて、アプリから直接開発者に送ります。
-ui.tip.bug-status,報告されたバグを、状況・発見バージョン・修正バージョンとともに一覧表示します。絞り込みもできます。
+ui.tip.bug-report,見つけた問題を書いて（または機能の要望に切り替えて）、アプリから開発者に直接送ります。
+ui.tip.bug-status,報告されたバグと機能の要望を、状況・報告時のバージョン・対応バージョンとともに一覧表示します。絞り込みもできます。
 ui.tip.changelog,アプリの各バージョンで追加・修正された内容を確認します。
 ui.tip.chapter,選んだ巻に新しい章を作成して開きます。章は複数のシーンをまとめるものです。
 ui.tip.chapters,章マネージャーを開きます — 巻内のすべての章の表紙、順序、統計。
@@ -7517,6 +7547,8 @@ ui.tip.export-pdf-builtin,内蔵の PDF ジェネレーターで、エクスポ�
 ui.tip.export-rtf,脚本を、Word をはじめ多くのワープロで開ける RTF ファイルとして書き出します。
 ui.tip.export-watermark,書き出したファイルの全ページに入る透かしを設定します — 受取人の名前や「下書き」の文字など。
 ui.tip.export-zip,プロジェクトフォルダー全体を 1 つの ZIP ファイルにまとめます — バックアップや共有用。
+ui.tip.extension-guide,プラグインやその他の拡張機能の作り方ガイドをアプリ内で開きます。
+ui.tip.feature-request,ほしい機能を説明して、アプリから開発者に直接要望を送ります。
 ui.tip.find,現在開いているドキュメント内で検索・置換します。
 ui.tip.floorplan,間取り図を開きます — 真上から見たセットの配置図です。キャラクターを置き、カメラ/レンズやライトを設定し、シーンのセリフに合わせて動きの段取りを組めます
 ui.tip.fmt,テキストの書式 — 太字、見出し、リストなど。各ボタンに、適用されるスタイルが示されています。
@@ -7718,6 +7750,7 @@ ui.tip.split-view:right,執筆エリアを左右のペインに分割します�
 ui.tip.sprint,執筆スプリントの時間を計り、その間に書いた語数を数えます。語数の目標にも対応し、統計はプロジェクトに保存されます
 ui.tip.story-starter,ストーリースターターを開きます。物語、キャラクター、冒頭のシーンを順を追って設定し、AI とエピソード形式でプレイします。
 ui.tip.story-starter-toggle,ストーリースターターを開閉します — 物語を順を追って設定し、AI とプレイします。もう一度押すと閉じます。
+ui.tip.support,プロジェクトの支援ページをブラウザーで開きます。開発者にコーヒーをおごることができます。
 ui.tip.sync-scene-meta,シーンのプロパティを .md ファイルのヘッダーから読み込み直します — 別のプログラムでファイルを編集した後に使います。
 ui.tip.test-run,アプリのセルフテスト一式を実行します（開発者向け）。
 ui.tip.text-case,選択したテキストを指定の大文字/小文字の形式に変更します。ラテン文字が対象です。
@@ -7798,6 +7831,7 @@ ui.tip.ui:tb-source,このシーンの生の Markdown を表示します — フ
 ui.tip.ui:tb-sp-cont,脚本の自動継続マークの切り替えです — ページの終わりに (CONTINUED)、セリフがページをまたぐときに (MORE) が入ります。
 ui.tip.ui:tb-sp-ext,キャラクター名の後に拡張表記を追加します — (V.O.) ナレーション、(O.S.) 画面外、(cont'd) 続き。
 ui.tip.ui:tb-visual,このシーンのストーリーボードを開き、画像の連なりで場面を表現します。
+ui.tip.user-manual,ユーザーマニュアルの全章をアプリ内で開きます。英語またはタイ語で、インターネット接続なしで読めます。
 ui.tip.visual-tags,シーンに付ける色タグを管理します — たとえば、ストーリーラインや主要キャラクターごとに。
 ui.tip.word-history,頻繁に繰り返されている語を見つけ、語の使用統計を表示します。自分の口癖に気づくのに役立ちます。
 ui.tip.workspace,指定したパネルレイアウトに切り替えます。

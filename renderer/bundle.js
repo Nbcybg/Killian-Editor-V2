@@ -16120,12 +16120,12 @@
   function projectFontFamily(file) {
     return cssFamilyName(String(file || "").split(/[\\/]/).pop().replace(FONT_FILE_RE, ""));
   }
-  function projectFontFaceCss(files, urlOf2) {
+  function projectFontFaceCss(files, urlOf3) {
     const out = [];
     for (const f of files || []) {
       if (!FONT_FILE_RE.test(String(f))) continue;
       const fam = projectFontFamily(f);
-      const url = urlOf2 ? urlOf2(f) : "";
+      const url = urlOf3 ? urlOf3(f) : "";
       if (!fam || !url) continue;
       out.push('@font-face{font-family:"' + fam + '";font-display:swap;src:url("' + String(url).replace(/"/g, "%22") + '");}');
     }
@@ -18152,9 +18152,9 @@
         "split-view": "dock-right",
         "typewriter": "edit",
         "workspace-menu": "collection",
+        "zoom:-1": "zoom-out",
         "zoom:0": "reset",
         "zoom:1": "zoom-in",
-        "zoom:-1": "zoom-out",
         "scratchpad": "note",
         "a11y-settings": "cog",
         "ai-analyzer": "brain",
@@ -18176,8 +18176,8 @@
         "auto-sync:false": "",
         "auto-sync:true": "",
         "books": "",
-        "branching": "branch",
         "branch-sync": "",
+        "branching": "branch",
         "bug-report": "bug",
         "bug-status": "bug-check",
         "changelog": "",
@@ -18198,6 +18198,8 @@
         "export-rtf": "",
         "export-watermark": "",
         "export-zip": "",
+        "extension-guide": "extension",
+        "feature-request": "bulb",
         "floorplan": "floorplan",
         "fmt": "",
         "fmt:code": "",
@@ -18209,8 +18211,8 @@
         "gallery-export-used": "export",
         "gallery-new-album": "",
         "gallery-unused": "broom",
-        "goto:page": "",
         "goto-page:1": "skip-previous",
+        "goto:page": "",
         "goto:scene": "",
         "home": "home",
         "import-language-csv": "globe",
@@ -18229,11 +18231,11 @@
         "page-headers": "page-header",
         "page-numbers": "",
         "page-setup": "ruler",
+        "panel-system": "frame",
         "panels-side-bottom": "panel-bottom",
         "panels-side-left": "panel-left",
         "panels-side-right": "panel-right",
         "panels-side-top": "panel-top",
-        "panel-system": "frame",
         "planner": "",
         "planner-align": "",
         "planner-valign": "",
@@ -18265,10 +18267,6 @@
         "sp-element-caps": "",
         "sp-extension": "character-extension",
         "sp-force-case": "",
-        "split-add": "",
-        "split-close": "",
-        "split-view:down": "",
-        "split-view:right": "",
         "sp-report": "",
         "sp-report:character": "group",
         "sp-report:chart": "chart",
@@ -18282,8 +18280,13 @@
         "sp-view:overview1": "",
         "sp-view:overview4": "",
         "sp-view:side": "",
+        "split-add": "",
+        "split-close": "",
+        "split-view:down": "",
+        "split-view:right": "",
         "story-starter": "",
         "story-starter-toggle": "book-open",
+        "support": "heart",
         "sync-scene-meta": "refresh",
         "test-run": "",
         "text-case": "",
@@ -18303,16 +18306,16 @@
         "toggle-theme": "",
         "toolbar-config": "",
         "type-sound": "volume",
+        "ui-scale": "",
+        "ui-scale:-1": "",
+        "ui-scale:0": "",
+        "ui-scale:1": "",
         "ui:filter-archive-toggle": "archive",
         "ui:find-close": "",
         "ui:find-next": "",
         "ui:find-prev": "",
         "ui:find-rep1": "",
         "ui:find-repall": "",
-        "ui-scale": "",
-        "ui-scale:0": "",
-        "ui-scale:1": "",
-        "ui-scale:-1": "",
         "ui:tb-case": "text-case",
         "ui:tb-color": "",
         "ui:tb-highlight": "highlight",
@@ -18323,6 +18326,7 @@
         "ui:tb-sp-cont": "",
         "ui:tb-sp-ext": "character-extension",
         "ui:tb-visual": "image",
+        "user-manual": "book",
         "visual-tags": "",
         "word-history": "",
         "workspace": "",
@@ -18452,9 +18456,9 @@
         ["Backslash", true, true, "split-view"],
         ["KeyT", true, true, "typewriter"],
         ["KeyY", true, true, "workspace-menu"],
+        ["Minus", true, false, "zoom", -1],
         ["Digit0", true, true, "zoom", 0],
-        ["Equal", true, false, "zoom", 1],
-        ["Minus", true, false, "zoom", -1]
+        ["Equal", true, false, "zoom", 1]
       ];
     }
   });
@@ -22063,19 +22067,19 @@ ${BLOCK_END}
   function quoteAt(text, start, end) {
     return String(text || "").slice(start, end);
   }
-  async function writeMdKeepingComments(io2, path, fullText, fromPath = null) {
+  async function writeMdKeepingComments(io4, path, fullText, fromPath = null) {
     let raw = "";
     try {
-      raw = await io2.readFile(fromPath || path) || "";
+      raw = await io4.readFile(fromPath || path) || "";
     } catch {
       raw = "";
     }
     const comments = parseComments(raw);
     if (!comments.length) {
-      await io2.writeFile(path, fullText);
+      await io4.writeFile(path, fullText);
       return false;
     }
-    await io2.writeFile(path, mergeComments(fullText, reanchorAll(fullText, comments)));
+    await io4.writeFile(path, mergeComments(fullText, reanchorAll(fullText, comments)));
     return true;
   }
   function fromScenesJson(scenesJson, opts = {}) {
@@ -22107,8 +22111,8 @@ ${BLOCK_END}
       newId = (now) => "c" + Number(now).toString(36) + (_seq++).toString(36);
       num2 = (v2) => typeof v2 === "number" && isFinite(v2) ? v2 : 0;
       CommentStore = class {
-        constructor({ io: io2, now = () => Date.now(), author = "" } = {}) {
-          this.io = io2;
+        constructor({ io: io4, now = () => Date.now(), author = "" } = {}) {
+          this.io = io4;
           this.now = now;
           this.author = author;
         }
@@ -24770,6 +24774,7 @@ ${BLOCK_END}
       const move = (ev) => {
         if (!moved && Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 3) return;
         moved = true;
+        box2.style.animation = "none";
         box2.classList.add("k-dlg-moving");
         setOff(clampDialogOffset({ x: start.x + ev.clientX - x0, y: start.y + ev.clientY - y0 }, base4, window.innerWidth, window.innerHeight));
       };
@@ -28876,11 +28881,11 @@ ${BLOCK_END}
     const stamp = date.getFullYear() + pad2(date.getMonth() + 1) + pad2(date.getDate()) + "-" + pad2(date.getHours()) + pad2(date.getMinutes()) + pad2(date.getSeconds());
     return dir2 + stem + ".unreadable-" + stamp + ext;
   }
-  async function readJsonGuarded(io2, file, fallback, o = {}) {
+  async function readJsonGuarded(io4, file, fallback, o = {}) {
     const k = keyOf(file);
     let has4 = false;
     try {
-      has4 = !!await io2.exists(file);
+      has4 = !!await io4.exists(file);
     } catch {
       has4 = false;
     }
@@ -28889,14 +28894,14 @@ ${BLOCK_END}
       return { data: fallback(), state: "missing", backup: "", writable: true, fresh: false };
     }
     try {
-      const data2 = await io2.readJson(file);
+      const data2 = await io4.readJson(file);
       if (data2 === null || typeof data2 !== "object") throw new Error("not an object");
       done.delete(k);
       return { data: data2, state: "ok", backup: "", writable: true, fresh: false };
     } catch (error2) {
       let sig = "";
       try {
-        sig = io2.mtime ? String(await io2.mtime(file)) : "";
+        sig = io4.mtime ? String(await io4.mtime(file)) : "";
       } catch {
         sig = "";
       }
@@ -28907,7 +28912,7 @@ ${BLOCK_END}
       let backup = "";
       try {
         const dst = brokenBackupName(file, o.now || /* @__PURE__ */ new Date());
-        await io2.copyFile(file, dst);
+        await io4.copyFile(file, dst);
         backup = dst;
       } catch {
         backup = "";
@@ -28960,25 +28965,25 @@ ${BLOCK_END}
   function pendingLocks() {
     return queues.size;
   }
-  function mutateJson(io2, file, fn, opts = {}) {
+  function mutateJson(io4, file, fn, opts = {}) {
     return withFileLock(file, async () => {
       let data2;
       try {
-        data2 = await io2.readJson(file);
+        data2 = await io4.readJson(file);
       } catch (e) {
         if (!("fallback" in opts)) throw e;
         let has4 = false;
         try {
-          has4 = typeof io2.exists === "function" ? !!await io2.exists(file) : false;
+          has4 = typeof io4.exists === "function" ? !!await io4.exists(file) : false;
         } catch {
           has4 = false;
         }
         if (has4) {
           let backup = "";
           try {
-            if (typeof io2.copyFile === "function") {
+            if (typeof io4.copyFile === "function") {
               const dst = brokenBackupName(file);
-              await io2.copyFile(file, dst);
+              await io4.copyFile(file, dst);
               backup = dst;
             }
           } catch {
@@ -28994,7 +28999,7 @@ ${BLOCK_END}
       }
       const result = await fn(data2);
       if (result === false) return { data: data2, changed: false, result };
-      await io2.writeFile(file, JSON.stringify(data2, null, 2));
+      await io4.writeFile(file, JSON.stringify(data2, null, 2));
       return { data: data2, changed: true, result };
     });
   }
@@ -37212,22 +37217,22 @@ ${BLOCK_END}
     sceneRenameTarget: () => sceneRenameTarget,
     sectionRenameTarget: () => sectionRenameTarget
   });
-  async function freeSceneFile(io2, dPath, folderName, title2, taken = [], self2 = "") {
+  async function freeSceneFile(io4, dPath, folderName, title2, taken = [], self2 = "") {
     const used = /* @__PURE__ */ new Set();
     for (const n2 of taken || []) used.add(nameKey(n2));
-    for (const f of await mdOf(io2, await io2.join(dPath, "Chapters", folderName))) used.add(nameKey(f));
+    for (const f of await mdOf(io4, await io4.join(dPath, "Chapters", folderName))) used.add(nameKey(f));
     if (self2) used.delete(nameKey(self2));
     return freeName2(diskBase(title2, "scene"), used, ".md");
   }
-  async function freeChapterFolder(io2, dPath, title2, taken = [], self2 = "") {
+  async function freeChapterFolder(io4, dPath, title2, taken = [], self2 = "") {
     const used = /* @__PURE__ */ new Set();
     for (const n2 of taken || []) used.add(nameKey(n2));
-    for (const f of await dirsOf(io2, await io2.join(dPath, "Chapters"))) used.add(nameKey(f));
+    for (const f of await dirsOf(io4, await io4.join(dPath, "Chapters"))) used.add(nameKey(f));
     if (self2) used.delete(nameKey(self2));
     return freeName2(diskBase(title2, "chapter"), used);
   }
-  async function freeBookName(io2, root, title2) {
-    const dirs = await dirsOf(io2, root);
+  async function freeBookName(io4, root, title2) {
+    const dirs = await dirsOf(io4, root);
     if (!title2) {
       const n3 = defaultBookName([...dirs]);
       return { title: n3, folder: n3, taken: false };
@@ -37238,50 +37243,50 @@ ${BLOCK_END}
     while (bookNameTaken(name5, dirs)) name5 = `${base4} ${++n2}`;
     return { title: `${String(title2).trim()} ${n2}`, folder: name5, taken: true };
   }
-  async function moveVis(io2, fromDir, fromFile, toDir, toFile) {
+  async function moveVis(io4, fromDir, fromFile, toDir, toFile) {
     try {
-      const src2 = await io2.join(fromDir, visFileName(fromFile));
-      if (!await has(io2, src2)) return false;
-      const dst = await io2.join(toDir, visFileName(toFile));
-      if (await has(io2, dst)) return false;
-      await io2.move(src2, dst);
+      const src2 = await io4.join(fromDir, visFileName(fromFile));
+      if (!await has(io4, src2)) return false;
+      const dst = await io4.join(toDir, visFileName(toFile));
+      if (await has(io4, dst)) return false;
+      await io4.move(src2, dst);
       return true;
     } catch {
       return false;
     }
   }
-  async function sceneRenameTarget(io2, dPath, ch, sceneId, title2) {
+  async function sceneRenameTarget(io4, dPath, ch, sceneId, title2) {
     let d;
     try {
-      d = await io2.readJson(await io2.join(dPath, "scenes.json"));
+      d = await io4.readJson(await io4.join(dPath, "scenes.json"));
     } catch {
       return "";
     }
     const rows = (d && d.chapters || {})[ch.guid] || [];
     const row4 = rows.find((r) => r.id === sceneId);
     if (!row4 || !row4.fileName || nameFits(title2, row4.fileName, ".md")) return "";
-    return freeSceneFile(io2, dPath, ch.folderName, title2, rows.filter((r) => r !== row4).map((r) => r.fileName), row4.fileName);
+    return freeSceneFile(io4, dPath, ch.folderName, title2, rows.filter((r) => r !== row4).map((r) => r.fileName), row4.fileName);
   }
-  async function renameSceneOnDisk(io2, dPath, ch, sceneId, title2) {
-    const sf = await io2.join(dPath, "scenes.json");
-    const dir2 = await io2.join(dPath, "Chapters", ch.folderName);
+  async function renameSceneOnDisk(io4, dPath, ch, sceneId, title2) {
+    const sf = await io4.join(dPath, "scenes.json");
+    const dir2 = await io4.join(dPath, "Chapters", ch.folderName);
     const out = { ok: false, moved: false, from: "", to: "", fileName: "" };
-    await mutateJson(io2, sf, async (d) => {
+    await mutateJson(io4, sf, async (d) => {
       const rows = (d && d.chapters || {})[ch.guid] || [];
       const row4 = rows.find((r) => r.id === sceneId);
       if (!row4 || !row4.fileName) {
         out.reason = "no-row";
         return false;
       }
-      const from2 = await io2.join(dir2, row4.fileName);
+      const from2 = await io4.join(dir2, row4.fileName);
       out.from = from2;
       out.to = from2;
       out.fileName = row4.fileName;
       try {
-        const { meta: meta2, body } = (0, import_md6.parseMdFile)(await io2.readFile(from2));
+        const { meta: meta2, body } = (0, import_md6.parseMdFile)(await io4.readFile(from2));
         if (meta2.title !== title2) {
           meta2.title = title2;
-          await writeMdKeepingComments(io2, from2, (0, import_md6.dumpMdFile)(meta2, body));
+          await writeMdKeepingComments(io4, from2, (0, import_md6.dumpMdFile)(meta2, body));
         }
       } catch (e) {
         out.reason = "no-file";
@@ -37291,7 +37296,7 @@ ${BLOCK_END}
       let fileName = row4.fileName;
       if (!nameFits(title2, row4.fileName, ".md")) {
         fileName = await freeSceneFile(
-          io2,
+          io4,
           dPath,
           ch.folderName,
           title2,
@@ -37299,9 +37304,9 @@ ${BLOCK_END}
           row4.fileName
         );
         if (!sameName(fileName, row4.fileName)) {
-          const to = await io2.join(dir2, fileName);
-          await io2.move(from2, to);
-          await moveVis(io2, dir2, row4.fileName, dir2, fileName);
+          const to = await io4.join(dir2, fileName);
+          await io4.move(from2, to);
+          await moveVis(io4, dir2, row4.fileName, dir2, fileName);
           out.moved = true;
           out.to = to;
         }
@@ -37313,24 +37318,24 @@ ${BLOCK_END}
     });
     return out;
   }
-  async function renameChapterOnDisk(io2, dPath, chGuid, title2) {
-    const df = await io2.join(dPath, "draft.json");
+  async function renameChapterOnDisk(io4, dPath, chGuid, title2) {
+    const df = await io4.join(dPath, "draft.json");
     const out = { ok: false, moved: false, from: "", to: "", folderName: "" };
-    await mutateJson(io2, df, async (d) => {
+    await mutateJson(io4, df, async (d) => {
       const list3 = d && d.chapters || [];
       const c = list3.find((x) => x.guid === chGuid);
       if (!c) return false;
       const cur = c.folderName || "";
-      const from2 = await io2.join(dPath, "Chapters", cur);
+      const from2 = await io4.join(dPath, "Chapters", cur);
       out.from = from2;
       out.to = from2;
       let folderName = cur;
       if (!cur || !nameFits(title2, cur)) {
-        folderName = await freeChapterFolder(io2, dPath, title2, list3.filter((x) => x !== c).map((x) => x.folderName), cur);
+        folderName = await freeChapterFolder(io4, dPath, title2, list3.filter((x) => x !== c).map((x) => x.folderName), cur);
         if (!sameName(folderName, cur)) {
-          const to = await io2.join(dPath, "Chapters", folderName);
-          if (cur && await has(io2, from2)) await io2.move(from2, to);
-          else await io2.mkdir(to);
+          const to = await io4.join(dPath, "Chapters", folderName);
+          if (cur && await has(io4, from2)) await io4.move(from2, to);
+          else await io4.mkdir(to);
           out.moved = !!cur;
           out.to = to;
         }
@@ -37342,62 +37347,62 @@ ${BLOCK_END}
     });
     return out;
   }
-  async function sectionRenameTarget(io2, secPath, title2) {
+  async function sectionRenameTarget(io4, secPath, title2) {
     const cur = baseOf(secPath);
     const want = diskBase(title2, "Book");
     if (sameName(want, cur)) return { folder: cur, moves: false, taken: false };
-    return { folder: want, moves: true, taken: bookNameTaken(want, await dirsOf(io2, parentOf2(secPath)), cur) };
+    return { folder: want, moves: true, taken: bookNameTaken(want, await dirsOf(io4, parentOf2(secPath)), cur) };
   }
-  async function renameSectionOnDisk(io2, secPath, title2) {
-    const tg = await sectionRenameTarget(io2, secPath, title2);
+  async function renameSectionOnDisk(io4, secPath, title2) {
+    const tg = await sectionRenameTarget(io4, secPath, title2);
     const out = { ok: false, moved: false, taken: tg.taken, from: secPath, to: secPath, folderName: tg.folder };
     if (tg.taken) return out;
     if (tg.moves) {
-      const to = await io2.join(parentOf2(secPath), tg.folder);
-      await io2.move(secPath, to);
+      const to = await io4.join(parentOf2(secPath), tg.folder);
+      await io4.move(secPath, to);
       out.moved = true;
       out.to = to;
     }
-    await mutateJson(io2, await io2.join(out.to, "section.json"), (d) => {
+    await mutateJson(io4, await io4.join(out.to, "section.json"), (d) => {
       d.title = title2;
       d.folderName = tg.folder;
     }, { fallback: {} });
     out.ok = true;
     return out;
   }
-  async function metaTitle(io2, file) {
+  async function metaTitle(io4, file) {
     try {
-      const m = (0, import_md6.parseMdFile)(await io2.readFile(file)).meta || {};
+      const m = (0, import_md6.parseMdFile)(await io4.readFile(file)).meta || {};
       return { title: m.title != null ? String(m.title) : "" };
     } catch {
       return null;
     }
   }
-  async function stampTitle(io2, file, title2) {
+  async function stampTitle(io4, file, title2) {
     try {
-      const { meta: meta2, body } = (0, import_md6.parseMdFile)(await io2.readFile(file));
+      const { meta: meta2, body } = (0, import_md6.parseMdFile)(await io4.readFile(file));
       if (meta2.title === title2) return false;
       meta2.title = title2;
-      await writeMdKeepingComments(io2, file, (0, import_md6.dumpMdFile)(meta2, body));
+      await writeMdKeepingComments(io4, file, (0, import_md6.dumpMdFile)(meta2, body));
       return true;
     } catch {
       return false;
     }
   }
-  async function reconcileDraft(io2, dPath, changes) {
-    const df = await io2.join(dPath, "draft.json");
-    const sf = await io2.join(dPath, "scenes.json");
-    const chRoot = await io2.join(dPath, "Chapters");
+  async function reconcileDraft(io4, dPath, changes) {
+    const df = await io4.join(dPath, "draft.json");
+    const sf = await io4.join(dPath, "scenes.json");
+    const chRoot = await io4.join(dPath, "Chapters");
     let draft, scenes;
     try {
-      draft = await io2.readJson(df);
-      scenes = await io2.readJson(sf);
+      draft = await io4.readJson(df);
+      scenes = await io4.readJson(sf);
     } catch {
       return;
     }
     let chapters = draft && Array.isArray(draft.chapters) ? draft.chapters : [];
     const rowsBy = scenes && scenes.chapters && typeof scenes.chapters === "object" ? scenes.chapters : {};
-    const folders = await dirsOf(io2, chRoot);
+    const folders = await dirsOf(io4, chRoot);
     const folderKeys = new Set(folders.map(nameKey));
     const exact = new Set(folders);
     if (chapters.some((c) => c && c.folderName && !exact.has(c.folderName))) {
@@ -37406,30 +37411,30 @@ ${BLOCK_END}
       const needMeta = chapters.some((c) => c && c.folderName && !folderKeys.has(nameKey(c.folderName)));
       for (const f of folders) {
         if (known2.has(nameKey(f)) || !needMeta) continue;
-        files[f] = await mdOf(io2, await io2.join(chRoot, f));
-        for (const fn of files[f]) metas[f + "/" + fn] = await metaTitle(io2, await io2.join(chRoot, f, fn));
+        files[f] = await mdOf(io4, await io4.join(chRoot, f));
+        for (const fn of files[f]) metas[f + "/" + fn] = await metaTitle(io4, await io4.join(chRoot, f, fn));
       }
       const res = pairChapterRenames(chapters, folders, rowsBy, (f) => files[f] || [], (f, fn) => metas[f + "/" + fn]);
       if (res.pairs.length) {
         const done3 = [];
-        await mutateJson(io2, df, async (d) => {
+        await mutateJson(io4, df, async (d) => {
           let hit = false;
           for (const p of res.pairs) {
             const c = (d.chapters || []).find((x) => x.guid === p.guid);
             if (!c || !sameName(c.folderName, p.from)) continue;
-            if (!await has(io2, await io2.join(chRoot, p.to))) continue;
+            if (!await has(io4, await io4.join(chRoot, p.to))) continue;
             const oldTitle = c.title || "";
             const title2 = p.by === "case" && !nameFits(oldTitle, p.from) ? oldTitle : titleAfterRename("chapter", p.to, oldTitle);
             c.folderName = p.to;
             c.title = title2;
             hit = true;
-            done3.push({ kind: "chapter", from: await io2.join(chRoot, p.from), to: await io2.join(chRoot, p.to), oldTitle, title: title2 });
+            done3.push({ kind: "chapter", from: await io4.join(chRoot, p.from), to: await io4.join(chRoot, p.to), oldTitle, title: title2 });
           }
           return hit ? void 0 : false;
         });
         changes.push(...done3);
         try {
-          chapters = (await io2.readJson(df)).chapters || chapters;
+          chapters = (await io4.readJson(df)).chapters || chapters;
         } catch {
         }
       }
@@ -37437,9 +37442,9 @@ ${BLOCK_END}
     const leftMissing = [], leftOrphans = [];
     for (const c of chapters) {
       if (!c || !c.folderName || !folderKeys.has(nameKey(c.folderName))) continue;
-      const dir2 = await io2.join(chRoot, c.folderName);
+      const dir2 = await io4.join(chRoot, c.folderName);
       const rows = rowsBy[c.guid] || [];
-      const files = await mdOf(io2, dir2);
+      const files = await mdOf(io4, dir2);
       const fileSet = new Set(files);
       const rowKeys = new Set(rows.map((r) => nameKey(r && r.fileName || "")));
       const anyGone = rows.some((r) => r && r.fileName && !fileSet.has(r.fileName));
@@ -37449,19 +37454,19 @@ ${BLOCK_END}
         continue;
       }
       const metas = {};
-      for (const f of strays) metas[f] = await metaTitle(io2, await io2.join(dir2, f));
+      for (const f of strays) metas[f] = await metaTitle(io4, await io4.join(dir2, f));
       const res = pairSceneRenames(rows, files, (f) => metas[f]);
       for (const r of res.missing) leftMissing.push({ chGuid: c.guid, folder: c.folderName, row: r });
       for (const f of res.orphans) leftOrphans.push({ chGuid: c.guid, folder: c.folderName, file: f, title: metas[f] && metas[f].title || "" });
       if (!res.pairs.length) continue;
       const done3 = [];
-      await mutateJson(io2, sf, async (d) => {
+      await mutateJson(io4, sf, async (d) => {
         let hit = false;
         const live2 = (d && d.chapters || {})[c.guid] || [];
         for (const p of res.pairs) {
           const row4 = live2.find((r) => r.id === p.id);
           if (!row4 || !sameName(row4.fileName, p.from)) continue;
-          if (!await has(io2, await io2.join(dir2, p.to))) continue;
+          if (!await has(io4, await io4.join(dir2, p.to))) continue;
           if (live2.some((r) => r !== row4 && sameName(r.fileName, p.to))) continue;
           const oldTitle = row4.title || "";
           const nb = stripExt(p.to, ".md");
@@ -37469,13 +37474,13 @@ ${BLOCK_END}
           row4.fileName = p.to;
           row4.title = title2;
           hit = true;
-          done3.push({ kind: "scene", from: await io2.join(dir2, p.from), to: await io2.join(dir2, p.to), oldTitle, title: title2, _dir: dir2, _from: p.from, _to: p.to });
+          done3.push({ kind: "scene", from: await io4.join(dir2, p.from), to: await io4.join(dir2, p.to), oldTitle, title: title2, _dir: dir2, _from: p.from, _to: p.to });
         }
         return hit ? void 0 : false;
       });
       for (const ch of done3) {
-        await moveVis(io2, ch._dir, ch._from, ch._dir, ch._to);
-        if (ch.title !== ch.oldTitle) await stampTitle(io2, ch.to, ch.title);
+        await moveVis(io4, ch._dir, ch._from, ch._dir, ch._to);
+        if (ch.title !== ch.oldTitle) await stampTitle(io4, ch.to, ch.title);
         delete ch._dir;
         delete ch._from;
         delete ch._to;
@@ -37485,7 +37490,7 @@ ${BLOCK_END}
     if (leftMissing.length && leftOrphans.length) {
       for (const o of leftOrphans) {
         if (o.title === void 0) {
-          const m = await metaTitle(io2, await io2.join(chRoot, o.folder, o.file));
+          const m = await metaTitle(io4, await io4.join(chRoot, o.folder, o.file));
           o.title = m && m.title || "";
         }
       }
@@ -37496,15 +37501,15 @@ ${BLOCK_END}
           return c ? c.folderName : "";
         };
         const done3 = [];
-        await mutateJson(io2, sf, async (d) => {
+        await mutateJson(io4, sf, async (d) => {
           let hit = false;
           d.chapters = d.chapters || {};
           for (const m of moves) {
             const src2 = d.chapters[m.fromCh] || [];
             const row4 = src2.find((r) => r.id === m.id);
             if (!row4 || !sameName(row4.fileName, m.from)) continue;
-            const toDir = await io2.join(chRoot, folderOf(m.toCh));
-            if (!await has(io2, await io2.join(toDir, m.to))) continue;
+            const toDir = await io4.join(chRoot, folderOf(m.toCh));
+            if (!await has(io4, await io4.join(toDir, m.to))) continue;
             const dst = d.chapters[m.toCh] || [];
             if (dst.some((r) => sameName(r.fileName, m.to))) continue;
             d.chapters[m.fromCh] = src2.filter((r) => r !== row4);
@@ -37515,12 +37520,12 @@ ${BLOCK_END}
             hit = true;
             done3.push({
               kind: "scene",
-              from: await io2.join(chRoot, folderOf(m.fromCh), m.from),
-              to: await io2.join(toDir, m.to),
+              from: await io4.join(chRoot, folderOf(m.fromCh), m.from),
+              to: await io4.join(toDir, m.to),
               oldTitle: row4.title || "",
               title: row4.title || "",
               moved: true,
-              _fromDir: await io2.join(chRoot, folderOf(m.fromCh)),
+              _fromDir: await io4.join(chRoot, folderOf(m.fromCh)),
               _toDir: toDir,
               _from: m.from,
               _to: m.to
@@ -37529,7 +37534,7 @@ ${BLOCK_END}
           return hit ? void 0 : false;
         });
         for (const ch of done3) {
-          await moveVis(io2, ch._fromDir, ch._from, ch._toDir, ch._to);
+          await moveVis(io4, ch._fromDir, ch._from, ch._toDir, ch._to);
           delete ch._fromDir;
           delete ch._toDir;
           delete ch._from;
@@ -37539,16 +37544,16 @@ ${BLOCK_END}
       }
     }
   }
-  async function reconcileNames(io2, root) {
+  async function reconcileNames(io4, root) {
     const changes = [];
     if (!root) return changes;
-    for (const name5 of await dirsOf(io2, root)) {
-      const secPath = await io2.join(root, name5);
-      const sf = await io2.join(secPath, "section.json");
-      if (!await has(io2, sf)) continue;
+    for (const name5 of await dirsOf(io4, root)) {
+      const secPath = await io4.join(root, name5);
+      const sf = await io4.join(secPath, "section.json");
+      if (!await has(io4, sf)) continue;
       let meta2;
       try {
-        meta2 = await io2.readJson(sf);
+        meta2 = await io4.readJson(sf);
       } catch {
         continue;
       }
@@ -37557,9 +37562,9 @@ ${BLOCK_END}
       if (s.record) {
         const oldTitle = meta2 && meta2.title || "";
         try {
-          const from2 = s.renamed ? await io2.join(root, meta2.folderName) : "";
-          const copied = s.renamed && await has(io2, await io2.join(from2, "section.json"));
-          await mutateJson(io2, sf, (d) => {
+          const from2 = s.renamed ? await io4.join(root, meta2.folderName) : "";
+          const copied = s.renamed && await has(io4, await io4.join(from2, "section.json"));
+          await mutateJson(io4, sf, (d) => {
             d.folderName = name5;
             if (s.renamed) d.title = s.title;
             if (copied) d.guid = "k2-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -37568,46 +37573,46 @@ ${BLOCK_END}
         } catch {
         }
       }
-      for (const dn of await dirsOf(io2, await io2.join(secPath, "Draft"))) {
-        const dPath = await io2.join(secPath, "Draft", dn);
-        if (!await has(io2, await io2.join(dPath, "draft.json"))) continue;
+      for (const dn of await dirsOf(io4, await io4.join(secPath, "Draft"))) {
+        const dPath = await io4.join(secPath, "Draft", dn);
+        if (!await has(io4, await io4.join(dPath, "draft.json"))) continue;
         try {
-          await reconcileDraft(io2, dPath, changes);
+          await reconcileDraft(io4, dPath, changes);
         } catch {
         }
       }
     }
     return changes;
   }
-  async function listNameMismatches(io2, root) {
+  async function listNameMismatches(io4, root) {
     const out = [];
     if (!root) return out;
-    for (const name5 of await dirsOf(io2, root)) {
-      const secPath = await io2.join(root, name5);
-      const sf = await io2.join(secPath, "section.json");
-      if (!await has(io2, sf)) continue;
+    for (const name5 of await dirsOf(io4, root)) {
+      const secPath = await io4.join(root, name5);
+      const sf = await io4.join(secPath, "section.json");
+      if (!await has(io4, sf)) continue;
       let meta2;
       try {
-        meta2 = await io2.readJson(sf);
+        meta2 = await io4.readJson(sf);
       } catch {
         continue;
       }
       const title2 = meta2 && meta2.title || name5;
       if (!sameName(diskBase(title2, "Book"), name5)) out.push({ kind: "book", title: title2, disk: name5, secPath });
-      for (const dn of await dirsOf(io2, await io2.join(secPath, "Draft"))) {
-        const dPath = await io2.join(secPath, "Draft", dn);
+      for (const dn of await dirsOf(io4, await io4.join(secPath, "Draft"))) {
+        const dPath = await io4.join(secPath, "Draft", dn);
         let draft, scenes;
         try {
-          draft = await io2.readJson(await io2.join(dPath, "draft.json"));
-          scenes = await io2.readJson(await io2.join(dPath, "scenes.json"));
+          draft = await io4.readJson(await io4.join(dPath, "draft.json"));
+          scenes = await io4.readJson(await io4.join(dPath, "scenes.json"));
         } catch {
           continue;
         }
-        const folders = new Set((await dirsOf(io2, await io2.join(dPath, "Chapters"))).map(nameKey));
+        const folders = new Set((await dirsOf(io4, await io4.join(dPath, "Chapters"))).map(nameKey));
         for (const c of draft && draft.chapters || []) {
           if (!c || !c.folderName || !folders.has(nameKey(c.folderName))) continue;
           if (c.title && !nameFits(c.title, c.folderName)) out.push({ kind: "chapter", title: c.title || "", disk: c.folderName, secPath, dPath, ch: c });
-          const files = new Set((await mdOf(io2, await io2.join(dPath, "Chapters", c.folderName))).map(nameKey));
+          const files = new Set((await mdOf(io4, await io4.join(dPath, "Chapters", c.folderName))).map(nameKey));
           for (const r of (scenes && scenes.chapters || {})[c.guid] || []) {
             if (!r || !r.fileName || !r.title || !files.has(nameKey(r.fileName))) continue;
             if (!nameFits(r.title || "", r.fileName, ".md")) out.push({ kind: "scene", title: r.title || "", disk: r.fileName, secPath, dPath, ch: c, id: r.id });
@@ -37625,23 +37630,23 @@ ${BLOCK_END}
       import_md6 = __toESM(require_md());
       init_comment_core();
       init_vis_core();
-      dirsOf = async (io2, p) => {
+      dirsOf = async (io4, p) => {
         try {
-          return await io2.listDirs(p) || [];
+          return await io4.listDirs(p) || [];
         } catch {
           return [];
         }
       };
-      mdOf = async (io2, p) => {
+      mdOf = async (io4, p) => {
         try {
-          return await io2.listFiles(p, ".md") || [];
+          return await io4.listFiles(p, ".md") || [];
         } catch {
           return [];
         }
       };
-      has = async (io2, p) => {
+      has = async (io4, p) => {
         try {
-          return !!await io2.exists(p);
+          return !!await io4.exists(p);
         } catch {
           return false;
         }
@@ -61775,7 +61780,7 @@ ${mdToHtmlBody(md, o)}
           var cropBox = this.getCropBox();
           var bleedBox = this.getBleedBox();
           var trimBox = this.getTrimBox();
-          var artBox2 = this.getArtBox();
+          var artBox = this.getArtBox();
           var hasCropBox = this.node.CropBox();
           var hasBleedBox = this.node.BleedBox();
           var hasTrimBox = this.node.TrimBox();
@@ -61789,7 +61794,7 @@ ${mdToHtmlBody(md, o)}
           if (hasTrimBox && rectanglesAreEqual(trimBox, mediaBox)) {
             this.setTrimBox(mediaBox.x, mediaBox.y, width, height);
           }
-          if (hasArtBox && rectanglesAreEqual(artBox2, mediaBox)) {
+          if (hasArtBox && rectanglesAreEqual(artBox, mediaBox)) {
             this.setArtBox(mediaBox.x, mediaBox.y, width, height);
           }
         };
@@ -61838,8 +61843,8 @@ ${mdToHtmlBody(md, o)}
           assertIs(y, "y", ["number"]);
           assertIs(width, "width", ["number"]);
           assertIs(height, "height", ["number"]);
-          var artBox2 = this.doc.context.obj([x, y, x + width, y + height]);
-          this.node.set(PDFName_default.ArtBox, artBox2);
+          var artBox = this.doc.context.obj([x, y, x + width, y + height]);
+          this.node.set(PDFName_default.ArtBox, artBox);
         };
         PDFPage2.prototype.getSize = function() {
           var _a = this.getMediaBox(), width = _a.width, height = _a.height;
@@ -61872,8 +61877,8 @@ ${mdToHtmlBody(md, o)}
         };
         PDFPage2.prototype.getArtBox = function() {
           var _a;
-          var artBox2 = this.node.ArtBox();
-          return (_a = artBox2 === null || artBox2 === void 0 ? void 0 : artBox2.asRectangle()) !== null && _a !== void 0 ? _a : this.getCropBox();
+          var artBox = this.node.ArtBox();
+          return (_a = artBox === null || artBox === void 0 ? void 0 : artBox.asRectangle()) !== null && _a !== void 0 ? _a : this.getCropBox();
         };
         PDFPage2.prototype.translateContent = function(x, y) {
           assertIs(x, "x", ["number"]);
@@ -110547,18 +110552,18 @@ a.card:hover{border-color:${CARD_STRIPE}}
     }
     return { text: out, changed };
   }
-  function renameEntityTask(io2) {
+  function renameEntityTask(io4) {
     return async (payload) => {
       const { oldName, newName, files = [] } = payload || {};
       if (!oldName || !newName || oldName === newName) return { changed: 0, files: [], detail: t("ui.autoTaskEventQueue.notHasMustEdit") };
       const touched = [];
       let total = 0;
       for (const p of files) {
-        const text = await io2.readFile(p);
+        const text = await io4.readFile(p);
         if (text == null) continue;
         const r = replaceName(text, oldName, newName);
         if (!r.changed) continue;
-        await io2.writeFile(p, r.text);
+        await io4.writeFile(p, r.text);
         touched.push(p);
         total += r.changed;
       }
@@ -114282,8 +114287,8 @@ ${h.text}`;
       KEY_FILE3 = "ai-key.json";
       SECRET_KEYS = ["authorization", "x-api-key", "apikey", "api_key", "key", "token"];
       KeyStore = class {
-        constructor({ io: io2 = null, root = "", cache: cache3 = null } = {}) {
-          this.io = io2;
+        constructor({ io: io4 = null, root = "", cache: cache3 = null } = {}) {
+          this.io = io4;
           this.root = root;
           this._cache = cache3;
         }
@@ -117584,8 +117589,8 @@ ${h.text}`;
         }
       };
       KanbanBoard = class {
-        constructor({ io: io2, draftPath, statuses, storage, autoSave = true, onLog: onLog2 } = {}) {
-          this.io = io2;
+        constructor({ io: io4, draftPath, statuses, storage, autoSave = true, onLog: onLog2 } = {}) {
+          this.io = io4;
           this.draftPath = draftPath;
           this.statuses = statuses || DEFAULT_STATUSES;
           this.store = new KanbanStore(storage);
@@ -134624,9 +134629,9 @@ ${h.text}`;
          * @param {object} io    kapi adapter (รับเข้ามาเพื่อ unit test)
          * @param {string} path  path ไฟล์กระดาน (ไม่ใส่ = <root>/planner.json)
          */
-        constructor(root, io2, path) {
+        constructor(root, io4, path) {
           this._root = root;
-          this._io = io2;
+          this._io = io4;
           this._path = path || null;
           this._nodes = [];
           this._edges = [];
@@ -178390,23 +178395,23 @@ img{max-width:100%}` }
       ""
     ].join("\n");
   }
-  async function ensureSkillDir(root, io2 = typeof kapi !== "undefined" ? kapi : null) {
-    if (!root || !io2) return "";
-    const d = await io2.join(root, SKILL_DIR);
-    if (!await io2.exists(d)) await io2.mkdir(d);
+  async function ensureSkillDir(root, io4 = typeof kapi !== "undefined" ? kapi : null) {
+    if (!root || !io4) return "";
+    const d = await io4.join(root, SKILL_DIR);
+    if (!await io4.exists(d)) await io4.mkdir(d);
     return d;
   }
-  async function loadSkills(root, io2 = typeof kapi !== "undefined" ? kapi : null) {
-    if (!root || !io2) return [];
+  async function loadSkills(root, io4 = typeof kapi !== "undefined" ? kapi : null) {
+    if (!root || !io4) return [];
     try {
-      const d = await io2.join(root, SKILL_DIR);
-      if (!await io2.exists(d)) return [];
+      const d = await io4.join(root, SKILL_DIR);
+      if (!await io4.exists(d)) return [];
       const out = [];
-      for (const f of await io2.listFiles(d)) {
+      for (const f of await io4.listFiles(d)) {
         if (!/\.md$/i.test(f)) continue;
         try {
-          const p = await io2.join(d, f);
-          const s = parseSkillFile(await io2.readFile(p), f);
+          const p = await io4.join(d, f);
+          const s = parseSkillFile(await io4.readFile(p), f);
           s.file = p;
           out.push(s);
         } catch {
@@ -179443,11 +179448,11 @@ img{max-width:100%}` }
       SYSTEM = t("ui.aiChat.youAssistantKnownWorld") + t("ui.aiChat.replyThaiUseOnly") + t("ui.aiChat.dataNotAtNot") + t("ui.aiChat.toScenePageSpecify");
       MAX_HISTORY_TOKENS = 2e3;
       ChatSession = class {
-        constructor({ client, index = null, k = 6, io: io2 = null, root = "", maxHistoryTokens = MAX_HISTORY_TOKENS } = {}) {
+        constructor({ client, index = null, k = 6, io: io4 = null, root = "", maxHistoryTokens = MAX_HISTORY_TOKENS } = {}) {
           this.client = client;
           this.rag = new RagPipeline({ client, index: index || new VectorIndex({}) });
           this.k = k;
-          this.io = io2;
+          this.io = io4;
           this.root = root;
           this.history = [];
           this.maxHistoryTokens = maxHistoryTokens;
@@ -195027,89 +195032,7 @@ ${s.body}`).join("\n\n");
     }
   });
 
-  // src/starter/starter-art.js
-  function artKey(id) {
-    const k = String(id == null ? "" : id).toLowerCase().replace(/[^a-z0-9_-]/g, "");
-    return k || ART_DEFAULT;
-  }
-  function artBase(id, slot) {
-    const s = ART_SLOTS[slot] ? slot : "top";
-    return artKey(id) + "-" + s;
-  }
-  function artCandidates(id, slot) {
-    const keys4 = artKey(id) === ART_DEFAULT ? [ART_DEFAULT] : [artKey(id), ART_DEFAULT];
-    const s = ART_SLOTS[slot] ? slot : "top";
-    const out = [];
-    for (const k of keys4) for (const ext of ART_EXTS) out.push(ART_DIR + "/" + k + "-" + s + "." + ext);
-    return out;
-  }
-  function pickArt(names, id, slot) {
-    const have = new Map((names || []).map((n2) => [String(n2).toLowerCase(), String(n2)]));
-    for (const c of artCandidates(id, slot)) {
-      const file = c.slice(ART_DIR.length + 1);
-      const hit = have.get(file.toLowerCase());
-      if (hit) return ART_DIR + "/" + hit;
-    }
-    return null;
-  }
-  function artSizeText(slot) {
-    const s = ART_SLOTS[slot] || ART_SLOTS.top;
-    return s.w + " " + TIMES2 + " " + s.h;
-  }
-  var ART_DIR, ART_EXTS, ART_SLOTS, TIMES2, ART_HOME, ART_DEFAULT;
-  var init_starter_art = __esm({
-    "src/starter/starter-art.js"() {
-      ART_DIR = "starter";
-      ART_EXTS = ["png", "jpg", "webp"];
-      ART_SLOTS = {
-        side: { id: "side", w: 480, h: 920, cssW: 240, cssH: 460 },
-        top: { id: "top", w: 1200, h: 300, cssW: 0, cssH: 0 }
-      };
-      TIMES2 = String.fromCharCode(215);
-      ART_HOME = "home";
-      ART_DEFAULT = "default";
-    }
-  });
-
   // src/starter/starter-wizard.js
-  function artNames() {
-    if (!_artNames) {
-      _artNames = Promise.resolve().then(() => typeof kapi !== "undefined" && kapi.starterArtList ? kapi.starterArtList() : []).then((x) => Array.isArray(x) ? x : []).catch(() => []);
-    }
-    return _artNames;
-  }
-  function artBox(id, slot) {
-    const box2 = el("div", "st-art st-art-" + slot);
-    box2.dataset.art = artBase(id, slot);
-    box2.setAttribute("aria-hidden", "true");
-    const ph = el("div", "st-art-ph");
-    ph.append(el("div", "st-art-ph-ico", gi("image")));
-    ph.append(el("div", "st-art-ph-size", artSizeText(slot) + " px"));
-    ph.append(el("div", "st-art-ph-file", ART_DIR + "/" + artBase(id, slot) + ".png"));
-    ph.append(el("div", "st-art-ph-hint", t("ui.starter.artHint")));
-    box2.append(ph);
-    box2.style.setProperty("--st-art-ar", ART_SLOTS[slot].w + " / " + ART_SLOTS[slot].h);
-    artNames().then((names) => {
-      const src2 = pickArt(names, id, slot);
-      if (!src2) {
-        box2.classList.add("st-art-empty");
-        return;
-      }
-      const img = el("img", "st-art-img");
-      img.alt = "";
-      img.draggable = false;
-      img.onload = () => {
-        box2.classList.add("st-art-ready");
-      };
-      img.onerror = () => {
-        img.remove();
-        box2.classList.add("st-art-empty");
-      };
-      img.src = src2;
-      box2.append(img);
-    });
-    return box2;
-  }
   function renderWizard(host2, ctx2) {
     const s = ctx2.starter;
     const i5 = clampStep(s.step);
@@ -195147,14 +195070,8 @@ ${s.body}`).join("\n\n");
     fill3.style.width = prog.pct + "%";
     bar.append(fill3);
     wrap2.append(bar);
-    const main = el("div", "st-wz-main");
-    main.append(artBox(step.id, "side"));
-    const col = el("div", "st-wz-col");
-    col.append(artBox(step.id, "top"));
     const body = el("div", "st-wz-body");
-    col.append(body);
-    main.append(col);
-    wrap2.append(main);
+    wrap2.append(body);
     const head22 = el("div", "st-step-head");
     head22.append(el("div", "st-step-title", step.icon + " " + step.title));
     head22.append(el("div", "st-step-desc", step.desc));
@@ -195248,7 +195165,6 @@ ${s.body}`).join("\n\n");
     }
     return box2;
   }
-  var _artNames;
   var init_starter_wizard = __esm({
     "src/starter/starter-wizard.js"() {
       init_core();
@@ -195258,8 +195174,6 @@ ${s.body}`).join("\n\n");
       init_starter_steps();
       init_starter_cast();
       init_icons();
-      init_starter_art();
-      _artNames = null;
     }
   });
 
@@ -197042,7 +196956,6 @@ ${s.body}`).join("\n\n");
     };
     head2.append(imp);
     wrap2.append(head2);
-    wrap2.append(artBox(ART_HOME, "top"));
     wrap2.append(el("div", "st-hint", t("ui.starter.welcomeHint")));
     const rows = await listStarters();
     if (rows.length > 3) {
@@ -197200,7 +197113,6 @@ ${s.body}`).join("\n\n");
       init_starter_steps_def();
       init_starter_store();
       init_starter_wizard();
-      init_starter_art();
       init_starter_scenario();
       init_starter_chat();
       init_starter_wiki();
@@ -197301,11 +197213,11 @@ ${s.body}`).join("\n\n");
   function getAntonyms(word) {
     return shared().getAntonyms(word);
   }
-  async function loadExtra(io2, root) {
+  async function loadExtra(io4, root) {
     try {
-      const p = io2.join(root, "Plugins", "thesaurus.json");
-      if (!await io2.exists(p)) return null;
-      const j = await io2.readJson(p);
+      const p = io4.join(root, "Plugins", "thesaurus.json");
+      if (!await io4.exists(p)) return null;
+      const j = await io4.readJson(p);
       if (!j) return null;
       return { synonyms: j.synonyms || {}, antonyms: j.antonyms || {} };
     } catch {
@@ -197779,18 +197691,18 @@ ${s.body}`).join("\n\n");
     return draft ? draft.children : binder;
   }
   async function importScrivener(filePath, options = {}) {
-    const io2 = options.io;
-    if (!io2) return { ok: false, error: t("ui.impOrtScrivener.mustSendIoAdapter"), code: "no-io" };
+    const io4 = options.io;
+    if (!io4) return { ok: false, error: t("ui.impOrtScrivener.mustSendIoAdapter"), code: "no-io" };
     const warnings = [];
     let files = [];
     try {
-      files = await io2.listFiles(filePath);
+      files = await io4.listFiles(filePath);
     } catch {
       files = [];
     }
     const scrivx = files.find((f) => f.toLowerCase().endsWith(".scrivx"));
     if (!scrivx) return { ok: false, error: t("ui.impOrtScrivener.notFoundFileScrivx"), code: "no-scrivx" };
-    const xml = await io2.readFile(io2.join(filePath, scrivx));
+    const xml = await io4.readFile(io4.join(filePath, scrivx));
     const binder = parseBinder(xml);
     if (!binder.length) return { ok: false, error: t("ui.impOrtScrivener.readOutlineBinderCant"), code: "bad-binder" };
     const mapped = mapBinder(binder, options);
@@ -197798,7 +197710,7 @@ ${s.body}`).join("\n\n");
     for (const sec2 of mapped.sections) {
       for (const ch of sec2.chapters) {
         for (const sc of ch.scenes) {
-          const rtf = await readDocRtf(io2, filePath, sc.srcId);
+          const rtf = await readDocRtf(io4, filePath, sc.srcId);
           if (rtf == null) {
             warnings.push(tf("ui.impOrtScrivener.notFoundBody", sc.title, sc.srcId));
             sc.body = "";
@@ -197814,18 +197726,18 @@ ${s.body}`).join("\n\n");
     if (!dest) return { ok: false, error: t("ui.impOrtScrivener.cantPickFolderTo"), code: "no-dest", plan, counts: mapped.counts };
     let written = 0;
     for (const f of plan.files) {
-      const full = io2.join(dest, ...f.path);
-      if (io2.mkdir) await io2.mkdir(dirOf3(io2, dest, f.path));
-      await io2.writeFile(full, f.content);
+      const full = io4.join(dest, ...f.path);
+      if (io4.mkdir) await io4.mkdir(dirOf3(io4, dest, f.path));
+      await io4.writeFile(full, f.content);
       written++;
       if (options.onProgress) options.onProgress(written, plan.files.length, f.path.join("/"));
     }
     return { ok: true, plan, counts: mapped.counts, warnings, written, title: title2, dest };
   }
-  function dirOf3(io2, dest, parts) {
-    return io2.join(dest, ...parts.slice(0, -1));
+  function dirOf3(io4, dest, parts) {
+    return io4.join(dest, ...parts.slice(0, -1));
   }
-  async function readDocRtf(io2, root, id) {
+  async function readDocRtf(io4, root, id) {
     const candidates = [
       ["Files", "Data", id, "content.rtf"],
       // Scrivener 3
@@ -197834,9 +197746,9 @@ ${s.body}`).join("\n\n");
       ["Files", "Docs", id, "content.rtf"]
     ];
     for (const parts of candidates) {
-      const p = io2.join(root, ...parts);
+      const p = io4.join(root, ...parts);
       try {
-        if (await io2.exists(p)) return await io2.readFile(p);
+        if (await io4.exists(p)) return await io4.readFile(p);
       } catch {
       }
     }
@@ -197915,10 +197827,10 @@ ${sc.body || ""}
     const src2 = await kapi.openProjectDialog();
     if (!src2) return null;
     setBusy(t("ui.impOrt.busyReadProjectScrivener"));
-    const io2 = makeIo();
+    const io4 = makeIo();
     let preview2;
     try {
-      preview2 = await importScrivener(src2, { io: io2, dryRun: true });
+      preview2 = await importScrivener(src2, { io: io4, dryRun: true });
     } finally {
       clearBusy();
     }
@@ -197937,14 +197849,14 @@ ${sc.body || ""}
     if (!await confirmBox(lines.join("\n") + t("ui.impOrt.pickFolderToDone"), t("ui.common.importBtn"))) return null;
     const dest = await kapi.openProjectDialog();
     if (!dest) return null;
-    if (await kapi.exists(io2.join(dest, "project.khn.json"))) {
+    if (await kapi.exists(io4.join(dest, "project.khn.json"))) {
       if (!await confirmBox(t("ui.imp.overwrite"), t("ui.common.overwrite"))) return null;
     }
     setBusy(t("ui.imp.working"));
     let res;
     try {
       res = await importScrivener(src2, {
-        io: io2,
+        io: io4,
         dest,
         title: preview2.title,
         now: (/* @__PURE__ */ new Date()).toISOString(),
@@ -199284,6 +199196,9 @@ ${css}
     const n2 = parseInt(num5, 10);
     return Number.isInteger(n2) && n2 > 0 ? BUG_LIST_URL + "/" + n2 : BUG_LIST_URL;
   }
+  function statusKey(status, kind) {
+    return (kind === "feature" ? FEATURE_STATUS_KEYS : BUG_STATUS_KEYS)[status] || BUG_STATUS_KEYS.new;
+  }
   function isOpenStatus(st) {
     return BUG_OPEN_STATUSES.includes(st);
   }
@@ -199299,20 +199214,29 @@ ${css}
     if (closed) return reason === "not-planned" || has3(ls, "wontfix", "invalid", "not-a-bug") ? "wontfix" : "fixed";
     if (has3(ls, "in-progress", "wip", "fixing")) return "progress";
     if (has3(ls, "need-info", "needs-info", "more-info", "question")) return "needinfo";
-    if (has3(ls, "confirmed", "bug")) return "confirmed";
+    if (has3(ls, "confirmed", "bug", "accepted", "planned")) return "confirmed";
     return "new";
   }
   function isTrustedAuthor(issue) {
     return TRUSTED_AUTHORS.includes(String(issue && issue.author_association).toUpperCase());
   }
-  function isBugIssue(issue) {
+  function reportKind(k) {
+    return k === "feature" ? "feature" : "bug";
+  }
+  function kindOf(issue) {
+    const ls = labelNames(issue);
+    if (has3(ls, "bug")) return "bug";
+    if (has3(ls, ...FEATURE_LABELS)) return "feature";
+    return reportKind(parseReportMark(issue && issue.body).kind);
+  }
+  function isReportIssue(issue) {
     if (!issue || typeof issue !== "object" || issue.pull_request) return false;
     if (!Number.isInteger(issue.number)) return false;
     if (!isTrustedAuthor(issue)) return false;
     const ls = labelNames(issue);
     if (has3(ls, ...HIDDEN_LABELS)) return false;
-    if (has3(ls, "bug", "confirmed")) return true;
-    return !has3(ls, "enhancement", "feature", "feature-request", "documentation");
+    if (has3(ls, "bug", "confirmed", ...FEATURE_LABELS)) return true;
+    return !has3(ls, "documentation");
   }
   function shortVersion(v2) {
     const s = normalizeTag2(v2);
@@ -199330,7 +199254,7 @@ ${css}
     return cmpVersion(A, B) || (A < B ? -1 : A > B ? 1 : 0);
   }
   function parseReportMark(body) {
-    const out = { version: "", platform: "", lang: "" };
+    const out = { version: "", platform: "", lang: "", kind: "" };
     const m = RE_MARK.exec(String(body || ""));
     if (!m) return out;
     for (const kv of m[1].trim().split(/\s+/)) {
@@ -199362,6 +199286,7 @@ ${css}
       num: num5,
       id: "#" + num5,
       title: String(issue.title || "").replace(/\s+/g, " ").trim().slice(0, 300),
+      kind: kindOf(issue),
       status: statusOf3(issue),
       foundIn: foundVersion(issue),
       reported: String(issue.created_at || ""),
@@ -199384,7 +199309,7 @@ ${css}
       arr = null;
     }
     if (!Array.isArray(arr)) return { ok: false, code: "parse", status: res.status };
-    return { ok: true, bugs: arr.filter(isBugIssue).map(issueToBug), more: arr.length >= BUG_PAGE_SIZE };
+    return { ok: true, bugs: arr.filter(isReportIssue).map(issueToBug), more: arr.length >= BUG_PAGE_SIZE };
   }
   function mergeBugs(...lists) {
     const seen = /* @__PURE__ */ new Set(), out = [];
@@ -199402,8 +199327,9 @@ ${css}
   }
   function filterBugs(list3, f = {}) {
     const words = String(f.q || "").toLowerCase().split(/\s+/).filter(Boolean);
-    const st = f.status || "all", found2 = f.found || "all", fixed = f.fixed || "all";
+    const st = f.status || "all", found2 = f.found || "all", fixed = f.fixed || "all", kind = f.kind || "all";
     return (list3 || []).filter((b) => {
+      if (kind !== "all" && reportKind(b.kind) !== kind) return false;
       if (st === "open" ? !isOpenStatus(b.status) : st === "closed" ? isOpenStatus(b.status) : st !== "all" && b.status !== st) return false;
       if (found2 !== "all" && b.foundIn !== found2) return false;
       if (fixed === "none" ? !!b.fixedIn : fixed !== "all" && b.fixedIn !== fixed) return false;
@@ -199436,6 +199362,14 @@ ${css}
     }
     return out;
   }
+  function countByKind(list3) {
+    const out = { all: 0, bug: 0, feature: 0 };
+    for (const b of list3 || []) {
+      out.all++;
+      out[reportKind(b.kind)]++;
+    }
+    return out;
+  }
   function reportTitle(title2) {
     return clean3(title2, 200).replace(/\s+/g, " ");
   }
@@ -199450,7 +199384,7 @@ ${css}
     sec2(L2.steps, r.steps);
     sec2(L2.expected, r.expected);
     parts.push("### " + String(L2.env || "").trim() + "\n" + envLine(env2));
-    parts.push(reportMark(env2));
+    parts.push(reportMark(env2, r.kind));
     return parts.join("\n\n");
   }
   function envLine(env2 = {}) {
@@ -199460,14 +199394,14 @@ ${css}
     if (env2.runtime) bits3.push(clean3(env2.runtime, 60));
     return bits3.join(" \xB7 ");
   }
-  function reportMark(env2 = {}) {
-    return "<!-- k2-report version=" + (markVal(env2.version) || "?") + (env2.platform ? " platform=" + markVal(env2.platform) : "") + (env2.lang ? " lang=" + markVal(env2.lang) : "") + " -->";
+  function reportMark(env2 = {}, kind = "bug") {
+    return "<!-- k2-report version=" + (markVal(env2.version) || "?") + (env2.platform ? " platform=" + markVal(env2.platform) : "") + (env2.lang ? " lang=" + markVal(env2.lang) : "") + (reportKind(kind) === "feature" ? " kind=feature" : "") + " -->";
   }
   function isRelayUrl(u) {
     const s = String(u == null ? "" : u).trim();
     return /^https:\/\/[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{1,5})?(\/[^\s?#@]*)?$/i.test(s);
   }
-  function buildRelayRequest({ relay = "", title: title2 = "", body = "", env: env2 = {}, now = Date.now() } = {}) {
+  function buildRelayRequest({ relay = "", title: title2 = "", body = "", env: env2 = {}, kind = "bug", now = Date.now() } = {}) {
     const ttl = reportTitle(title2);
     if (!isRelayUrl(relay) || !ttl) return null;
     return {
@@ -199475,7 +199409,14 @@ ${css}
       options: {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-K2-Client": RELAY_CLIENT },
-        body: JSON.stringify({ title: ttl, body: clean3(body, RELAY_MAX_BODY), version: markVal(env2.version), ts: now })
+        // ช่อง kind มีเฉพาะคำขอฟีเจอร์ — รายงานบั๊กส่งรูปเดิมสี่ช่อง (ตัวกลางรุ่นเก่ารับได้ทั้งสองรูป: ช่องที่ไม่รู้จักถูกมองข้าม)
+        body: JSON.stringify({
+          title: ttl,
+          body: clean3(body, RELAY_MAX_BODY),
+          version: markVal(env2.version),
+          ts: now,
+          ...reportKind(kind) === "feature" ? { kind: "feature" } : {}
+        })
       }
     };
   }
@@ -199500,13 +199441,14 @@ ${css}
     const num5 = d && d.ok === true ? parseInt(d.number, 10) : NaN;
     return Number.isInteger(num5) && num5 > 0 ? { ok: true, num: num5 } : { ok: false, code: "parse", status: res.status };
   }
-  function pendingBug(num5, title2, version2, now = Date.now()) {
+  function pendingBug(num5, title2, version2, now = Date.now(), kind = "bug") {
     const n2 = parseInt(num5, 10);
     if (!Number.isInteger(n2) || n2 <= 0) return null;
     return {
       num: n2,
       id: "#" + n2,
       title: reportTitle(title2),
+      kind: reportKind(kind),
       status: "new",
       foundIn: shortVersion(markVal(version2)),
       reported: new Date(now).toISOString(),
@@ -199521,7 +199463,7 @@ ${css}
       if (!p || !Number.isInteger(p.num) || p.num <= 0 || seen.has(p.num)) continue;
       if (!Number.isFinite(p.ts) || now - p.ts < 0 || now - p.ts >= PENDING_MS) continue;
       seen.add(p.num);
-      out.push(pendingBug(p.num, p.title, p.foundIn, p.ts));
+      out.push(pendingBug(p.num, p.title, p.foundIn, p.ts, p.kind));
     }
     return out.sort((a, b) => b.ts - a.ts).slice(0, PENDING_MAX);
   }
@@ -199562,6 +199504,7 @@ ${css}
       num: b.num,
       id: "#" + b.num,
       title: String(b.title || "").slice(0, 300),
+      kind: reportKind(b.kind),
       status: b.status,
       foundIn: String(b.foundIn || "").slice(0, 40),
       reported: String(b.reported || "").slice(0, 40),
@@ -199570,7 +199513,7 @@ ${css}
     }));
     return { ts: c.ts, bugs };
   }
-  var BOM_RE, BUG_LIST_URL, BUG_PAGE_SIZE, BUG_MAX_PAGES, BUG_STATUSES, BUG_STATUS_KEYS, BUG_OPEN_STATUSES, norm4, has3, TRUSTED_AUTHORS, HIDDEN_LABELS, RE_MARK, RE_VER_LINE, labelValue, BUG_SORT_KEYS, clean3, markVal, RELAY_CLIENT, RELAY_PATH, RELAY_MAX_BODY, PENDING_MS, PENDING_MAX, MAIL_SUBJECT_PREFIX;
+  var BOM_RE, BUG_LIST_URL, BUG_PAGE_SIZE, BUG_MAX_PAGES, BUG_STATUSES, BUG_STATUS_KEYS, FEATURE_STATUS_KEYS, BUG_OPEN_STATUSES, norm4, has3, TRUSTED_AUTHORS, HIDDEN_LABELS, REPORT_KINDS, FEATURE_LABELS, RE_MARK, RE_VER_LINE, labelValue, BUG_SORT_KEYS, clean3, markVal, RELAY_CLIENT, RELAY_PATH, RELAY_MAX_BODY, PENDING_MS, PENDING_MAX, MAIL_SUBJECT_PREFIX;
   var init_bug_core = __esm({
     "src/bugs/bug-core.js"() {
       init_timing();
@@ -199589,11 +199532,20 @@ ${css}
         wontfix: "ui.bug.stWontfix",
         duplicate: "ui.bug.stDuplicate"
       };
+      FEATURE_STATUS_KEYS = {
+        ...BUG_STATUS_KEYS,
+        confirmed: "ui.bug.stPlanned",
+        progress: "ui.bug.stBuilding",
+        fixed: "ui.bug.stAdded",
+        wontfix: "ui.bug.stDeclined"
+      };
       BUG_OPEN_STATUSES = ["new", "confirmed", "progress", "needinfo"];
       norm4 = (s) => String(s == null ? "" : s).trim().toLowerCase().replace(/[\s_]+/g, "-");
       has3 = (ls, ...names) => names.some((n2) => ls.includes(n2));
       TRUSTED_AUTHORS = ["OWNER", "MEMBER", "COLLABORATOR"];
       HIDDEN_LABELS = ["hidden", "spam", "test"];
+      REPORT_KINDS = ["bug", "feature"];
+      FEATURE_LABELS = ["enhancement", "feature", "feature-request"];
       RE_MARK = /<!--\s*k2-report\b([^>]*?)-->/i;
       RE_VER_LINE = /^[\s>*_-]*(?:app\s+)?version[*_\s]*[:：][*_\s]*([^\s*_`<]+)/im;
       labelValue = (ls, re) => {
@@ -199653,8 +199605,8 @@ ${css}
       return [];
     }
   }
-  function rememberSent(num5, title2, version2) {
-    const row4 = pendingBug(num5, title2, version2);
+  function rememberSent(num5, title2, version2, kind) {
+    const row4 = pendingBug(num5, title2, version2, Date.now(), kind);
     if (!row4) return;
     try {
       localStorage.setItem(SENT_KEY, JSON.stringify(prunePending([row4, ...readSent()])));
@@ -199731,12 +199683,26 @@ ${css}
     const key2 = SEND_ERR_KEYS[r && r.code] || "ui.bug.sendNet";
     return key2 === "ui.bug.sendFail" ? tf(key2, r && r.status || "?") : t(key2);
   }
-  function openBugReport() {
+  function openBugReport(opts = {}) {
     document.querySelectorAll(".k-overlay.k-bug-report-ov").forEach((o) => o.remove());
     const ov = el("div", "k-overlay k-bug-report-ov");
     const box2 = el("div", "k-dialog k-wide k-bug-report");
-    box2.append(el("div", "k-dlg-title", t("ui.bug.reportTitle")));
+    const dlgTitle = el("div", "k-dlg-title", t("ui.bug.reportTitle"));
+    box2.append(dlgTitle);
     const body = el("div", "k-bug-form");
+    const kindBar = el("div", "k-bug-kinds");
+    kindBar.setAttribute("role", "radiogroup");
+    kindBar.setAttribute("aria-label", t("ui.bug.kindLabel"));
+    const kindBtns = {};
+    for (const k of REPORT_KINDS) {
+      const b = el("button", "k-bug-kind", t(KIND_TEXT[k].tab));
+      b.type = "button";
+      b.dataset.kind = k;
+      b.setAttribute("role", "radio");
+      kindBar.append(b);
+      kindBtns[k] = b;
+    }
+    body.append(kindBar);
     body.append(el("div", "k-hint k-bug-intro", t("ui.bug.reportIntro")));
     const relay = String(io.relay() || "");
     const canSend = isRelayUrl(relay);
@@ -199753,9 +199719,12 @@ ${css}
       body.append(line);
     }
     const draft = readDraft();
+    let kind = reportKind(opts.kind || draft.kind);
+    const fieldLabels2 = {};
     const field3 = (id, labelKey2, phKey, rows, value) => {
       const wrap2 = el("div", "k-bug-field");
       const lb = el("label", "k-bug-label", t(labelKey2));
+      fieldLabels2[id] = lb;
       lb.htmlFor = id;
       const inp = el(rows ? "textarea" : "input", "k-dlg-input" + (rows ? " k-bug-ta" : ""));
       inp.id = id;
@@ -199787,13 +199756,16 @@ ${css}
       errBox.textContent = msg || "";
       if (msg) setStatusError(msg);
     };
-    const values2 = () => ({ title: fTitle.value, what: fWhat.value, steps: fSteps.value, expected: fExpected.value });
+    const values2 = () => ({ title: fTitle.value, what: fWhat.value, steps: fSteps.value, expected: fExpected.value, kind });
     for (const f of [fTitle, fWhat, fSteps, fExpected]) f.addEventListener("input", () => {
       saveDraft2(values2());
       if (errBox.textContent) errBox.textContent = "";
     });
-    const labels = { what: t("ui.bug.fWhat"), steps: t("ui.bug.fSteps"), expected: t("ui.bug.fExpected"), env: t("ui.bug.envHead") };
-    const fullBody = () => buildReportBody({ ...values2(), env: env2, labels });
+    const labels = () => {
+      const K = KIND_TEXT[kind];
+      return { what: t(K.fWhat), steps: t(K.fSteps), expected: t(K.fExpected), env: t("ui.bug.envHead") };
+    };
+    const fullBody = () => buildReportBody({ ...values2(), env: env2, labels: labels(), kind });
     const ready2 = () => {
       if (reportTitle(fTitle.value)) return true;
       showErr(t("ui.bug.needTitle"));
@@ -199864,7 +199836,7 @@ ${css}
     let sending = false;
     bSend.onclick = async () => {
       if (sending || !canSend || !ready2()) return;
-      const req = buildRelayRequest({ relay, title: fTitle.value, body: fullBody(), env: env2 });
+      const req = buildRelayRequest({ relay, title: fTitle.value, body: fullBody(), env: env2, kind });
       if (!req) {
         showErr(t("ui.bug.sendOff"));
         return;
@@ -199884,22 +199856,55 @@ ${css}
       sending = false;
       bSend.disabled = false;
       bCopy.disabled = false;
-      bSend.textContent = t("ui.bug.btnSend");
+      bSend.textContent = t(KIND_TEXT[kind].send);
       if (!r.ok) {
-        log("warn", "bug: report send failed", { code: r.code, status: r.status || 0 });
+        log("warn", "bug: report send failed", { kind, code: r.code, status: r.status || 0 });
         showErr(sendErrorText(r));
         return;
       }
-      log("info", "bug: report sent", { num: r.num });
+      log("info", "bug: report sent", { kind, num: r.num });
       saveDraft2(null);
-      rememberSent(r.num, fTitle.value, env2.version);
+      rememberSent(r.num, fTitle.value, env2.version, kind);
       clearBugCache();
       close2();
-      const msg = tf("ui.bug.sentOk", "#" + r.num);
+      const msg = tf(KIND_TEXT[kind].sent, "#" + r.num);
       setStatusAction(msg, t("ui.bug.btnStatus"), () => openBugStatus({ force: true }));
       toast(msg);
     };
     btns.append(bStatus, bCancel, bCopy, bSend);
+    const setKind = (k, user) => {
+      kind = reportKind(k);
+      const K = KIND_TEXT[kind];
+      for (const kk of REPORT_KINDS) {
+        const on2 = kk === kind;
+        kindBtns[kk].classList.toggle("on", on2);
+        kindBtns[kk].setAttribute("aria-checked", on2 ? "true" : "false");
+        kindBtns[kk].tabIndex = on2 ? 0 : -1;
+      }
+      box2.dataset.kind = kind;
+      dlgTitle.textContent = t(K.title);
+      fTitle.placeholder = t(K.fTitlePh);
+      fieldLabels2[fWhat.id].textContent = t(K.fWhat);
+      fWhat.placeholder = t(K.fWhatPh);
+      fieldLabels2[fSteps.id].textContent = t(K.fSteps);
+      fSteps.placeholder = t(K.fStepsPh);
+      fieldLabels2[fExpected.id].textContent = t(K.fExpected);
+      fExpected.placeholder = t(K.fExpectedPh);
+      if (!sending) bSend.textContent = t(K.send);
+      if (user) {
+        saveDraft2(values2());
+        if (errBox.textContent) errBox.textContent = "";
+      }
+    };
+    for (const k of REPORT_KINDS) kindBtns[k].onclick = () => setKind(k, true);
+    kindBar.onkeydown = (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      const next = REPORT_KINDS[(REPORT_KINDS.indexOf(kind) + (e.key === "ArrowRight" ? 1 : REPORT_KINDS.length - 1)) % REPORT_KINDS.length];
+      setKind(next, true);
+      kindBtns[next].focus();
+    };
+    setKind(kind, false);
     box2.append(body, btns);
     ov.append(box2);
     ov.addEventListener("mousedown", (e) => {
@@ -199916,7 +199921,7 @@ ${css}
     return ov;
   }
   function resetBugView() {
-    Object.assign(VIEW2, { q: "", status: "all", found: "all", fixed: "all", sort: "id", dir: "desc" });
+    Object.assign(VIEW2, { q: "", kind: "all", status: "all", found: "all", fixed: "all", sort: "id", dir: "desc" });
   }
   function openBugStatus(opts = {}) {
     document.querySelectorAll(".k-overlay.k-bug-status-ov").forEach((o) => o.remove());
@@ -199935,13 +199940,14 @@ ${css}
       s.setAttribute("aria-label", t(titleKey));
       return s;
     };
+    const selKind = mkSel("k-bug-f-kind", "ui.bug.kindLabel");
     const selStatus = mkSel("k-bug-f-status", "ui.bug.colStatus");
     const selFound = mkSel("k-bug-f-found", "ui.bug.colFound");
     const selFixed = mkSel("k-bug-f-fixed", "ui.bug.colFixed");
     const bClear = el("button", "cmp-mini k-bug-clear", t("ui.bug.clear"));
     const bRefresh = el("button", "cmp-mini k-bug-refresh");
     bRefresh.append(icon("refresh", 14), document.createTextNode(" " + t("ui.bug.refresh")));
-    bar.append(q2, selStatus, selFound, selFixed, bClear, bRefresh);
+    bar.append(q2, selKind, selStatus, selFound, selFixed, bClear, bRefresh);
     const wrap2 = el("div", "k-bug-wrap");
     const table9 = el("table", "k-bug-table");
     const thead = el("thead"), headRow = el("tr");
@@ -199978,15 +199984,20 @@ ${css}
     const btns = el("div", "k-dlg-btns");
     const bWeb = el("button", "k-bug-web", t("ui.bug.openWeb"));
     bWeb.onclick = () => openInBrowser(BUG_LIST_URL);
+    const bFeature = el("button", "k-bug-go-feature", t("ui.bug.featureTitle"));
     const bReport = el("button", "k-bug-go-report", t("ui.bug.reportTitle"));
     const bClose = el("button", "k-ok k-cancel", t("ui.common.close"));
     const close2 = () => ov.remove();
     bReport.onclick = () => {
       close2();
-      openBugReport();
+      openBugReport({ kind: "bug" });
+    };
+    bFeature.onclick = () => {
+      close2();
+      openBugReport({ kind: "feature" });
     };
     bClose.onclick = close2;
-    btns.append(bWeb, bReport, bClose);
+    btns.append(bWeb, bFeature, bReport, bClose);
     box2.append(bar, wrap2, note, btns);
     ov.append(box2);
     const S10 = { bugs: null, loading: false, error: "", ts: 0, stale: false };
@@ -200000,14 +200011,23 @@ ${css}
       sel2.value = options.some(([v2]) => v2 === value) ? value : "all";
       return sel2.value;
     };
+    let hasFeature = false;
+    const statusName = (s) => {
+      const bug = t(statusKey(s, "bug")), feat2 = t(statusKey(s, "feature"));
+      return VIEW2.kind === "feature" ? feat2 : VIEW2.kind === "bug" || !hasFeature || bug === feat2 ? bug : bug + " / " + feat2;
+    };
     const fillFilters = () => {
-      const list3 = S10.bugs || [];
+      const all = S10.bugs || [];
+      const nk = countByKind(all);
+      hasFeature = nk.feature > 0;
+      VIEW2.kind = fillSelect(selKind, ["all", ...REPORT_KINDS].map((k) => [k, tf(KIND_FILTER_KEYS[k], nk[k])]), VIEW2.kind);
+      const list3 = filterBugs(all, { kind: VIEW2.kind });
       const n2 = countByStatus(list3);
       VIEW2.status = fillSelect(selStatus, [
         ["all", tf("ui.bug.fltAll", n2.all)],
         ["open", tf("ui.bug.fltOpen", n2.open)],
         ["closed", tf("ui.bug.fltClosed", n2.closed)],
-        ...BUG_STATUSES.map((s) => [s, tf("ui.bug.fltOne", t(BUG_STATUS_KEYS[s]), n2[s])])
+        ...BUG_STATUSES.map((s) => [s, tf("ui.bug.fltOne", statusName(s), n2[s])])
       ], VIEW2.status);
       VIEW2.found = fillSelect(selFound, [["all", t("ui.bug.fltFoundAll")], ...bugVersions(list3, "foundIn").map((v2) => [v2, v2])], VIEW2.found);
       VIEW2.fixed = fillSelect(selFixed, [
@@ -200047,11 +200067,19 @@ ${css}
         };
         idCell.append(link);
         const stCell = el("td", "k-bug-c-status");
-        const chip = el("span", "k-bug-st", t(BUG_STATUS_KEYS[b.status]));
+        const kd = reportKind(b.kind);
+        tr4.dataset.kind = kd;
+        const chip = el("span", "k-bug-st", t(statusKey(b.status, kd)));
         chip.dataset.st = b.status;
         if (b.status === "fixed") chip.prepend(icon("check", 11));
         stCell.append(chip);
-        const ttl = el("td", "k-bug-c-title k-selectable", b.title || DASH);
+        const ttl = el("td", "k-bug-c-title k-selectable");
+        if (kd === "feature") {
+          const tag3 = el("span", "k-bug-kindtag");
+          tag3.append(icon("bulb", 11), document.createTextNode(t("ui.bug.kindTag")));
+          ttl.append(tag3);
+        }
+        ttl.append(document.createTextNode(b.title || DASH));
         ttl.title = b.title || "";
         tr4.append(
           idCell,
@@ -200076,7 +200104,7 @@ ${css}
       stamp.textContent = !S10.ts ? "" : S10.stale ? S10.error + " " + tf("ui.bug.stale", fmtDateTime(S10.ts)) : tf("ui.bug.updated", fmtDateTime(S10.ts));
       stamp.classList.toggle("k-bug-stamp-warn", !!S10.stale);
       bRefresh.disabled = S10.loading;
-      bClear.disabled = !(VIEW2.q || VIEW2.status !== "all" || VIEW2.found !== "all" || VIEW2.fixed !== "all");
+      bClear.disabled = !(VIEW2.q || VIEW2.kind !== "all" || VIEW2.status !== "all" || VIEW2.found !== "all" || VIEW2.fixed !== "all");
     }
     let round = 0;
     async function load(force) {
@@ -200121,6 +200149,11 @@ ${css}
       VIEW2.q = q2.value;
       draw3();
     };
+    selKind.onchange = () => {
+      VIEW2.kind = selKind.value;
+      fillFilters();
+      draw3();
+    };
     selStatus.onchange = () => {
       VIEW2.status = selStatus.value;
       draw3();
@@ -200159,7 +200192,7 @@ ${css}
     }, 0);
     return ov;
   }
-  var io, CACHE_KEY2, DRAFT_KEY, _cache5, SENT_KEY, ERR_KEYS, SEND_ERR_KEYS, COLS, DASH, VIEW2;
+  var io, CACHE_KEY2, DRAFT_KEY, _cache5, SENT_KEY, ERR_KEYS, SEND_ERR_KEYS, KIND_TEXT, KIND_FILTER_KEYS, COLS, DASH, VIEW2;
   var init_bug_ui = __esm({
     "src/bugs/bug-ui.js"() {
       init_core();
@@ -200184,6 +200217,35 @@ ${css}
       SENT_KEY = "k2-bug-sent";
       ERR_KEYS = { net: "ui.bug.errNet", rate: "ui.bug.errRate", http: "ui.bug.errHttp", parse: "ui.bug.errParse" };
       SEND_ERR_KEYS = { net: "ui.bug.sendNet", rate: "ui.bug.sendRate", clock: "ui.bug.sendClock", http: "ui.bug.sendFail", parse: "ui.bug.sendFail" };
+      KIND_TEXT = {
+        bug: {
+          tab: "ui.bug.kindBug",
+          title: "ui.bug.reportTitle",
+          send: "ui.bug.btnSend",
+          sent: "ui.bug.sentOk",
+          fTitlePh: "ui.bug.fTitlePh",
+          fWhat: "ui.bug.fWhat",
+          fWhatPh: "ui.bug.fWhatPh",
+          fSteps: "ui.bug.fSteps",
+          fStepsPh: "ui.bug.fStepsPh",
+          fExpected: "ui.bug.fExpected",
+          fExpectedPh: "ui.bug.fExpectedPh"
+        },
+        feature: {
+          tab: "ui.bug.kindFeature",
+          title: "ui.bug.featureTitle",
+          send: "ui.bug.btnSendFeature",
+          sent: "ui.bug.sentOkFeature",
+          fTitlePh: "ui.bug.fTitlePhFeature",
+          fWhat: "ui.bug.fWant",
+          fWhatPh: "ui.bug.fWantPh",
+          fSteps: "ui.bug.fWhy",
+          fStepsPh: "ui.bug.fWhyPh",
+          fExpected: "ui.bug.fNow",
+          fExpectedPh: "ui.bug.fNowPh"
+        }
+      };
+      KIND_FILTER_KEYS = { all: "ui.bug.fltKindAll", bug: "ui.bug.fltKindBug", feature: "ui.bug.fltKindFeature" };
       COLS = [
         { key: "id", label: "ui.bug.colId" },
         { key: "title", label: "ui.bug.colTitle" },
@@ -200193,7 +200255,539 @@ ${css}
         { key: "fixedIn", label: "ui.bug.colFixed" }
       ];
       DASH = "\u2014";
-      VIEW2 = { q: "", status: "all", found: "all", fixed: "all", sort: "id", dir: "desc" };
+      VIEW2 = { q: "", kind: "all", status: "all", found: "all", fixed: "all", sort: "id", dir: "desc" };
+    }
+  });
+
+  // src/docs-view.js
+  function docLang(uiLang2, picked) {
+    const p = String(picked || "").toLowerCase();
+    if (DOC_LANGS.includes(p)) return p;
+    const u = String(uiLang2 || "").toLowerCase().split(/[-_]/)[0];
+    return DOC_LANGS.includes(u) ? u : DOC_LANGS[0];
+  }
+  function docHome(book, lang) {
+    const b = DOC_BOOKS[book] || DOC_BOOKS.manual;
+    return b.dir + "/" + docLang("", lang) + "/README.md";
+  }
+  function docReadPaths(path) {
+    const p = normPath(path) || "";
+    return DOC_PACKED_COPIES[p] ? [p, DOC_PACKED_COPIES[p]] : [p];
+  }
+  function normPath(p) {
+    const out = [];
+    for (const seg of String(p || "").replace(/\\/g, "/").split("/")) {
+      if (!seg || seg === ".") continue;
+      if (seg === "..") {
+        if (!out.length) return null;
+        out.pop();
+        continue;
+      }
+      out.push(seg);
+    }
+    return out.join("/");
+  }
+  function docInfo(path) {
+    const p = normPath(path);
+    if (!p) return null;
+    for (const book of Object.keys(DOC_BOOKS)) {
+      const dir2 = DOC_BOOKS[book].dir + "/";
+      if (!p.startsWith(dir2)) continue;
+      const rest = p.slice(dir2.length);
+      const first = rest.split("/")[0];
+      const lang = DOC_LANGS.includes(first) && rest.includes("/") ? first : "";
+      return { book, lang, file: lang ? rest.slice(lang.length + 1) : rest };
+    }
+    return null;
+  }
+  function docInLang(path, lang) {
+    const info = docInfo(path);
+    if (!info) return docHome("manual", lang);
+    return info.lang ? DOC_BOOKS[info.book].dir + "/" + docLang("", lang) + "/" + info.file : docHome(info.book, lang);
+  }
+  function resolveDocLink(cur, href, repoUrl = "") {
+    const raw = String(href == null ? "" : href).trim();
+    if (!raw) return { kind: "none" };
+    if (/^https?:\/\//i.test(raw)) return { kind: "web", url: raw };
+    if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return { kind: "none" };
+    let hash2 = "", target = raw;
+    const i5 = raw.indexOf("#");
+    if (i5 >= 0) {
+      hash2 = raw.slice(i5 + 1);
+      target = raw.slice(0, i5);
+    }
+    try {
+      hash2 = decodeURIComponent(hash2);
+    } catch {
+    }
+    if (!target) return hash2 ? { kind: "hash", hash: hash2 } : { kind: "none" };
+    try {
+      target = decodeURIComponent(target);
+    } catch {
+    }
+    const base4 = String(cur || "").split("/").slice(0, -1).join("/");
+    let p = normPath(target.startsWith("/") ? target : base4 + "/" + target);
+    if (p == null) return { kind: "none" };
+    const repo = String(repoUrl || "").replace(/\/+$/, "");
+    const onRepo = (view2) => /^https:\/\//i.test(repo) ? { kind: "web", url: repo + "/" + view2 + "/HEAD/" + p.split("/").map(encodeURIComponent).join("/") } : { kind: "none" };
+    if (/\/$/.test(target) || !/\.[A-Za-z0-9]+$/.test(p)) return onRepo("tree");
+    if (docInfo(p)) {
+      if (/\.md$/i.test(p)) return { kind: "doc", path: p, hash: hash2 };
+      if (TEXT_EXT.test(p)) return { kind: "file", path: p };
+      return { kind: "none" };
+    }
+    return onRepo("blob");
+  }
+  function resolveDocImage(cur, src2) {
+    const raw = String(src2 == null ? "" : src2).trim().split(/\s+/)[0];
+    if (!raw || /^[a-z][a-z0-9+.-]*:/i.test(raw)) return "";
+    const base4 = String(cur || "").split("/").slice(0, -1).join("/");
+    const p = normPath(base4 + "/" + raw);
+    return p && docInfo(p) && IMG_EXT.test(p) ? p : "";
+  }
+  function docInlineParts(text) {
+    const src2 = String(text == null ? "" : text).split(L_OPEN).join("").split(L_CLOSE).join("");
+    const links = [];
+    const codeAt = [];
+    const reCode = /(`+)[\s\S]*?\1/g;
+    let k;
+    while (k = reCode.exec(src2)) codeAt.push([k.index, k.index + k[0].length]);
+    const inCode = (i5) => codeAt.some(([a, b]) => i5 >= a && i5 < b);
+    const held = src2.replace(RE_LINK, (m, bang2, label2, href, auto, at) => {
+      if (inCode(at)) return m;
+      links.push(auto ? { label: auto, href: auto } : bang2 ? { image: true, alt: label2, src: href } : { label: label2, href });
+      return L_OPEN + (links.length - 1) + L_CLOSE;
+    });
+    const out = [];
+    for (const part of inlineParts(held)) {
+      if (part.code) {
+        out.push(part);
+        continue;
+      }
+      const { text: s, ...st } = part;
+      let at = 0, m;
+      RE_LINK_HOLD.lastIndex = 0;
+      while (m = RE_LINK_HOLD.exec(s)) {
+        if (m.index > at) out.push({ ...st, text: s.slice(at, m.index) });
+        const l = links[+m[1]];
+        if (l.image) out.push({ image: true, src: l.src, alt: l.alt, text: l.alt || " " });
+        else for (const lp of inlineParts(l.label)) out.push({ ...st, ...lp, href: l.href });
+        at = m.index + m[0].length;
+      }
+      if (at < s.length) out.push({ ...st, text: s.slice(at) });
+    }
+    return out.filter((p) => p.image || p.text !== "");
+  }
+  function docPlainText(text) {
+    return docInlineParts(text).map((p) => p.image ? "" : p.text).join("");
+  }
+  function docSlug(text) {
+    return docPlainText(text).trim().toLowerCase().replace(/[^\p{L}\p{M}\p{N}\s_-]/gu, "").replace(/\s/g, "-");
+  }
+  function docBlocks2(md) {
+    const text = String(md == null ? "" : md).replace(/^﻿/, "").replace(/\r\n?/g, "\n");
+    const blocks = changelogBlocks(text);
+    const seen = /* @__PURE__ */ new Map();
+    let title2 = "";
+    for (const b of blocks) {
+      if (b.kind !== "h") continue;
+      const base4 = docSlug(b.text);
+      const n2 = seen.get(base4) || 0;
+      seen.set(base4, n2 + 1);
+      b.id = n2 ? base4 + "-" + n2 : base4;
+      if (!title2 && b.level === 1) title2 = docPlainText(b.text);
+    }
+    return { title: title2, blocks };
+  }
+  function docToc(homePath, md) {
+    const home = normPath(homePath) || "";
+    const dir2 = home.split("/").slice(0, -1).join("/");
+    const { title: title2, blocks } = docBlocks2(md);
+    const out = [{ path: home, title: title2 }];
+    const seen = /* @__PURE__ */ new Set([home]);
+    const scan = (text) => {
+      for (const p of docInlineParts(text)) {
+        if (!p.href) continue;
+        const r = resolveDocLink(home, p.href);
+        if (r.kind !== "doc" || seen.has(r.path)) continue;
+        if (r.path.split("/").slice(0, -1).join("/") !== dir2) continue;
+        seen.add(r.path);
+        out.push({ path: r.path, title: "" });
+      }
+    };
+    const label2 = /* @__PURE__ */ new Map();
+    const collect = (text) => {
+      const done3 = /* @__PURE__ */ new Set();
+      for (const p of docInlineParts(text)) {
+        if (!p.href) continue;
+        const r = resolveDocLink(home, p.href);
+        if (r.kind !== "doc") continue;
+        if (label2.has(r.path) && !done3.has(r.path)) continue;
+        done3.add(r.path);
+        label2.set(r.path, (label2.get(r.path) || "") + p.text);
+      }
+    };
+    for (const b of blocks) {
+      if (b.kind === "li") {
+        collect(b.text);
+        scan(b.text);
+      }
+    }
+    for (const row4 of out) if (!row4.title) row4.title = (label2.get(row4.path) || "").trim() || row4.path.split("/").pop();
+    return out;
+  }
+  var DOC_BOOKS, DOC_LANGS, DOC_LANG_NAMES, DOC_PACKED_COPIES, TEXT_EXT, IMG_EXT, L_OPEN, L_CLOSE, RE_LINK_HOLD, RE_LINK;
+  var init_docs_view = __esm({
+    "src/docs-view.js"() {
+      init_changelog_view();
+      DOC_BOOKS = {
+        manual: { dir: "docs/manual", titleKey: "ui.docs.bookManual" },
+        extension: { dir: "docs/extension", titleKey: "ui.docs.bookExtension" }
+      };
+      DOC_LANGS = ["en", "th"];
+      DOC_LANG_NAMES = { en: "English", th: "\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22" };
+      DOC_PACKED_COPIES = { "docs/extension/k2.d.ts": "renderer/docs-copy/k2.d.ts.txt" };
+      TEXT_EXT = /\.(md|ts|js|cjs|mjs|json|txt|csv|css|html)$/i;
+      IMG_EXT = /\.(webp|png|jpe?g|gif|svg)$/i;
+      L_OPEN = String.fromCharCode(57346);
+      L_CLOSE = String.fromCharCode(57347);
+      RE_LINK_HOLD = new RegExp(L_OPEN + "(\\d+)" + L_CLOSE, "g");
+      RE_LINK = /(!?)\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\(([^()\s]*(?:\([^()\s]*\)[^()\s]*)*)(?:\s+"[^"]*")?\)|<(https?:\/\/[^<>\s]+)>/g;
+    }
+  });
+
+  // src/docs-ui.js
+  var docs_ui_exports = {};
+  __export(docs_ui_exports, {
+    openDocs: () => openDocs,
+    setDocsIo: () => setDocsIo
+  });
+  function setDocsIo(patch) {
+    const old = { ...io2 };
+    Object.assign(io2, patch || {});
+    return () => {
+      Object.assign(io2, old);
+    };
+  }
+  function pickedLang() {
+    try {
+      return localStorage.getItem(LANG_KEY) || "";
+    } catch {
+      return "";
+    }
+  }
+  function rememberLang(l) {
+    try {
+      localStorage.setItem(LANG_KEY, l);
+    } catch {
+    }
+  }
+  function openDocs(book = "manual", opts = {}) {
+    document.querySelectorAll(".k-overlay.k-docs-ov").forEach((o) => o.remove());
+    const S10 = { book: DOC_BOOKS[book] ? book : "manual", lang: docLang(langInfo.code, pickedLang()), path: "", toc: [], tocKey: "", back: [], round: 0 };
+    const ov = el("div", "k-overlay k-docs-ov");
+    const box2 = el("div", "k-dialog k-wide k-docs-dlg");
+    const ttl = el("div", "k-dlg-title", t(DOC_BOOKS[S10.book].titleKey));
+    const bar = el("div", "k-changelog-bar k-docs-bar");
+    const mkBtn2 = (cls, ic, labelKey2) => {
+      const b = el("button", "cmp-mini " + cls);
+      b.type = "button";
+      b.append(icon(ic, 14));
+      b.title = t(labelKey2);
+      b.setAttribute("aria-label", t(labelKey2));
+      return b;
+    };
+    const bBack = mkBtn2("k-docs-back", "arrow-left", "ui.docs.back");
+    const sel2 = el("select", "k-dlg-select k-changelog-sel k-docs-sel");
+    sel2.title = t("ui.docs.chapter");
+    sel2.setAttribute("aria-label", t("ui.docs.chapter"));
+    const bPrev = mkBtn2("k-docs-prev", "chevron-left", "ui.docs.prev");
+    const bNext = mkBtn2("k-docs-next", "chevron-right", "ui.docs.next");
+    const selLang = el("select", "k-dlg-select k-docs-lang");
+    selLang.title = t("ui.docs.language");
+    selLang.setAttribute("aria-label", t("ui.docs.language"));
+    for (const l of DOC_LANGS) {
+      const o = el("option", null, DOC_LANG_NAMES[l]);
+      o.value = l;
+      selLang.append(o);
+    }
+    bar.append(bBack, sel2, bPrev, bNext, selLang);
+    const body = el("div", "k-changelog k-changelog-rich k-docs-body k-selectable");
+    body.tabIndex = 0;
+    const btns = el("div", "k-dlg-btns");
+    const bClose = el("button", "k-ok k-cancel", t("ui.common.close"));
+    const close2 = () => ov.remove();
+    bClose.onclick = close2;
+    btns.append(bClose);
+    box2.append(ttl, bar, body, btns);
+    ov.append(box2);
+    const follow = (r) => {
+      if (r.kind === "doc" || r.kind === "file") go(r.path, { hash: r.hash || "", push: true });
+      else if (r.kind === "hash") scrollToAnchor2(r.hash);
+      else if (r.kind === "web") {
+        try {
+          Promise.resolve(io2.open(r.url)).catch((e) => log("warn", "docs: open link failed", e));
+        } catch (e) {
+          log("warn", "docs: open link failed", e);
+        }
+      }
+    };
+    const inlineInto = (host2, text) => {
+      for (const p of docInlineParts(text)) {
+        if (p.image) {
+          const src2 = resolveDocImage(S10.path, p.src);
+          if (!src2) {
+            host2.append(el("span", "k-cl-i", p.alt || ""));
+            continue;
+          }
+          const img = el("img", "k-doc-img");
+          img.alt = p.alt || "";
+          img.loading = "lazy";
+          img.draggable = false;
+          img.src = urlOf2(src2);
+          host2.append(img);
+          continue;
+        }
+        const cls = [p.bold ? "k-cl-b" : "", p.em ? "k-cl-i" : "", p.strike ? "k-cl-s" : ""].filter(Boolean).join(" ") || null;
+        if (!p.href) {
+          host2.append(el(p.code ? "code" : "span", cls, p.text));
+          continue;
+        }
+        const r = resolveDocLink(S10.path, p.href, UPDATE_HOME_URL);
+        if (r.kind === "none") {
+          host2.append(el(p.code ? "code" : "span", cls, p.text));
+          continue;
+        }
+        const a = el("span", "k-doc-link" + (cls ? " " + cls : ""));
+        a.append(p.code ? el("code", null, p.text) : document.createTextNode(p.text));
+        a.tabIndex = 0;
+        a.setAttribute("role", "link");
+        a.dataset.kind = r.kind;
+        if (r.kind === "web") {
+          a.title = r.url;
+          a.append(icon("link-external", 11));
+        }
+        a.onclick = () => follow(r);
+        a.onkeydown = (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            follow(r);
+          }
+        };
+        host2.append(a);
+      }
+      return host2;
+    };
+    const nodesOf = (md) => {
+      const out = [];
+      for (const b of docBlocks2(md).blocks) {
+        if (b.kind === "h") {
+          const h = inlineInto(el("div", b.level === 1 ? "k-cl-title" : "k-cl-h k-cl-h" + Math.min(6, b.level)), b.text);
+          h.setAttribute("role", "heading");
+          h.setAttribute("aria-level", String(b.level));
+          h.dataset.anchor = b.id;
+          out.push(h);
+        } else if (b.kind === "hr") out.push(el("hr", "k-cl-hr"));
+        else if (b.kind === "code") out.push(el("pre", "k-cl-code", b.text));
+        else if (b.kind === "quote") out.push(inlineInto(el("blockquote", "k-cl-quote"), b.text));
+        else if (b.kind === "li") {
+          const row4 = el("div", "k-cl-li");
+          row4.style.marginInlineStart = b.depth * 1.4 + "em";
+          row4.append(el("span", "k-cl-mark", b.ordered ? b.mark : "\u2022"), inlineInto(el("span", "k-cl-litext"), b.text));
+          out.push(row4);
+        } else if (b.kind === "table") {
+          const wrap2 = el("div", "k-cl-tablewrap"), tb2 = el("table", "k-cl-table k-doc-table");
+          const hr = el("tr");
+          for (const c of b.head) hr.append(inlineInto(el("th"), c));
+          tb2.append(hr);
+          for (const r of b.rows) {
+            const tr4 = el("tr");
+            for (const c of r) tr4.append(inlineInto(el("td"), c));
+            tb2.append(tr4);
+          }
+          wrap2.append(tb2);
+          out.push(wrap2);
+        } else out.push(inlineInto(el("p", "k-cl-p"), b.text));
+      }
+      return out;
+    };
+    function scrollToAnchor2(hash2) {
+      const want = String(hash2 || "").toLowerCase();
+      const target = want && [...body.querySelectorAll("[data-anchor]")].find((n2) => n2.dataset.anchor === want);
+      if (!target) return false;
+      body.scrollTop += target.getBoundingClientRect().top - body.getBoundingClientRect().top - 4;
+      return true;
+    }
+    async function loadToc() {
+      const key2 = S10.book + "/" + S10.lang;
+      if (S10.tocKey === key2) return;
+      const home = docHome(S10.book, S10.lang);
+      let toc = [];
+      try {
+        toc = docToc(home, await io2.read(home));
+      } catch (e) {
+        log("warn", "docs: contents not readable", e);
+        toc = [];
+      }
+      S10.toc = toc;
+      S10.tocKey = key2;
+    }
+    function syncBar(pageTitle) {
+      ttl.textContent = t(DOC_BOOKS[S10.book].titleKey);
+      sel2.replaceChildren();
+      S10.toc.forEach((row4, i5) => {
+        const o = el("option", null, row4.title);
+        o.value = String(i5);
+        sel2.append(o);
+      });
+      const at = S10.toc.findIndex((row4) => row4.path === S10.path);
+      if (at < 0) {
+        const o = el("option", null, pageTitle || S10.path.split("/").pop());
+        o.value = "-1";
+        sel2.append(o);
+      }
+      sel2.value = String(at);
+      bPrev.disabled = at <= 0;
+      bNext.disabled = at < 0 || at >= S10.toc.length - 1;
+      bBack.disabled = !S10.back.length;
+      selLang.value = S10.lang;
+    }
+    async function go(path, { hash: hash2 = "", push = false, top = 0 } = {}) {
+      const my = ++S10.round;
+      const info = docInfo(path);
+      if (!info) return;
+      let text = null, failed = true, why = "";
+      for (const p of docReadPaths(path)) {
+        try {
+          text = await io2.read(p);
+          failed = false;
+          break;
+        } catch (e) {
+          why = String(e && e.message || e);
+        }
+      }
+      if (failed) log("warn", "docs: page not readable", { path, error: why });
+      if (my !== S10.round || !ov.isConnected) return;
+      if (push && S10.path && S10.path !== path) S10.back.push({ path: S10.path, top: body.scrollTop });
+      S10.path = path;
+      S10.book = info.book;
+      if (info.lang) S10.lang = info.lang;
+      await loadToc();
+      if (my !== S10.round || !ov.isConnected) return;
+      box2.dataset.book = S10.book;
+      box2.dataset.path = path;
+      let title2 = "";
+      if (failed) {
+        body.replaceChildren(el("div", "k-docs-missing", tf("ui.docs.notFound", path)));
+      } else if (/\.md$/i.test(path)) {
+        title2 = docBlocks2(text).title;
+        body.replaceChildren(...nodesOf(text));
+      } else {
+        title2 = path.split("/").pop();
+        body.replaceChildren(el("div", "k-cl-title", title2), el("pre", "k-cl-code", text));
+      }
+      syncBar(title2);
+      body.scrollTop = top;
+      if (hash2) scrollToAnchor2(hash2);
+      log("info", "docs: page shown", { book: S10.book, lang: S10.lang, page: path.split("/").pop() });
+    }
+    bBack.onclick = () => {
+      const b = S10.back.pop();
+      if (b) go(b.path, { top: b.top });
+    };
+    sel2.onchange = () => {
+      const row4 = S10.toc[+sel2.value];
+      if (row4) go(row4.path, { push: true });
+    };
+    const step = (d) => {
+      const at = S10.toc.findIndex((row5) => row5.path === S10.path);
+      const row4 = S10.toc[at + d];
+      if (at >= 0 && row4) go(row4.path, { push: true });
+    };
+    bPrev.onclick = () => step(-1);
+    bNext.onclick = () => step(1);
+    selLang.onchange = () => {
+      rememberLang(selLang.value);
+      S10.lang = selLang.value;
+      go(docInLang(S10.path, selLang.value), { push: false });
+    };
+    ov.addEventListener("mousedown", (e) => {
+      if (e.target === ov) close2();
+    });
+    escClose(ov, close2);
+    document.body.append(ov);
+    ov.k2ready = go(opts.path && docInfo(opts.path) ? opts.path : docHome(S10.book, S10.lang), { hash: opts.hash || "" });
+    setTimeout(() => {
+      try {
+        body.focus();
+      } catch {
+      }
+    }, 0);
+    return ov;
+  }
+  var LANG_KEY, urlOf2, io2;
+  var init_docs_ui = __esm({
+    "src/docs-ui.js"() {
+      init_core();
+      init_i18n();
+      init_ui();
+      init_icons();
+      init_update_check();
+      init_docs_view();
+      LANG_KEY = "k2-docs-lang";
+      urlOf2 = (path) => "../" + String(path).split("/").map(encodeURIComponent).join("/");
+      io2 = {
+        read: async (path) => {
+          const r = await fetch(urlOf2(path));
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.text();
+        },
+        open: (url) => kapi.openExternal(url)
+      };
+    }
+  });
+
+  // src/app-info.js
+  function copyrightLine(year = (/* @__PURE__ */ new Date()).getFullYear()) {
+    const y = Number.isInteger(year) && year > COPYRIGHT_SINCE ? COPYRIGHT_SINCE + "\u2013" + year : String(COPYRIGHT_SINCE);
+    return String.fromCharCode(169) + " " + y + " " + COPYRIGHT_HOLDER;
+  }
+  var COPYRIGHT_HOLDER, COPYRIGHT_SINCE, SUPPORT_URL;
+  var init_app_info = __esm({
+    "src/app-info.js"() {
+      COPYRIGHT_HOLDER = "Noobcyborg Studio";
+      COPYRIGHT_SINCE = 2026;
+      SUPPORT_URL = "https://buymeacoffee.com/noobcyborg";
+    }
+  });
+
+  // src/support-ui.js
+  function setSupportIo(patch) {
+    const old = { ...io3 };
+    Object.assign(io3, patch || {});
+    return () => {
+      Object.assign(io3, old);
+    };
+  }
+  async function openSupportPage() {
+    let ok2 = false;
+    try {
+      ok2 = await io3.open(SUPPORT_URL) !== false;
+    } catch (e) {
+      log("warn", "support: open failed", e);
+    }
+    if (ok2) {
+      log("info", "support: page opened");
+      setStatus(t("ui.app.supportOpened"));
+    } else setStatusError(t("ui.bug.openFail"));
+    return ok2;
+  }
+  var io3;
+  var init_support_ui = __esm({
+    "src/support-ui.js"() {
+      init_core();
+      init_app_info();
+      io3 = { open: (url) => kapi.openExternal(url) };
     }
   });
 
@@ -200795,10 +201389,11 @@ ${css}
   async function runTest(projectPath) {
     const out = [];
     const flush = () => kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
+    const KEEP_GOING = location.search.includes("k2keep");
     const check2 = (name5, cond, extra) => {
       out.push((cond ? "PASS " : "FAIL ") + name5 + (cond ? "" : " :: " + extra));
       flush();
-      if (!cond) throw new Error(name5);
+      if (!cond && !KEEP_GOING) throw new Error(name5);
     };
     const note = (text) => {
       out.push("INFO " + text);
@@ -242104,6 +242699,15 @@ ${css}
         const boxN = ovN.querySelector(".k-dialog"), ttlN = boxN.querySelector(".k-dlg-title");
         const xN = await untilN(() => ovN.querySelector(":scope > .k-dlg-x"));
         check2("[169-N] \u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14\u0E17\u0E35\u0E48\u0E21\u0E38\u0E21 (\u0E2D\u0E22\u0E39\u0E48\u0E19\u0E2D\u0E01\u0E15\u0E31\u0E27\u0E01\u0E25\u0E48\u0E2D\u0E07 \u2014 \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E19\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E1B\u0E38\u0E48\u0E21\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07)", !!xN && !boxN.contains(xN) && boxN.querySelectorAll("button").length === 2);
+        await Promise.all(boxN.getAnimations().map((an) => an.finished.catch(() => {
+        })));
+        await untilN(() => {
+          const r12 = boxN.getBoundingClientRect();
+          return new Promise((res) => requestAnimationFrame(() => {
+            const r23 = boxN.getBoundingClientRect();
+            res(r12.left === r23.left && r12.top === r23.top && r12.width === r23.width);
+          }));
+        }, 1500);
         const b0 = boxN.getBoundingClientRect();
         const xr0 = xN.getBoundingClientRect();
         check2("[169-N] \u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E21\u0E38\u0E21\u0E02\u0E27\u0E32\u0E1A\u0E19\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07", Math.abs(xr0.right - (b0.right - 8)) <= 3 && Math.abs(xr0.top - (b0.top + 8)) <= 3, Math.round(xr0.right - b0.right) + "," + Math.round(xr0.top - b0.top));
@@ -242131,7 +242735,11 @@ ${css}
         check2("[169-N] \u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14\u0E15\u0E32\u0E21\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E44\u0E1B\u0E14\u0E49\u0E27\u0E22", Math.abs(xr3.right - (b3.right - 8)) <= 3 && Math.abs(xr3.top - (b3.top + 8)) <= 3);
         ttlN.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
         const b4 = boxN.getBoundingClientRect();
-        check2("[169-N] \u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01\u0E2B\u0E31\u0E27\u0E01\u0E25\u0E48\u0E2D\u0E07 = \u0E01\u0E25\u0E31\u0E1A\u0E01\u0E25\u0E32\u0E07\u0E08\u0E2D", Math.abs(b4.left - b0.left) <= 1 && Math.abs(b4.top - b0.top) <= 1);
+        check2(
+          "[169-N] \u0E14\u0E31\u0E1A\u0E40\u0E1A\u0E34\u0E25\u0E04\u0E25\u0E34\u0E01\u0E2B\u0E31\u0E27\u0E01\u0E25\u0E48\u0E2D\u0E07 = \u0E01\u0E25\u0E31\u0E1A\u0E01\u0E25\u0E32\u0E07\u0E08\u0E2D",
+          Math.abs(b4.left - b0.left) <= 1 && Math.abs(b4.top - b0.top) <= 1,
+          Math.round(b4.left) + "," + Math.round(b4.top) + " / " + Math.round(b0.left) + "," + Math.round(b0.top)
+        );
         xN.click();
         const ansN = await Promise.race([askP, wN(1500).then(() => "\u0E04\u0E49\u0E32\u0E07")]);
         check2("[169-N] \u2605 \u0E01\u0E14\u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14\u0E17\u0E35\u0E48\u0E21\u0E38\u0E21 = \u0E17\u0E32\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01", ansN === null && !ovN.isConnected, String(ansN));
@@ -242693,23 +243301,30 @@ ${css}
           await wX(150);
         }
         {
-          const names = await kapi.starterArtList();
-          check2("[169-X] main \u0E1A\u0E2D\u0E01\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E20\u0E32\u0E1E\u0E02\u0E2D\u0E07 Story Starter \u0E44\u0E14\u0E49", Array.isArray(names));
           await (await Promise.resolve().then(() => (init_starter_ui(), starter_ui_exports))).resetStarterView();
           await handleCommand("toggle-panel", "starter");
-          const artX = await untilX(() => document.querySelector('[data-panel-id="starter"] .st-list-wrap .st-art'), 5e3);
-          check2("[169-X] \u2605 \u0E2B\u0E19\u0E49\u0E32\u0E23\u0E27\u0E21 Story Starter \u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E43\u0E2A\u0E48\u0E20\u0E32\u0E1E (\u0E41\u0E16\u0E1A\u0E2B\u0E31\u0E27)", !!artX && artX.classList.contains("st-art-top") && artX.dataset.art === "home-top");
-          if (artX) {
-            await untilX(() => artX.classList.contains("st-art-empty") || artX.classList.contains("st-art-ready"), 3e3);
-            const hasFile = (names || []).some((n2) => /^(home|default)-top\./i.test(n2));
-            const r = artX.getBoundingClientRect();
-            check2("[169-X] \u0E0A\u0E48\u0E2D\u0E07\u0E41\u0E16\u0E1A\u0E2B\u0E31\u0E27\u0E44\u0E14\u0E49\u0E2A\u0E31\u0E14\u0E2A\u0E48\u0E27\u0E19 4:1 \u0E15\u0E32\u0E21\u0E2A\u0E40\u0E1B\u0E01 (1200\xD7300)", r.width > 100 && Math.abs(r.width / r.height - 4) < 0.25, r.width + "\xD7" + r.height);
-            if (!hasFile) check2(
-              "[169-X] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C = \u0E01\u0E23\u0E2D\u0E1A placeholder \u0E1A\u0E2D\u0E01\u0E02\u0E19\u0E32\u0E14\u0E01\u0E31\u0E1A\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E27\u0E32\u0E07",
-              artX.querySelector(".st-art-ph-size").textContent === "1200 \xD7 300 px" && artX.querySelector(".st-art-ph-file").textContent === "starter/home-top.png" && getComputedStyle(artX.querySelector(".st-art-ph")).display !== "none"
-            );
-            else check2("[169-X] \u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C = \u0E41\u0E2A\u0E14\u0E07\u0E20\u0E32\u0E1E \u0E0B\u0E48\u0E2D\u0E19 placeholder", artX.classList.contains("st-art-ready"));
-          }
+          const listX = await untilX(() => document.querySelector('[data-panel-id="starter"] .st-list-wrap'), 5e3);
+          check2("[169-X] \u2605 \u0E2B\u0E19\u0E49\u0E32\u0E23\u0E27\u0E21 Story Starter \u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E48\u0E2D\u0E07\u0E20\u0E32\u0E1E/\u0E01\u0E23\u0E2D\u0E1A placeholder", !!listX && !listX.closest('[data-panel-id="starter"]').querySelector(".st-art, .st-art-ph"));
+          const headX = listX && listX.querySelector(".st-list-head");
+          check2(
+            "[169-X] \u2605 \u0E2B\u0E31\u0E27\u0E2B\u0E19\u0E49\u0E32\u0E23\u0E27\u0E21\u0E15\u0E48\u0E2D\u0E14\u0E49\u0E27\u0E22\u0E04\u0E33\u0E41\u0E19\u0E30\u0E19\u0E33\u0E17\u0E31\u0E19\u0E17\u0E35 (\u0E40\u0E14\u0E34\u0E21\u0E21\u0E35\u0E41\u0E16\u0E1A\u0E20\u0E32\u0E1E 4:1 \u0E04\u0E31\u0E48\u0E19\u0E01\u0E25\u0E32\u0E07)",
+            !!headX && !!headX.nextElementSibling && headX.nextElementSibling.classList.contains("st-hint"),
+            headX && headX.nextElementSibling ? headX.nextElementSibling.className : "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E2B\u0E31\u0E27"
+          );
+          check2(
+            "[169-X] \u0E0A\u0E48\u0E2D\u0E07\u0E16\u0E32\u0E21\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E20\u0E32\u0E1E\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E14 (\u0E44\u0E21\u0E48\u0E21\u0E35 kapi.starterArtList) \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E20\u0E32\u0E1E\u0E43\u0E19\u0E15\u0E31\u0E27\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21",
+            typeof kapi.starterArtList === "undefined" && !await fetch("starter/README.md").then((r) => r.ok).catch(() => false)
+          );
+          check2(
+            "[169-X] CSS \u0E17\u0E35\u0E48\u0E42\u0E2B\u0E25\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E44\u0E21\u0E48\u0E21\u0E35\u0E01\u0E0E\u0E02\u0E2D\u0E07\u0E0A\u0E48\u0E2D\u0E07\u0E20\u0E32\u0E1E/\u0E04\u0E2D\u0E25\u0E31\u0E21\u0E19\u0E4C\u0E20\u0E32\u0E1E\u0E02\u0E2D\u0E07 wizard \u0E40\u0E2B\u0E25\u0E37\u0E2D",
+            ![...document.styleSheets].some((sh) => {
+              try {
+                return [...sh.cssRules].some((r) => /\.st-art|\.st-wz-main|\.st-wz-col/.test(r.selectorText || ""));
+              } catch {
+                return false;
+              }
+            })
+          );
           await handleCommand("toggle-panel", "starter");
           await wX(150);
         }
@@ -243491,7 +244106,7 @@ ${css}
               body: "Version: 2.0.0-alpha.167",
               milestone: { title: "2.0.0-alpha.168" }
             }),
-            mkIssue2({ number: 7, title: "\u0E02\u0E2D\u0E42\u0E2B\u0E21\u0E14\u0E21\u0E37\u0E14", labels: [{ name: "enhancement" }] }),
+            mkIssue2({ number: 7, title: "\u0E41\u0E01\u0E49\u0E04\u0E33\u0E1C\u0E34\u0E14\u0E43\u0E19\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D", labels: [{ name: "documentation" }] }),
             mkIssue2({ number: 6, title: "PR", pull_request: {} }),
             mkIssue2({ number: 2, title: "\u0E40\u0E17\u0E2A170 \u0E04\u0E19\u0E19\u0E2D\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E07\u0E1A\u0E19\u0E40\u0E27\u0E47\u0E1A", labels: [{ name: "bug" }], author_association: "NONE" }),
             mkIssue2({ number: 5, title: "\u0E40\u0E17\u0E2A170 \u0E0B\u0E49\u0E33", labels: [{ name: "duplicate" }], created_at: "2026-09-01T00:00:00Z" }),
@@ -243532,7 +244147,7 @@ ${css}
             heads.join(" | ")
           );
           check2(
-            "[170-B] \u2605\u2605 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 = \u0E1A\u0E31\u0E4A\u0E01 5 \u0E15\u0E31\u0E27 (\u0E44\u0E21\u0E48\u0E19\u0E31\u0E1A PR/\u0E02\u0E49\u0E2D\u0E40\u0E2A\u0E19\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C/\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E04\u0E19\u0E19\u0E2D\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E07\u0E1A\u0E19\u0E40\u0E27\u0E47\u0E1A) \u0E40\u0E23\u0E35\u0E22\u0E07\u0E40\u0E25\u0E02\u0E43\u0E2B\u0E21\u0E48\u0E01\u0E48\u0E2D\u0E19 \xB7 \u0E16\u0E32\u0E21 GitHub \u0E04\u0E23\u0E31\u0E49\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27",
+            "[170-B] \u2605\u2605 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 = \u0E1A\u0E31\u0E4A\u0E01 5 \u0E15\u0E31\u0E27 (\u0E44\u0E21\u0E48\u0E19\u0E31\u0E1A PR/\u0E07\u0E32\u0E19\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23/\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E04\u0E19\u0E19\u0E2D\u0E01\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E07\u0E1A\u0E19\u0E40\u0E27\u0E47\u0E1A) \u0E40\u0E23\u0E35\u0E22\u0E07\u0E40\u0E25\u0E02\u0E43\u0E2B\u0E21\u0E48\u0E01\u0E48\u0E2D\u0E19 \xB7 \u0E16\u0E32\u0E21 GitHub \u0E04\u0E23\u0E31\u0E49\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27",
             numsB() === "9,8,5,4,3" && fetched.length === 1 && fetched[0] === bugApiUrl(1),
             numsB() + " \xB7 fetch=" + fetched.length
           );
@@ -243673,6 +244288,336 @@ ${css}
             await kapi.menuTestClick("bug-report");
             check2("[170-B] \u0E01\u0E14\u0E40\u0E21\u0E19\u0E39 \u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E1A\u0E31\u0E4A\u0E01 = \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19", await untilB(() => repBox(), 3e3) !== null);
             document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+          }
+          {
+            relayB = "https://relay.k2test.invalid";
+            contactB = { label: "", url: "" };
+            localStorage.removeItem("k2-bug-draft");
+            clearBugCache();
+            clearBugSent();
+            resetBugView();
+            document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+            await handleCommand("feature-request");
+            const fb = await untilB(() => repBox());
+            await wB(120);
+            const kindBtn = (k) => repBox().querySelector('.k-bug-kinds .k-bug-kind[data-kind="' + k + '"]');
+            const labsF = () => [...repBox().querySelectorAll(".k-bug-field label")].map((l) => l.textContent).join("|");
+            check2(
+              "[170-F] \u2605\u2605 \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 feature-request = \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C (\u0E2B\u0E31\u0E27\u0E01\u0E25\u0E48\u0E2D\u0E07 \xB7 \u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E15\u0E34\u0E14 \xB7 \u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E48\u0E07)",
+              !!fb && fb.dataset.kind === "feature" && fb.querySelector(".k-dlg-title").textContent === t("ui.bug.featureTitle") && kindBtn("feature").getAttribute("aria-checked") === "true" && kindBtn("bug").getAttribute("aria-checked") === "false" && kindBtn("feature").classList.contains("on") && sendBtn().textContent === t("ui.bug.btnSendFeature"),
+              fb ? fb.dataset.kind + " \xB7 " + fb.querySelector(".k-dlg-title").textContent : "\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14"
+            );
+            const rKinds = fb.querySelector(".k-bug-kinds").getBoundingClientRect(), rForm = fb.querySelector(".k-bug-form").getBoundingClientRect();
+            check2(
+              "[170-F] \u0E04\u0E33\u0E16\u0E32\u0E21\u0E02\u0E2D\u0E07\u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E38\u0E14\u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C \xB7 \u0E17\u0E38\u0E01\u0E0A\u0E48\u0E2D\u0E07\u0E21\u0E35\u0E04\u0E33\u0E43\u0E1A\u0E49 \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E14\u0E34\u0E1A \xB7 \u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E0A\u0E19\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E25\u0E49\u0E19",
+              labsF() === [t("ui.bug.fTitle"), t("ui.bug.fWant"), t("ui.bug.fWhy"), t("ui.bug.fNow")].join("|") && fb.querySelector("#k-bug-f-what").placeholder === t("ui.bug.fWantPh") && fb.querySelector("#k-bug-f-title").placeholder === t("ui.bug.fTitlePhFeature") && !rawKey(fb) && seen(kindBtn("bug")) && seen(kindBtn("feature")) && rKinds.left >= rForm.left - 1 && rKinds.right <= rForm.right + 1 && [kindBtn("bug"), kindBtn("feature")].every((b) => b.scrollWidth <= b.clientWidth + 1),
+              labsF()
+            );
+            typeIn(fb.querySelector("#k-bug-f-title"), "\u0E40\u0E17\u0E2A170 \u0E02\u0E2D\u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E48\u0E32\u0E19\u0E01\u0E25\u0E32\u0E07\u0E04\u0E37\u0E19");
+            typeIn(fb.querySelector("#k-bug-f-what"), "\u0E2D\u0E22\u0E32\u0E01\u0E44\u0E14\u0E49\u0E40\u0E17\u0E2A170");
+            kindBtn("bug").click();
+            await wB(60);
+            check2(
+              "[170-F] \u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E31\u0E4A\u0E01 = \u0E2B\u0E31\u0E27\u0E01\u0E25\u0E48\u0E2D\u0E07/\u0E04\u0E33\u0E16\u0E32\u0E21/\u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E48\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E0A\u0E38\u0E14\u0E1A\u0E31\u0E4A\u0E01 \xB7 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
+              repBox().dataset.kind === "bug" && repBox().querySelector(".k-dlg-title").textContent === t("ui.bug.reportTitle") && labsF() === [t("ui.bug.fTitle"), t("ui.bug.fWhat"), t("ui.bug.fSteps"), t("ui.bug.fExpected")].join("|") && sendBtn().textContent === t("ui.bug.btnSend") && repBox().querySelector("#k-bug-f-what").value === "\u0E2D\u0E22\u0E32\u0E01\u0E44\u0E14\u0E49\u0E40\u0E17\u0E2A170",
+              labsF()
+            );
+            kindBtn("bug").focus();
+            kindBtn("bug").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+            await wB(60);
+            check2(
+              "[170-F] \u0E25\u0E39\u0E01\u0E28\u0E23\u0E02\u0E27\u0E32\u0E1A\u0E19\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E0A\u0E19\u0E34\u0E14 = \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C + \u0E42\u0E1F\u0E01\u0E31\u0E2A\u0E22\u0E49\u0E32\u0E22\u0E15\u0E32\u0E21",
+              repBox().dataset.kind === "feature" && document.activeElement === kindBtn("feature") && kindBtn("feature").tabIndex === 0 && kindBtn("bug").tabIndex === -1
+            );
+            repBox().querySelector(":scope > .k-dlg-btns > .k-cancel").click();
+            await untilB(() => !repBox(), 2e3);
+            await handleCommand("bug-report");
+            const fb2 = await untilB(() => repBox());
+            await wB(100);
+            check2(
+              "[170-F] \u2605 \u0E23\u0E48\u0E32\u0E07\u0E08\u0E33\u0E0A\u0E19\u0E34\u0E14\u0E44\u0E27\u0E49: \u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E43\u0E2B\u0E21\u0E48\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38\u0E0A\u0E19\u0E34\u0E14 = \u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E14\u0E34\u0E21",
+              !!fb2 && fb2.dataset.kind === "feature" && fb2.querySelector("#k-bug-f-title").value === "\u0E40\u0E17\u0E2A170 \u0E02\u0E2D\u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E48\u0E32\u0E19\u0E01\u0E25\u0E32\u0E07\u0E04\u0E37\u0E19" && fb2.querySelector("#k-bug-f-what").value === "\u0E2D\u0E22\u0E32\u0E01\u0E44\u0E14\u0E49\u0E40\u0E17\u0E2A170",
+              fb2 ? fb2.dataset.kind : ""
+            );
+            postRes = { status: 201, ok: true, body: '{"ok":true,"number":88}' };
+            const nPF = posted.length;
+            sendBtn().click();
+            await untilB(() => posted.length === nPF + 1 && !repBox(), 3e3);
+            const sentF = JSON.parse((posted[posted.length - 1] || { options: { body: "{}" } }).options.body);
+            check2(
+              "[170-F] \u2605\u2605 \u0E2A\u0E48\u0E07\u0E04\u0E33\u0E02\u0E2D = POST \u0E40\u0E02\u0E49\u0E32\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E0A\u0E19\u0E34\u0E14 \xB7 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E0A\u0E49\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E22\u0E48\u0E2D\u0E22\u0E02\u0E2D\u0E07\u0E01\u0E32\u0E23\u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C \xB7 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E01\u0E33\u0E01\u0E31\u0E1A\u0E1A\u0E2D\u0E01\u0E0A\u0E19\u0E34\u0E14",
+              posted.length === nPF + 1 && sentF.kind === "feature" && Object.keys(sentF).sort().join() === "body,kind,title,ts,version" && sentF.title === "\u0E40\u0E17\u0E2A170 \u0E02\u0E2D\u0E42\u0E2B\u0E21\u0E14\u0E2D\u0E48\u0E32\u0E19\u0E01\u0E25\u0E32\u0E07\u0E04\u0E37\u0E19" && sentF.body.includes("### " + t("ui.bug.fWant") + "\n\u0E2D\u0E22\u0E32\u0E01\u0E44\u0E14\u0E49\u0E40\u0E17\u0E2A170") && /<!-- k2-report version=\S+ [^>]*kind=feature -->$/.test(sentF.body.trim()),
+              JSON.stringify(sentF).slice(0, 200)
+            );
+            const stMsgF = document.getElementById("status");
+            check2(
+              "[170-F] \u0E2A\u0E48\u0E07\u0E41\u0E25\u0E49\u0E27: \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1B\u0E34\u0E14 \xB7 \u0E23\u0E48\u0E32\u0E07\u0E16\u0E39\u0E01\u0E25\u0E49\u0E32\u0E07 \xB7 \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E04\u0E33\u0E02\u0E2D (\u0E44\u0E21\u0E48\u0E40\u0E23\u0E35\u0E22\u0E01\u0E27\u0E48\u0E32\u0E1A\u0E31\u0E4A\u0E01)",
+              !repBox() && localStorage.getItem("k2-bug-draft") == null && stMsgF.textContent.includes(tf("ui.bug.sentOkFeature", "#88")) && !stMsgF.textContent.includes(tf("ui.bug.sentOk", "#88")),
+              stMsgF.textContent
+            );
+            document.querySelectorAll(".k-toast").forEach((x) => x.remove());
+            fakeRes = { status: 200, ok: true, body: JSON.stringify(ISSUES.concat([
+              mkIssue2({ number: 12, title: "\u0E40\u0E17\u0E2A170 \u0E02\u0E2D\u0E18\u0E35\u0E21\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E01\u0E48\u0E32", labels: [{ name: "enhancement" }, { name: "from-app" }], body: "<!-- k2-report version=" + APP_VERSION + " kind=feature -->" }),
+              mkIssue2({ number: 11, title: "\u0E40\u0E17\u0E2A170 \u0E02\u0E2D\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 ODT", labels: [{ name: "enhancement" }, { name: "accepted" }] }),
+              mkIssue2({
+                number: 1,
+                title: "\u0E40\u0E17\u0E2A170 \u0E02\u0E2D\u0E19\u0E31\u0E1A\u0E04\u0E33\u0E23\u0E32\u0E22\u0E1A\u0E17",
+                state: "closed",
+                state_reason: "completed",
+                milestone: { title: "2.0.0-alpha.168" },
+                body: "x\n<!-- k2-report version=2.0.0-alpha.167 kind=feature -->"
+              })
+            ])) };
+            clearBugCache();
+            resetBugView();
+            await handleCommand("bug-status");
+            const sbF = await untilB(() => stBox());
+            await sbF.closest(".k-overlay").k2ready;
+            await wB(100);
+            const selK = () => stBox().querySelector(".k-bug-f-kind");
+            const setSel = (sel2, v4) => {
+              sel2.value = v4;
+              sel2.dispatchEvent(new Event("change", { bubbles: true }));
+            };
+            check2("[170-F] \u2605\u2605 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E23\u0E27\u0E21 = \u0E1A\u0E31\u0E4A\u0E01 + \u0E04\u0E33\u0E02\u0E2D (\u0E23\u0E27\u0E21\u0E04\u0E33\u0E02\u0E2D\u0E17\u0E35\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E07\u0E2A\u0E48\u0E07) \u0E40\u0E23\u0E35\u0E22\u0E07\u0E40\u0E25\u0E02\u0E43\u0E2B\u0E21\u0E48\u0E01\u0E48\u0E2D\u0E19", numsB() === "88,12,11,9,8,5,4,3,1", numsB());
+            check2(
+              "[170-F] \u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E01\u0E23\u0E2D\u0E07\u0E0A\u0E19\u0E34\u0E14: \u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14/\u0E1A\u0E31\u0E4A\u0E01/\u0E04\u0E33\u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E08\u0E33\u0E19\u0E27\u0E19",
+              [...selK().options].map((o) => o.value + "=" + o.textContent).join("|") === ["all=" + tf("ui.bug.fltKindAll", 9), "bug=" + tf("ui.bug.fltKindBug", 5), "feature=" + tf("ui.bug.fltKindFeature", 4)].join("|"),
+              [...selK().options].map((o) => o.textContent).join("|")
+            );
+            const rowF = (n2) => rowsB().find((r) => r.dataset.num === String(n2));
+            const tagOf = (n2) => rowF(n2).querySelector(".k-bug-c-title .k-bug-kindtag");
+            check2(
+              '[170-F] \u2605\u2605 \u0E41\u0E16\u0E27\u0E02\u0E2D\u0E07\u0E04\u0E33\u0E02\u0E2D\u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22 "\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C" \u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14 (\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 + \u0E44\u0E2D\u0E04\u0E2D\u0E19) \xB7 \u0E41\u0E16\u0E27\u0E02\u0E2D\u0E07\u0E1A\u0E31\u0E4A\u0E01\u0E44\u0E21\u0E48\u0E21\u0E35',
+              [88, 12, 11, 1].every((n2) => rowF(n2).dataset.kind === "feature" && tagOf(n2) && tagOf(n2).textContent === t("ui.bug.kindTag") && tagOf(n2).childElementCount > 0) && [9, 8, 5, 4, 3].every((n2) => rowF(n2).dataset.kind === "bug" && !tagOf(n2)) && rowF(12).children[1].textContent.includes("\u0E40\u0E17\u0E2A170 \u0E02\u0E2D\u0E18\u0E35\u0E21\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E40\u0E01\u0E48\u0E32")
+            );
+            const stOf = (n2) => rowF(n2).querySelector(".k-bug-st").textContent.trim();
+            check2(
+              "[170-F] \u2605 \u0E2A\u0E16\u0E32\u0E19\u0E30\u0E02\u0E2D\u0E07\u0E04\u0E33\u0E02\u0E2D\u0E43\u0E0A\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E23\u0E31\u0E1A\u0E44\u0E27\u0E49\u0E41\u0E25\u0E49\u0E27 \xB7 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27) \xB7 \u0E1A\u0E31\u0E4A\u0E01\u0E43\u0E0A\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21 \xB7 \u0E0A\u0E19\u0E34\u0E14\u0E08\u0E32\u0E01\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E01\u0E33\u0E01\u0E31\u0E1A\u0E01\u0E47\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E14\u0E49",
+              stOf(11) === t("ui.bug.stPlanned") && stOf(1) === t("ui.bug.stAdded") && stOf(12) === t("ui.bug.stNew") && stOf(8) === t("ui.bug.stFixed") && stOf(9) === t("ui.bug.stConfirmed"),
+              [11, 1, 12, 8, 9].map(stOf).join(" | ")
+            );
+            const stOptF = () => [...stBox().querySelector(".k-bug-f-status").options].map((o) => o.textContent);
+            check2(
+              "[170-F] \u0E14\u0E39\u0E23\u0E27\u0E21\u0E2A\u0E2D\u0E07\u0E0A\u0E19\u0E34\u0E14: \u0E0A\u0E48\u0E2D\u0E07\u0E01\u0E23\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1A\u0E2D\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E02\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E0A\u0E19\u0E34\u0E14\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E35\u0E22\u0E01\u0E15\u0E48\u0E32\u0E07\u0E01\u0E31\u0E19 (\u0E41\u0E01\u0E49\u0E44\u0E02\u0E41\u0E25\u0E49\u0E27 / \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27) \xB7 \u0E17\u0E35\u0E48\u0E40\u0E23\u0E35\u0E22\u0E01\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E01\u0E31\u0E19\u0E44\u0E21\u0E48\u0E0B\u0E49\u0E33",
+              stOptF().includes(tf("ui.bug.fltOne", t("ui.bug.stFixed") + " / " + t("ui.bug.stAdded"), 2)) && stOptF().includes(tf("ui.bug.fltOne", t("ui.bug.stNew"), 3)),
+              stOptF().join("|")
+            );
+            setSel(selK(), "feature");
+            check2(
+              '[170-F] \u2605\u2605 \u0E01\u0E23\u0E2D\u0E07 "\u0E04\u0E33\u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C" = \u0E40\u0E2B\u0E25\u0E37\u0E2D 4 \xB7 \u0E08\u0E33\u0E19\u0E27\u0E19/\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E19\u0E31\u0E1A\u0E08\u0E32\u0E01\u0E0A\u0E19\u0E34\u0E14\u0E17\u0E35\u0E48\u0E14\u0E39 \xB7 \u0E1B\u0E38\u0E48\u0E21\u0E25\u0E49\u0E32\u0E07\u0E01\u0E14\u0E44\u0E14\u0E49',
+              numsB() === "88,12,11,1" && stBox().querySelector(".k-bug-count").textContent === tf("ui.bug.count", 4, 9) && stOptF()[0] === tf("ui.bug.fltAll", 4) && stOptF().includes(tf("ui.bug.fltOne", t("ui.bug.stAdded"), 1)) && stBox().querySelector(".k-bug-clear").disabled === false,
+              numsB() + " \xB7 " + stOptF().join("|")
+            );
+            setSel(selK(), "bug");
+            check2('[170-F] \u0E01\u0E23\u0E2D\u0E07 "\u0E1A\u0E31\u0E4A\u0E01" = \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E40\u0E14\u0E34\u0E21\u0E2B\u0E49\u0E32\u0E15\u0E31\u0E27', numsB() === "9,8,5,4,3" && stOptF().includes(tf("ui.bug.fltOne", t("ui.bug.stFixed"), 1)), numsB());
+            stBox().querySelector(".k-bug-clear").click();
+            await wB(60);
+            check2("[170-F] \u0E25\u0E49\u0E32\u0E07\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07 = \u0E0A\u0E19\u0E34\u0E14\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14", selK().value === "all" && numsB() === "88,12,11,9,8,5,4,3,1", numsB());
+            const rBarF = stBox().querySelector(".k-bug-bar").getBoundingClientRect(), rDlgF = stBox().getBoundingClientRect();
+            check2(
+              "[170-F] \u0E41\u0E16\u0E1A\u0E15\u0E31\u0E27\u0E01\u0E23\u0E2D\u0E07 (\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E0A\u0E48\u0E2D\u0E07\u0E0A\u0E19\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27) \u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07 \u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E41\u0E19\u0E27\u0E19\u0E2D\u0E19 \xB7 \u0E15\u0E32\u0E23\u0E32\u0E07\u0E44\u0E21\u0E48\u0E25\u0E49\u0E19",
+              [...stBox().querySelectorAll(".k-bug-bar > *")].every((e22) => {
+                const r = e22.getBoundingClientRect();
+                return r.left >= rDlgF.left && r.right <= rDlgF.right + 1;
+              }) && rBarF.right <= rDlgF.right + 1 && stBox().querySelector(".k-bug-wrap").scrollWidth <= stBox().querySelector(".k-bug-wrap").clientWidth + 1
+            );
+            const bF = stBox().querySelector(".k-bug-go-feature");
+            check2("[170-F] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E44\u0E1B\u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C (\u0E04\u0E39\u0E48\u0E01\u0E31\u0E1A\u0E1B\u0E38\u0E48\u0E21\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E1A\u0E31\u0E4A\u0E01) \u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07", seen(bF) && bF.textContent === t("ui.bug.featureTitle") && bF.getBoundingClientRect().left >= rDlgF.left);
+            bF.click();
+            const fb3 = await untilB(() => repBox());
+            check2("[170-F] \u2605 \u0E08\u0E32\u0E01\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E2A\u0E16\u0E32\u0E19\u0E30 \u2192 \u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C = \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C", !!fb3 && fb3.dataset.kind === "feature" && !stBox());
+            document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+            if (kapi.menuLabels && kapi.menuTestClick) {
+              const labsM = await kapi.menuLabels();
+              check2('[170-F] \u2605 \u0E40\u0E21\u0E19\u0E39 \u0E0A\u0E48\u0E27\u0E22\u0E40\u0E2B\u0E25\u0E37\u0E2D \u0E21\u0E35 "\u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C" (\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E08\u0E23\u0E34\u0E07)', labsM.some((l) => l.endsWith(" > " + t("ui.menu.featureRequest"))), labsM.filter((l) => /feature|ฟีเจอร์/i.test(l)).join(" | "));
+              await kapi.menuTestClick("feature-request");
+              const fb4 = await untilB(() => repBox(), 3e3);
+              check2("[170-F] \u2605 \u0E01\u0E14\u0E40\u0E21\u0E19\u0E39 \u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C = \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E23\u0E32\u0E22\u0E07\u0E32\u0E19\u0E43\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E02\u0E2D\u0E1F\u0E35\u0E40\u0E08\u0E2D\u0E23\u0E4C", !!fb4 && fb4.dataset.kind === "feature");
+              document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+            }
+            localStorage.removeItem("k2-bug-draft");
+            clearBugCache();
+            clearBugSent();
+            resetBugView();
+          }
+          {
+            const openedD = [];
+            const restoreDocs = setDocsIo({ open: async (url) => {
+              openedD.push(url);
+              return true;
+            } });
+            const restoreSup = setSupportIo({ open: async (url) => {
+              openedD.push(url);
+              return true;
+            } });
+            const lang0 = localStorage.getItem("k2-docs-lang");
+            localStorage.removeItem("k2-docs-lang");
+            const docBox = () => document.querySelector(".k-overlay .k-dialog.k-docs-dlg");
+            const docReady = async () => {
+              const b = await untilB(() => docBox());
+              if (b) await b.closest(".k-overlay").k2ready;
+              await wB(80);
+              return b;
+            };
+            const pathD = () => docBox() ? docBox().dataset.path : "";
+            const until2 = (fn, ms = 4e3) => untilB(fn, ms);
+            try {
+              document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+              const wantLang = docLang(document.documentElement.lang, "");
+              const otherLang = DOC_LANGS.find((l) => l !== wantLang);
+              await handleCommand("user-manual");
+              const db = await docReady();
+              check2(
+                "[170-D] \u2605\u2605 \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 user-manual = \u0E40\u0E1B\u0E34\u0E14\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E43\u0E19\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21 \u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E02\u0E2D\u0E07\u0E20\u0E32\u0E29\u0E32\u0E15\u0E32\u0E21\u0E01\u0E15\u0E34\u0E01\u0E32 (\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D\u0E44\u0E17\u0E22 = \u0E44\u0E17\u0E22 \xB7 \u0E19\u0E2D\u0E01\u0E19\u0E31\u0E49\u0E19 = \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29)",
+                !!db && pathD() === "docs/manual/" + wantLang + "/README.md" && db.querySelector(".k-dlg-title").textContent === t("ui.docs.bookManual") && db.querySelector(".k-docs-lang").value === wantLang,
+                pathD()
+              );
+              check2(
+                "[170-D] \u0E20\u0E32\u0E29\u0E32\u0E15\u0E31\u0E49\u0E07\u0E15\u0E49\u0E19\u0E02\u0E2D\u0E07\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D = \u0E2D\u0E31\u0E07\u0E01\u0E24\u0E29\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E2D\u0E17\u0E38\u0E01\u0E20\u0E32\u0E29\u0E32\u0E17\u0E35\u0E48\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D\u0E44\u0E21\u0E48\u0E21\u0E35",
+                DOC_LANGS[0] === "en" && ["de", "fr", "ja", "pt", "zh", ""].every((l) => docLang(l, "") === "en")
+              );
+              const bodyD = () => docBox().querySelector(".k-docs-body");
+              check2(
+                "[170-D] \u2605\u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D\u0E27\u0E32\u0E14\u0E08\u0E32\u0E01\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E21\u0E32\u0E01\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21: \u0E21\u0E35\u0E2B\u0E31\u0E27\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07 \xB7 \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D \xB7 \u0E25\u0E34\u0E07\u0E01\u0E4C\u0E1A\u0E17 \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E21\u0E32\u0E23\u0E4C\u0E01\u0E14\u0E32\u0E27\u0E19\u0E4C\u0E14\u0E34\u0E1A \xB7 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E04\u0E35\u0E22\u0E4C\u0E20\u0E32\u0E29\u0E32\u0E14\u0E34\u0E1A",
+                !!bodyD().querySelector(".k-cl-title") && bodyD().querySelectorAll(".k-cl-h").length >= 4 && bodyD().querySelectorAll('.k-doc-link[data-kind="doc"]').length >= 20 && !/\]\(|\*\*|^#{1,6} /m.test(bodyD().textContent) && !rawKey(docBox()),
+                bodyD().textContent.slice(0, 120)
+              );
+              const img1 = bodyD().querySelector("img.k-doc-img");
+              const imgOk = img1 && await until2(() => img1.complete && img1.naturalWidth > 0, 8e3);
+              check2(
+                "[170-D] \u2605\u2605 \u0E23\u0E39\u0E1B\u0E02\u0E2D\u0E07\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D\u0E42\u0E2B\u0E25\u0E14\u0E44\u0E14\u0E49\u0E08\u0E23\u0E34\u0E07 (\u0E44\u0E1F\u0E25\u0E4C\u0E23\u0E39\u0E1B\u0E21\u0E32\u0E01\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21) \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E01\u0E34\u0E19\u0E40\u0E19\u0E37\u0E49\u0E2D",
+                !!imgOk && img1.getBoundingClientRect().width <= bodyD().clientWidth + 1,
+                img1 ? img1.getAttribute("src") + " \xB7 " + img1.naturalWidth : "\u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E39\u0E1B"
+              );
+              const selD = () => docBox().querySelector(".k-docs-sel");
+              check2(
+                "[170-D] \u2605 \u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1A\u0E17: \u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E1A\u0E17+\u0E20\u0E32\u0E04\u0E1C\u0E19\u0E27\u0E01 (\u2265 22) \xB7 \u0E0A\u0E37\u0E48\u0E2D\u0E1A\u0E17\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C \xB7 \u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01 \xB7 \u0E1B\u0E38\u0E48\u0E21\u0E01\u0E48\u0E2D\u0E19\u0E2B\u0E19\u0E49\u0E32/\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E1B\u0E34\u0E14",
+                selD().options.length >= 22 && [...selD().options].every((o) => o.textContent.trim() && !/\.md$/.test(o.textContent)) && selD().value === "0" && docBox().querySelector(".k-docs-prev").disabled && docBox().querySelector(".k-docs-back").disabled && !docBox().querySelector(".k-docs-next").disabled,
+                selD().options.length + " \xB7 " + selD().value
+              );
+              const rD = docBox().getBoundingClientRect();
+              check2(
+                "[170-D] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E08\u0E2D \xB7 \u0E41\u0E16\u0E1A\u0E19\u0E33\u0E17\u0E32\u0E07\u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07 \xB7 \u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14\u0E40\u0E2B\u0E47\u0E19\u0E44\u0E14\u0E49",
+                rD.top >= 0 && rD.bottom <= innerHeight + 1 && rD.left >= 0 && rD.right <= innerWidth + 1 && [...docBox().querySelectorAll(".k-docs-bar > *")].every((e22) => {
+                  const r = e22.getBoundingClientRect();
+                  return r.left >= rD.left && r.right <= rD.right + 1;
+                }) && seen(docBox().querySelector(":scope > .k-dlg-btns > .k-ok")),
+                Math.round(rD.top) + ".." + Math.round(rD.bottom) + " / " + innerHeight
+              );
+              docBox().querySelector(".k-docs-next").click();
+              check2(
+                "[170-D] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E17\u0E16\u0E31\u0E14\u0E44\u0E1B = \u0E1A\u0E17\u0E17\u0E35\u0E48 1 \xB7 \u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1A\u0E17\u0E15\u0E32\u0E21 \xB7 \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E01\u0E14\u0E44\u0E14\u0E49",
+                await until2(() => /\/01-[^/]+\.md$/.test(pathD()) && selD().value === "1" && !docBox().querySelector(".k-docs-back").disabled) === true,
+                pathD()
+              );
+              const webL = bodyD().querySelector('.k-doc-link[data-kind="web"]');
+              const p1 = pathD();
+              if (webL) webL.click();
+              await wB(80);
+              check2(
+                "[170-D] \u2605 \u0E25\u0E34\u0E07\u0E01\u0E4C\u0E40\u0E27\u0E47\u0E1A\u0E43\u0E19\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D = \u0E40\u0E1B\u0E34\u0E14\u0E43\u0E19\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E02\u0E2D\u0E07\u0E23\u0E30\u0E1A\u0E1A (https) \xB7 \u0E15\u0E31\u0E27\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E14\u0E34\u0E21",
+                !!webL && openedD.length === 1 && /^https:\/\//.test(openedD[0]) && pathD() === p1,
+                openedD.join()
+              );
+              const docL = [...bodyD().querySelectorAll('.k-doc-link[data-kind="doc"]')].find((a) => !/README|\/01-/.test(a.textContent) && a.textContent.trim());
+              if (docL) docL.click();
+              check2("[170-D] \u2605\u2605 \u0E25\u0E34\u0E07\u0E01\u0E4C\u0E44\u0E1B\u0E1A\u0E17\u0E2D\u0E37\u0E48\u0E19 = \u0E40\u0E1B\u0E34\u0E14\u0E1A\u0E17\u0E19\u0E31\u0E49\u0E19\u0E43\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E48\u0E32\u0E19 (\u0E44\u0E21\u0E48\u0E2D\u0E2D\u0E01\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21)", !!docL && await until2(() => pathD() !== p1 && /\.md$/.test(pathD())) === true && openedD.length === 1, pathD());
+              docBox().querySelector(".k-docs-back").click();
+              check2("[170-D] \u0E1B\u0E38\u0E48\u0E21\u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A = \u0E01\u0E25\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E2D\u0E48\u0E32\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E01\u0E48\u0E2D\u0E19", await until2(() => pathD() === p1) === true, pathD());
+              const selL = docBox().querySelector(".k-docs-lang");
+              selL.value = otherLang;
+              selL.dispatchEvent(new Event("change", { bubbles: true }));
+              check2(
+                "[170-D] \u2605\u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E20\u0E32\u0E29\u0E32\u0E43\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E48\u0E32\u0E19 = \u0E2B\u0E19\u0E49\u0E32\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19\u0E43\u0E19\u0E2D\u0E35\u0E01\u0E20\u0E32\u0E29\u0E32 \u0E41\u0E25\u0E30\u0E16\u0E39\u0E01\u0E08\u0E33\u0E44\u0E27\u0E49",
+                await until2(() => pathD() === p1.replace("/" + wantLang + "/", "/" + otherLang + "/")) === true && localStorage.getItem("k2-docs-lang") === otherLang,
+                pathD()
+              );
+              docBox().querySelector(":scope > .k-dlg-btns > .k-ok").click();
+              check2("[170-D] \u0E1B\u0E38\u0E48\u0E21\u0E1B\u0E34\u0E14 \u0E1B\u0E34\u0E14\u0E15\u0E31\u0E27\u0E2D\u0E48\u0E32\u0E19", await until2(() => !docBox(), 2e3) === true);
+              await handleCommand("user-manual");
+              await docReady();
+              check2("[170-D] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E43\u0E2B\u0E21\u0E48 = \u0E20\u0E32\u0E29\u0E32\u0E17\u0E35\u0E48\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E44\u0E27\u0E49\u0E04\u0E23\u0E31\u0E49\u0E07\u0E01\u0E48\u0E2D\u0E19", pathD() === "docs/manual/" + otherLang + "/README.md", pathD());
+              document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", code: "Escape", bubbles: true }));
+              check2("[170-D] Esc \u0E1B\u0E34\u0E14\u0E15\u0E31\u0E27\u0E2D\u0E48\u0E32\u0E19", await until2(() => !docBox(), 2e3) === true);
+              localStorage.removeItem("k2-docs-lang");
+              await handleCommand("extension-guide");
+              const dx = await docReady();
+              check2(
+                "[170-D] \u2605\u2605 \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07 extension-guide = \u0E40\u0E1B\u0E34\u0E14\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D\u0E2A\u0E48\u0E27\u0E19\u0E02\u0E22\u0E32\u0E22 (\u0E40\u0E25\u0E48\u0E21\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 \xB7 \u0E04\u0E23\u0E1A 12 \u0E1A\u0E17)",
+                !!dx && pathD() === "docs/extension/" + wantLang + "/README.md" && dx.querySelector(".k-dlg-title").textContent === t("ui.docs.bookExtension") && dx.querySelector(".k-docs-sel").options.length === 13,
+                pathD() + " \xB7 " + (dx ? dx.querySelector(".k-docs-sel").options.length : 0)
+              );
+              const tsL = [...docBox().querySelectorAll('.k-doc-link[data-kind="file"]')][0];
+              if (tsL) {
+                tsL.click();
+                await until2(() => /k2\.d\.ts$/.test(pathD()));
+              }
+              check2(
+                "[170-D] \u0E44\u0E1F\u0E25\u0E4C k2.d.ts \u0E40\u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E04\u0E49\u0E14\u0E43\u0E19\u0E15\u0E31\u0E27\u0E2D\u0E48\u0E32\u0E19 \xB7 \u0E0A\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1A\u0E17\u0E42\u0E0A\u0E27\u0E4C\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C \xB7 \u0E22\u0E49\u0E2D\u0E19\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49",
+                /k2\.d\.ts$/.test(pathD()) && !!docBox().querySelector(".k-docs-body pre.k-cl-code") && docBox().querySelector(".k-docs-body pre.k-cl-code").textContent.length > 500 && docBox().querySelector(".k-docs-sel").selectedOptions[0].textContent === "k2.d.ts" && !docBox().querySelector(".k-docs-back").disabled,
+                pathD()
+              );
+              document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+              const ovD = aboutDialog();
+              await wB(150);
+              const pM = ovD.querySelector(".k-about-manual"), pSup = ovD.querySelector(".k-about-support"), cp = ovD.querySelector(".k-about-copy");
+              const rL = ovD.querySelector(".k-about-left").getBoundingClientRect(), rFt = ovD.querySelector(".k-about-foot").getBoundingClientRect();
+              check2(
+                '[170-D] \u2605\u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07 "\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A": \u0E1B\u0E38\u0E48\u0E21\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D + \u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E19\u0E31\u0E1A\u0E2A\u0E19\u0E38\u0E19 (\u0E21\u0E35\u0E44\u0E2D\u0E04\u0E2D\u0E19) + \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E25\u0E34\u0E02\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E4C Noobcyborg Studio',
+                seen(pM) && seen(pSup) && seen(cp) && pM.textContent === t("ui.docs.bookManual") && pSup.textContent === t("ui.menu.support") && pSup.childElementCount > 0 && cp.textContent === copyrightLine() && cp.textContent.includes("Noobcyborg Studio"),
+                cp ? cp.textContent : ""
+              );
+              check2(
+                '[170-D] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E01\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07 "\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A" \u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E1D\u0E31\u0E48\u0E07\u0E0B\u0E49\u0E32\u0E22 \u0E44\u0E21\u0E48\u0E17\u0E31\u0E1A\u0E41\u0E16\u0E27\u0E25\u0E48\u0E32\u0E07 \xB7 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E25\u0E34\u0E02\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E4C\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07',
+                [...ovD.querySelectorAll(".k-about-pill")].length === 6 && [...ovD.querySelectorAll(".k-about-pill")].every((p) => {
+                  const r = p.getBoundingClientRect();
+                  return r.left >= rL.left && r.right <= rL.right + 1 && r.bottom <= rFt.top + 1;
+                }) && cp.getBoundingClientRect().bottom <= rL.bottom + 1 && cp.getBoundingClientRect().top >= rFt.bottom - 1,
+                [...ovD.querySelectorAll(".k-about-pill")].map((p) => Math.round(p.getBoundingClientRect().bottom)).join() + " / " + Math.round(rFt.top) + " / " + Math.round(rL.bottom)
+              );
+              const nO = openedD.length;
+              pSup.click();
+              check2(
+                "[170-D] \u2605\u2605 \u0E01\u0E14\u0E2A\u0E19\u0E31\u0E1A\u0E2A\u0E19\u0E38\u0E19 = \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E19\u0E31\u0E1A\u0E2A\u0E19\u0E38\u0E19\u0E43\u0E19\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C (\u0E25\u0E34\u0E07\u0E01\u0E4C\u0E08\u0E32\u0E01 app-info.js) + \u0E1A\u0E2D\u0E01\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30 \xB7 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
+                await until2(() => openedD.length === nO + 1 && document.getElementById("status").textContent.includes(t("ui.app.supportOpened"))) === true && openedD[openedD.length - 1] === SUPPORT_URL && /^https:\/\//.test(SUPPORT_URL) && ovD.isConnected,
+                openedD.slice(-1).join()
+              );
+              pM.click();
+              const dm = await docReady();
+              check2('[170-D] \u2605 \u0E01\u0E14\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07 "\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A" = \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E1B\u0E34\u0E14 \u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E34\u0E14\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49', !!dm && !ovD.isConnected && /^docs\/manual\//.test(pathD()));
+              document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+              const restoreFail = setSupportIo({ open: async () => false });
+              await handleCommand("support");
+              restoreFail();
+              check2(
+                "[170-D] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E19\u0E31\u0E1A\u0E2A\u0E19\u0E38\u0E19\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49 = \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E1C\u0E34\u0E14\u0E1E\u0E25\u0E32\u0E14\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30 (\u0E44\u0E21\u0E48\u0E40\u0E07\u0E35\u0E22\u0E1A)",
+                await until2(() => document.getElementById("status").textContent.includes(t("ui.bug.openFail")), 2e3) === true,
+                document.getElementById("status").textContent
+              );
+              if (kapi.menuLabels && kapi.menuTestClick) {
+                const labsD = await kapi.menuLabels();
+                const helpHas = (k) => labsD.some((l) => l.endsWith(" > " + t(k)));
+                check2(
+                  "[170-D] \u2605\u2605 \u0E40\u0E21\u0E19\u0E39 \u0E0A\u0E48\u0E27\u0E22\u0E40\u0E2B\u0E25\u0E37\u0E2D \u0E21\u0E35 \u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49 \xB7 \u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D\u0E2A\u0E48\u0E27\u0E19\u0E02\u0E22\u0E32\u0E22 \xB7 \u0E2A\u0E19\u0E31\u0E1A\u0E2A\u0E19\u0E38\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C (\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E08\u0E23\u0E34\u0E07 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E35\u0E22\u0E4C)",
+                  helpHas("ui.menu.userManual") && helpHas("ui.menu.extensionGuide") && helpHas("ui.menu.support") && !labsD.some((l) => /ui\.menu\.(userManual|extensionGuide|support)/.test(l)),
+                  labsD.filter((l) => /manual|guide|support|คู่มือ|สนับสนุน/i.test(l)).join(" | ")
+                );
+                await kapi.menuTestClick("extension-guide");
+                const dmx = await docReady();
+                check2("[170-D] \u2605 \u0E01\u0E14\u0E40\u0E21\u0E19\u0E39 \u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D\u0E2A\u0E48\u0E27\u0E19\u0E02\u0E22\u0E32\u0E22 = \u0E40\u0E1B\u0E34\u0E14\u0E15\u0E31\u0E27\u0E2D\u0E48\u0E32\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E21\u0E19\u0E31\u0E49\u0E19", !!dmx && /^docs\/extension\//.test(pathD()), pathD());
+                document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+                const nM = openedD.length;
+                await kapi.menuTestClick("support");
+                check2("[170-D] \u2605 \u0E01\u0E14\u0E40\u0E21\u0E19\u0E39 \u0E2A\u0E19\u0E31\u0E1A\u0E2A\u0E19\u0E38\u0E19\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C = \u0E40\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E19\u0E31\u0E1A\u0E2A\u0E19\u0E38\u0E19", await until2(() => openedD.length === nM + 1 && openedD[openedD.length - 1] === SUPPORT_URL, 3e3) === true);
+              }
+            } finally {
+              restoreDocs();
+              restoreSup();
+              if (lang0 == null) localStorage.removeItem("k2-docs-lang");
+              else localStorage.setItem("k2-docs-lang", lang0);
+              document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
+            }
           }
         } finally {
           restoreIo();
@@ -243933,6 +244878,8 @@ ${css}
         (state._panelDrawErrors || 0) === 0,
         (state._panelDrawErrors || 0) + " \u0E04\u0E23\u0E31\u0E49\u0E07 \xB7 \u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14: " + (state._panelDrawLastErr || "\u2014")
       );
+      const failedN = out.filter((l) => l.startsWith("FAIL ")).length;
+      if (failedN) throw new Error(failedN + " FAIL (keep-going)");
       out.push("ALL OK");
     } catch (e) {
       out.push("STOP: " + e.message + "\n" + (e.stack || ""));
@@ -244066,6 +245013,10 @@ ${css}
       init_dialogs();
       init_home_ui();
       init_bug_ui();
+      init_docs_ui();
+      init_support_ui();
+      init_app_info();
+      init_docs_view();
       init_bug_core();
       init_locale();
       init_spell();
@@ -259203,7 +260154,15 @@ ${css}
       ov.remove();
       handleCommand("bug-status");
     };
-    pills2.append(pChange, pUpdate, pBug, pBugStatus);
+    const pManual = el("button", "k-about-pill k-about-manual", t("ui.docs.bookManual"));
+    pManual.onclick = () => {
+      ov.remove();
+      handleCommand("user-manual");
+    };
+    const pSupport = el("button", "k-about-pill k-about-support");
+    pSupport.append(icon("heart", 12), document.createTextNode(t("ui.menu.support")));
+    pSupport.onclick = () => handleCommand("support");
+    pills2.append(pChange, pUpdate, pManual, pBug, pBugStatus, pSupport);
     left.append(title2, tag3, sub, ver, pills2);
     const foot = el("div", "k-about-foot");
     const dev = el("button", "k-about-round", "");
@@ -259217,7 +260176,7 @@ ${css}
     dev.onclick = openDev;
     devLbl.onclick = openDev;
     foot.append(dev, devLbl);
-    left.append(foot);
+    left.append(foot, el("div", "k-about-copy", copyrightLine()));
     const right = el("div", "k-about-right");
     const hero = el("img", "k-about-hero");
     hero.alt = "";
@@ -260096,6 +261055,24 @@ ${css}
         break;
       case "bug-status":
         openBugStatus();
+        break;
+      // [alpha.170] ขอฟีเจอร์ = กล่องรายงานเดียวกัน เปิดในโหมดขอฟีเจอร์
+      case "feature-request":
+        openBugReport({ kind: "feature" });
+        break;
+      // [alpha.170] คู่มือในโปรแกรม (มากับตัวโปรแกรม · ภาษาตั้งต้นอังกฤษ) — เมนู ช่วยเหลือ · กล่อง "เกี่ยวกับ"
+      case "user-manual": {
+        const { openDocs: openDocs2 } = await Promise.resolve().then(() => (init_docs_ui(), docs_ui_exports));
+        openDocs2("manual");
+        break;
+      }
+      case "extension-guide": {
+        const { openDocs: openDocs2 } = await Promise.resolve().then(() => (init_docs_ui(), docs_ui_exports));
+        openDocs2("extension");
+        break;
+      }
+      case "support":
+        openSupportPage();
         break;
       // [alpha.135] เมนู ช่วยเหลือ → ตรวจหาอัปเดต… (ไม่เงียบ — บอกผลทุกกรณี)
       case "check-update":
@@ -262344,6 +263321,8 @@ ${css}
       init_locale();
       init_status_toggles();
       init_bug_ui();
+      init_app_info();
+      init_support_ui();
       init_statusbar_lock();
       tr3 = t;
       pageScale = 1;
@@ -262725,8 +263704,7 @@ ${css}
         ] },
         { group: t("ui.common.font"), items: [
           { name: "Courier Prime", what: t("ui.app.fontScreenplayQuoteUnquote"), lic: "SIL OFL 1.1" },
-          { name: "Nerd Fonts \xB7 Material Design Icons", what: t("ui.app.creditIcons"), lic: "MIT / Apache-2.0", url: "https://www.nerdfonts.com" },
-          { name: t("ui.app.courierMonoThaiProportionalThai"), what: t("ui.app.fontScreenplayPosView"), lic: t("ui.app.notSource") }
+          { name: "Nerd Fonts \xB7 Material Design Icons", what: t("ui.app.creditIcons"), lic: "MIT / Apache-2.0", url: "https://www.nerdfonts.com" }
         ] },
         { group: t("ui.app.data"), items: [
           { name: t("ui.app.checkWord"), what: t("ui.app.listWordEnglishFolder"), lic: "" },

@@ -1,7 +1,8 @@
-// src/bugs/bug-ui.js — [alpha.170] กล่อง "รายงานบั๊ก" + กล่อง "สถานะบั๊ก"
+// src/bugs/bug-ui.js — [alpha.170] กล่อง "รายงานบั๊ก / ขอฟีเจอร์" + กล่อง "สถานะบั๊กและคำขอ"
 //
 // ทางเข้า (ทุกทางเรียกสองฟังก์ชันนี้ผ่านคำสั่ง `bug-report` / `bug-status` ใน handleCommand):
 //   ปุ่มท้ายแถบสถานะ (ถัดจากปุ่มหน้าแรก) · กล่อง "เกี่ยวกับ" · เมนู ช่วยเหลือ
+//   ขอฟีเจอร์ = กล่องรายงานเดียวกัน เปิดในโหมดขอฟีเจอร์ (คำสั่ง `feature-request` → openBugReport({ kind: 'feature' }))
 //
 // ตรรกะทั้งหมดอยู่ `bug-core.js` (บริสุทธิ์ · unit `bug-core`) — ไฟล์นี้มีแค่ วาด + เน็ต/เบราว์เซอร์/คลิปบอร์ด
 //   · "ส่งรายงาน" ส่งตรงจากโปรแกรมเข้าตัวกลางของผู้ดูแล (bug-config.js → tools/bug-relay) ซึ่งเปิด Issue ให้ — ผู้ใช้ไม่ต้องมีบัญชีอะไร
@@ -15,9 +16,9 @@ import { fmtDate, fmtDateTime, cmpText } from '../locale.js';
 import { BUG_FETCH_TIMEOUT_MS } from '../timing.js';
 import { BUG_RELAY_URL, BUG_CONTACT } from './bug-config.js';
 import {
-  BUG_LIST_URL, BUG_MAX_PAGES, BUG_STATUSES, BUG_STATUS_KEYS, bugApiUrl, bugUrl, bugVersions,
-  buildMailto, buildRelayRequest, buildReportBody, cacheFresh, contactKind, countByStatus, envLine, filterBugs, isRelayUrl, mergeBugs,
-  parseCache, pendingBug, prunePending, readIssuesResponse, readRelayResponse, reportTitle, sortBugs, withPending,
+  BUG_LIST_URL, BUG_MAX_PAGES, BUG_STATUSES, REPORT_KINDS, bugApiUrl, bugUrl, bugVersions,
+  buildMailto, buildRelayRequest, buildReportBody, cacheFresh, contactKind, countByKind, countByStatus, envLine, filterBugs, isRelayUrl, mergeBugs,
+  parseCache, pendingBug, prunePending, readIssuesResponse, readRelayResponse, reportKind, reportTitle, sortBugs, statusKey, withPending,
 } from './bug-core.js';
 
 // ───────── เน็ต/เบราว์เซอร์/คลิปบอร์ด — จุดเดียว (e2e สลับเป็นของปลอมด้วย setBugIo ไม่เปิดเบราว์เซอร์/ไม่ส่งรายงานจริง) ─────────
@@ -56,8 +57,8 @@ const SENT_KEY = 'k2-bug-sent';
 function readSent() {
   try { return prunePending(JSON.parse(localStorage.getItem(SENT_KEY) || '[]')); } catch { return []; }
 }
-function rememberSent(num, title, version) {
-  const row = pendingBug(num, title, version);
+function rememberSent(num, title, version, kind) {
+  const row = pendingBug(num, title, version, Date.now(), kind);
   if (!row) return;
   try { localStorage.setItem(SENT_KEY, JSON.stringify(prunePending([row, ...readSent()]))); } catch {}
 }
@@ -113,6 +114,7 @@ function readDraft() {
 }
 function saveDraft(d) {
   try {
+    // ชนิดที่เลือกไว้ถูกจำไปกับข้อความ (ร่างที่ไม่มีข้อความเลย = ไม่มีอะไรให้จำ)
     if (d && (d.title || d.what || d.steps || d.expected)) localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
     else localStorage.removeItem(DRAFT_KEY);
   } catch {}
@@ -125,16 +127,52 @@ function sendErrorText(r) {
 }
 
 /**
+ * [alpha.170 · ขอฟีเจอร์] ข้อความของกล่องรายงานตามชนิด — ตารางคีย์เต็ม (ห้ามประกอบคีย์จากชิ้นส่วน)
+ * ช่องกรอกสามช่อง (what/steps/expected) ใช้ร่วมกัน เปลี่ยนแค่คำถาม: บั๊ก = เกิดอะไร/ทำซ้ำยังไง/ควรเป็นยังไง ·
+ * ขอฟีเจอร์ = อยากได้อะไร/ช่วยอะไร/ตอนนี้ทำยังไง
+ */
+const KIND_TEXT = {
+  bug: {
+    tab: 'ui.bug.kindBug', title: 'ui.bug.reportTitle', send: 'ui.bug.btnSend', sent: 'ui.bug.sentOk',
+    fTitlePh: 'ui.bug.fTitlePh', fWhat: 'ui.bug.fWhat', fWhatPh: 'ui.bug.fWhatPh',
+    fSteps: 'ui.bug.fSteps', fStepsPh: 'ui.bug.fStepsPh', fExpected: 'ui.bug.fExpected', fExpectedPh: 'ui.bug.fExpectedPh',
+  },
+  feature: {
+    tab: 'ui.bug.kindFeature', title: 'ui.bug.featureTitle', send: 'ui.bug.btnSendFeature', sent: 'ui.bug.sentOkFeature',
+    fTitlePh: 'ui.bug.fTitlePhFeature', fWhat: 'ui.bug.fWant', fWhatPh: 'ui.bug.fWantPh',
+    fSteps: 'ui.bug.fWhy', fStepsPh: 'ui.bug.fWhyPh', fExpected: 'ui.bug.fNow', fExpectedPh: 'ui.bug.fNowPh',
+  },
+};
+/** ชื่อชนิดในช่องกรองของกล่องสถานะ (มีตัวเลข) */
+const KIND_FILTER_KEYS = { all: 'ui.bug.fltKindAll', bug: 'ui.bug.fltKindBug', feature: 'ui.bug.fltKindFeature' };
+
+/**
  * กล่องรายงานบั๊ก — กรอก → "ส่งรายงาน" (ส่งตรงจากโปรแกรมเข้าตัวกลางของผู้ดูแล) · "คัดลอกรายงาน" (ส่งทางที่กำหนด)
  * ข้อความที่พิมพ์ค้างถูกจำไว้ (ปิดกล่องโดยไม่ได้ส่ง เปิดใหม่ยังอยู่ · ส่งไม่สำเร็จก็ยังอยู่) · ส่งสำเร็จแล้วจึงล้าง
+ * @param {{kind?:'bug'|'feature'}} [opts] kind = ชนิดที่เลือกไว้ตอนเปิด (ไม่ส่ง = ชนิดของร่างที่ค้าง · ไม่มีร่าง = บั๊ก)
  * @returns {HTMLElement} ตัว overlay
  */
-export function openBugReport() {
+export function openBugReport(opts = {}) {
   document.querySelectorAll('.k-overlay.k-bug-report-ov').forEach((o) => o.remove());
   const ov = el('div', 'k-overlay k-bug-report-ov');
   const box = el('div', 'k-dialog k-wide k-bug-report');
-  box.append(el('div', 'k-dlg-title', t('ui.bug.reportTitle')));
+  const dlgTitle = el('div', 'k-dlg-title', t('ui.bug.reportTitle'));
+  box.append(dlgTitle);
   const body = el('div', 'k-bug-form');
+  // [alpha.170 · ขอฟีเจอร์] สวิตช์ชนิดของรายงาน — อยู่บนสุด เพราะคำถามของทุกช่องข้างล่างเปลี่ยนตาม
+  const kindBar = el('div', 'k-bug-kinds');
+  kindBar.setAttribute('role', 'radiogroup');
+  kindBar.setAttribute('aria-label', t('ui.bug.kindLabel'));
+  const kindBtns = {};
+  for (const k of REPORT_KINDS) {
+    const b = el('button', 'k-bug-kind', t(KIND_TEXT[k].tab));
+    b.type = 'button';
+    b.dataset.kind = k;
+    b.setAttribute('role', 'radio');
+    kindBar.append(b);
+    kindBtns[k] = b;
+  }
+  body.append(kindBar);
   body.append(el('div', 'k-hint k-bug-intro', t('ui.bug.reportIntro')));
 
   const relay = String(io.relay() || '');
@@ -156,9 +194,12 @@ export function openBugReport() {
   }
 
   const draft = readDraft();
+  let kind = reportKind(opts.kind || draft.kind);
+  const fieldLabels = {};
   const field = (id, labelKey, phKey, rows, value) => {
     const wrap = el('div', 'k-bug-field');
     const lb = el('label', 'k-bug-label', t(labelKey));
+    fieldLabels[id] = lb;
     lb.htmlFor = id;
     const inp = el(rows ? 'textarea' : 'input', 'k-dlg-input' + (rows ? ' k-bug-ta' : ''));
     inp.id = id;
@@ -187,11 +228,11 @@ export function openBugReport() {
   body.append(errBox);
   const showErr = (msg) => { errBox.textContent = msg || ''; if (msg) setStatusError(msg); };
 
-  const values = () => ({ title: fTitle.value, what: fWhat.value, steps: fSteps.value, expected: fExpected.value });
+  const values = () => ({ title: fTitle.value, what: fWhat.value, steps: fSteps.value, expected: fExpected.value, kind });
   for (const f of [fTitle, fWhat, fSteps, fExpected]) f.addEventListener('input', () => { saveDraft(values()); if (errBox.textContent) errBox.textContent = ''; });
 
-  const labels = { what: t('ui.bug.fWhat'), steps: t('ui.bug.fSteps'), expected: t('ui.bug.fExpected'), env: t('ui.bug.envHead') };
-  const fullBody = () => buildReportBody({ ...values(), env, labels });
+  const labels = () => { const K = KIND_TEXT[kind]; return { what: t(K.fWhat), steps: t(K.fSteps), expected: t(K.fExpected), env: t('ui.bug.envHead') }; };
+  const fullBody = () => buildReportBody({ ...values(), env, labels: labels(), kind });
   /** หัวข้อว่าง = ชี้ช่องให้กรอก (ไม่ส่ง/ไม่คัดลอกรายงานเปล่า) */
   const ready = () => {
     if (reportTitle(fTitle.value)) return true;
@@ -243,7 +284,7 @@ export function openBugReport() {
   let sending = false;
   bSend.onclick = async () => {
     if (sending || !canSend || !ready()) return;
-    const req = buildRelayRequest({ relay, title: fTitle.value, body: fullBody(), env });
+    const req = buildRelayRequest({ relay, title: fTitle.value, body: fullBody(), env, kind });
     if (!req) { showErr(t('ui.bug.sendOff')); return; }
     sending = true;
     showErr('');
@@ -255,23 +296,53 @@ export function openBugReport() {
     const r = readRelayResponse(res);
     sending = false;
     bSend.disabled = false; bCopy.disabled = false;
-    bSend.textContent = t('ui.bug.btnSend');
+    bSend.textContent = t(KIND_TEXT[kind].send);
     if (!r.ok) {
       // ส่งไม่สำเร็จ = ข้อความที่พิมพ์ยังอยู่ครบ (ร่างไม่ถูกล้าง) — ลองใหม่หรือคัดลอกส่งทางอื่นได้
-      log('warn', 'bug: report send failed', { code: r.code, status: r.status || 0 });
+      log('warn', 'bug: report send failed', { kind, code: r.code, status: r.status || 0 });
       showErr(sendErrorText(r));
       return;
     }
-    log('info', 'bug: report sent', { num: r.num });
+    log('info', 'bug: report sent', { kind, num: r.num });
     saveDraft(null);
-    rememberSent(r.num, fTitle.value, env.version);
+    rememberSent(r.num, fTitle.value, env.version, kind);
     clearBugCache();                       // รายการที่จำไว้ยังไม่มีบั๊กตัวใหม่ — เปิดกล่องสถานะครั้งถัดไปให้ถามใหม่
     close();
-    const msg = tf('ui.bug.sentOk', '#' + r.num);
+    const msg = tf(KIND_TEXT[kind].sent, '#' + r.num);
     setStatusAction(msg, t('ui.bug.btnStatus'), () => openBugStatus({ force: true }));
     toast(msg);
   };
   btns.append(bStatus, bCancel, bCopy, bSend);
+
+  /** สลับชนิด: หัวกล่อง · คำถาม/คำใบ้ของทุกช่อง · ปุ่มส่ง — ข้อความที่พิมพ์ไว้อยู่ครบ */
+  const setKind = (k, user) => {
+    kind = reportKind(k);
+    const K = KIND_TEXT[kind];
+    for (const kk of REPORT_KINDS) {
+      const on = kk === kind;
+      kindBtns[kk].classList.toggle('on', on);
+      kindBtns[kk].setAttribute('aria-checked', on ? 'true' : 'false');
+      kindBtns[kk].tabIndex = on ? 0 : -1;
+    }
+    box.dataset.kind = kind;
+    dlgTitle.textContent = t(K.title);
+    fTitle.placeholder = t(K.fTitlePh);
+    fieldLabels[fWhat.id].textContent = t(K.fWhat); fWhat.placeholder = t(K.fWhatPh);
+    fieldLabels[fSteps.id].textContent = t(K.fSteps); fSteps.placeholder = t(K.fStepsPh);
+    fieldLabels[fExpected.id].textContent = t(K.fExpected); fExpected.placeholder = t(K.fExpectedPh);
+    if (!sending) bSend.textContent = t(K.send);
+    if (user) { saveDraft(values()); if (errBox.textContent) errBox.textContent = ''; }
+  };
+  for (const k of REPORT_KINDS) kindBtns[k].onclick = () => setKind(k, true);
+  // กลุ่มตัวเลือก: ลูกศรซ้าย/ขวาย้ายตัวเลือก (Tab เข้ากลุ่มครั้งเดียว)
+  kindBar.onkeydown = (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const next = REPORT_KINDS[(REPORT_KINDS.indexOf(kind) + (e.key === 'ArrowRight' ? 1 : REPORT_KINDS.length - 1)) % REPORT_KINDS.length];
+    setKind(next, true);
+    kindBtns[next].focus();
+  };
+  setKind(kind, false);
 
   box.append(body, btns);
   ov.append(box);
@@ -295,9 +366,9 @@ const COLS = [
 ];
 const DASH = '—';
 /** ตัวกรอง/การเรียงค้างไว้ระหว่างเปิด-ปิดกล่อง (เป็นมุมมอง ไม่ใช่ข้อมูล) */
-const VIEW = { q: '', status: 'all', found: 'all', fixed: 'all', sort: 'id', dir: 'desc' };
+const VIEW = { q: '', kind: 'all', status: 'all', found: 'all', fixed: 'all', sort: 'id', dir: 'desc' };
 /** ล้างมุมมอง (เทส + ปุ่ม "ล้างตัวกรอง") */
-export function resetBugView() { Object.assign(VIEW, { q: '', status: 'all', found: 'all', fixed: 'all', sort: 'id', dir: 'desc' }); }
+export function resetBugView() { Object.assign(VIEW, { q: '', kind: 'all', status: 'all', found: 'all', fixed: 'all', sort: 'id', dir: 'desc' }); }
 
 /**
  * กล่องสถานะบั๊ก — รายการ + ตัวกรอง (คำค้น · สถานะ · พบในรุ่น · แก้ไขในรุ่น) + เรียงตามหัวคอลัมน์
@@ -317,13 +388,14 @@ export function openBugStatus(opts = {}) {
   q.type = 'search'; q.placeholder = t('ui.bug.searchPh'); q.value = VIEW.q;
   q.setAttribute('aria-label', t('ui.bug.searchPh'));
   const mkSel = (cls, titleKey) => { const s = el('select', 'k-dlg-select ' + cls); s.title = t(titleKey); s.setAttribute('aria-label', t(titleKey)); return s; };
+  const selKind = mkSel('k-bug-f-kind', 'ui.bug.kindLabel');
   const selStatus = mkSel('k-bug-f-status', 'ui.bug.colStatus');
   const selFound = mkSel('k-bug-f-found', 'ui.bug.colFound');
   const selFixed = mkSel('k-bug-f-fixed', 'ui.bug.colFixed');
   const bClear = el('button', 'cmp-mini k-bug-clear', t('ui.bug.clear'));
   const bRefresh = el('button', 'cmp-mini k-bug-refresh');
   bRefresh.append(icon('refresh', 14), document.createTextNode(' ' + t('ui.bug.refresh')));
-  bar.append(q, selStatus, selFound, selFixed, bClear, bRefresh);
+  bar.append(q, selKind, selStatus, selFound, selFixed, bClear, bRefresh);
 
   // ── ตาราง ──
   const wrap = el('div', 'k-bug-wrap');
@@ -359,12 +431,14 @@ export function openBugStatus(opts = {}) {
   const btns = el('div', 'k-dlg-btns');
   const bWeb = el('button', 'k-bug-web', t('ui.bug.openWeb'));
   bWeb.onclick = () => openInBrowser(BUG_LIST_URL);
+  const bFeature = el('button', 'k-bug-go-feature', t('ui.bug.featureTitle'));
   const bReport = el('button', 'k-bug-go-report', t('ui.bug.reportTitle'));
   const bClose = el('button', 'k-ok k-cancel', t('ui.common.close'));
   const close = () => ov.remove();
-  bReport.onclick = () => { close(); openBugReport(); };
+  bReport.onclick = () => { close(); openBugReport({ kind: 'bug' }); };
+  bFeature.onclick = () => { close(); openBugReport({ kind: 'feature' }); };
   bClose.onclick = close;
-  btns.append(bWeb, bReport, bClose);
+  btns.append(bWeb, bFeature, bReport, bClose);
   box.append(bar, wrap, note, btns);
   ov.append(box);
 
@@ -377,14 +451,25 @@ export function openBugStatus(opts = {}) {
     sel.value = options.some(([v]) => v === value) ? value : 'all';
     return sel.value;
   };
+  /** ชื่อสถานะในช่องกรอง: ดูชนิดเดียว = ชื่อของชนิดนั้น · ดูรวม = ชื่อของบั๊ก (+ ชื่อของคำขอ เมื่อเรียกต่างกันและในรายการมีคำขอจริง) */
+  let hasFeature = false;
+  const statusName = (s) => {
+    const bug = t(statusKey(s, 'bug')), feat = t(statusKey(s, 'feature'));
+    return VIEW.kind === 'feature' ? feat : (VIEW.kind === 'bug' || !hasFeature || bug === feat ? bug : bug + ' / ' + feat);
+  };
   const fillFilters = () => {
-    const list = S.bugs || [];
+    const all = S.bugs || [];
+    const nk = countByKind(all);
+    hasFeature = nk.feature > 0;
+    VIEW.kind = fillSelect(selKind, ['all', ...REPORT_KINDS].map((k) => [k, tf(KIND_FILTER_KEYS[k], nk[k])]), VIEW.kind);
+    // ตัวเลข/รายชื่อรุ่นของช่องที่เหลือ นับจากชนิดที่กำลังดู
+    const list = filterBugs(all, { kind: VIEW.kind });
     const n = countByStatus(list);
     VIEW.status = fillSelect(selStatus, [
       ['all', tf('ui.bug.fltAll', n.all)],
       ['open', tf('ui.bug.fltOpen', n.open)],
       ['closed', tf('ui.bug.fltClosed', n.closed)],
-      ...BUG_STATUSES.map((s) => [s, tf('ui.bug.fltOne', t(BUG_STATUS_KEYS[s]), n[s])]),
+      ...BUG_STATUSES.map((s) => [s, tf('ui.bug.fltOne', statusName(s), n[s])]),
     ], VIEW.status);
     VIEW.found = fillSelect(selFound, [['all', t('ui.bug.fltFoundAll')], ...bugVersions(list, 'foundIn').map((v) => [v, v])], VIEW.found);
     VIEW.fixed = fillSelect(selFixed, [['all', t('ui.bug.fltFixedAll')], ['none', t('ui.bug.fltFixedNone')],
@@ -417,12 +502,21 @@ export function openBugStatus(opts = {}) {
       link.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
       idCell.append(link);
       const stCell = el('td', 'k-bug-c-status');
-      const chip = el('span', 'k-bug-st', t(BUG_STATUS_KEYS[b.status]));
+      const kd = reportKind(b.kind);
+      tr.dataset.kind = kd;
+      const chip = el('span', 'k-bug-st', t(statusKey(b.status, kd)));
       chip.dataset.st = b.status;
       // "แก้ไขแล้ว" มีเครื่องหมายถูกนำหน้า — แยกจากสถานะอื่นได้โดยไม่พึ่งสี (ธีมหลักสีลิงก์กับสีเตือนใกล้กัน)
       if (b.status === 'fixed') chip.prepend(icon('check', 11));
       stCell.append(chip);
-      const ttl = el('td', 'k-bug-c-title k-selectable', b.title || DASH);
+      const ttl = el('td', 'k-bug-c-title k-selectable');
+      // คำขอฟีเจอร์มีป้ายนำหน้ารายละเอียด (ไอคอน + คำ — ไม่พึ่งสี) · บั๊กไม่มีป้าย = หน้าตาเดิม
+      if (kd === 'feature') {
+        const tag = el('span', 'k-bug-kindtag');
+        tag.append(icon('bulb', 11), document.createTextNode(t('ui.bug.kindTag')));
+        ttl.append(tag);
+      }
+      ttl.append(document.createTextNode(b.title || DASH));
       ttl.title = b.title || '';
       tr.append(idCell, ttl, stCell, cell('k-bug-c-foundIn', b.foundIn),
                 cell('k-bug-c-reported', fmtDate(b.reported)), cell('k-bug-c-fixedIn', b.fixedIn));
@@ -443,7 +537,7 @@ export function openBugStatus(opts = {}) {
     stamp.textContent = !S.ts ? '' : (S.stale ? S.error + ' ' + tf('ui.bug.stale', fmtDateTime(S.ts)) : tf('ui.bug.updated', fmtDateTime(S.ts)));
     stamp.classList.toggle('k-bug-stamp-warn', !!S.stale);
     bRefresh.disabled = S.loading;
-    bClear.disabled = !(VIEW.q || VIEW.status !== 'all' || VIEW.found !== 'all' || VIEW.fixed !== 'all');
+    bClear.disabled = !(VIEW.q || VIEW.kind !== 'all' || VIEW.status !== 'all' || VIEW.found !== 'all' || VIEW.fixed !== 'all');
   }
 
   let round = 0;
@@ -475,6 +569,7 @@ export function openBugStatus(opts = {}) {
   }
 
   q.oninput = () => { VIEW.q = q.value; draw(); };
+  selKind.onchange = () => { VIEW.kind = selKind.value; fillFilters(); draw(); };
   selStatus.onchange = () => { VIEW.status = selStatus.value; draw(); };
   selFound.onchange = () => { VIEW.found = selFound.value; draw(); };
   selFixed.onchange = () => { VIEW.fixed = selFixed.value; draw(); };

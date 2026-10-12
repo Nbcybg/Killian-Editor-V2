@@ -6157,35 +6157,7 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
 /* ═══════════════ [alpha.94] Story Starter ═══════════════
    แผงเดียวสลับ 4 หน้า: หน้ารวม → wizard → รายการตอน → แชท Game Master
    ใช้ตัวแปรสีของโปรแกรมทั้งหมด (ห้ามเขียน hex ตรง ๆ — ธีมสว่างจะพัง) */
-#starter-body { height:100%; overflow:auto; padding:14px; container:stw / inline-size; }
-
-/* ── [alpha.169] ช่องใส่ภาพประกอบแบบ setup wizard (ขนาดกำหนดใน src/starter/starter-art.js)
-   side = 240×460 (ไฟล์ 480×920) แถบภาพข้างซ้าย เมื่อเนื้อแผงกว้าง ≥ 600px · top = แถบหัว 4:1 (ไฟล์ 1200×300) เมื่อแผงแคบ/หน้ารวม
-   ไม่มีไฟล์ = กรอบเส้นประบอกขนาด + ชื่อไฟล์ที่ต้องวาง ── */
-.st-art { position:relative; overflow:hidden; border-radius:var(--k-radius-md, 10px); border:1px dashed var(--border);
-  background:linear-gradient(160deg, var(--sunken), var(--side)); user-select:none; }
-.st-art-ready { border-style:solid; }
-.st-art-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
-.st-art-top { width:100%; aspect-ratio:var(--st-art-ar, 4 / 1); margin:12px 0 2px; }
-.st-art-side { display:none; flex:none; width:calc(240px * var(--ui-scale, 1)); height:calc(460px * var(--ui-scale, 1));
-  position:sticky; top:0; }
-.st-art-ph { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:3px; padding:8px; text-align:center; color:var(--dim); line-height:1.35; }
-.st-art-ready .st-art-ph { display:none; }
-.st-art-ph-ico { font-size:1.6em; opacity:.55; }
-.st-art-ph-size { font-weight:600; color:var(--fg); font-variant-numeric:tabular-nums; }
-.st-art-ph-file { font-family:ui-monospace, Menlo, Consolas, monospace, var(--thai-net); font-size:.8em; opacity:.85; word-break:break-all; }
-.st-art-ph-hint { font-size:.78em; opacity:.7; }
-.st-art-top .st-art-ph { flex-direction:row; flex-wrap:wrap; column-gap:10px; }
-.st-art-top .st-art-ph-ico { font-size:1.2em; }
-.st-wz-main { margin-top:4px; }
-@container stw (min-width: 600px) {
-  .st-wz-main { display:flex; gap:22px; align-items:flex-start; margin-top:14px; }
-  .st-wz-col { flex:1; min-width:0; }
-  .st-wz-main > .st-art-side { display:block; }
-  .st-wz-main .st-art-top { display:none; }
-  .st-wz-main .st-step-head { margin-top:0; }
-}
+#starter-body { height:100%; overflow:auto; padding:14px; }
 
 /* ── ชิ้นส่วนที่ใช้ร่วมกันทุกหน้า ── */
 .st-field { display:flex; flex-direction:column; gap:6px; margin:12px 0; }
@@ -8522,3 +8494,52 @@ body.k-menubar-on .tb-menu:focus { background:var(--hover); color:var(--bright);
 .k-bug-contact-name { color:var(--fg); font-weight:600; }
 .k-bug-contact-name.k-bug-link { color:var(--link); }
 .k-dialog.k-bug-report > .k-dlg-btns > button:disabled { opacity:.45; }
+
+/* ══════════ [alpha.170] ขอฟีเจอร์ในกล่องรายงาน · ตัวอ่านคู่มือ · บรรทัดลิขสิทธิ์ ══════════ */
+/* สวิตช์ชนิดของรายงาน (บั๊ก / ขอฟีเจอร์) — แคปซูลสองช่อง ตัวที่เลือกบอกด้วยพื้น + ตัวหนา (ไม่พึ่งสีอย่างเดียว) */
+.k-bug-kinds { display:flex; align-self:flex-start; max-width:100%; padding:calc(3px * var(--uis)); gap:calc(3px * var(--uis));
+  border:1px solid var(--border); border-radius:var(--r-pill); background:var(--sunken); }
+.k-bug-kinds > .k-bug-kind { flex:0 1 auto; min-width:0; margin:0; padding:calc(4px * var(--uis)) calc(14px * var(--uis)); border:0;
+  border-radius:var(--r-pill); background:transparent; color:var(--dim); font:inherit; font-size:calc(12.5px * var(--uis));
+  cursor:default; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.k-bug-kinds > .k-bug-kind:hover { color:var(--bright); }
+.k-bug-kinds > .k-bug-kind.on { background:var(--accent); color:var(--on-accent); font-weight:600; }
+.k-bug-kinds > .k-bug-kind:focus-visible { outline:2px solid var(--accent-hi); outline-offset:1px; }
+/* ป้าย "ฟีเจอร์" นำหน้ารายละเอียดในตารางสถานะ */
+.k-bug-kindtag { display:inline-flex; align-items:center; gap:calc(3px * var(--uis)); margin-inline-end:calc(6px * var(--uis));
+  padding:0 calc(7px * var(--uis)); border:1px solid var(--link); border-radius:var(--r-pill); color:var(--link);
+  font-size:calc(11.5px * var(--uis)); white-space:nowrap; vertical-align:baseline; user-select:none; }
+.k-dialog > .k-dlg-btns > .k-bug-web ~ .k-bug-go-feature { margin-inline-start:0; }
+
+/* ตัวอ่านคู่มือ: กล่องสูงคงที่ · แถบนำทางกับปุ่มปิดไม่หด · เนื้อเป็นตัวที่เลื่อน (ใช้ตัวอักษรชุดเดียวกับ "มีอะไรใหม่") */
+.k-dialog.k-docs-dlg { width:calc(980px * var(--uis)); max-width:95vw; height:calc(760px * var(--uis)); max-height:90vh;
+  display:flex; flex-direction:column; overflow:hidden; }
+.k-dialog.k-docs-dlg > * { flex:none; }
+.k-dialog.k-docs-dlg > .k-dlg-btns { position:static; margin-bottom:0; padding-bottom:0; }
+.k-docs-bar > .k-docs-sel { flex:1 1 calc(260px * var(--uis)); }
+.k-docs-bar > .k-docs-lang { flex:0 0 auto; width:auto; min-width:calc(110px * var(--uis)); margin-inline-start:auto; }
+.k-docs-bar > .cmp-mini { display:inline-flex; align-items:center; justify-content:center; min-width:calc(30px * var(--uis)); }
+.k-dialog.k-docs-dlg > .k-docs-body { flex:1 1 auto; min-height:0; height:auto; max-height:none;
+  padding:calc(14px * var(--uis)) calc(22px * var(--uis)); font-size:calc(13.5px * var(--ui-scale, 1)); }
+/* เนื้อรับโฟกัสเพื่อให้เลื่อนด้วยคีย์บอร์ดได้ — เส้นบอกโฟกัสบาง ๆ (กรอบหนาทั้งผืนรบกวนการอ่าน) */
+.k-docs-body:focus-visible { outline:1px solid color-mix(in srgb, var(--accent-hi) 45%, transparent); outline-offset:-1px; }
+.k-docs-body .k-cl-title { font-size:1.5em; }
+.k-docs-body .k-cl-h2 { font-size:1.25em; margin-top:1.5em; padding-bottom:.25em; border-bottom:1px solid var(--border); }
+.k-docs-body .k-cl-h3 { font-size:1.1em; }
+.k-doc-link { color:var(--link); cursor:pointer; }
+.k-doc-link:hover { text-decoration:underline; }
+.k-doc-link:focus-visible { outline:2px solid var(--accent-hi); outline-offset:1px; border-radius:var(--r-xs); }
+.k-doc-link > svg, .k-doc-link > .k-icon { margin-inline-start:calc(2px * var(--uis)); vertical-align:-1px; opacity:.8; }
+.k-doc-img { display:block; max-width:100%; height:auto; margin:.6em 0; border:1px solid var(--border); border-radius:var(--r-md); }
+.k-docs-body .k-doc-table td:first-child { white-space:normal; }
+.k-docs-missing { padding:calc(36px * var(--uis)) calc(20px * var(--uis)); text-align:center; color:var(--st-danger); line-height:1.6; overflow-wrap:anywhere; }
+
+/* กล่อง "เกี่ยวกับ": ปุ่มสนับสนุนมีไอคอนนำ · บรรทัดลิขสิทธิ์ใต้แถวล่าง */
+/* ปุ่มเพิ่มจากสี่เป็นหก (คู่มือ · สนับสนุน) — ภาษาที่คำยาว (เยอรมัน) ปุ่มแถวสุดท้ายชนแถวล่างพอดี: กระชับระยะ + แถวล่างมีระยะกันชนของตัวเอง
+   + ฝั่งซ้ายเลื่อนได้เมื่อของสูงเกินกล่องจริง ๆ (ดีกว่าทับกัน) */
+.k-about-left { overflow-y:auto; }
+.k-about-left > .k-about-logo { margin-bottom:16px; }
+.k-about-left > .k-about-pills { gap:6px 8px; margin-top:14px; }
+.k-about-left > .k-about-foot { padding-top:12px; }
+.k-about-pill.k-about-support { display:inline-flex; align-items:center; gap:5px; }
+.k-about-copy { margin-top:12px; font-size:calc(11px * var(--ui-scale, 1)); color:var(--brand-navy); opacity:.62; }

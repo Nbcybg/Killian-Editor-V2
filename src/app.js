@@ -369,6 +369,8 @@ const tr = t;
 import { cmpText, fmtNum, fmtTime, fmtDate, fmtDateTime } from './locale.js';
 import { installStatusToggles, syncStatusToggles } from './status-toggles.js';   // [alpha.165]
 import { openBugReport, openBugStatus } from './bugs/bug-ui.js';   // [alpha.170] รายงานบั๊ก + สถานะบั๊ก
+import { copyrightLine } from './app-info.js';                    // [alpha.170] บรรทัดลิขสิทธิ์ (ชื่อเฉพาะ — ไม่ผ่านไฟล์ภาษา)
+import { openSupportPage } from './support-ui.js';                // [alpha.170] หน้าสนับสนุนโปรเจกต์
 import { installStatusBarLock, resetStatusBarLock, reserveStatusWidth } from './statusbar-lock.js';   // [alpha.166]
 
 // ---------------- (ย้ายไป core.js แล้ว: $, el, state, smart, log, setStatus, ค่าตั้งต้น) ----------------
@@ -14684,7 +14686,6 @@ export const CREDITS = [
   { group: tt('ui.common.font'), items: [
     { name: 'Courier Prime', what: tt('ui.app.fontScreenplayQuoteUnquote'), lic: 'SIL OFL 1.1' },
     { name: 'Nerd Fonts · Material Design Icons', what: tt('ui.app.creditIcons'), lic: 'MIT / Apache-2.0', url: 'https://www.nerdfonts.com' },
-    { name: tt('ui.app.courierMonoThaiProportionalThai'), what: tt('ui.app.fontScreenplayPosView'), lic: tt('ui.app.notSource') },
   ] },
   { group: tt('ui.app.data'), items: [
     { name: tt('ui.app.checkWord'), what: tt('ui.app.listWordEnglishFolder'), lic: '' },
@@ -14724,7 +14725,13 @@ export function aboutDialog(opts = {}) {
   pBug.onclick = () => { ov.remove(); handleCommand('bug-report'); };
   const pBugStatus = el('button', 'k-about-pill k-about-bug-status', tt('ui.about.bugStatus'));
   pBugStatus.onclick = () => { ov.remove(); handleCommand('bug-status'); };
-  pills.append(pChange, pUpdate, pBug, pBugStatus);
+  // [alpha.170] คู่มือผู้ใช้ + สนับสนุนโปรเจกต์ — คำสั่งเดียวกับเมนู ช่วยเหลือ
+  const pManual = el('button', 'k-about-pill k-about-manual', tt('ui.docs.bookManual'));
+  pManual.onclick = () => { ov.remove(); handleCommand('user-manual'); };
+  const pSupport = el('button', 'k-about-pill k-about-support');
+  pSupport.append(icon('heart', 12), document.createTextNode(tt('ui.menu.support')));
+  pSupport.onclick = () => handleCommand('support');
+  pills.append(pChange, pUpdate, pManual, pBug, pBugStatus, pSupport);
   left.append(title, tag, sub, ver, pills);
   const foot = el('div', 'k-about-foot');
   const dev = el('button', 'k-about-round', '');
@@ -14734,7 +14741,8 @@ export function aboutDialog(opts = {}) {
   const openDev = () => { ov.remove(); openDevConsole(); };
   dev.onclick = openDev; devLbl.onclick = openDev;
   foot.append(dev, devLbl);
-  left.append(foot);
+  // [alpha.170] บรรทัดลิขสิทธิ์ (ชื่อเฉพาะจาก app-info.js — ไม่ผ่านไฟล์ภาษา)
+  left.append(foot, el('div', 'k-about-copy', copyrightLine()));
 
   // ── ขวา ──
   const right = el('div', 'k-about-right');
@@ -15422,6 +15430,12 @@ export async function handleCommand(ch, ...a) {
     // [alpha.170] รายงานบั๊ก / สถานะบั๊ก — ปุ่มท้ายแถบสถานะ · กล่อง "เกี่ยวกับ" · เมนู ช่วยเหลือ เรียกสองคำสั่งนี้ทางเดียวกัน
     case 'bug-report': openBugReport(); break;
     case 'bug-status': openBugStatus(); break;
+    // [alpha.170] ขอฟีเจอร์ = กล่องรายงานเดียวกัน เปิดในโหมดขอฟีเจอร์
+    case 'feature-request': openBugReport({ kind: 'feature' }); break;
+    // [alpha.170] คู่มือในโปรแกรม (มากับตัวโปรแกรม · ภาษาตั้งต้นอังกฤษ) — เมนู ช่วยเหลือ · กล่อง "เกี่ยวกับ"
+    case 'user-manual': { const { openDocs } = await import('./docs-ui.js'); openDocs('manual'); break; }
+    case 'extension-guide': { const { openDocs } = await import('./docs-ui.js'); openDocs('extension'); break; }
+    case 'support': openSupportPage(); break;
     // [alpha.135] เมนู ช่วยเหลือ → ตรวจหาอัปเดต… (ไม่เงียบ — บอกผลทุกกรณี)
     case 'check-update': await checkForUpdates({ silent: false }); break;
     // [alpha.58r ข้อ 4] คอนโซลนักพัฒนา (Ctrl+Shift+`) — อยู่เมนูเดียวกับ "เกี่ยวกับ"

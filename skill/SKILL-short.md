@@ -6,7 +6,8 @@ description: Build, maintain, extend, and debug Killian 2 (คิเลียน
 # Killian 2 (คิเลียน อีดิเตอร์ v2)
 
 โปรแกรมเขียนนิยาย + บทภาพยนตร์ของ Top — **Electron 43 + ProseMirror**, พกพาได้, ไทยเป็นหลัก
-เขียนใหม่จาก v1 (Python/Tkinter) แต่ **ไฟล์งานเข้ากันได้ 100%** (.md + .json เหมือนเดิม)
+เขียนใหม่จาก v1 (Python/Tkinter) · ไฟล์งาน = .md + .json (โค้ดยังอ่านไฟล์ของ v1 ได้ตามเดิม
+แต่ **ห้ามเขียนว่า "เข้ากันได้กับ Killian v1" ใน README / กล่องเกี่ยวกับ / ข้อความที่ผู้ใช้เห็น** — ผู้ใช้สั่งตัดที่ alpha.169)
 
 **คุยกับผู้ใช้เป็นภาษาไทย กระชับ ตรงไปตรงมา** ผู้ใช้ = Top (นักออกแบบ/dev, กรุงเทพฯ)
 
@@ -38,6 +39,42 @@ npm run dist             # → dist/Killian2-<version>-portable.exe (~90MB, ใ�
 **Bash tool ที่นี่คือ Git Bash** — `/tmp` ของ bash = `%LOCALAPPDATA%\Temp` แต่ `/tmp` ที่โค้ด Electron เขียน
 = `C:\tmp` → ผลเทสอยู่ที่ **`C:/tmp/k2result.txt`** เสมอ · ฆ่าโปรเซสด้วย `taskkill //F //IM electron.exe`
 (สองสแลชเพราะ MSYS แปลง path)
+
+### A2) เครื่องผู้ใช้จริง — macOS (MacBook Pro 15" 2019 · Intel · macOS 15.7) ← ผู้ใช้ย้ายมาเครื่องนี้ที่ alpha.169
+โฟลเดอร์งาน: `/Users/kaipleng/Desktop/Killian-Editor-V2-main` (สำเนาจาก GitHub — **เริ่มต้นไม่ใช่ git repo และไม่มี `node_modules`**)
+
+```bash
+npm ci && node node_modules/electron/install.js   # postinstall ของ electron ไม่อยู่ใน allowScripts → ต้องรันเองหนึ่งครั้ง
+node build.js && npm run test:unit                # unit ~1–2 นาที
+# e2e — รอบเต็ม ~55 นาทีบนเครื่องนี้ (6,497 ข้อ) → รันเบื้องหลังเสมอ แล้วรอ /tmp/k2result.txt (ALL OK / STOP)
+rm -f /tmp/k2result.txt; rm -rf /tmp/k2proj /tmp/k2ud-e2e; node test/fixture.js /tmp/k2proj
+KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj KILLIAN_USERDATA=/tmp/k2ud-e2e ./node_modules/.bin/electron .
+# + KILLIAN_TEST_KEEPGOING=1 = ไม่หยุดที่ข้อแดงข้อแรก (เก็บข้อแดงทั้งรอบในครั้งเดียว · ไม่มีข้อแดง = ลงท้าย ALL OK เหมือนรอบปกติ)
+cp package.json /tmp/pkg.bak && npm run dist:mac && diff /tmp/pkg.bak package.json   # → dist/Killian2-<ver>-mac-intel.dmg (~143MB)
+```
+- **แอปไม่ปิดเองเมื่อ e2e จบ** — ฆ่าด้วย `pkill -9 -f "electron/dist/Electron.app"` (ตัวแพ็ก: `pkill -9 -f "Killian 2.app"`) · `kill` ธรรมดาติดกล่องยืนยันออก
+- **ห้าม build / เปิด Electron ตัวอื่นระหว่าง e2e** (แย่งโฟกัส · bundle ถูกเขียนทับกลางรอบ) — ทำเอกสาร/README ระหว่างรอได้
+- **รอบ 55 นาทีแพง → ลองเฉพาะบล็อกเทสใหม่ก่อน**: ต่อท้าย selftest.js ชั่วคราว `window.__k2x = { …ของภายในที่บล็อกใช้ }`
+  → build → เปิดแอปด้วย `KILLIAN_TEST=1 KILLIAN_TEST_NORUN=1 KILLIAN_TEST_PROJECT=<dir>` (ได้ `window.__k2dev.handleCommand` โดยไม่รันชุดเทส)
+  → ส่งบล็อกเทสเข้า `Runtime.evaluate` ผ่าน CDP โดยให้ `check` เก็บข้อแดงแทนการโยน → **ลบ hook แล้ว build ใหม่ก่อน e2e จริง**
+- probe: userData แยก (`KILLIAN_USERDATA`) + `--remote-debugging-port=9333` · Node 26 มี `WebSocket`/`fetch` ในตัว (ตัวขับ CDP ~20 บรรทัด ไม่ต้องลงอะไร)
+  · `screencapture` เห็นแค่วอลเปเปอร์ (ไม่มีสิทธิ์ Screen Recording) → ใช้ `Page.captureScreenshot` · `Emulation.setDeviceMetricsOverride` จำลอง 1024×700
+- **ตรวจของในตัวแพ็กเสมอ**: `npx asar list "dist/mac/Killian 2.app/Contents/Resources/app.asar"` — electron-builder ตัด `*.d.ts` (และนามสกุลอีกชุด) ทิ้งโดยตั้งค่าไม่ได้
+  และต้องมี `build.mac.icon` ไม่งั้นได้ไอคอน Electron ตั้งต้น (เตือนแค่บรรทัดเดียว)
+- **`tools/docs-appendix.cjs` รันบน mac ไม่ได้ผลที่ถูก** (คีย์ลัดออกเป็น ⌘ · คู่มือใช้แบบ Ctrl): ภาคผนวก C สร้างด้วย `buildCommands()` ของตัวมันเองได้ (ไม่ต้องเปิดแอป)
+  · ภาคผนวก A แก้บรรทัดเมนูด้วยป้ายจากไฟล์ภาษา · ให้ผู้ใช้รัน `--check` บน Windows ยืนยัน
+- เมนูบน mac: เมนู "ไฟล์" ไปอยู่ใต้เมนูชื่อแอป (ตัวแรกของแถบเมนูระบบ) — ปกติของ macOS
+
+**push ขึ้น GitHub จากโฟลเดอร์ที่ไม่ใช่ git repo** (ทำแล้วที่ alpha.169 รอบต่อ 5 — `gh` ล็อกอินเป็น Nbcybg อยู่แล้ว):
+```bash
+git init -q -b main && git remote add origin https://github.com/Nbcybg/Killian-Editor-V2.git && git fetch origin
+git reset -q --mixed origin/main          # ดัชนี = main บนรีโป · ไฟล์ในโฟลเดอร์ไม่ถูกแตะ
+git status --short                        # ★ ต้องเห็นเฉพาะไฟล์ที่แก้ในรอบนี้ — มีไฟล์แปลก = โฟลเดอร์ไม่ได้มาจาก main ล่าสุด หยุดแล้วบอกผู้ใช้
+git push origin origin/main:refs/heads/backup/main-YYYY-MM-DD-<tag>     # สำรอง main เดิมก่อนเสมอ
+git add -A && git commit … && git push origin HEAD:main HEAD:alpha-134-wysiwyg   # กิ่งทำงานของเครื่อง Windows ต้องเท่ากับ main
+```
+ผู้เขียนคอมมิตของรีโปนี้ = `Killian Backup <backup@killian2.local>` (ตั้งด้วย `git config user.*` ระดับรีโป) · ท้ายข้อความมี Co-Authored-By
+· ไม่ bump เลขรุ่น = ตัวตรวจอัปเดตของผู้ใช้ไม่เสนออะไร (ต้องให้ผู้ใช้สั่ง bump เอง)
 
 ### B) แซนด์บ็อกซ์ Linux
 อาจถูกล้างระหว่าง task — ถ้าไม่มีให้ขอ `Killian2-src.zip` (ล่าสุด) แตกที่ `/home/claude/work/v2_extract/`
@@ -449,9 +486,12 @@ zip -qry out.zip 'Killian 2.app'           # -y สำคัญ! เก็บ 14
 
 ---
 
-## เวอร์ชัน (ล่าสุด **alpha.165** · e2e 5,841 ข้อ ALL OK ทั้ง dev และตัว packaged · unit 147 ไฟล์ · 10,490 ข้อ)
+## เวอร์ชัน (ล่าสุด **alpha.169 รอบต่อ 5** · e2e 6,497 ข้อ ALL OK บน macOS · unit 173 ไฟล์ · 12,456 ข้อ)
 
-> .135–.165 ไม่ได้จดทีละรุ่นที่นี่ — ดู `CHANGELOG.md` (ละเอียด) + `AGENTS.md` (กฎถาวรเป็นตารางต่อรุ่น "ทำแบบนี้ / ห้าม")
+> **alpha.169 รอบต่อ 4–5 (macOS · 2026-10-12)** — ขอฟีเจอร์ในกล่องรายงานบั๊ก (`kind`) · คู่มือผู้ใช้/คู่มือส่วนขยายในโปรแกรม (`docs-view.js` + `docs-ui.js` ·
+> แพ็ก `docs/manual` + `docs/extension`) · ลิงก์สนับสนุน + ลิขสิทธิ์ Noobcyborg Studio (`app-info.js`) · README ใหม่สองภาษา + แบนเนอร์ (`tools/make-banner.cjs`) ·
+> สเปก macOS วัดจากตัวแพ็กจริง · ถอดช่องภาพแบบ setup wizard ของ Story Starter · เครดิตตรงกับของจริง
+> .135–.169 ไม่ได้จดทีละรุ่นที่นี่ — ดู `CHANGELOG.md` (ละเอียด) + `AGENTS.md` (กฎถาวรเป็นตารางต่อรุ่น "ทำแบบนี้ / ห้าม")
 > · **อ่าน AGENTS.md ส่วน "กฎถาวร" ของรุ่นล่าสุดก่อนเริ่มงานทุกครั้ง** — ตัวนั้นทันสมัยกว่าสกิลนี้เสมอ
 
 .13–.22 (v1→v2 พื้นฐาน): snapshot, line numbers, spellcheck ไทย+Chromium, ปุ่มลัดตั้งเอง, mac build, บทหนัง Ctrl+arrow, relationship sync, floating format bar, sidebar resize, SmartType Final Draft, wiki gallery/lightbox, explorer search+tags, panel docking, tree float+snap
@@ -659,6 +699,24 @@ printf '{"openLastProject":true,"showHomeOnStartup":false,"language":"th"}' > "$
   คืนแผงด้วย `dockPanel(id,'left')` ไม่มีจุดยึด (ไปเกาะข้างแถบเครื่องมือ → จำ/คืนเลย์เอาต์ทั้งชุดแทน) ·
   คำจาก `textBetween` ≠ `getSelection().toString()` (Chromium ขยายให้ครบกลุ่มอักษรไทย)
 - **heredoc ของ Bash tool ยุบ `\\`** — ข้อความ/สคริปต์ที่มีแบ็กสแลช (regex, `'\n'` ใน JS) เขียนด้วย Write แล้วรันด้วย node
+
+### บทเรียน alpha.169 รอบต่อ 4–5 (รอบแรกที่รันครบบน macOS)
+- **ของที่ "มีในรีโป" ≠ "มีในแอป"**: คู่มือสองเล่มมีลิงก์ใน README ครบ แต่ไม่อยู่ใน `build.files` และไม่มีเมนูเปิด — ผู้ใช้ถาม "check ว่าถูกใส่และเรียกใช้ใน app มั้ย"
+  ให้ตรวจสามชั้น: แพ็กไหม (`asar list`) · มีทางเข้าไหม (เมนู/ปุ่ม/คำสั่ง) · เปิดได้จริงในตัวแพ็กไหม (CDP เข้าตัว `.app`)
+- **e2e ที่วัดตำแหน่งกล่องโต้ตอบต้องรออนิเมชันเปิดกล่องจบ** (`getAnimations()`) — `[169-N]` ผ่านบน Windows ด้วยจังหวะ แดงบน mac สองข้อ
+  และพาไปเจอบั๊กจริง: `.k-dlg-moving{animation:none}` ถอดคลาสแล้วอนิเมชันเปิดกล่องเล่นซ้ำ (กล่องเด้งทุกครั้งที่ปล่อยเมาส์)
+- **แก้พฤติกรรมของของเดิมแล้วต้องรันเทสเดิมของมันด้วย ไม่ใช่แค่เทสใหม่**: ชื่อสถานะรวมสองชนิด ("แก้ไขแล้ว / เพิ่มแล้ว") ทำ `[170-B]` เดิมแดงที่นาทีที่ 50
+  — บล็อกเทสใหม่ผ่านในการลองแยก แต่บล็อกเดิมข้างเคียงไม่ได้ลอง
+- **ฟีเจอร์ที่ผู้ใช้ไม่ได้ขอแล้วทำเผื่อ อาจถูกสั่งถอด**: ช่องภาพแบบ setup wizard ของ Story Starter (ทำที่ .168 รอบต่อ 3) ผู้ใช้ "ไม่ชอบเลย" → ถอดทั้งชุด
+  (โมดูล · IPC · CSS · ไฟล์ภาพ · คีย์ภาษา · เทส → เหลือด่านกันย้อนกลับ) · ถอดฟีเจอร์ = จำนวน unit ลดได้ ให้บอกตรง ๆ ในสรุป
+- **ถอดของออกจากตัวโปรแกรม = ลบเครดิต + คีย์ภาษาในคอมมิตเดียวกัน**: เครดิตฟอนต์ Courier ไทยค้างมา 10 รุ่นหลังฟอนต์ถูกถอด ·
+  คำอธิบาย Fabric.js ยังอ้างผังพื้นที่ที่เปลี่ยนเป็น SVG ไปแล้ว → ตอนนี้ unit `docs-view` เทียบเครดิตกับ import/ไฟล์จริง
+- **คำสั่งกำกวมให้เลือกการตีความที่หลักฐานในรีโปรองรับ แล้วบอกผู้ใช้ชัด ๆ**: "ทำ spec ออกมาเลย" = วัดความต้องการของระบบบน macOS
+  (README ไทยเขียนค้างว่า "ยังไม่ได้ยืนยันเวอร์ชันขั้นต่ำ") · "default เป็นภาษาอังกฤษ" = README/คู่มือ อังกฤษเป็นตัวหลัก (ในแอป: หน้าจอไทยได้ฉบับไทย)
+- **ข้อความใหม่ 7 ภาษา**: `tools/i18n-add.cjs` (เพิ่ม) · แก้ค่าของคีย์เดิม/ลบคีย์ = สคริปต์สั้นที่ใช้ `parseCsv` + `cell` ของเครื่องมือเดียวกัน (อย่าแก้ CSV ด้วย sed)
+- **README**: อังกฤษ = ตัวหลัก · ไทย = โครงเดียวกัน · "มีอะไรใหม่" รุ่นล่าสุดรุ่นเดียวก่อน Disclaimer (unit ตรวจเลขรุ่น — bump แล้วต้องเขียนส่วนนี้ใหม่)
+- **ตัวกลางรายงานบั๊ก (Cloudflare Worker) ไม่ได้ deploy อัตโนมัติ** — แก้ `tools/bug-relay/worker.js` แล้วต้องบอกผู้ใช้ให้วางโค้ดเองทุกครั้ง
+  และออกแบบให้โปรแกรม/ตัวกลางคนละรุ่นคุยกันได้ (ช่องใหม่เป็นทางเลือก · มีทางสำรองในบรรทัดกำกับ)
 
 ---
 

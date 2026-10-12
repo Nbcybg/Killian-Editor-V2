@@ -157,6 +157,10 @@ function makeDialogMovable(ov, box) {
     const move = (ev) => {
       if (!moved && Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 3) return;
       moved = true;
+      // [alpha.170 · macOS] `.k-dlg-moving` ปิดอนิเมชันของกล่องระหว่างลาก — พอถอดคลาส อนิเมชัน "เปิดกล่อง" เล่นซ้ำ
+      // (กล่องเด้งหนึ่งทีทุกครั้งที่ปล่อยเมาส์/กด Esc ระหว่างลาก · e2e [169-N] วัดตำแหน่งกลางอนิเมชันรอบสองแล้วแดงบน macOS)
+      // → ลากครั้งแรก = อนิเมชันเปิดกล่องจบหน้าที่แล้ว ปิดถาวรที่ตัวกล่อง
+      box.style.animation = 'none';
       box.classList.add('k-dlg-moving');
       setOff(clampDialogOffset({ x: start.x + ev.clientX - x0, y: start.y + ev.clientY - y0 }, base, window.innerWidth, window.innerHeight));
     };

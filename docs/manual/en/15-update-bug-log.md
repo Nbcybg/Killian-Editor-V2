@@ -46,9 +46,11 @@ Special cases:
 
 ## 15.3 Reporting a bug
 
-**Help → Report a bug…**, or the bug button at the end of the status bar.
+**Help → Report a bug…**, or the bug button at the end of the status bar. The same dialog also takes **feature requests** — see [Requesting a feature](#requesting-a-feature) below.
 
 ![The bug-report dialog](img/dlg-bug-report.webp)
+
+At the top of the dialog, the **Bug report / Feature request** switch chooses what you are sending. The fields below are for a bug report.
 
 | Field | What to enter |
 |---|---|
@@ -78,23 +80,40 @@ Special cases:
 4. Copy the error message from the status bar or the Log panel into the report (check first that it contains nothing private).
 5. For panel-layout problems: send the file from **Export → Export panel layout (JSON)…** through whatever channel the maintainers indicate.
 
+### Requesting a feature
+
+**Help → Request a feature…**, or switch the dialog to **Feature request**.
+
+| Field | What to enter |
+|---|---|
+| **Title** (required) | Sum up the idea in one line |
+| **What you would like** | The feature or change you have in mind |
+| **Why it would help** | What you are trying to do, and when you would use it |
+| **How you manage today** | A workaround or another app you use for this (optional) |
+
+- Press **Send request** — it is sent the same way as a bug report and gets an ID you can follow in **Bug & request status**.
+- Switching between the two types keeps what you have typed, and an unsent draft remembers its type.
+- The privacy rules above apply in the same way: **requests are public**.
+- A request is a suggestion, not a promise. Its status shows what the maintainers decided.
+
 ## 15.4 Checking bug status
 
-**Help → Bug status…** — a table of reported bugs.
+**Help → Bug & request status…** — a table of reported bugs and feature requests.
 
 | Column | |
 |---|---|
 | Bug ID · Details | Click a row = open that bug in your browser |
-| Status | Awaiting review · Confirmed · Being fixed · Needs more info · Fixed · Duplicate · Won't fix |
+| Status | Bugs: Awaiting review · Confirmed · Being fixed · Needs more info · Fixed · Duplicate · Won't fix — Feature requests: Awaiting review · Planned · In progress · Needs more info · Added · Duplicate · Not planned |
 | Found in · Fixed in | |
 | Reported | |
 
-- **Filters**: status (all / still open / closed / one status) · Found in · Fixed in · a search box (ID · details · version) · **Clear filters**
+- A feature request carries a **Feature** tag in front of its details; a bug has none.
+- **Filters**: type (all / bugs / feature requests) · status (all / still open / closed / one status) · Found in · Fixed in · a search box (ID · details · version) · **Clear filters**
 - Click a column header to sort · reload · **Open on GitHub**
-- A bug you have just sent from this machine appears in the list at once (even before the list from the server has caught up).
+- A bug or request you have just sent from this machine appears in the list at once (even before the list from the server has caught up).
 - If the latest load failed, the app shows the list it loaded earlier and tells you when that was.
 
-Anyone can view the status. **Reporting** is done from inside the app.
+Anyone can view the status. **Reporting** and **requesting** are done from inside the app — the buttons at the bottom of this dialog open the report dialog in either mode.
 
 ## 15.5 The activity log
 
@@ -123,6 +142,13 @@ The **Help → Developer** menu:
 - **Open Chromium DevTools** — only present when running from source or in developer mode.
 
 > Do not run console commands you do not understand or that came from someone you do not know. The console can reach your files.
+
+## 15.7 The manuals inside the app, and supporting the project
+
+- **Help → User Manual…** opens this manual inside the app, and **Help → Extension Guide…** opens the guide for plugin authors. Both ship with the app, so they work offline.
+- In the reader, pick a chapter from the list, step with the previous/next buttons, and return with the back button. Links to other chapters open in the reader; links to web pages open in your browser.
+- The manuals are written in **English and Thai**. They open in Thai when the interface is Thai and in English for every other interface language. The language box in the reader switches between the two and remembers your choice.
+- **Help → Support the Project** (also a button in the About dialog) opens the project's support page in your browser: <https://buymeacoffee.com/noobcyborg>. Nothing is sent from the app.
 
 ---
 

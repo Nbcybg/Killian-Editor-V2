@@ -15,7 +15,7 @@
     "dist:mac": "node build.js && electron-builder --mac dmg --x64"
   },
   "keywords": [],
-  "author": "",
+  "author": "Noobcyborg Studio",
   "license": "ISC",
   "dependencies": {
     "jszip": "^3.10.1"
@@ -62,6 +62,8 @@
       "fs-safe.cjs",
       "renderer/**",
       "languages/**",
+      "docs/manual/**",
+      "docs/extension/**",
       "node_modules/**",
       "package.json"
     ],
@@ -79,6 +81,7 @@
       "artifactName": "Killian2-${version}-portable.exe"
     },
     "mac": {
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "dmg",
@@ -97,7 +100,8 @@
     "dmg": {
       "artifactName": "Killian2-${version}-mac-intel.dmg",
       "title": "Killian 2 ${version}"
-    }
+    },
+    "copyright": "Copyright © 2026 Noobcyborg Studio"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,

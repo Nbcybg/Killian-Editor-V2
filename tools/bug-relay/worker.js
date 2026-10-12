@@ -20,6 +20,10 @@ export const CLIENT = 'killian2';
 export const LIMITS = { title: 200, body: 20000, bytes: 64 * 1024, maxAgeMs: 15 * 60 * 1000 };
 /** ป้ายที่ติดให้ทุกรายงานจากโปรแกรม (ไม่มีป้ายนี้ในรีโป GitHub จะสร้างให้เอง) */
 export const LABELS = ['from-app'];
+/** ชนิดของรายงาน — ไม่ส่งมา = บั๊ก (โปรแกรมรุ่นก่อน alpha.170 ไม่มีช่องนี้ และต้องส่งได้ตามเดิม) */
+export const KINDS = ['bug', 'feature'];
+/** ป้ายที่ติดเพิ่มให้คำขอฟีเจอร์ — โปรแกรมอ่านชนิดจากป้ายนี้ (ผู้ดูแลเปลี่ยนป้ายเพื่อย้ายชนิดได้) */
+export const KIND_LABELS = { bug: [], feature: ['enhancement'] };
 
 const RE_VERSION = /^\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z.]+)?$/;
 const RE_MARK = /<!--\s*k2-report\b[^>]*-->/gi;
@@ -32,7 +36,7 @@ const fail = (status, code) => ({ ok: false, status, code });
  * ตรวจรายงานที่โปรแกรมส่งมา — บริสุทธิ์ (unit test ได้)
  * @param {any} input วัตถุที่ถอดจาก JSON แล้ว
  * @param {number} now เวลาปัจจุบัน (ms)
- * @returns {{ok:true,title:string,body:string,version:string}|{ok:false,status:number,code:string}}
+ * @returns {{ok:true,title:string,body:string,version:string,kind:string}|{ok:false,status:number,code:string}}
  */
 export function validateReport(input, now = Date.now()) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return fail(400, 'shape');
@@ -40,6 +44,8 @@ export function validateReport(input, now = Date.now()) {
   const body = String(input.body == null ? '' : input.body).replace(/\r\n?/g, '\n').replace(CTRL, '').trim();
   const version = String(input.version == null ? '' : input.version).trim();
   const ts = Number(input.ts);
+  const kind = input.kind == null ? 'bug' : String(input.kind);
+  if (!KINDS.includes(kind)) return fail(400, 'kind');
   if (!title || title.length > LIMITS.title) return fail(400, 'title');
   if (!body || body.length > LIMITS.body) return fail(400, 'body');
   if (!RE_VERSION.test(version) || version.length > 40) return fail(400, 'version');
@@ -50,7 +56,7 @@ export function validateReport(input, now = Date.now()) {
   // เทียบทั้งค่า ไม่ใช่ "ขึ้นต้นด้วย" (alpha.1 ต้องไม่ผ่านด่านของ alpha.169)
   const marked = marks.length === 1 ? (/\bversion=(\S+)/.exec(marks[0]) || [])[1] : '';
   if (marked !== version) return fail(400, 'mark');
-  return { ok: true, title, body, version };
+  return { ok: true, title, body, version, kind };
 }
 
 /** ไม่ให้รายงานแท็กใครบน GitHub (@ชื่อ) — แทรกช่องว่างกว้างศูนย์หลัง @ */
@@ -58,7 +64,7 @@ export function defang(text) { return String(text).replace(/@(?=[A-Za-z0-9])/g, 
 
 /** เนื้อของคำขอเปิด Issue */
 export function issuePayload(v) {
-  return { title: defang(v.title), body: defang(v.body), labels: LABELS.slice() };
+  return { title: defang(v.title), body: defang(v.body), labels: [...LABELS, ...(KIND_LABELS[v.kind] || [])] };
 }
 
 const json = (status, data) => new Response(JSON.stringify(data), {

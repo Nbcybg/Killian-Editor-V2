@@ -617,6 +617,9 @@ function buildMenu() {
       // — ผู้ใช้ที่ไม่รู้คีย์ลัดจึงไม่มีทางรู้ว่ามีหน้านี้อยู่ · และไม่มีทางเปิดหน้ารีโป/รุ่นที่เผยแพร่เลย
       // [alpha.168 · bug hunt] ภาพรวมการใช้งานหน้าเดียว — ผู้ใช้ใหม่ไม่มีอะไรบอกเลยว่าโปรแกรมทำงานยังไง
       { label: tt('ui.menu.quickStart'), click: cmd('quick-start') },
+      // [alpha.170] คู่มือฉบับเต็มมากับตัวโปรแกรม (docs/manual · docs/extension ใน build.files) — อ่านในโปรแกรม ไม่ต้องต่อเน็ต
+      { id: 'user-manual', label: tt('ui.menu.userManual'), click: cmd('user-manual') },
+      { id: 'extension-guide', label: tt('ui.menu.extensionGuide'), click: cmd('extension-guide') },
       { label: tt('ui.menu.cheatsheet'), click: cmd('cheatsheet') },
       { label: tt('ui.menu.saveChangeChangelog'), click: cmd('changelog') },
       { type: 'separator' },
@@ -628,7 +631,11 @@ function buildMenu() {
       { type: 'separator' },
       // [alpha.170] รายงานบั๊ก / สถานะบั๊ก (Issues ของรีโปเดียวกัน) — ทางเดียวกับปุ่มท้ายแถบสถานะและกล่อง "เกี่ยวกับ"
       { id: 'bug-report', label: tt('ui.menu.bugReport'), click: cmd('bug-report') },
+      { id: 'feature-request', label: tt('ui.menu.featureRequest'), click: cmd('feature-request') },
       { id: 'bug-status', label: tt('ui.menu.bugStatus'), click: cmd('bug-status') },
+      { type: 'separator' },
+      // [alpha.170] หน้าสนับสนุนโปรเจกต์ (ที่อยู่อยู่ที่ src/app-info.js ที่เดียว — renderer เป็นคนเปิดผ่าน shell:openExternal)
+      { id: 'support', label: tt('ui.menu.support'), click: cmd('support') },
       { type: 'separator' },
       // [alpha.162 · W4] ของนักพัฒนาแยกเป็นเมนูย่อย — ผู้ใช้ทั่วไปไม่ต้องเจอ DevTools ปนกับ "เกี่ยวกับ"
       { label: tt('ui.menu.developer'), submenu: [
@@ -862,7 +869,8 @@ function createWindow() {
   win.on('responsive', () => logMain('info', 'window responsive again'));
   win.webContents.on('did-fail-load', (e, code, desc, url) => logMain('error', 'load failed [' + code + ' ' + desc + ']', url));
   win.webContents.on('preload-error', (e, p, err) => logMain('error', 'preload error', err));
-  win.loadFile('renderer/index.html', TEST ? { search: 'k2test=1' } : {});
+  // [alpha.170] KILLIAN_TEST_KEEPGOING=1 = e2e ไม่หยุดที่ข้อแดงข้อแรก (เก็บข้อแดงทั้งรอบในครั้งเดียว — รอบเต็มใช้เวลาเกือบชั่วโมง)
+  win.loadFile('renderer/index.html', TEST ? { search: 'k2test=1' + (process.env.KILLIAN_TEST_KEEPGOING === '1' ? '&k2keep=1' : '') } : {});
   // [alpha.168] ลายเซ็นแบบวัตถุเดียว (แบบหลายอาร์กิวเมนต์ถูก Electron ประกาศเลิกใช้)
   if (TEST) win.webContents.on('console-message', (e) => {
     try { fs.appendFileSync('/tmp/k2console.txt', `${e.level} ${e.sourceId}:${e.lineNumber} ${e.message}\n`); } catch {}
@@ -1710,14 +1718,6 @@ H('plugins:globalDir', () => {
   const p = globalPluginsDir();
   try { fs.mkdirSync(p, { recursive: true }); } catch {}
   return p;
-});
-// [alpha.169] ภาพประกอบของ Story Starter (renderer/starter/*.png) — renderer ถามรายชื่อไฟล์ที่มีจริงครั้งเดียว
-// แล้วเลือกเอง (starter-art.js) · ไม่รับอาร์กิวเมนต์ (โฟลเดอร์ตายตัวในตัวโปรแกรม) · ถ้าให้ renderer ลองโหลดทีละชื่อ = คอนโซลแดงเป็นแถว
-H('starter:artList', () => {
-  try {
-    return fs.readdirSync(path.join(__dirname, 'renderer', 'starter'), { withFileTypes: true })
-      .filter((d) => d.isFile() && /\.(png|jpe?g|webp)$/i.test(d.name)).map((d) => d.name);
-  } catch { return []; }
 });
 H('plugins:listGlobal', () => {
   try {

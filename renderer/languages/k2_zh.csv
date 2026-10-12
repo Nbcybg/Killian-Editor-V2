@@ -12,7 +12,7 @@ ui.a11y.oskFail,无法打开系统屏幕键盘 — 此电脑上未安装任何�
 ui.a11y.oskOpened,已打开系统屏幕键盘
 ui.a11y.oskSettings,无法直接打开屏幕键盘 — 已改为打开系统键盘设置，请在其中开启
 ui.about.bugReport,报告错误
-ui.about.bugStatus,错误状态
+ui.about.bugStatus,错误与建议状态
 ui.about.changelog,新功能
 ui.about.checkUpdate,检查更新
 ui.about.credits,致谢
@@ -1317,7 +1317,7 @@ ui.app.block, 个块
 ui.app.boardItemHideItem,有 {0} 个看板被筛选条件隐藏 — 清空搜索框即可查看全部
 ui.app.boardPlanner,规划板
 ui.app.boardPlanner2,规划板（{0}）
-ui.app.boardPlannerPlannerGraph,规划板（规划器）与平面图
+ui.app.boardPlannerPlannerGraph,规划板（规划器）
 ui.app.boardPlannerReadCant,规划板（无法读取）
 ui.app.bookNotHasDraft,本卷还没有草稿
 ui.app.btnFloatFABClose,悬浮按钮（FAB）：关
@@ -1417,7 +1417,6 @@ ui.app.copyResult,复制结果
 ui.app.copyResultConsoleDone,控制台输出已复制
 ui.app.copySaveDoneLine,日志已复制（{0} 行符合筛选条件）
 ui.app.corner,倾斜（度）
-ui.app.courierMonoThaiProportionalThai,Courier MonoThai · ProportionalThai (1998)
 ui.app.coverBookReadNot,无法读取本卷的封面图片
 ui.app.creditIcons,应用的图标集（K2 Icons 字体）
 ui.app.creditThree,3D 故事网络（模型 · 背景）
@@ -1515,12 +1514,11 @@ ui.app.file,文件扩展名
 ui.app.fileLangK2Csv,语言文件（k2_*.csv）
 ui.app.fileNotHas,（此文件还没有 {0}）
 ui.app.fileOpen,打开文件
-ui.app.fileTaskMarkdownJSON,工作文件为 Markdown + JSON，与 Killian v1 完全兼容
+ui.app.fileTaskMarkdownJSON,工作文件为普通的 Markdown + JSON
 ui.app.filter,按来源筛选
 ui.app.findDiskFindOn,在磁盘上查找
 ui.app.findRowNotFound,未找到行 → 正在修复树
 ui.app.folderNotProjectKillian,此文件夹不是 Killian 项目（未找到 project.khn.json）
-ui.app.fontScreenplayPosView,剧本字体（泰文）— 已调整声调符号位置 · 参见 renderer/assets/fonts/THAI-FONTS.txt
 ui.app.fontScreenplayQuoteUnquote,剧本字体（拉丁文）— Quote-Unquote Apps
 ui.app.forceCaseBig,强制大写
 ui.app.forcePrintBigFormat,按标准剧本格式强制大写
@@ -1737,7 +1735,6 @@ ui.app.notRememberEditChapter,不再记住“{0}”（可在 剧本 → 管理 S
 ui.app.notRememberFoundNot,尚未记住（出现不足 {0} 次）— 点击“记住”即可立即记住
 ui.app.notSave,未保存
 ui.app.notSet,（未设置）
-ui.app.notSource,来源许可证未知
 ui.app.notUseTemplate2,— 无模板 —
 ui.app.novel, 小说
 ui.app.novel2, 小说 ▾
@@ -1962,6 +1959,7 @@ ui.app.startAppShowPage,启动时：先显示主页
 ui.app.status2,状态： 
 ui.app.styleWatermark,水印模板
 ui.app.suggest, （推荐）
+ui.app.supportOpened,已在浏览器中打开支持页面。谢谢！
 ui.app.template,模板
 ui.app.templateManage,模板（管理）
 ui.app.templatesFillBlockProfile,模板：已将档案块添加到此项目的标准模板中
@@ -2357,7 +2355,8 @@ ui.branch.zoomIn,放大
 ui.branch.zoomOut,缩小
 ui.bug.btnCopy,复制报告
 ui.bug.btnSend,发送报告
-ui.bug.btnStatus,查看错误状态
+ui.bug.btnSendFeature,发送建议
+ui.bug.btnStatus,查看状态
 ui.bug.clear,清除筛选
 ui.bug.colFixed,修复版本
 ui.bug.colFound,发现版本
@@ -2371,13 +2370,14 @@ ui.bug.contactMailTip,复制报告，并打开一封发往此地址的新邮件
 ui.bug.copied,报告已复制，请粘贴到指定的渠道发送。
 ui.bug.copyFail,无法复制报告
 ui.bug.count,显示 {1} 项中的 {0} 项
-ui.bug.empty,尚无已报告的错误
+ui.bug.empty,尚无任何报告
 ui.bug.envHead,环境
 ui.bug.envNote,这一行会自动附在报告中，不含文件名和作品内容。
 ui.bug.errHttp,GitHub 返回了错误 {0}
 ui.bug.errNet,无法连接 GitHub。请检查网络连接后重试。
 ui.bug.errParse,无法读取 GitHub 返回的列表
 ui.bug.errRate,GitHub 暂时限制了请求次数。请稍后重试，或在 GitHub 上查看列表。
+ui.bug.featureTitle,提出功能建议
 ui.bug.fExpected,预期结果
 ui.bug.fExpectedPh,本应出现的结果（可选）
 ui.bug.fltAll,全部状态（{0}）
@@ -2385,23 +2385,37 @@ ui.bug.fltClosed,已关闭（{0}）
 ui.bug.fltFixedAll,修复版本：全部
 ui.bug.fltFixedNone,尚无修复版本
 ui.bug.fltFoundAll,发现版本：全部
+ui.bug.fltKindAll,全部类型（{0}）
+ui.bug.fltKindBug,错误（{0}）
+ui.bug.fltKindFeature,功能建议（{0}）
 ui.bug.fltOne,{0}（{1}）
 ui.bug.fltOpen,未关闭（{0}）
+ui.bug.fNow,目前的做法
+ui.bug.fNowPh,变通办法或你为此使用的其他软件（可选）
 ui.bug.fSteps,重现步骤
 ui.bug.fStepsPh,1. 打开……  2. 点击……  3. 看到……
 ui.bug.fTitle,标题
 ui.bug.fTitlePh,用一句话概括问题
+ui.bug.fTitlePhFeature,用一句话概括你的想法
+ui.bug.fWant,想要的功能
+ui.bug.fWantPh,描述你设想的功能或改动
 ui.bug.fWhat,发生了什么
 ui.bug.fWhatPh,描述你看到的情况，例如错误提示或丢失的内容
-ui.bug.loading,正在加载错误列表……
-ui.bug.needTitle,请先填写问题的标题
-ui.bug.noMatch,没有符合筛选条件的错误
+ui.bug.fWhy,为什么有帮助
+ui.bug.fWhyPh,你想完成什么，以及何时会用到
+ui.bug.kindBug,错误报告
+ui.bug.kindFeature,功能建议
+ui.bug.kindLabel,报告类型
+ui.bug.kindTag,建议
+ui.bug.loading,正在加载列表……
+ui.bug.needTitle,请先填写标题
+ui.bug.noMatch,没有符合筛选条件的项目
 ui.bug.openFail,无法打开浏览器
 ui.bug.openWeb,在 GitHub 上打开
 ui.bug.refresh,刷新
-ui.bug.reportIntro,报告会从程序直接发送，并出现在任何人都能查看的错误列表中——请不要填写个人信息或尚未发表的正文。
+ui.bug.reportIntro,报告和建议会从程序直接发送，并出现在任何人都能查看的公开列表中——请不要填写个人信息或尚未发表的正文。
 ui.bug.reportTitle,报告错误
-ui.bug.rowTip,在浏览器中打开错误 {0}
+ui.bug.rowTip,在浏览器中打开 {0}
 ui.bug.searchPh,按编号、详情或版本搜索
 ui.bug.sendClock,由于本机的日期和时间不正确，报告未能发送。请校正后重试，已填写的内容仍然保留。
 ui.bug.sendFail,报告接收服务返回了错误 {0}。已填写的内容仍然保留，请稍后重试，或复制报告通过其他方式发送。
@@ -2410,15 +2424,20 @@ ui.bug.sendNet,无法发送报告。请检查网络连接后重试，已填写�
 ui.bug.sendOff,此版本尚不能从程序内发送报告。请复制报告，通过开发者指定的渠道发送。
 ui.bug.sendRate,发送过于频繁，请稍候再试。
 ui.bug.sentOk,报告已发送，编号 {0}
+ui.bug.sentOkFeature,建议已发送，编号 {0}
 ui.bug.sortTip,按此列排序
 ui.bug.source,来源：本程序的 GitHub Issues
+ui.bug.stAdded,已添加
 ui.bug.stale,（当前列表加载于 {0}）
-ui.bug.statusTitle,错误状态
+ui.bug.statusTitle,错误与建议状态
+ui.bug.stBuilding,进行中
 ui.bug.stConfirmed,已确认
+ui.bug.stDeclined,不采纳
 ui.bug.stDuplicate,重复
 ui.bug.stFixed,已修复
 ui.bug.stNeedInfo,需要更多信息
 ui.bug.stNew,待确认
+ui.bug.stPlanned,已计划
 ui.bug.stProgress,修复中
 ui.bug.stWontfix,不予修复
 ui.bug.updated,最近更新：{0}
@@ -3223,6 +3242,14 @@ ui.dlgBuilder.sceneOpenBare,场景开始
 ui.dlgBuilder.selfMono,独白
 ui.dlgBuilder.unknownName,未知
 ui.dlgBuilder.untitled,无标题
+ui.docs.back,返回
+ui.docs.bookExtension,扩展指南
+ui.docs.bookManual,用户手册
+ui.docs.chapter,章节
+ui.docs.language,手册语言
+ui.docs.next,下一章
+ui.docs.notFound,无法打开手册的这一页：{0}
+ui.docs.prev,上一章
 ui.doctor.allGood,未发现问题 — 索引与所有文件一致
 ui.doctor.badgeTip,发现 {0} 个项目问题（缺失文件 · 重复行 · 头部损坏等）— 点击查看并修复
 ui.doctor.confirmFix,修复所选的 {0} 个问题？
@@ -4658,7 +4685,7 @@ ui.menu.blockCode,代码块
 ui.menu.boardMoodMoodBoard,情绪板 — 以侧边面板形式打开；可将图片拖入其中
 ui.menu.btnFloatCornerRight,悬浮按钮，右下角（FAB）
 ui.menu.bugReport,报告错误……
-ui.menu.bugStatus,错误状态……
+ui.menu.bugStatus,错误与建议状态……
 ui.menu.cancelSplitPageScreen,取消分屏
 ui.menu.caseBigSmall,大小写（自由）
 ui.menu.centerK,居中
@@ -4706,6 +4733,8 @@ ui.menu.exportLayoutPanelJSON,导出面板布局（JSON）……
 ui.menu.exportProjectZip,整个项目导出为 ZIP……
 ui.menu.exportTop,导出
 ui.menu.exportWorkFlowSteps,编辑导出工作流步骤……
+ui.menu.extensionGuide,扩展指南……
+ui.menu.featureRequest,提出功能建议……
 ui.menu.file,文件
 ui.menu.file2,文件
 ui.menu.fitWidePagePaper,适应页面宽度
@@ -4854,6 +4883,7 @@ ui.menu.storyTools,故事工具
 ui.menu.storyYoursDialogPrev,与你的故事对话（旧对话框）……
 ui.menu.suggestTitle,建议标题……
 ui.menu.summaryBodyProject,总结项目……
+ui.menu.support,支持本项目
 ui.menu.tableCSV,CSV 表格
 ui.menu.textCaseCycleU,循环切换大小写
 ui.menu.textContCONTINUEDMORE,续接文字（CONTINUED · MORE · cont'd）
@@ -4864,6 +4894,7 @@ ui.menu.toggleModeNovelChapter,在小说 ↔ 剧本模式之间切换
 ui.menu.tool,工具
 ui.menu.toolbarCfg,自定义工具栏……
 ui.menu.trialPlayStoryBreak,试玩分支故事（玩家模式）
+ui.menu.userManual,用户手册……
 ui.menu.view,视图
 ui.menu.viewChapter,剧本视图
 ui.menu.viewNoteAll,查看所有备注……
@@ -6109,7 +6140,7 @@ ui.roster.showHeadingScene,显示“场景”标题
 ui.roster.showHeadingTime,显示“时间”标题
 ui.sb.autoFit,自动适应宽度
 ui.sb.autosave,自动保存
-ui.sb.bugReport,报告错误
+ui.sb.bugReport,报告错误或提出功能建议
 ui.sb.home,主页
 ui.sb.lineNumbers,行号
 ui.sb.mdCodes,显示 Markdown 代码
@@ -6871,7 +6902,6 @@ ui.starter.aiWriteIntro,让 AI 撰写梗概
 ui.starter.aiWriteIntroShort,仅一段
 ui.starter.aiWriteOpener,让 AI 起草开场
 ui.starter.aiWriteSynopsis,让 AI 撰写梗概
-ui.starter.artHint,插图位 — 请将同名文件放入应用文件夹
 ui.starter.autoLinkAsk,是否同时为“{0}”创建一个 Wiki 页面？
 ui.starter.autoLinkGo,创建
 ui.starter.backToList,返回概览
@@ -7484,8 +7514,8 @@ ui.tip.blockStyle,将整个段落变为某一级标题或引用。导航面板�
 ui.tip.books,管理卷和草稿 — 封面、简介、状态，并可拖动重新排序。
 ui.tip.branch-sync,读取此场景中以方括号 [文本] 写成的选项，并将其转换为分支图上的路径。
 ui.tip.branching,打开分支故事图，显示每个场景的选项通向何处 — 适用于视觉小说和剧情游戏。
-ui.tip.bug-report,写下遇到的问题，直接从程序发送给开发者。
-ui.tip.bug-status,列出已报告的错误及其状态、发现版本和修复版本，并可筛选。
+ui.tip.bug-report,写下你发现的问题，或切换为功能建议，并从程序直接发送给开发者。
+ui.tip.bug-status,列出已报告的错误和功能建议及其状态、报告时的版本和解决版本，并可筛选。
 ui.tip.changelog,查看应用每个版本新增或修复了什么。
 ui.tip.chapter,在你选择的卷中创建新章节并打开它。章节用于把若干场景归为一组。
 ui.tip.chapters,打开章节管理器 — 查看卷中每个章节的封面、顺序和统计数据。
@@ -7517,6 +7547,8 @@ ui.tip.export-pdf-builtin,直接使用内置 PDF 生成器导出 PDF，不经过
 ui.tip.export-rtf,将剧本导出为 RTF 文件，可在 Word 和大多数文字处理软件中打开。
 ui.tip.export-watermark,设置印在导出文件每一页上的水印 — 收件人姓名或“草稿”字样。
 ui.tip.export-zip,将整个项目文件夹打包成一个 ZIP 文件，用于备份或分享。
+ui.tip.extension-guide,在程序内打开编写插件和其他扩展的指南。
+ui.tip.feature-request,描述你想要的功能，并从程序直接把建议发送给开发者。
 ui.tip.find,在当前打开的文档中查找和替换。
 ui.tip.floorplan,打开平面图 — 俯视的布景图：摆放角色，设置摄影机/镜头和灯光，再对照场景台词安排各节拍的走位
 ui.tip.fmt,文本格式 — 加粗、标题、列表等；每个按钮都会说明它应用的样式。
@@ -7718,6 +7750,7 @@ ui.tip.split-view:right,将写作区域分为左右两个窗格。
 ui.tip.sprint,为写作冲刺计时，统计冲刺期间写下的词数，支持设定词数目标，并将统计数据保存在项目中
 ui.tip.story-starter,打开故事启动器：逐步设置故事、角色和开场场景，然后与 AI 以篇章形式展开游玩。
 ui.tip.story-starter-toggle,打开或关闭故事启动器 — 逐步设置故事并与 AI 一起游玩。再次点击即可关闭。
+ui.tip.support,在浏览器中打开本项目的支持页面，可以请开发者喝杯咖啡。
 ui.tip.sync-scene-meta,从 .md 文件头重新读取场景属性 — 在其他程序中编辑过文件后使用。
 ui.tip.test-run,运行应用的自检测试套件（面向开发者）。
 ui.tip.text-case,将选中的文本转换为指定的大小写形式。仅影响拉丁字母。
@@ -7798,6 +7831,7 @@ ui.tip.ui:tb-source,显示此场景的原始 Markdown — 即写入文件的确�
 ui.tip.ui:tb-sp-cont,开关剧本的自动续接标记 — 页尾的 (CONTINUED) 和对白跨页时的 (MORE)。
 ui.tip.ui:tb-sp-ext,在角色名之后添加扩展标记 — (V.O.) 画外音、(O.S.) 画外、(cont'd) 接续。
 ui.tip.ui:tb-visual,打开此场景的分镜板，用一连串图像来讲述它。
+ui.tip.user-manual,在程序内打开完整的用户手册——全部章节，提供英文和泰文，无需联网。
 ui.tip.visual-tags,管理你为场景附加的颜色标签 — 比如按故事线或主角划分。
 ui.tip.word-history,找出频繁重复的词并显示用词统计，帮你发现自己的口头禅。
 ui.tip.workspace,切换到指定的面板布局。

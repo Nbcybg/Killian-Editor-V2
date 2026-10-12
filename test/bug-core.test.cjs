@@ -62,11 +62,31 @@ const issue = (o) => ({ number: 1, title: 'x', state: 'open', labels: [], create
 
 // ═══════════ อะไรนับเป็นบั๊ก ═══════════
 {
-  check('pull request ไม่ใช่บั๊ก', B.isBugIssue(issue({ pull_request: { url: 'x' } })) === false);
-  check('ข้อเสนอฟีเจอร์/เอกสาร ไม่ใช่บั๊ก', !B.isBugIssue(issue({ labels: [{ name: 'enhancement' }] })) && !B.isBugIssue(issue({ labels: [{ name: 'documentation' }] })));
-  check('ฟีเจอร์ที่ติดป้าย bug ด้วย = บั๊ก', B.isBugIssue(issue({ labels: [{ name: 'enhancement' }, { name: 'bug' }] })));
-  check('ไม่มีป้าย = บั๊ก (รายงานใหม่ยังไม่มีใครติดป้าย)', B.isBugIssue(issue({})));
-  check('ของเสีย (ไม่มีเลข/ไม่ใช่วัตถุ) = ไม่รับ', !B.isBugIssue(null) && !B.isBugIssue('x') && !B.isBugIssue({ title: 'a' }));
+  check('pull request ไม่ใช่บั๊ก', B.isReportIssue(issue({ pull_request: { url: 'x' } })) === false);
+  check('งานเอกสารไม่นับ', !B.isReportIssue(issue({ labels: [{ name: 'documentation' }] })));
+  // [alpha.170 · ขอฟีเจอร์] ผู้ใช้: "ปรับปรุง bug report ให้มี request feature เพิ่มเข้ามา"
+  const kd = (o) => B.kindOf(issue(o));
+  check('★★ คำขอฟีเจอร์นับเป็นรายการ (เดิมถูกกรองทิ้ง) · เอกสารที่ติดป้ายฟีเจอร์ด้วยก็นับ',
+        B.isReportIssue(issue({ labels: [{ name: 'enhancement' }] })) && B.isReportIssue(issue({ labels: ['Feature Request'] }))
+        && B.isReportIssue(issue({ labels: [{ name: 'documentation' }, { name: 'feature' }] })));
+  check('★ ชนิดจากป้าย: enhancement/feature/feature-request = ขอฟีเจอร์ · ไม่มีป้าย = บั๊ก',
+        kd({ labels: [{ name: 'enhancement' }] }) === 'feature' && kd({ labels: ['Feature'] }) === 'feature' && kd({ labels: ['feature request'] }) === 'feature' && kd({}) === 'bug');
+  check('★ ป้าย bug ชนะป้ายฟีเจอร์และบรรทัดกำกับ (ผู้ดูแลย้ายชนิดได้ด้วยป้าย)',
+        kd({ labels: [{ name: 'enhancement' }, { name: 'bug' }] }) === 'bug' && kd({ labels: ['bug'], body: '<!-- k2-report version=1.0 kind=feature -->' }) === 'bug');
+  check('★★ ไม่มีป้าย (ตัวกลางรุ่นเก่า) = อ่านชนิดจากบรรทัดกำกับ · ค่าแปลก = บั๊ก',
+        kd({ body: 'x\n<!-- k2-report version=2.0.0-alpha.169 lang=en kind=feature -->' }) === 'feature'
+        && kd({ body: '<!-- k2-report version=1.0 kind=evil -->' }) === 'bug' && kd({ body: '<!-- k2-report version=1.0 -->' }) === 'bug');
+  check('ชนิดติดไปกับแถว', B.issueToBug(issue({ labels: ['enhancement'] })).kind === 'feature' && B.issueToBug(issue({})).kind === 'bug');
+  check('คำขอที่รับไว้ (accepted/planned/confirmed) = สถานะยืนยันแล้ว · มีแค่ป้ายฟีเจอร์ = รอตรวจสอบ',
+        B.statusOf(issue({ labels: ['enhancement', 'accepted'] })) === 'confirmed' && B.statusOf(issue({ labels: ['enhancement', 'planned'] })) === 'confirmed'
+        && B.statusOf(issue({ labels: ['enhancement'] })) === 'new');
+  check('★ สถานะของคำขอฟีเจอร์มีชื่อของตัวเองสี่ตัว (คีย์เต็ม) · ที่เหลือใช้ร่วมกับบั๊ก',
+        B.statusKey('fixed', 'feature') === 'ui.bug.stAdded' && B.statusKey('confirmed', 'feature') === 'ui.bug.stPlanned' && B.statusKey('progress', 'feature') === 'ui.bug.stBuilding'
+        && B.statusKey('wontfix', 'feature') === 'ui.bug.stDeclined' && B.statusKey('new', 'feature') === B.BUG_STATUS_KEYS.new
+        && B.statusKey('fixed', 'bug') === 'ui.bug.stFixed' && B.statusKey('fixed') === 'ui.bug.stFixed' && B.statusKey('zzz', 'feature') === 'ui.bug.stNew'
+        && B.BUG_STATUSES.every((st) => /^ui\.bug\.st[A-Z]\w+$/.test(B.FEATURE_STATUS_KEYS[st])));
+  check('ไม่มีป้าย = บั๊ก (รายงานใหม่ยังไม่มีใครติดป้าย)', B.isReportIssue(issue({})));
+  check('ของเสีย (ไม่มีเลข/ไม่ใช่วัตถุ) = ไม่รับ', !B.isReportIssue(null) && !B.isReportIssue('x') && !B.isReportIssue({ title: 'a' }));
 }
 
 // ═══════════ รุ่น ═══════════
@@ -79,7 +99,7 @@ const issue = (o) => ({ number: 1, title: 'x', state: 'open', labels: [], create
 
   const body = B.buildReportBody({ what: 'ก', env: { version: '2.0.0-alpha.169', platform: 'win32', lang: 'th' }, labels: { what: 'W', steps: 'S', expected: 'E', env: 'ENV' } });
   check('★★ รุ่นที่พบอ่านกลับจากรายงานที่โปรแกรมเขียนเอง', B.foundVersion(issue({ body })) === 'alpha.169', B.foundVersion(issue({ body })));
-  check('บรรทัดกำกับอ่านได้ครบ', JSON.stringify(B.parseReportMark(body)) === JSON.stringify({ version: '2.0.0-alpha.169', platform: 'win32', lang: 'th' }));
+  check('บรรทัดกำกับอ่านได้ครบ', JSON.stringify(B.parseReportMark(body)) === JSON.stringify({ version: '2.0.0-alpha.169', platform: 'win32', lang: 'th', kind: '' }));
   check('ป้าย found: ชนะเนื้อรายงาน (ผู้ดูแลแก้ได้)', B.foundVersion(issue({ body, labels: [{ name: 'found:alpha.160' }] })) === 'alpha.160');
   check('บรรทัด Version: ที่คนพิมพ์เองก็อ่านได้', B.foundVersion(issue({ body: 'hello\n**Version:** 2.0.0-alpha.150\nbye' })) === 'alpha.150'
         && B.foundVersion(issue({ body: 'App version: v2.0.0-alpha.151' })) === 'alpha.151');
@@ -98,7 +118,7 @@ const RAW = [
   issue({ number: 7, title: '  บันทึกแล้ว\nค้าง  ', labels: [{ name: 'bug' }], created_at: '2026-10-05T03:00:00Z', body: '<!-- k2-report version=2.0.0-alpha.169 -->' }),
   issue({ number: 5, title: 'Export PDF blank', state: 'closed', state_reason: 'completed', created_at: '2026-09-20T03:00:00Z',
           body: 'Version: 2.0.0-alpha.167', milestone: { title: '2.0.0-alpha.168' } }),
-  issue({ number: 6, title: 'add dark mode', labels: [{ name: 'enhancement' }] }),
+  issue({ number: 6, title: 'fix a typo in the manual', labels: [{ name: 'documentation' }] }),
   issue({ number: 4, title: 'PR', pull_request: {} }),
   issue({ number: 3, title: 'ซ้ำ', labels: [{ name: 'duplicate' }], created_at: '2026-09-01T00:00:00Z' }),
   issue({ number: 2, title: 'crash on open', labels: [{ name: 'in progress' }], created_at: '2026-08-15T00:00:00Z', body: '<!-- k2-report version=2.0.0-alpha.99 -->' }),
@@ -109,7 +129,7 @@ const RAW = [
         b.id === '#7' && b.title === 'บันทึกแล้ว ค้าง' && b.status === 'confirmed' && b.foundIn === 'alpha.169'
         && b.reported === '2026-10-05T03:00:00Z' && b.fixedIn === '' && b.url === B.bugUrl(7), JSON.stringify(b));
   const r = B.readIssuesResponse({ status: 200, ok: true, body: JSON.stringify(RAW) });
-  check('อ่านคำตอบ: กรอง PR/ฟีเจอร์ออก เหลือ 4 บั๊ก', r.ok && r.bugs.length === 4 && r.bugs.map((x) => x.num).join() === '7,5,3,2', r.ok ? r.bugs.map((x) => x.num).join() : r.code);
+  check('อ่านคำตอบ: กรอง PR/งานเอกสารออก เหลือ 4 บั๊ก', r.ok && r.bugs.length === 4 && r.bugs.map((x) => x.num).join() === '7,5,3,2', r.ok ? r.bugs.map((x) => x.num).join() : r.code);
   check('หน้าไม่เต็ม = ไม่มีหน้าถัดไป', r.more === false);
   const full = B.readIssuesResponse({ status: 200, ok: true, body: JSON.stringify(Array.from({ length: 100 }, (_, i) => issue({ number: i + 1 }))) });
   check('หน้าเต็ม 100 = อาจมีหน้าถัดไป', full.ok && full.more === true && full.bugs.length === 100);
@@ -155,6 +175,15 @@ const RAW = [
   const n = B.countByStatus(list);
   check('นับต่อสถานะ', n.all === 4 && n.open === 2 && n.closed === 2 && n.confirmed === 1 && n.progress === 1 && n.fixed === 1 && n.duplicate === 1 && n.new === 0);
   check('รายชื่อรุ่นในช่องกรอง: ใหม่ → เก่า ไม่ซ้ำ ไม่มีค่าว่าง', B.bugVersions(list, 'foundIn').join() === 'alpha.169,alpha.167,alpha.99' && B.bugVersions(list, 'fixedIn').join() === 'alpha.168');
+  const mixed = [{ num: 1, title: 'a', status: 'new', kind: 'bug' }, { num: 2, title: 'b', status: 'fixed', kind: 'feature' }, { num: 3, title: 'c', status: 'new' }];
+  check('★★ กรองตามชนิด: ทั้งหมด / บั๊ก / ขอฟีเจอร์ (แถวที่ไม่มีชนิด = บั๊ก — รายการที่จำไว้จากรุ่นก่อน)',
+        nums(B.filterBugs(mixed, {})) === '1,2,3' && nums(B.filterBugs(mixed, { kind: 'bug' })) === '1,3' && nums(B.filterBugs(mixed, { kind: 'feature' })) === '2'
+        && nums(B.filterBugs(mixed, { kind: 'feature', status: 'open' })) === '');
+  const withReq = B.readIssuesResponse({ status: 200, ok: true, body: JSON.stringify([...RAW, issue({ number: 1, title: 'add dark mode', labels: [{ name: 'enhancement' }] })]) }).bugs;
+  check('★★ อ่านคำตอบ: คำขอฟีเจอร์อยู่ในรายการพร้อมชนิด (กรองชนิด "บั๊ก" = รายการเดิม)',
+        nums(withReq) === '7,5,3,2,1' && withReq[4].kind === 'feature' && nums(B.filterBugs(withReq, { kind: 'bug' })) === '7,5,3,2' && nums(B.filterBugs(withReq, { kind: 'feature' })) === '1');
+  const nk = B.countByKind(mixed);
+  check('นับต่อชนิด', nk.all === 3 && nk.bug === 2 && nk.feature === 1 && B.countByKind(null).all === 0);
   check('รายการว่าง/ค่าเสียไม่พัง', B.filterBugs(null, { q: 'a' }).length === 0 && B.sortBugs(null).length === 0 && B.countByStatus(null).all === 0 && B.bugVersions(null).length === 0);
 }
 
@@ -238,6 +267,30 @@ const RAW = [
         pay.labels.join() === 'from-app' && !/@octocat/.test(pay.title) && !/@someone/.test(pay.body) && pay.title.replace(/[^\x20-\x7E]/g, '') === 'hi @octocat', JSON.stringify(pay.title));
   check('★★ บรรทัดกำกับรุ่นรอดถึง Issue → กล่องสถานะอ่าน "พบในรุ่น" ได้', B.foundVersion({ body: W.issuePayload(v).body, labels: [] }) === 'alpha.169');
 
+  // ── [alpha.170 · ขอฟีเจอร์] ──
+  const fLabels = { what: 'What you would like', steps: 'Why it would help', expected: 'How you manage today', env: 'Environment' };
+  const fBody = B.buildReportBody({ what: 'Dark mode for exports', steps: 'Reading at night', expected: '', env, labels: fLabels, kind: 'feature' });
+  check('★★ คำขอฟีเจอร์: หัวข้อย่อยของตัวเอง + บรรทัดกำกับบอกชนิด (อ่านกลับได้) · บรรทัดกำกับของบั๊กเหมือนเดิมทุกตัวอักษร',
+        fBody.includes('### What you would like\nDark mode for exports') && fBody.includes('### Why it would help\nReading at night')
+        && fBody.trim().endsWith('<!-- k2-report version=2.0.0-alpha.169 platform=win32 lang=th kind=feature -->')
+        && B.parseReportMark(fBody).kind === 'feature' && B.parseReportMark(body).kind === '' && B.reportMark(env, 'zzz') === B.reportMark(env));
+  const fReq = B.buildRelayRequest({ relay: RELAY, title: 'Dark exports', body: fBody, env, kind: 'feature', now: NOW });
+  const fSent = JSON.parse(fReq.options.body);
+  check('★ คำขอฟีเจอร์ส่งช่อง kind เพิ่มหนึ่งช่อง · รายงานบั๊กยังเป็นสี่ช่องเดิม (ตัวกลางรุ่นเก่ารับได้)',
+        Object.keys(fSent).sort().join() === 'body,kind,title,ts,version' && fSent.kind === 'feature' && !('kind' in sent)
+        && !('kind' in JSON.parse(B.buildRelayRequest({ relay: RELAY, title: 'a', body, env, kind: 'nope', now: NOW }).options.body)));
+  const fv = W.validateReport(fSent, NOW + 1000);
+  check('★★ ตัวกลางรับคำขอฟีเจอร์ที่โปรแกรมสร้าง แล้วติดป้าย enhancement เพิ่ม (โปรแกรมอ่านชนิดจากป้ายนี้)',
+        fv.ok === true && fv.kind === 'feature' && W.issuePayload(fv).labels.join() === 'from-app,enhancement'
+        && B.kindOf({ labels: W.issuePayload(fv).labels, body: W.issuePayload(fv).body }) === 'feature');
+  check('★★ คำขอรูปเดิมของโปรแกรมรุ่นก่อน (ไม่มีช่อง kind) = บั๊ก ป้ายเดิม', v.kind === 'bug' && W.issuePayload(v).labels.join() === 'from-app');
+  check('ตัวกลางปฏิเสธชนิดที่ไม่รู้จัก · รายชื่อชนิดสองฝั่งตรงกัน',
+        bad({ kind: 'spam' }).code === 'kind' && bad({ kind: '' }).code === 'kind' && bad({ kind: 'bug' }).ok === true && W.KINDS.join() === B.REPORT_KINDS.join()
+        && B.REPORT_KINDS.every((k) => Array.isArray(W.KIND_LABELS[k])) && W.KIND_LABELS.feature.every((l) => B.FEATURE_LABELS.includes(l)));
+  const fp = B.pendingBug(78, 'Dark exports', '2.0.0-alpha.169', NOW, 'feature');
+  check('คำขอที่เพิ่งส่ง: แถวชั่วคราวพกชนิด และรอดการคัดของที่จำไว้',
+        fp.kind === 'feature' && pd.kind === 'bug' && B.prunePending([fp], NOW)[0].kind === 'feature' && B.withPending([], [fp], NOW)[0].kind === 'feature');
+
   // ── ค่าที่ผู้ดูแลตั้ง (bug-config.js) ──
   check('★ ที่อยู่ตัวกลางที่ตั้งไว้: ว่าง (ยังไม่เปิด) หรือ https ที่ใช้ได้', C.BUG_RELAY_URL === '' || B.isRelayUrl(C.BUG_RELAY_URL), C.BUG_RELAY_URL);
   check('ทางที่กำหนด: มี label/url เป็นข้อความ · url ว่างหรือ https', typeof C.BUG_CONTACT.label === 'string' && (C.BUG_CONTACT.url === '' || /^https:\/\//.test(C.BUG_CONTACT.url)));
@@ -252,17 +305,17 @@ const RAW = [
 // ═══════════ คนนอกเปิด Issue จากเว็บ = ไม่นับ + ถูกปิดอัตโนมัติ ═══════════
 {
   check('★★ Issue ของผู้ดูแล/ตัวกลางเท่านั้นที่ขึ้นในโปรแกรม',
-        B.isBugIssue(issue({ author_association: 'OWNER' })) && B.isBugIssue(issue({ author_association: 'COLLABORATOR' })) && B.isBugIssue(issue({ author_association: 'member' }))
-        && !B.isBugIssue(issue({ author_association: 'NONE' })) && !B.isBugIssue(issue({ author_association: 'CONTRIBUTOR' })) && !B.isBugIssue(issue({ author_association: undefined })));
+        B.isReportIssue(issue({ author_association: 'OWNER' })) && B.isReportIssue(issue({ author_association: 'COLLABORATOR' })) && B.isReportIssue(issue({ author_association: 'member' }))
+        && !B.isReportIssue(issue({ author_association: 'NONE' })) && !B.isReportIssue(issue({ author_association: 'CONTRIBUTOR' })) && !B.isReportIssue(issue({ author_association: undefined })));
   const copied = '# หัวข้อ\n\n' + B.buildReportBody({ what: 'ก', env: { version: '2.0.0-alpha.169', platform: 'win32', lang: 'th' }, labels: { what: 'W', steps: 'S', expected: 'E', env: 'ENV' } });
   check('★★ ของคนนอกไม่นับ — แม้ติดป้าย bug · แม้วางรายงานที่คัดลอกจากโปรแกรม (ทาง GitHub ถูกถอดแล้ว เหลืออีเมล)',
-        !B.isBugIssue(issue({ author_association: 'NONE', labels: [{ name: 'bug' }] })) && !B.isBugIssue(issue({ author_association: 'NONE', body: copied })) && !('isAppReport' in B));
+        !B.isReportIssue(issue({ author_association: 'NONE', labels: [{ name: 'bug' }] })) && !B.isReportIssue(issue({ author_association: 'NONE', body: copied })) && !('isAppReport' in B));
   check('★ ผู้ดูแลลงรายงานที่ได้ทางอีเมลเป็น Issue (วางทั้งก้อน) = นับ และอ่านรุ่นที่พบได้เอง',
-        B.isBugIssue(issue({ author_association: 'OWNER', body: copied })) && B.foundVersion(issue({ body: copied })) === 'alpha.169');
+        B.isReportIssue(issue({ author_association: 'OWNER', body: copied })) && B.foundVersion(issue({ body: copied })) === 'alpha.169');
   // [bug hunt] ผู้ดูแลซ่อนรายการได้ด้วยป้าย (รายงานทดสอบ · สแปมที่ยิงเข้าตัวกลาง) โดยไม่ต้องลบ Issue
   check('★★ ป้าย hidden / spam / test = ไม่ขึ้นในโปรแกรม (แม้เป็นของผู้ดูแล แม้ติดป้าย bug)',
-        B.HIDDEN_LABELS.join() === 'hidden,spam,test' && B.HIDDEN_LABELS.every((l) => !B.isBugIssue(issue({ labels: [{ name: l }, { name: 'bug' }, { name: 'from-app' }] })))
-        && !B.isBugIssue(issue({ labels: [{ name: 'Hidden' }] })) && B.isBugIssue(issue({ labels: [{ name: 'from-app' }] })));
+        B.HIDDEN_LABELS.join() === 'hidden,spam,test' && B.HIDDEN_LABELS.every((l) => !B.isReportIssue(issue({ labels: [{ name: l }, { name: 'bug' }, { name: 'from-app' }] })))
+        && !B.isReportIssue(issue({ labels: [{ name: 'Hidden' }] })) && B.isReportIssue(issue({ labels: [{ name: 'from-app' }] })));
   const gate = fs.readFileSync(path.join(ROOT, '.github/workflows/issue-gate.yml'), 'utf8');
   check('★ ตัวปิดอัตโนมัติใช้รายชื่อเดียวกับโปรแกรม + ปิดแล้วล็อก',
         B.TRUSTED_AUTHORS.every((a) => gate.includes('"' + a + '"')) && /types: \[opened, reopened\]/.test(gate)
@@ -309,6 +362,8 @@ const RAW = [
   const c = B.parseCache(JSON.stringify({ ts: now, bugs: [
     { num: 9, title: 't', status: 'fixed', foundIn: 'alpha.1', reported: '2026-01-01', fixedIn: 'alpha.2', url: 'https://evil.example/x' },
     { num: 'x', title: 'bad', status: 'fixed' }, { num: 8, title: 'bad status', status: 'hacked' }, null] }));
+  check('แคช: ชนิดของแถว (ของรุ่นก่อนไม่มีช่องนี้ = บั๊ก · ค่าแปลก = บั๊ก)',
+        c.bugs[0].kind === 'bug' && B.parseCache(JSON.stringify({ ts: now, bugs: [{ num: 1, status: 'new', kind: 'feature' }, { num: 2, status: 'new', kind: 'x' }] })).bugs.map((b) => b.kind).join() === 'feature,bug');
   check('★ อ่านแคช: แถวเสียถูกทิ้ง · ลิงก์ประกอบใหม่จากเลข (ไม่เชื่อที่เก็บไว้)', c && c.bugs.length === 1 && c.bugs[0].url === B.bugUrl(9) && c.bugs[0].id === '#9');
   check('แคชรูปผิด = null', B.parseCache('nope') === null && B.parseCache('{"ts":"a","bugs":[]}') === null && B.parseCache('{"ts":1}') === null && B.parseCache('') === null);
 }
@@ -317,9 +372,10 @@ const RAW = [
 {
   const uiSrc = fs.readFileSync(path.join(ROOT, 'src/bugs/bug-ui.js'), 'utf8');
   const coreSrc = fs.readFileSync(path.join(ROOT, 'src/bugs/bug-core.js'), 'utf8');
-  const keys = new Set([...Object.values(B.BUG_STATUS_KEYS)]);
+  const keys = new Set([...Object.values(B.BUG_STATUS_KEYS), ...Object.values(B.FEATURE_STATUS_KEYS)]);
   for (const m of stripComments(uiSrc).matchAll(/'(ui\.[\w.-]+)'/g)) keys.add(m[1]);
-  for (const k of ['ui.sb.bugReport', 'ui.about.bugReport', 'ui.about.bugStatus', 'ui.menu.bugReport', 'ui.menu.bugStatus', 'ui.tip.bug-report', 'ui.tip.bug-status']) keys.add(k);
+  for (const k of ['ui.sb.bugReport', 'ui.about.bugReport', 'ui.about.bugStatus', 'ui.menu.bugReport', 'ui.menu.bugStatus', 'ui.tip.bug-report', 'ui.tip.bug-status',
+                   'ui.menu.featureRequest', 'ui.tip.feature-request']) keys.add(k);
   check('โมดูลใช้คีย์ภาษาอย่างน้อย 55 คีย์', keys.size >= 55, keys.size);
   const dir = path.join(ROOT, 'languages');
   const files = fs.readdirSync(dir).filter((f) => /^k2_.+\.csv$/.test(f));
@@ -356,6 +412,9 @@ const RAW = [
   check('★ กล่อง "เกี่ยวกับ" มีทั้งรายงานบั๊กและสถานะบั๊ก',
         /k-about-bug-report'[^\n]*ui\.about\.bugReport/.test(app) && /k-about-bug-status'[^\n]*ui\.about\.bugStatus/.test(app)
         && /handleCommand\('bug-report'\)/.test(app) && /handleCommand\('bug-status'\)/.test(app));
+  check('★★ ขอฟีเจอร์: คำสั่ง feature-request เปิดกล่องเดียวกันในโหมดขอฟีเจอร์ · อยู่ในเมนูช่วยเหลือและทะเบียนคำสั่ง',
+        /case 'feature-request': openBugReport\(\{ kind: 'feature' \}\); break;/.test(app) && /click: cmd\('feature-request'\)/.test(main)
+        && /(^|\n)feature-request,[a-z-]+,/.test(cmds));
   check('เมนูช่วยเหลือมีสองรายการ (ผ่าน cmd())', /click: cmd\('bug-report'\)/.test(main) && /click: cmd\('bug-status'\)/.test(main));
   const uiSrc2 = stripComments(fs.readFileSync(path.join(ROOT, 'src/bugs/bug-ui.js'), 'utf8'));
   check('★★ กล่องรายงานส่งผ่านตัวกลาง (io.post) — ไม่เปิดหน้าเขียน Issue ในเบราว์เซอร์',

@@ -1,4 +1,5 @@
-// test/starter-art.test.cjs — [alpha.169] ช่องใส่ภาพประกอบของ Story Starter (แบบ setup wizard) + ชื่อแถบชื่อหน้าต่าง + ไอคอนโปรแกรม
+// test/win-title.test.cjs — [alpha.169] ชื่อแถบชื่อหน้าต่าง + ไอคอนโปรแกรม
+// (เดิมชื่อ starter-art.test.cjs — [alpha.170] ช่องภาพประกอบแบบ setup wizard ของ Story Starter ถูกถอดออกตามที่ผู้ใช้สั่ง เหลือด่านกันย้อนกลับท้ายไฟล์)
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -10,7 +11,6 @@ function load(rel, name) {
   esbuild.buildSync({ entryPoints: [path.join(ROOT, rel)], outfile: tmp, bundle: true, format: 'cjs', platform: 'node', logLevel: 'silent' });
   return require(tmp);
 }
-const A = load('src/starter/starter-art.js', 'starter-art');
 const W = load('src/win-title.js', 'win-title');
 
 let pass = 0, fail = 0;
@@ -19,60 +19,6 @@ function check(name, cond, extra) {
   else { fail++; console.log('FAIL ' + name + (extra !== undefined ? ' | ' + extra : '')); }
 }
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-
-// ═══════════ ขนาดของช่องภาพ (สเปกที่คนทำภาพยึด) ═══════════
-check('★ side = ไฟล์ 480×920 แสดง 240×460 (สองเท่าพอดี)',
-      A.ART_SLOTS.side.w === 480 && A.ART_SLOTS.side.h === 920 && A.ART_SLOTS.side.cssW === 240 && A.ART_SLOTS.side.cssH === 460);
-check('★ top = ไฟล์ 1200×300 (4:1)', A.ART_SLOTS.top.w === 1200 && A.ART_SLOTS.top.h === 300 && A.artRatio('top') === 4);
-check('ข้อความขนาด', A.artSizeText('side') === '480 × 920' && A.artSizeText('top') === '1200 × 300');
-check('ตำแหน่งที่ไม่รู้จัก = top', A.artSizeText('zzz') === '1200 × 300' && A.artBase('tags', 'zzz') === 'tags-top');
-
-// ═══════════ ชื่อไฟล์ ═══════════
-check('ชื่อไฟล์ = <ช่อง>-<ตำแหน่ง>', A.artBase('tags', 'side') === 'tags-side' && A.artBase('home', 'top') === 'home-top');
-check('ชื่อช่องถูกกรอง (ห้ามมีตัวคั่นทาง/จุด)', A.artKey('../x/y') === 'xy' && A.artKey('') === 'default' && A.artKey(null) === 'default'
-      && A.artKey('Cast') === 'cast');
-{
-  const c = A.artCandidates('tags', 'side');
-  check('ลำดับที่ลอง: ของช่องก่อน (png → jpg → webp) แล้วค่อย default',
-        c[0] === 'starter/tags-side.png' && c[1] === 'starter/tags-side.jpg' && c[2] === 'starter/tags-side.webp'
-        && c[3] === 'starter/default-side.png' && c.length === 6, JSON.stringify(c));
-  check('ช่อง default ไม่ลองซ้ำสองรอบ', A.artCandidates('default', 'top').length === 3);
-}
-
-// ═══════════ เลือกจากรายชื่อไฟล์ที่มีจริง ═══════════
-check('มีไฟล์ของขั้น → ใช้ของขั้น', A.pickArt(['tags-side.png', 'default-side.png'], 'tags', 'side') === 'starter/tags-side.png');
-check('★ ไม่มีของขั้น → ใช้ default', A.pickArt(['default-side.png'], 'cast', 'side') === 'starter/default-side.png');
-check('★ ไม่มีอะไรเลย → null (วาด placeholder)', A.pickArt([], 'cast', 'side') === null && A.pickArt(null, 'cast', 'top') === null);
-check('คนละตำแหน่งไม่ใช้แทนกัน', A.pickArt(['tags-top.png'], 'tags', 'side') === null);
-check('นามสกุลอื่น + ตัวพิมพ์ต่างกัน (ระบบไฟล์ของ Windows ไม่แยก) → คืนชื่อจริงบนดิสก์',
-      A.pickArt(['Tags-Side.JPG'], 'tags', 'side') === 'starter/Tags-Side.JPG');
-check('png มาก่อน jpg เมื่อมีทั้งคู่', A.pickArt(['w-top.jpg', 'w-top.png'], 'w', 'top') === 'starter/w-top.png');
-
-// ═══════════ ตารางไฟล์ทั้งหมด ↔ ทะเบียนขั้นจริง ↔ README ═══════════
-{
-  const defSrc = read('src/starter/starter-steps-def.js');
-  const stepIds = [...defSrc.matchAll(/\{ id: '([a-z0-9]+)', icon:/g)].map((m) => m[1]);
-  check('อ่าน id ของขั้นจากทะเบียนได้ (≥ 5 ขั้น)', stepIds.length >= 5, stepIds.join());
-  const rows = A.artManifest(stepIds);
-  check('ตารางไฟล์: default 2 + home 1 + ขั้นละ 2', rows.length === 3 + stepIds.length * 2, String(rows.length));
-  check('หน้ารวมมีแต่แถบหัว', rows.filter((r) => r.key === 'home').length === 1 && rows.find((r) => r.key === 'home').slot === 'top');
-  const readme = read('renderer/starter/README.md');
-  const missing = rows.filter((r) => !readme.includes(path.basename(r.file)));
-  check('★ README ของโฟลเดอร์ภาพบอกครบทุกไฟล์ (เพิ่มขั้นใหม่แล้วลืมเอกสาร = แดง)', missing.length === 0, missing.map((r) => r.file).join());
-  check('README บอกขนาดตรงกับโค้ด', readme.includes('480 × 920') && readme.includes('1200 × 300'));
-}
-
-// ═══════════ CSS ต้องตรงกับค่าคงที่ ═══════════
-{
-  const css = read('renderer/style.css');
-  check('★ เกณฑ์ความกว้างใน CSS = ART_WIDE_MIN', css.includes('@container stw (min-width: ' + A.ART_WIDE_MIN + 'px)'));
-  check('★ ขนาดแถบภาพข้างใน CSS = cssW × cssH',
-        new RegExp('\\.st-art-side \\{[^}]*width:calc\\(' + A.ART_SLOTS.side.cssW + 'px[^}]*height:calc\\(' + A.ART_SLOTS.side.cssH + 'px').test(css));
-  check('แผง Story Starter เป็น container ชื่อ stw', /#starter-body \{[^}]*container:stw \/ inline-size/.test(css));
-  const main = read('main.js'), pre = read('preload.js');
-  check('main มีช่อง starter:artList ที่ไม่รับอาร์กิวเมนต์', /H\('starter:artList', \(\) =>/.test(main));
-  check('preload เปิด starterArtList', /starterArtList: call\('starter:artList'\)/.test(pre));
-}
 
 // ═══════════ ชื่อแถบชื่อหน้าต่าง + เลขรุ่น ═══════════
 check('เลขรุ่น: เติม v นำหน้า · ไม่ซ้อน v', W.versionLabel('2.0.0-alpha.169') === 'v2.0.0-alpha.169' && W.versionLabel('v1.2') === 'v1.2');
@@ -137,6 +83,20 @@ check('เลขรุ่นว่าง = ไม่มีป้าย', W.versi
         !fs.existsSync(path.join(ROOT, 'renderer/about/logo.svg')) && !fs.existsSync(path.join(ROOT, 'renderer/splash/logo-placeholder.svg'))
         && !read('renderer/splash.html').includes('logo-placeholder') && read('src/app.js').includes("logo.src = 'assets/app-icon.svg'"));
   check('หน้าต่างได้ไอคอน (รันจากซอร์ส/Linux ไม่มีไอคอนของ exe)', (read('main.js').match(/\.\.\.WIN_ICON/g) || []).length >= 3);
+}
+
+// ═══════════ [alpha.170] Story Starter ไม่มีช่องภาพประกอบแบบ setup wizard แล้ว ═══════════
+// ผู้ใช้: "story starter ตัดรูป ที่เหมือน setup wizzard ออกดีกว่าไม่ชอบเลย"
+{
+  const css = read('renderer/style.css');
+  check('★ ไม่มีโมดูล/โฟลเดอร์ของช่องภาพเหลือ', !fs.existsSync(path.join(ROOT, 'src/starter/starter-art.js')) && !fs.existsSync(path.join(ROOT, 'renderer/starter')));
+  check('★ ตัววาดของ Story Starter ไม่สร้างช่องภาพ', !/artBox|starter-art|st-art/.test(read('src/starter/starter-wizard.js') .replace(/\/\/.*$/gm, ''))
+        && !/artBox|starter-art|st-art/.test(read('src/starter/starter-ui.js').replace(/\/\/.*$/gm, '')));
+  check('เนื้อขั้นของ wizard ต่อกับตัว wizard ตรง ๆ (ไม่มีคอลัมน์ภาพคั่น)', /const body = el\('div', 'st-wz-body'\);\s*\n\s*wrap\.append\(body\);/.test(read('src/starter/starter-wizard.js')));
+  check('CSS ไม่มีกฎของช่องภาพ/คอลัมน์ภาพ/container ที่ใช้เลือกแถบภาพ', !/\.st-art|\.st-wz-main|\.st-wz-col|@container stw|container:stw/.test(css));
+  check('main/preload ไม่มีช่องถามรายชื่อไฟล์ภาพ', !/starter:artList/.test(read('main.js')) && !/starterArtList/.test(read('preload.js')));
+  const th = read('languages/k2_th.csv');
+  check('ไฟล์ภาษาไม่มีข้อความของช่องภาพค้าง', !/^ui\.starter\.artHint,/m.test(th));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

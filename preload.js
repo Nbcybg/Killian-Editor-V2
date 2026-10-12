@@ -70,7 +70,6 @@ contextBridge.exposeInMainWorld('kapi', {
   // [alpha.60r3 ข้อ 7] ปลั๊กอินระดับผู้ใช้ (%APPDATA%/Killian2/Plugins/) — คืน path ให้ใช้ fs:* ต่อ
   globalPluginsDir: call('plugins:globalDir'),
   listGlobalPlugins: call('plugins:listGlobal'),
-  starterArtList: call('starter:artList'),   // [alpha.169] ภาพประกอบ Story Starter ที่มีจริงใน renderer/starter/
   // [alpha.80] ติดตั้ง/ถอนปลั๊กอินจากลิงก์ GitHub — โหลด+แตกซิปต้องทำใน main
   // (http:fetch คืนเป็นข้อความล้วน ใช้กับไฟล์ไบนารีไม่ได้)
   pluginFetchZip: call('plugins:fetchZip'),

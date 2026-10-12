@@ -1,8 +1,8 @@
-# รายงานบั๊กรับจากในโปรแกรมเท่านั้น (ปุ่มรายงานบั๊กท้ายแถบสถานะ / ช่วยเหลือ → รายงานบั๊ก)
+# รายงานบั๊กและคำขอฟีเจอร์รับจากในโปรแกรมเท่านั้น (ปุ่มรายงานบั๊กท้ายแถบสถานะ / ช่วยเหลือ → รายงานบั๊ก · ขอฟีเจอร์)
 # หน้า "New issue" จึงไม่มีแบบฟอร์มเปล่า — รายการสถานะบั๊กยังเปิดดูได้ทุกคนที่แท็บ Issues
 # (Issue ที่คนนอกเปิดได้อยู่ดี ถูกปิดอัตโนมัติด้วย .github/workflows/issue-gate.yml)
 blank_issues_enabled: false
 contact_links:
-  - name: รายงานบั๊กจากในโปรแกรม · Report bugs from inside the app
+  - name: รายงานบั๊ก/ขอฟีเจอร์จากในโปรแกรม · Report bugs and request features from inside the app
     url: https://github.com/Nbcybg/Killian-Editor-V2/issues
-    about: เปิด Killian 2 แล้วกดปุ่มรายงานบั๊กท้ายแถบสถานะ (หรือเมนู ช่วยเหลือ → รายงานบั๊ก) แล้วกดส่งรายงาน · Open Killian 2, use the bug button at the end of the status bar (or Help → Report a bug) and choose Send report. This page is for tracking status.
+    about: เปิด Killian 2 แล้วกดปุ่มรายงานบั๊กท้ายแถบสถานะ (หรือเมนู ช่วยเหลือ → รายงานบั๊ก / ขอฟีเจอร์) แล้วกดส่ง · Open Killian 2, use the bug button at the end of the status bar (or Help → Report a bug / Request a feature) and send it from there. This page is for tracking status.

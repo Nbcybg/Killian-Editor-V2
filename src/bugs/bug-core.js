@@ -13,6 +13,7 @@
 //   สถานะ          = เปิด/ปิดของ Issue + ป้าย: `confirmed`/`bug` · `in progress` · `need info` · `duplicate` · `wontfix`/`invalid`
 //   พบในรุ่น        = บรรทัดกำกับที่ตัวรายงานในโปรแกรมใส่ให้ (`<!-- k2-report version=… -->`) · หรือป้าย `found:alpha.169`
 //   แก้ไขในรุ่น      = Milestone ของ Issue · หรือป้าย `fixed:alpha.170`
+//   ชนิด            = ป้าย `enhancement`/`feature` = ขอฟีเจอร์ (รับไว้แล้ว = ป้าย `accepted`/`planned`/`confirmed`) · นอกนั้น = บั๊ก
 //
 // ไฟล์นี้ไม่แตะเน็ต/DOM/ไฟล์ภาษา — รับข้อมูลดิบของ GitHub เข้ามา คืนแถวที่วาดได้เลย
 import { BUG_CACHE_MS } from '../timing.js';
@@ -48,6 +49,18 @@ export const BUG_STATUS_KEYS = {
   wontfix: 'ui.bug.stWontfix',
   duplicate: 'ui.bug.stDuplicate',
 };
+/** คำขอฟีเจอร์ใช้สถานะชุดเดียวกัน แต่เรียกต่างกันสี่ตัว (รับไว้ · กำลังทำ · เพิ่มแล้ว · ไม่ทำ) */
+export const FEATURE_STATUS_KEYS = {
+  ...BUG_STATUS_KEYS,
+  confirmed: 'ui.bug.stPlanned',
+  progress: 'ui.bug.stBuilding',
+  fixed: 'ui.bug.stAdded',
+  wontfix: 'ui.bug.stDeclined',
+};
+/** คีย์ภาษาของสถานะตามชนิดของรายงาน */
+export function statusKey(status, kind) {
+  return (kind === 'feature' ? FEATURE_STATUS_KEYS : BUG_STATUS_KEYS)[status] || BUG_STATUS_KEYS.new;
+}
 /** สถานะที่ "ยังไม่จบ" — ตัวกรอง `open` */
 export const BUG_OPEN_STATUSES = ['new', 'confirmed', 'progress', 'needinfo'];
 export function isOpenStatus(st) { return BUG_OPEN_STATUSES.includes(st); }
@@ -68,7 +81,7 @@ export function statusOf(issue) {
   if (closed) return (reason === 'not-planned' || has(ls, 'wontfix', 'invalid', 'not-a-bug')) ? 'wontfix' : 'fixed';
   if (has(ls, 'in-progress', 'wip', 'fixing')) return 'progress';
   if (has(ls, 'need-info', 'needs-info', 'more-info', 'question')) return 'needinfo';
-  if (has(ls, 'confirmed', 'bug')) return 'confirmed';
+  if (has(ls, 'confirmed', 'bug', 'accepted', 'planned')) return 'confirmed';
   return 'new';
 }
 
@@ -87,15 +100,35 @@ export function isTrustedAuthor(issue) {
  */
 export const HIDDEN_LABELS = ['hidden', 'spam', 'test'];
 
-/** ไม่ใช่บั๊ก: pull request · ของที่คนนอกเปิดเองบนเว็บ · ของที่ผู้ดูแลซ่อน · ข้อเสนอฟีเจอร์/เอกสารที่ไม่ได้ติดป้าย bug */
-export function isBugIssue(issue) {
+// ───────────────────────── ชนิดของรายงาน: บั๊ก / ขอฟีเจอร์ ─────────────────────────
+//
+// ผู้ใช้: *"ปรับปรุง bug report ให้มี request feature เพิ่มเข้ามา"*
+//   · ชนิดเดินทางสองทาง: ป้ายของ Issue (`enhancement` — ตัวกลางติดให้ · ผู้ดูแลแก้ได้) และบรรทัดกำกับ (`kind=feature`)
+//     ป้ายชนะบรรทัดกำกับ: ผู้ดูแลย้ายชนิดได้ด้วยการเปลี่ยนป้าย (`bug` ชนะ `enhancement`)
+//   · ตัวกลางรุ่นเก่า (ยังไม่ได้วางโค้ดใหม่) ไม่ติดป้ายให้ — บรรทัดกำกับจึงเป็นทางสำรองที่ทำให้ชนิดยังถูกต้อง
+
+export const REPORT_KINDS = ['bug', 'feature'];
+/** ค่าที่ไม่รู้จัก = บั๊ก (ของเดิมทั้งหมดเป็นบั๊ก) */
+export function reportKind(k) { return k === 'feature' ? 'feature' : 'bug'; }
+/** ป้ายของ Issue ที่บอกว่าเป็นคำขอฟีเจอร์ */
+export const FEATURE_LABELS = ['enhancement', 'feature', 'feature-request'];
+/** ชนิดของ Issue หนึ่งตัว */
+export function kindOf(issue) {
+  const ls = labelNames(issue);
+  if (has(ls, 'bug')) return 'bug';
+  if (has(ls, ...FEATURE_LABELS)) return 'feature';
+  return reportKind(parseReportMark(issue && issue.body).kind);
+}
+
+/** ไม่นับ: pull request · ของที่คนนอกเปิดเองบนเว็บ · ของที่ผู้ดูแลซ่อน · งานเอกสารที่ไม่ได้ติดป้ายบั๊ก/ฟีเจอร์ */
+export function isReportIssue(issue) {
   if (!issue || typeof issue !== 'object' || issue.pull_request) return false;
   if (!Number.isInteger(issue.number)) return false;
   if (!isTrustedAuthor(issue)) return false;
   const ls = labelNames(issue);
   if (has(ls, ...HIDDEN_LABELS)) return false;
-  if (has(ls, 'bug', 'confirmed')) return true;
-  return !has(ls, 'enhancement', 'feature', 'feature-request', 'documentation');
+  if (has(ls, 'bug', 'confirmed', ...FEATURE_LABELS)) return true;
+  return !has(ls, 'documentation');
 }
 
 // ───────────────────────── รุ่น ─────────────────────────
@@ -120,9 +153,9 @@ export function cmpBugVersion(a, b) {
 
 const RE_MARK = /<!--\s*k2-report\b([^>]*?)-->/i;
 const RE_VER_LINE = /^[\s>*_-]*(?:app\s+)?version[*_\s]*[:：][*_\s]*([^\s*_`<]+)/im;
-/** บรรทัดกำกับที่ตัวรายงานในโปรแกรมใส่ไว้ → `{version, platform, lang}` (ไม่มี = ช่องว่าง) */
+/** บรรทัดกำกับที่ตัวรายงานในโปรแกรมใส่ไว้ → `{version, platform, lang, kind}` (ไม่มี = ช่องว่าง) */
 export function parseReportMark(body) {
-  const out = { version: '', platform: '', lang: '' };
+  const out = { version: '', platform: '', lang: '', kind: '' };
   const m = RE_MARK.exec(String(body || ''));
   if (!m) return out;
   for (const kv of m[1].trim().split(/\s+/)) {
@@ -157,7 +190,7 @@ export function fixedVersion(issue) {
 
 /**
  * Issue ดิบ → แถวที่กล่องสถานะวาด
- * @returns {{num:number,id:string,title:string,status:string,foundIn:string,reported:string,fixedIn:string,url:string}}
+ * @returns {{num:number,id:string,title:string,kind:string,status:string,foundIn:string,reported:string,fixedIn:string,url:string}}
  */
 export function issueToBug(issue) {
   const num = issue.number;
@@ -165,6 +198,7 @@ export function issueToBug(issue) {
     num,
     id: '#' + num,
     title: String(issue.title || '').replace(/\s+/g, ' ').trim().slice(0, 300),
+    kind: kindOf(issue),
     status: statusOf(issue),
     foundIn: foundVersion(issue),
     reported: String(issue.created_at || ''),
@@ -190,7 +224,7 @@ export function readIssuesResponse(res) {
   let arr = null;
   try { arr = JSON.parse(String(res.body || '').replace(BOM_RE, '')); } catch { arr = null; }
   if (!Array.isArray(arr)) return { ok: false, code: 'parse', status: res.status };
-  return { ok: true, bugs: arr.filter(isBugIssue).map(issueToBug), more: arr.length >= BUG_PAGE_SIZE };
+  return { ok: true, bugs: arr.filter(isReportIssue).map(issueToBug), more: arr.length >= BUG_PAGE_SIZE };
 }
 
 /** รวมหลายหน้า — เลขซ้ำ (รายการขยับระหว่างอ่านสองหน้า) เก็บตัวแรก */
@@ -216,14 +250,16 @@ export function bugVersions(list, field = 'foundIn') {
  * @param {object[]} list
  * @param {object} f
  * @param {string} [f.q] คำค้น — เลขบั๊ก (`#12`/`12`) · รายละเอียด · รุ่น (ทุกคำต้องเจอ)
+ * @param {string} [f.kind] `all` | `bug` | `feature`
  * @param {string} [f.status] `all` | `open` (ยังไม่จบ) | `closed` (จบแล้ว) | สถานะตัวใดตัวหนึ่ง
  * @param {string} [f.found] `all` | รุ่นที่พบ
  * @param {string} [f.fixed] `all` | `none` (ยังไม่ระบุรุ่นที่แก้) | รุ่นที่แก้
  */
 export function filterBugs(list, f = {}) {
   const words = String(f.q || '').toLowerCase().split(/\s+/).filter(Boolean);
-  const st = f.status || 'all', found = f.found || 'all', fixed = f.fixed || 'all';
+  const st = f.status || 'all', found = f.found || 'all', fixed = f.fixed || 'all', kind = f.kind || 'all';
   return (list || []).filter((b) => {
+    if (kind !== 'all' && reportKind(b.kind) !== kind) return false;
     if (st === 'open' ? !isOpenStatus(b.status) : st === 'closed' ? isOpenStatus(b.status) : (st !== 'all' && b.status !== st)) return false;
     if (found !== 'all' && b.foundIn !== found) return false;
     if (fixed === 'none' ? !!b.fixedIn : (fixed !== 'all' && b.fixedIn !== fixed)) return false;
@@ -264,6 +300,13 @@ export function countByStatus(list) {
   return out;
 }
 
+/** จำนวนต่อชนิด (ใช้เขียนตัวเลขในช่องกรองชนิด) */
+export function countByKind(list) {
+  const out = { all: 0, bug: 0, feature: 0 };
+  for (const b of (list || [])) { out.all++; out[reportKind(b.kind)]++; }
+  return out;
+}
+
 // ───────────────────────── เขียนรายงาน ─────────────────────────
 
 const clean = (s, max) => String(s == null ? '' : s).replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').trim().slice(0, max);
@@ -277,7 +320,8 @@ export function reportTitle(title) { return clean(title, 200).replace(/\s+/g, ' 
  * @param {object} r
  * @param {string} [r.what] เกิดอะไรขึ้น  @param {string} [r.steps] ขั้นตอนทำซ้ำ  @param {string} [r.expected] ที่ควรจะเป็น
  * @param {{version?:string, platform?:string, os?:string, lang?:string, runtime?:string}} [r.env]
- * @param {{what:string, steps:string, expected:string, env:string}} r.labels
+ * @param {{what:string, steps:string, expected:string, env:string}} r.labels หัวข้อย่อยของชนิดนั้น (บั๊ก/ขอฟีเจอร์ใช้คนละชุด)
+ * @param {'bug'|'feature'} [r.kind]
  */
 export function buildReportBody(r = {}) {
   const L = r.labels || {}, env = r.env || {};
@@ -287,7 +331,7 @@ export function buildReportBody(r = {}) {
   sec(L.steps, r.steps);
   sec(L.expected, r.expected);
   parts.push('### ' + String(L.env || '').trim() + '\n' + envLine(env));
-  parts.push(reportMark(env));
+  parts.push(reportMark(env, r.kind));
   return parts.join('\n\n');
 }
 /** บรรทัดสภาพแวดล้อมที่คนอ่าน — ใช้คำว่า Version ตายตัว (ตัวอ่านกลับรู้จักคำนี้ทุกภาษา) */
@@ -298,10 +342,12 @@ export function envLine(env = {}) {
   if (env.runtime) bits.push(clean(env.runtime, 60));
   return bits.join(' · ');
 }
-export function reportMark(env = {}) {
+export function reportMark(env = {}, kind = 'bug') {
   return '<!-- k2-report version=' + (markVal(env.version) || '?')
     + (env.platform ? ' platform=' + markVal(env.platform) : '')
-    + (env.lang ? ' lang=' + markVal(env.lang) : '') + ' -->';
+    + (env.lang ? ' lang=' + markVal(env.lang) : '')
+    // บั๊กไม่เขียนชนิด — บรรทัดกำกับของบั๊กเหมือนรุ่นก่อนทุกตัวอักษร
+    + (reportKind(kind) === 'feature' ? ' kind=feature' : '') + ' -->';
 }
 
 // ───────────────────────── ส่งรายงานผ่านตัวกลาง ─────────────────────────
@@ -328,7 +374,7 @@ export function isRelayUrl(u) {
  * คำขอที่ส่งเข้าตัวกลาง — คืน null เมื่อยังไม่ได้ตั้งที่อยู่ตัวกลาง/ที่อยู่ใช้ไม่ได้/ไม่มีหัวข้อ
  * @returns {{url:string, options:{method:string, headers:object, body:string}}|null}
  */
-export function buildRelayRequest({ relay = '', title = '', body = '', env = {}, now = Date.now() } = {}) {
+export function buildRelayRequest({ relay = '', title = '', body = '', env = {}, kind = 'bug', now = Date.now() } = {}) {
   const ttl = reportTitle(title);
   if (!isRelayUrl(relay) || !ttl) return null;
   return {
@@ -336,7 +382,9 @@ export function buildRelayRequest({ relay = '', title = '', body = '', env = {},
     options: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-K2-Client': RELAY_CLIENT },
-      body: JSON.stringify({ title: ttl, body: clean(body, RELAY_MAX_BODY), version: markVal(env.version), ts: now }),
+      // ช่อง kind มีเฉพาะคำขอฟีเจอร์ — รายงานบั๊กส่งรูปเดิมสี่ช่อง (ตัวกลางรุ่นเก่ารับได้ทั้งสองรูป: ช่องที่ไม่รู้จักถูกมองข้าม)
+      body: JSON.stringify({ title: ttl, body: clean(body, RELAY_MAX_BODY), version: markVal(env.version), ts: now,
+                             ...(reportKind(kind) === 'feature' ? { kind: 'feature' } : {}) }),
     },
   };
 }
@@ -371,10 +419,10 @@ export const PENDING_MS = 60 * 60 * 1000;
 export const PENDING_MAX = 20;
 
 /** แถวชั่วคราวของบั๊กที่เพิ่งส่ง (สถานะรอตรวจสอบ) */
-export function pendingBug(num, title, version, now = Date.now()) {
+export function pendingBug(num, title, version, now = Date.now(), kind = 'bug') {
   const n = parseInt(num, 10);
   if (!Number.isInteger(n) || n <= 0) return null;
-  return { num: n, id: '#' + n, title: reportTitle(title), status: 'new', foundIn: shortVersion(markVal(version)),
+  return { num: n, id: '#' + n, title: reportTitle(title), kind: reportKind(kind), status: 'new', foundIn: shortVersion(markVal(version)),
            reported: new Date(now).toISOString(), fixedIn: '', url: bugUrl(n), ts: now };
 }
 
@@ -385,7 +433,7 @@ export function prunePending(list, now = Date.now()) {
     if (!p || !Number.isInteger(p.num) || p.num <= 0 || seen.has(p.num)) continue;
     if (!Number.isFinite(p.ts) || now - p.ts < 0 || now - p.ts >= PENDING_MS) continue;
     seen.add(p.num);
-    out.push(pendingBug(p.num, p.title, p.foundIn, p.ts));
+    out.push(pendingBug(p.num, p.title, p.foundIn, p.ts, p.kind));
   }
   return out.sort((a, b) => b.ts - a.ts).slice(0, PENDING_MAX);
 }
@@ -447,7 +495,7 @@ export function parseCache(text) {
   try { c = JSON.parse(String(text || '')); } catch { return null; }
   if (!c || !Number.isFinite(c.ts) || !Array.isArray(c.bugs)) return null;
   const bugs = c.bugs.filter((b) => b && Number.isInteger(b.num) && b.num > 0 && BUG_STATUSES.includes(b.status))
-    .map((b) => ({ num: b.num, id: '#' + b.num, title: String(b.title || '').slice(0, 300), status: b.status,
+    .map((b) => ({ num: b.num, id: '#' + b.num, title: String(b.title || '').slice(0, 300), kind: reportKind(b.kind), status: b.status,
                    foundIn: String(b.foundIn || '').slice(0, 40), reported: String(b.reported || '').slice(0, 40),
                    fixedIn: String(b.fixedIn || '').slice(0, 40), url: bugUrl(b.num) }));
   return { ts: c.ts, bugs };

@@ -20,8 +20,7 @@ import {
   listStarters, readStarter, createStarter, deleteStarter,
   autoSaveStarter, writeStarter, flushStarterSaves, imageUrl,
 } from './starter-store.js';
-import { renderWizard, artBox } from './starter-wizard.js';
-import { ART_HOME } from './starter-art.js';
+import { renderWizard } from './starter-wizard.js';
 import { renderStarterHome } from './starter-scenario.js';
 import { renderChat, resetChatState } from './starter-chat.js';
 import { offerReconcile } from './starter-wiki.js';
@@ -184,7 +183,6 @@ async function renderList(host) {
   };
   head.append(imp);
   wrap.append(head);
-  wrap.append(artBox(ART_HOME, 'top'));          // [alpha.169] แถบภาพหัวหน้ารวม (renderer/starter/home-top.png)
   wrap.append(el('div', 'st-hint', t('ui.starter.welcomeHint')));
 
   const rows = await listStarters();

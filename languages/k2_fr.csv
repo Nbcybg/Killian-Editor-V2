@@ -12,7 +12,7 @@ ui.a11y.oskFail,Impossible d'ouvrir un clavier visuel du système — aucun des 
 ui.a11y.oskOpened,Clavier visuel du système ouvert
 ui.a11y.oskSettings,Impossible d'ouvrir directement le clavier visuel — les paramètres de clavier du système ont été ouverts ; activez-le à cet endroit
 ui.about.bugReport,Signaler un bug
-ui.about.bugStatus,État des bugs
+ui.about.bugStatus,État des bugs et demandes
 ui.about.changelog,Nouveautés
 ui.about.checkUpdate,Rechercher des mises à jour
 ui.about.credits,Crédits
@@ -1317,7 +1317,7 @@ ui.app.block, blocs
 ui.app.boardItemHideItem,{0} {0|tableau est masqué|tableaux sont masqués} par le filtre — videz la zone de recherche pour tous les voir
 ui.app.boardPlanner,Tableaux de planification
 ui.app.boardPlanner2,Tableaux de planification ({0})
-ui.app.boardPlannerPlannerGraph,Tableaux de planification (Planner) et plans d'étage
+ui.app.boardPlannerPlannerGraph,Tableaux de planification (Planner)
 ui.app.boardPlannerReadCant,Tableaux de planification (illisibles)
 ui.app.bookNotHasDraft,Ce livre n'a pas encore de brouillon
 ui.app.btnFloatFABClose,Bouton flottant (FAB) : désactivé
@@ -1417,7 +1417,6 @@ ui.app.copyResult,Copier les résultats
 ui.app.copyResultConsoleDone,Sortie de la console copiée
 ui.app.copySaveDoneLine,Journal copié ({0} {0|ligne|lignes} correspondant au filtre)
 ui.app.corner,Inclinaison (degrés)
-ui.app.courierMonoThaiProportionalThai,Courier MonoThai · ProportionalThai (1998)
 ui.app.coverBookReadNot,Impossible de lire l'image de couverture du livre
 ui.app.creditIcons,Le jeu d'icônes de l'application (police K2 Icons)
 ui.app.creditThree,Réseau narratif en 3D (modèles · arrière-plans)
@@ -1515,12 +1514,11 @@ ui.app.file,Extension de fichier
 ui.app.fileLangK2Csv,Fichiers de langue (k2_*.csv)
 ui.app.fileNotHas,(ce fichier n'a pas encore de {0})
 ui.app.fileOpen,Ouvrir des fichiers
-ui.app.fileTaskMarkdownJSON,"Les fichiers de travail sont en Markdown + JSON, entièrement compatibles avec Killian v1"
+ui.app.fileTaskMarkdownJSON,Les fichiers de travail sont en simple Markdown + JSON
 ui.app.filter,Filtrer par source
 ui.app.findDiskFindOn,Rechercher sur le disque
 ui.app.findRowNotFound,Ligne introuvable → réparation de l'arborescence
 ui.app.folderNotProjectKillian,Ce dossier n'est pas un projet Killian (project.khn.json introuvable)
-ui.app.fontScreenplayPosView,Police de scénario (thaï) — positions des tons adaptées · voir renderer/assets/fonts/THAI-FONTS.txt
 ui.app.fontScreenplayQuoteUnquote,Police de scénario (latine) — Quote-Unquote Apps
 ui.app.forceCaseBig,Forcer les majuscules
 ui.app.forcePrintBigFormat,Forcer les majuscules selon le format de scénario standard
@@ -1737,7 +1735,6 @@ ui.app.notRememberEditChapter,Ne mémorise plus « {0} » (modifiez cela dans Sc
 ui.app.notRememberFoundNot,Pas encore mémorisé (vu moins de {0} {0|fois|fois}) — cliquez sur « Mémoriser » pour le mémoriser maintenant
 ui.app.notSave,Non enregistré
 ui.app.notSet,(non défini)
-ui.app.notSource,Licence de la source inconnue
 ui.app.notUseTemplate2,— Aucun modèle —
 ui.app.novel, Roman
 ui.app.novel2, Roman ▾
@@ -1962,6 +1959,7 @@ ui.app.startAppShowPage,Au démarrage : afficher d'abord la page d'accueil
 ui.app.status2,Statut : 
 ui.app.styleWatermark,Modèle de filigrane
 ui.app.suggest, (recommandé)
+ui.app.supportOpened,La page de soutien est ouverte dans votre navigateur. Merci !
 ui.app.template,Modèle
 ui.app.templateManage,Modèles (gérer)
 ui.app.templatesFillBlockProfile,modèles : bloc de profil ajouté aux modèles standard de ce projet
@@ -2357,7 +2355,8 @@ ui.branch.zoomIn,Zoom avant
 ui.branch.zoomOut,Zoom arrière
 ui.bug.btnCopy,Copier le rapport
 ui.bug.btnSend,Envoyer le rapport
-ui.bug.btnStatus,Voir l'état des bugs
+ui.bug.btnSendFeature,Envoyer la demande
+ui.bug.btnStatus,Voir l'état
 ui.bug.clear,Effacer les filtres
 ui.bug.colFixed,Corrigé dans
 ui.bug.colFound,Trouvé dans
@@ -2370,14 +2369,15 @@ ui.bug.contactMailed,"Rapport copié. Collez-le dans l'e-mail qui s'est ouvert. 
 ui.bug.contactMailTip,Copie le rapport et ouvre un nouvel e-mail à cette adresse
 ui.bug.copied,Rapport copié. Collez-le dans le canal prévu.
 ui.bug.copyFail,Impossible de copier le rapport
-ui.bug.count,{0} sur {1} {1|bug affiché|bugs affichés}
-ui.bug.empty,Aucun bug n'a encore été signalé
+ui.bug.count,{0} sur {1} {1|élément affiché|éléments affichés}
+ui.bug.empty,Rien n'a encore été signalé
 ui.bug.envHead,Environnement
 ui.bug.envNote,Cette ligne est ajoutée automatiquement au rapport. Elle ne contient ni noms de fichiers ni contenu de votre travail.
 ui.bug.errHttp,GitHub a répondu avec l'erreur {0}
 ui.bug.errNet,Impossible de joindre GitHub. Vérifiez votre connexion Internet puis réessayez.
 ui.bug.errParse,Impossible de lire la liste envoyée par GitHub
 ui.bug.errRate,GitHub limite les requêtes pour le moment. Réessayez plus tard ou ouvrez la liste sur GitHub.
+ui.bug.featureTitle,Demander une fonctionnalité
 ui.bug.fExpected,Résultat attendu
 ui.bug.fExpectedPh,Ce qui aurait dû se passer (facultatif)
 ui.bug.fltAll,Tous les états ({0})
@@ -2385,23 +2385,37 @@ ui.bug.fltClosed,Fermés ({0})
 ui.bug.fltFixedAll,Corrigé dans : toutes
 ui.bug.fltFixedNone,Pas encore corrigé
 ui.bug.fltFoundAll,Trouvé dans : toutes
+ui.bug.fltKindAll,Tous les types ({0})
+ui.bug.fltKindBug,Bugs ({0})
+ui.bug.fltKindFeature,Demandes de fonctionnalités ({0})
 ui.bug.fltOne,{0} ({1})
 ui.bug.fltOpen,Encore ouverts ({0})
+ui.bug.fNow,Comment vous faites aujourd'hui
+ui.bug.fNowPh,Une solution de contournement ou une autre application que vous utilisez (facultatif)
 ui.bug.fSteps,Étapes pour reproduire
 ui.bug.fStepsPh,1. Ouvrir…  2. Cliquer…  3. Constater…
 ui.bug.fTitle,Titre
 ui.bug.fTitlePh,Résumez le problème en une ligne
+ui.bug.fTitlePhFeature,Résumez l'idée en une ligne
+ui.bug.fWant,Ce que vous aimeriez
+ui.bug.fWantPh,Décrivez la fonctionnalité ou le changement que vous imaginez
 ui.bug.fWhat,Ce qui s'est passé
 ui.bug.fWhatPh,"Décrivez ce que vous avez vu : message d'erreur, élément disparu…"
-ui.bug.loading,Chargement des bugs…
-ui.bug.needTitle,Saisissez d'abord un titre pour le problème
-ui.bug.noMatch,Aucun bug ne correspond à ces filtres
+ui.bug.fWhy,En quoi cela vous aiderait
+ui.bug.fWhyPh,"Ce que vous cherchez à faire, et quand vous l'utiliseriez"
+ui.bug.kindBug,Rapport de bug
+ui.bug.kindFeature,Demande de fonctionnalité
+ui.bug.kindLabel,Type de rapport
+ui.bug.kindTag,Demande
+ui.bug.loading,Chargement de la liste…
+ui.bug.needTitle,Saisissez d'abord un titre
+ui.bug.noMatch,Aucun élément ne correspond à ces filtres
 ui.bug.openFail,Impossible d'ouvrir le navigateur
 ui.bug.openWeb,Ouvrir sur GitHub
 ui.bug.refresh,Actualiser
-ui.bug.reportIntro,Les rapports sont envoyés directement depuis l'application et apparaissent dans une liste de bugs lisible par tous — n'y mettez ni données personnelles ni texte inédit.
+ui.bug.reportIntro,Les rapports et les demandes sont envoyés directement depuis l'application et apparaissent dans une liste publique lisible par tous — n'y mettez ni données personnelles ni texte inédit.
 ui.bug.reportTitle,Signaler un bug
-ui.bug.rowTip,Ouvrir le bug {0} dans le navigateur
+ui.bug.rowTip,Ouvrir {0} dans le navigateur
 ui.bug.searchPh,"Rechercher ID, détails, version"
 ui.bug.sendClock,Le rapport n'a pas pu être envoyé car la date et l'heure de cet ordinateur sont incorrectes. Réglez-les puis réessayez — votre texte est toujours là.
 ui.bug.sendFail,Le service de rapports a répondu avec l'erreur {0}. Votre texte est toujours là — réessayez plus tard ou copiez le rapport pour l'envoyer autrement.
@@ -2410,15 +2424,20 @@ ui.bug.sendNet,Impossible d'envoyer le rapport. Vérifiez votre connexion Intern
 ui.bug.sendOff,Cette version ne peut pas encore envoyer de rapports depuis l'application. Copiez le rapport et transmettez-le par le canal indiqué par le développeur.
 ui.bug.sendRate,Trop de rapports en peu de temps. Patientez un instant puis réessayez.
 ui.bug.sentOk,Rapport envoyé : bug {0}
+ui.bug.sentOkFeature,Demande envoyée : {0}
 ui.bug.sortTip,Trier selon cette colonne
 ui.bug.source,Source : les issues GitHub de l'application
+ui.bug.stAdded,Ajouté
 ui.bug.stale,(La liste affichée a été chargée le {0})
-ui.bug.statusTitle,État des bugs
+ui.bug.statusTitle,État des bugs et demandes
+ui.bug.stBuilding,En cours
 ui.bug.stConfirmed,Confirmé
+ui.bug.stDeclined,Non prévu
 ui.bug.stDuplicate,Doublon
 ui.bug.stFixed,Corrigé
 ui.bug.stNeedInfo,Infos demandées
 ui.bug.stNew,En attente d'examen
+ui.bug.stPlanned,Prévu
 ui.bug.stProgress,Correction en cours
 ui.bug.stWontfix,Non corrigé
 ui.bug.updated,Dernière mise à jour : {0}
@@ -3223,6 +3242,14 @@ ui.dlgBuilder.sceneOpenBare,La scène commence
 ui.dlgBuilder.selfMono,monologue
 ui.dlgBuilder.unknownName,Inconnu
 ui.dlgBuilder.untitled,Sans titre
+ui.docs.back,Retour
+ui.docs.bookExtension,Guide des extensions
+ui.docs.bookManual,Manuel d'utilisation
+ui.docs.chapter,Chapitre
+ui.docs.language,Langue du manuel
+ui.docs.next,Chapitre suivant
+ui.docs.notFound,Impossible d'ouvrir cette page du manuel : {0}
+ui.docs.prev,Chapitre précédent
 ui.doctor.allGood,Aucun problème trouvé — l'index correspond à tous les fichiers
 ui.doctor.badgeTip,"{0} {0|problème de projet trouvé|problèmes de projet trouvés} (fichiers manquants · lignes en double · en-têtes cassés, etc.) — cliquez pour examiner et corriger"
 ui.doctor.confirmFix,Réparer {0} {0|problème sélectionné|problèmes sélectionnés} ?
@@ -4658,7 +4685,7 @@ ui.menu.blockCode,Bloc de code
 ui.menu.boardMoodMoodBoard,Tableau d'inspiration — s'ouvre dans un panneau latéral ; faites-y glisser des images
 ui.menu.btnFloatCornerRight,"Bouton flottant, en bas à droite (FAB)"
 ui.menu.bugReport,Signaler un bug…
-ui.menu.bugStatus,État des bugs…
+ui.menu.bugStatus,État des bugs et demandes…
 ui.menu.cancelSplitPageScreen,Annuler la séparation de l'écran
 ui.menu.caseBigSmall,Majuscules/minuscules (libre)
 ui.menu.centerK,Centrer
@@ -4706,6 +4733,8 @@ ui.menu.exportLayoutPanelJSON,Exporter la disposition des panneaux (JSON)…
 ui.menu.exportProjectZip,Tout le projet en ZIP…
 ui.menu.exportTop,Exporter
 ui.menu.exportWorkFlowSteps,Modifier les étapes du flux d'export…
+ui.menu.extensionGuide,Guide des extensions…
+ui.menu.featureRequest,Demander une fonctionnalité…
 ui.menu.file,Fichier
 ui.menu.file2,Fichier
 ui.menu.fitWidePagePaper,Ajuster à la largeur de la page
@@ -4854,6 +4883,7 @@ ui.menu.storyTools,Outils de l'histoire
 ui.menu.storyYoursDialogPrev,Discuter avec votre histoire (ancienne boîte de dialogue)…
 ui.menu.suggestTitle,Suggérer un titre…
 ui.menu.summaryBodyProject,Résumer le projet…
+ui.menu.support,Soutenir le projet
 ui.menu.tableCSV,Tableau CSV
 ui.menu.textCaseCycleU,Parcourir les casses
 ui.menu.textContCONTINUEDMORE,Texte de continuation (CONTINUED · MORE · cont'd)
@@ -4864,6 +4894,7 @@ ui.menu.toggleModeNovelChapter,Basculer le mode roman ↔ scénario
 ui.menu.tool,Outils
 ui.menu.toolbarCfg,Personnaliser la barre d'outils…
 ui.menu.trialPlayStoryBreak,Tester l'histoire ramifiée (Mode Joueur)
+ui.menu.userManual,Manuel d'utilisation…
 ui.menu.view,Affichage
 ui.menu.viewChapter,Vue du scénario
 ui.menu.viewNoteAll,Voir toutes les notes…
@@ -6109,7 +6140,7 @@ ui.roster.showHeadingScene,Afficher l'en-tête Scène
 ui.roster.showHeadingTime,Afficher l'en-tête Moment
 ui.sb.autoFit,Ajuster automatiquement à la largeur
 ui.sb.autosave,Enregistrement automatique
-ui.sb.bugReport,Signaler un bug
+ui.sb.bugReport,Signaler un bug ou demander une fonctionnalité
 ui.sb.home,Accueil
 ui.sb.lineNumbers,Numéros de ligne
 ui.sb.mdCodes,Afficher les codes Markdown
@@ -6871,7 +6902,6 @@ ui.starter.aiWriteIntro,Laisser l'IA rédiger le synopsis
 ui.starter.aiWriteIntroShort,Un seul paragraphe
 ui.starter.aiWriteOpener,Laisser l'IA ébaucher l'ouverture
 ui.starter.aiWriteSynopsis,Laisser l'IA rédiger le synopsis
-ui.starter.artHint,Emplacement pour l'illustration — déposez un fichier portant ce nom dans le dossier de l'application
 ui.starter.autoLinkAsk,Créer aussi une page de wiki pour « {0} » ?
 ui.starter.autoLinkGo,Créer
 ui.starter.backToList,Retour à la vue d'ensemble
@@ -7484,8 +7514,8 @@ ui.tip.blockStyle,Transforme tout le paragraphe en un niveau de titre ou en cita
 ui.tip.books,"Gérez les livres et les brouillons — couvertures, résumés, statut, et glissez pour réordonner."
 ui.tip.branch-sync,Lit les choix écrits dans cette scène sous la forme [texte] entre crochets et les transforme en chemins sur la carte des embranchements.
 ui.tip.branching,"Ouvre la carte de l'histoire à embranchements, qui montre où mènent les choix de chaque scène — pour les romans visuels et les jeux narratifs."
-ui.tip.bug-report,Décrivez un problème rencontré et envoyez-le au développeur directement depuis l'application.
-ui.tip.bug-status,"Liste les bugs signalés avec leur état, la version où ils ont été trouvés et celle qui les corrige, avec des filtres."
+ui.tip.bug-report,Décrivez un problème rencontré — ou passez à une demande de fonctionnalité — et envoyez-le au développeur directement depuis l'application.
+ui.tip.bug-status,"Liste les bugs signalés et les demandes de fonctionnalités avec leur état, la version où ils ont été signalés et celle qui les résout, avec des filtres."
 ui.tip.changelog,Consultez ce que chaque version de l'application a ajouté ou corrigé.
 ui.tip.chapter,Crée un nouveau chapitre dans le livre de votre choix et l'ouvre. Un chapitre regroupe plusieurs scènes.
 ui.tip.chapters,"Ouvre le gestionnaire de chapitres — couvertures, ordre et statistiques de chaque chapitre du livre."
@@ -7517,6 +7547,8 @@ ui.tip.export-pdf-builtin,"Exporte un PDF directement avec le générateur de PD
 ui.tip.export-rtf,Exporte le scénario en fichier RTF qui s'ouvre dans Word et dans la plupart des traitements de texte.
 ui.tip.export-watermark,"Définit un filigrane imprimé sur chaque page des fichiers exportés — le nom d'un destinataire, ou le mot BROUILLON."
 ui.tip.export-zip,"Compresse tout le dossier du projet dans un seul fichier ZIP, pour la sauvegarde ou le partage."
+ui.tip.extension-guide,Ouvre dans l'application le guide pour écrire des plugins et d'autres extensions.
+ui.tip.feature-request,Décrivez une fonctionnalité que vous aimeriez et envoyez la demande au développeur directement depuis l'application.
 ui.tip.find,Recherche et remplace dans le document actuellement ouvert.
 ui.tip.floorplan,"Ouvre le plan d'étage — un plan de plateau vu de dessus : placez les personnages, réglez caméras/objectifs et lumières, puis réglez la mise en place des temps forts par rapport aux répliques de la scène"
 ui.tip.fmt,"Mise en forme du texte — gras, titres, listes, etc. ; chaque bouton indique le style qu'il applique."
@@ -7718,6 +7750,7 @@ ui.tip.split-view:right,Divise la zone d'écriture en volets gauche et droit.
 ui.tip.sprint,"Chronomètre un sprint d'écriture, compte les mots que vous écrivez pendant celui-ci, prend en charge un objectif de mots et conserve les statistiques dans le projet"
 ui.tip.story-starter,"Ouvre le Démarreur d'histoire : mettez en place pas à pas une histoire, des personnages et la scène d'ouverture, puis jouez-la en épisodes avec l'IA."
 ui.tip.story-starter-toggle,Ouvre ou ferme le Démarreur d'histoire — mettez une histoire en place pas à pas et jouez-la avec l'IA. Appuyez à nouveau pour fermer.
+ui.tip.support,"Ouvre dans votre navigateur la page de soutien du projet, où vous pouvez offrir un café au développeur."
 ui.tip.sync-scene-meta,Relit les propriétés des scènes depuis les en-têtes des fichiers .md — à utiliser après avoir modifié des fichiers dans un autre programme.
 ui.tip.test-run,Exécute la suite d'autotests de l'application (pour les développeurs).
 ui.tip.text-case,Met le texte sélectionné dans une casse donnée. Concerne les lettres latines.
@@ -7798,6 +7831,7 @@ ui.tip.ui:tb-source,"Affiche le markdown brut de cette scène — exactement ce 
 ui.tip.ui:tb-sp-cont,Active ou désactive les marques de suite automatiques du scénario — (CONTINUED) en bas de page et (MORE) quand un dialogue passe à la page suivante.
 ui.tip.ui:tb-sp-ext,"Ajoute une extension après le nom d'un personnage — (V.O.) voix off, (O.S.) hors champ, (cont'd) suite."
 ui.tip.ui:tb-visual,"Ouvre le storyboard de cette scène, pour la raconter par une suite d'images."
+ui.tip.user-manual,"Ouvre le manuel d'utilisation complet dans l'application — tous les chapitres, en anglais ou en thaï, sans connexion Internet."
 ui.tip.visual-tags,"Gérez les étiquettes de couleur que vous associez aux scènes — par intrigue ou par personnage principal, par exemple."
 ui.tip.word-history,"Repère les mots fréquemment répétés et affiche des statistiques d'emploi des mots, pour débusquer vos tics de langage."
 ui.tip.workspace,Passe à la disposition de panneaux indiquée.

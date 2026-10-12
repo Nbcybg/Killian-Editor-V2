@@ -12,7 +12,7 @@ ui.a11y.oskFail,เปิดแป้นพิมพ์บนจอของร�
 ui.a11y.oskOpened,เปิดแป้นพิมพ์บนจอของระบบแล้ว
 ui.a11y.oskSettings,เปิดแป้นพิมพ์บนจอตรง ๆ ไม่ได้ — เปิดหน้าตั้งค่าแป้นพิมพ์ของระบบให้แทน เปิดสวิตช์แป้นพิมพ์บนจอที่นั่น
 ui.about.bugReport,รายงานบั๊ก
-ui.about.bugStatus,สถานะบั๊ก
+ui.about.bugStatus,สถานะบั๊กและคำขอ
 ui.about.changelog,มีอะไรใหม่
 ui.about.checkUpdate,ตรวจรุ่นใหม่
 ui.about.credits,เครดิต
@@ -1317,7 +1317,7 @@ ui.app.block, บล็อก
 ui.app.boardItemHideItem,กระดาน {0} ใบถูกซ่อนด้วยตัวกรอง — ล้างช่องค้นหาเพื่อดูทั้งหมด
 ui.app.boardPlanner,กระดานวางแผน
 ui.app.boardPlanner2,กระดานวางแผน ({0})
-ui.app.boardPlannerPlannerGraph,กระดานวางแผน (Planner) และผังพื้นที่
+ui.app.boardPlannerPlannerGraph,กระดานวางแผน (Planner)
 ui.app.boardPlannerReadCant,กระดานวางแผน (อ่านไม่ได้)
 ui.app.bookNotHasDraft,เล่มนี้ยังไม่มีฉบับร่าง
 ui.app.btnFloatFABClose,ปุ่มลอย (FAB): ปิด
@@ -1417,7 +1417,6 @@ ui.app.copyResult,คัดลอกผล
 ui.app.copyResultConsoleDone,คัดลอกผลจากคอนโซลแล้ว
 ui.app.copySaveDoneLine,คัดลอกบันทึกแล้ว ({0} บรรทัดตามตัวกรอง)
 ui.app.corner,มุมเอียง (องศา)
-ui.app.courierMonoThaiProportionalThai,Courier MonoThai · ProportionalThai (1998)
 ui.app.coverBookReadNot,อ่านรูปปกของเล่มไม่ได้
 ui.app.creditIcons,ชุดไอคอนของโปรแกรม (ฟอนต์ K2 Icons)
 ui.app.creditThree,ผัง Story Network แบบ 3 มิติ (โมเดล · ฉากหลัง)
@@ -1515,12 +1514,11 @@ ui.app.file,นามสกุลไฟล์
 ui.app.fileLangK2Csv,ไฟล์ภาษา (k2_*.csv)
 ui.app.fileNotHas,(ไฟล์นี้ยังไม่มี{0})
 ui.app.fileOpen,ไฟล์ที่เปิดอยู่
-ui.app.fileTaskMarkdownJSON,ไฟล์งานเป็น Markdown + JSON เปิดร่วมกับ Killian v1 ได้ 100%
+ui.app.fileTaskMarkdownJSON,ไฟล์งานเป็น Markdown + JSON ธรรมดา
 ui.app.filter,กรองตามที่มา
 ui.app.findDiskFindOn,หาในดิสก์ (Find on disk)
 ui.app.findRowNotFound,หาแถวไม่เจอ → ซ่อมต้นไม้
 ui.app.folderNotProjectKillian,โฟลเดอร์นี้ไม่ใช่โปรเจกต์ Killian (ไม่พบ project.khn.json)
-ui.app.fontScreenplayPosView,ฟอนต์บทภาพยนตร์ (ไทย) — ดัดแปลงตำแหน่งวรรณยุกต์ · ดู renderer/assets/fonts/THAI-FONTS.txt
 ui.app.fontScreenplayQuoteUnquote,ฟอนต์บทภาพยนตร์ (ละติน) — Quote-Unquote Apps
 ui.app.forceCaseBig,บังคับตัวพิมพ์ใหญ่
 ui.app.forcePrintBigFormat,บังคับพิมพ์ใหญ่ตามรูปแบบบทมาตรฐาน
@@ -1737,7 +1735,6 @@ ui.app.notRememberEditChapter,"ไม่จำ ""{0}"" อีก (แก้ไ�
 ui.app.notRememberFoundNot,"ยังไม่จำ (เจอไม่ถึง {0} ครั้ง) — กดปุ่ม ""จำ"" เพื่อจำเลย"
 ui.app.notSave,ยังไม่บันทึก
 ui.app.notSet,(ไม่ตั้ง)
-ui.app.notSource,ไม่ทราบสิทธิ์ต้นฉบับ
 ui.app.notUseTemplate2,— ไม่ใช้เทมเพลต —
 ui.app.novel, นิยาย
 ui.app.novel2, นิยาย ▾
@@ -1962,6 +1959,7 @@ ui.app.startAppShowPage,เริ่มโปรแกรม: แสดงหน
 ui.app.status2,สถานะ: 
 ui.app.styleWatermark,แม่แบบลายน้ำ
 ui.app.suggest, (แนะนำ)
+ui.app.supportOpened,เปิดหน้าสนับสนุนในเบราว์เซอร์แล้ว ขอบคุณครับ
 ui.app.template,เทมเพลต
 ui.app.templateManage,เทมเพลต (จัดการ)
 ui.app.templatesFillBlockProfile,templates: เติมบล็อก profile ให้เทมเพลตมาตรฐานของโปรเจกต์นี้แล้ว
@@ -2357,7 +2355,8 @@ ui.branch.zoomIn,ขยายผัง
 ui.branch.zoomOut,ย่อผัง
 ui.bug.btnCopy,คัดลอกรายงาน
 ui.bug.btnSend,ส่งรายงาน
-ui.bug.btnStatus,ดูสถานะบั๊ก
+ui.bug.btnSendFeature,ส่งคำขอ
+ui.bug.btnStatus,ดูสถานะ
 ui.bug.clear,ล้างตัวกรอง
 ui.bug.colFixed,แก้ไขในรุ่น
 ui.bug.colFound,พบในรุ่น
@@ -2371,13 +2370,14 @@ ui.bug.contactMailTip,คัดลอกรายงาน แล้วเปิ
 ui.bug.copied,คัดลอกรายงานแล้ว นำไปวางส่งทางช่องทางที่กำหนดได้เลย
 ui.bug.copyFail,คัดลอกรายงานไม่ได้
 ui.bug.count,แสดง {0} จาก {1} รายการ
-ui.bug.empty,ยังไม่มีบั๊กที่ถูกรายงาน
+ui.bug.empty,ยังไม่มีรายการที่ถูกรายงาน
 ui.bug.envHead,สภาพแวดล้อม
 ui.bug.envNote,บรรทัดนี้แนบไปกับรายงานให้อัตโนมัติ ไม่มีชื่อไฟล์หรือเนื้อหาของผลงาน
 ui.bug.errHttp,GitHub ตอบกลับด้วยข้อผิดพลาด {0}
 ui.bug.errNet,ติดต่อ GitHub ไม่ได้ ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่
 ui.bug.errParse,อ่านรายการที่ GitHub ส่งมาไม่ได้
 ui.bug.errRate,GitHub จำกัดจำนวนครั้งที่ถามได้ชั่วคราว ลองใหม่ภายหลัง หรือเปิดดูบน GitHub
+ui.bug.featureTitle,ขอฟีเจอร์
 ui.bug.fExpected,ที่ควรจะเป็น
 ui.bug.fExpectedPh,สิ่งที่คาดว่าจะเกิดขึ้นแทน (ไม่บังคับ)
 ui.bug.fltAll,ทุกสถานะ ({0})
@@ -2385,23 +2385,37 @@ ui.bug.fltClosed,ปิดแล้ว ({0})
 ui.bug.fltFixedAll,แก้ไขในทุกรุ่น
 ui.bug.fltFixedNone,ยังไม่ระบุรุ่นที่แก้ไข
 ui.bug.fltFoundAll,พบในทุกรุ่น
+ui.bug.fltKindAll,ทุกชนิด ({0})
+ui.bug.fltKindBug,บั๊ก ({0})
+ui.bug.fltKindFeature,คำขอฟีเจอร์ ({0})
 ui.bug.fltOne,{0} ({1})
 ui.bug.fltOpen,ยังไม่ปิด ({0})
+ui.bug.fNow,ตอนนี้ทำอย่างไรอยู่
+ui.bug.fNowPh,วิธีเลี่ยงหรือโปรแกรมอื่นที่ใช้แทนอยู่ (ไม่บังคับ)
 ui.bug.fSteps,ขั้นตอนทำซ้ำ
 ui.bug.fStepsPh,1. เปิด…  2. กด…  3. เห็นว่า…
 ui.bug.fTitle,หัวข้อ
 ui.bug.fTitlePh,สรุปปัญหาในบรรทัดเดียว
+ui.bug.fTitlePhFeature,สรุปสิ่งที่อยากได้ในบรรทัดเดียว
+ui.bug.fWant,อยากได้อะไร
+ui.bug.fWantPh,อธิบายฟีเจอร์หรือการเปลี่ยนแปลงที่คิดไว้
 ui.bug.fWhat,เกิดอะไรขึ้น
 ui.bug.fWhatPh,อธิบายสิ่งที่เห็น เช่น ข้อความผิดพลาด หรือสิ่งที่หายไป
-ui.bug.loading,กำลังโหลดรายการบั๊ก…
-ui.bug.needTitle,กรอกหัวข้อของปัญหาก่อน
-ui.bug.noMatch,ไม่มีบั๊กที่ตรงกับตัวกรอง
+ui.bug.fWhy,ช่วยงานคุณอย่างไร
+ui.bug.fWhyPh,กำลังพยายามทำอะไร และจะใช้ตอนไหน
+ui.bug.kindBug,รายงานบั๊ก
+ui.bug.kindFeature,ขอฟีเจอร์
+ui.bug.kindLabel,ชนิดของรายงาน
+ui.bug.kindTag,ฟีเจอร์
+ui.bug.loading,กำลังโหลดรายการ…
+ui.bug.needTitle,กรอกหัวข้อก่อน
+ui.bug.noMatch,ไม่มีรายการที่ตรงกับตัวกรอง
 ui.bug.openFail,เปิดเบราว์เซอร์ไม่ได้
 ui.bug.openWeb,เปิดบน GitHub
 ui.bug.refresh,โหลดใหม่
-ui.bug.reportIntro,รายงานถูกส่งจากโปรแกรมโดยตรง แล้วขึ้นในรายการบั๊กที่ทุกคนเปิดอ่านได้ — อย่าใส่ข้อมูลส่วนตัวหรือเนื้อเรื่องที่ยังไม่เผยแพร่
+ui.bug.reportIntro,รายงานและคำขอถูกส่งจากโปรแกรมโดยตรง แล้วขึ้นในรายการที่ทุกคนเปิดอ่านได้ — อย่าใส่ข้อมูลส่วนตัวหรือเนื้อเรื่องที่ยังไม่เผยแพร่
 ui.bug.reportTitle,รายงานบั๊ก
-ui.bug.rowTip,เปิดบั๊ก {0} ในเบราว์เซอร์
+ui.bug.rowTip,เปิดรายการ {0} ในเบราว์เซอร์
 ui.bug.searchPh,ค้นหารหัสบั๊ก รายละเอียด หรือรุ่น
 ui.bug.sendClock,ส่งรายงานไม่ได้เพราะวันเวลาของเครื่องไม่ตรง ตั้งวันเวลาของเครื่องให้ถูกแล้วลองใหม่ ข้อความที่พิมพ์ไว้ยังอยู่
 ui.bug.sendFail,ปลายทางรับรายงานตอบกลับด้วยข้อผิดพลาด {0} ข้อความที่พิมพ์ไว้ยังอยู่ ลองใหม่ภายหลังหรือคัดลอกรายงานส่งทางอื่น
@@ -2410,15 +2424,20 @@ ui.bug.sendNet,ส่งรายงานไม่ได้ ตรวจกา�
 ui.bug.sendOff,รุ่นนี้ยังไม่ได้เปิดการส่งรายงานจากโปรแกรม ให้คัดลอกรายงานแล้วส่งทางช่องทางที่ผู้พัฒนากำหนด
 ui.bug.sendRate,ส่งรายงานถี่เกินไป รอสักครู่แล้วลองใหม่
 ui.bug.sentOk,ส่งรายงานแล้ว เป็นบั๊ก {0}
+ui.bug.sentOkFeature,ส่งคำขอแล้ว เลขที่ {0}
 ui.bug.sortTip,เรียงตามคอลัมน์นี้
 ui.bug.source,ที่มา: GitHub Issues ของโปรแกรม
+ui.bug.stAdded,เพิ่มแล้ว
 ui.bug.stale,(รายการที่เห็นโหลดไว้เมื่อ {0})
-ui.bug.statusTitle,สถานะบั๊ก
+ui.bug.statusTitle,สถานะบั๊กและคำขอ
+ui.bug.stBuilding,กำลังทำ
 ui.bug.stConfirmed,ยืนยันแล้ว
+ui.bug.stDeclined,ไม่ทำ
 ui.bug.stDuplicate,ซ้ำกับรายการอื่น
 ui.bug.stFixed,แก้ไขแล้ว
 ui.bug.stNeedInfo,ขอข้อมูลเพิ่ม
 ui.bug.stNew,รอตรวจสอบ
+ui.bug.stPlanned,รับไว้แล้ว
 ui.bug.stProgress,กำลังแก้ไข
 ui.bug.stWontfix,ไม่แก้ไข
 ui.bug.updated,อัปเดตล่าสุด {0}
@@ -3223,6 +3242,14 @@ ui.dlgBuilder.sceneOpenBare,ฉากเริ่มขึ้น
 ui.dlgBuilder.selfMono,รำพึงคนเดียว
 ui.dlgBuilder.unknownName,ไม่ทราบชื่อ
 ui.dlgBuilder.untitled,ยังไม่ตั้งชื่อ
+ui.docs.back,ย้อนกลับ
+ui.docs.bookExtension,คู่มือส่วนขยาย
+ui.docs.bookManual,คู่มือผู้ใช้
+ui.docs.chapter,บท
+ui.docs.language,ภาษาของคู่มือ
+ui.docs.next,บทถัดไป
+ui.docs.notFound,เปิดหน้านี้ของคู่มือไม่ได้: {0}
+ui.docs.prev,บทก่อนหน้า
 ui.doctor.allGood,ไม่พบปัญหา — ทะเบียนตรงกับไฟล์จริงทุกฉาก
 ui.doctor.badgeTip,โปรเจกต์มีปัญหา {0} จุด (ไฟล์หาย · แถวซ้ำ · หัวไฟล์พัง ฯลฯ) — คลิกเพื่อตรวจและซ่อม
 ui.doctor.confirmFix,ซ่อม {0} รายการที่เลือกหรือไม่
@@ -4658,7 +4685,7 @@ ui.menu.blockCode,บล็อกโค้ด
 ui.menu.boardMoodMoodBoard,กระดานอารมณ์ (Mood Board) — เปิดเป็นแผงข้าง ๆ แล้วลากรูปมาวางได้
 ui.menu.btnFloatCornerRight,ปุ่มลอยมุมขวาล่าง (FAB)
 ui.menu.bugReport,รายงานบั๊ก…
-ui.menu.bugStatus,สถานะบั๊ก…
+ui.menu.bugStatus,สถานะบั๊กและคำขอ…
 ui.menu.cancelSplitPageScreen,ยกเลิกแยกหน้าจอ
 ui.menu.caseBigSmall,ตัวพิมพ์ใหญ่/เล็ก (ให้อิสระ)
 ui.menu.centerK,กึ่งกลาง
@@ -4706,6 +4733,8 @@ ui.menu.exportLayoutPanelJSON,ส่งออกการจัดวางแ�
 ui.menu.exportProjectZip,ทั้งโปรเจกต์เป็น ZIP…
 ui.menu.exportTop,ส่งออก
 ui.menu.exportWorkFlowSteps,ปรับขั้นตอนเวิร์กโฟลว์ส่งออก…
+ui.menu.extensionGuide,คู่มือส่วนขยาย…
+ui.menu.featureRequest,ขอฟีเจอร์…
 ui.menu.file,ไฟล์
 ui.menu.file2,ไฟล์
 ui.menu.fitWidePagePaper,พอดีความกว้างหน้ากระดาษ
@@ -4854,6 +4883,7 @@ ui.menu.storyTools,เครื่องมือเล่าเรื่อง
 ui.menu.storyYoursDialogPrev,แชทกับเรื่องของคุณ (กล่องเดิม)…
 ui.menu.suggestTitle,แนะนำชื่อเรื่อง…
 ui.menu.summaryBodyProject,สรุปเนื้อหาโปรเจกต์…
+ui.menu.support,สนับสนุนโปรเจกต์
 ui.menu.tableCSV,ตาราง CSV
 ui.menu.textCaseCycleU,วนรูปตัวพิมพ์
 ui.menu.textContCONTINUEDMORE,ข้อความต่อเนื่อง (CONTINUED · MORE · cont'd)
@@ -4864,6 +4894,7 @@ ui.menu.toggleModeNovelChapter,สลับโหมด นิยาย ↔ บ�
 ui.menu.tool,เครื่องมือ
 ui.menu.toolbarCfg,ปรับปุ่มบนแถบเครื่องมือ…
 ui.menu.trialPlayStoryBreak,ทดลองเล่นเรื่องแตกสาย (Player Mode)
+ui.menu.userManual,คู่มือผู้ใช้…
 ui.menu.view,มุมมอง
 ui.menu.viewChapter,มุมมองบท
 ui.menu.viewNoteAll,ดูโน้ตทั้งหมด…
@@ -6109,7 +6140,7 @@ ui.roster.showHeadingScene,แสดงหัวข้อ Scene
 ui.roster.showHeadingTime,แสดงหัวข้อ Time
 ui.sb.autoFit,ซูมพอดีความกว้างอัตโนมัติ
 ui.sb.autosave,บันทึกอัตโนมัติ
-ui.sb.bugReport,รายงานบั๊ก
+ui.sb.bugReport,รายงานบั๊กหรือขอฟีเจอร์
 ui.sb.home,หน้าแรก
 ui.sb.lineNumbers,เลขบรรทัด
 ui.sb.mdCodes,แสดงรหัสมาร์กดาวน์
@@ -6871,7 +6902,6 @@ ui.starter.aiWriteIntro,ให้ AI เขียนเรื่องย่อ�
 ui.starter.aiWriteIntroShort,เอาแบบย่อหน้าเดียว
 ui.starter.aiWriteOpener,ให้ AI ร่างบทเปิด
 ui.starter.aiWriteSynopsis,ให้ AI เขียนเรื่องย่อให้
-ui.starter.artHint,ช่องใส่ภาพประกอบ — วางไฟล์ชื่อนี้ในโฟลเดอร์ของโปรแกรม
 ui.starter.autoLinkAsk,"สร้างหน้า Wiki ให้ ""{0}"" ด้วยไหม"
 ui.starter.autoLinkGo,สร้างให้
 ui.starter.backToList,กลับหน้ารวม
@@ -7484,8 +7514,8 @@ ui.tip.blockStyle,เปลี่ยนทั้งย่อหน้าเป�
 ui.tip.books,จัดการเล่มและฉบับร่าง ตั้งปก คำโปรย สถานะ และลากสลับลำดับเล่ม
 ui.tip.branch-sync,อ่านทางเลือกที่เขียนไว้ในฉากนี้ด้วยวงเล็บเหลี่ยม [ข้อความ] แล้วสร้างเป็นเส้นทางในผังแตกสาย
 ui.tip.branching,เปิดผังเรื่องแตกสาย ดูว่าแต่ละฉากมีทางเลือกพาไปฉากไหน เหมาะกับนิยายภาพหรือเกมเนื้อเรื่อง
-ui.tip.bug-report,เขียนรายงานปัญหาที่เจอ แล้วส่งตรงจากโปรแกรมให้ผู้พัฒนา
-ui.tip.bug-status,ดูรายการบั๊กที่ถูกรายงาน สถานะ รุ่นที่พบ และรุ่นที่แก้ไข พร้อมตัวกรอง
+ui.tip.bug-report,เขียนปัญหาที่เจอ หรือสลับไปขอฟีเจอร์ แล้วส่งถึงผู้พัฒนาจากในโปรแกรมได้เลย
+ui.tip.bug-status,ดูรายการบั๊กและคำขอฟีเจอร์ที่ถูกรายงาน สถานะ รุ่นที่พบ และรุ่นที่แก้ไข พร้อมตัวกรอง
 ui.tip.changelog,ดูว่าแต่ละรุ่นของโปรแกรมเพิ่มหรือแก้อะไรไปบ้าง
 ui.tip.chapter,สร้างบทใหม่ในเล่มที่เลือก แล้วเปิดให้เริ่มเขียนทันที บทคือกล่องที่รวมหลายฉากไว้ด้วยกัน
 ui.tip.chapters,เปิดแผงจัดการบท ตั้งปกบท ลำดับบท และดูสถิติของทุกบทในเล่ม
@@ -7517,6 +7547,8 @@ ui.tip.export-pdf-builtin,ส่งออก PDF ด้วยตัวสร้�
 ui.tip.export-rtf,ส่งออกบทภาพยนตร์เป็นไฟล์ RTF ที่เปิดได้ใน Word และโปรแกรมเอกสารทั่วไป
 ui.tip.export-watermark,ตั้งลายน้ำที่จะพิมพ์ทับทุกหน้าของไฟล์ที่ส่งออก เช่น ชื่อผู้รับ หรือคำว่า ฉบับร่าง
 ui.tip.export-zip,บีบอัดทั้งโฟลเดอร์โปรเจกต์เป็นไฟล์ ZIP ไฟล์เดียว สำหรับสำรองหรือส่งให้คนอื่น
+ui.tip.extension-guide,เปิดคู่มือการเขียนปลั๊กอินและส่วนขยายอื่น ๆ ในโปรแกรม
+ui.tip.feature-request,อธิบายฟีเจอร์ที่อยากได้ แล้วส่งคำขอถึงผู้พัฒนาจากในโปรแกรมได้เลย
 ui.tip.find,ค้นหาและแทนที่ภายในเอกสารที่เปิดอยู่ตอนนี้เท่านั้น
 ui.tip.floorplan,เปิดผังพื้นที่ — ผังกองถ่ายมุมบน: วางตัวละคร ตั้งกล้อง/เลนส์ จัดไฟ แล้วไล่จังหวะตามบรรทัดของฉาก
 ui.tip.fmt,คำสั่งจัดรูปแบบข้อความ เช่น ตัวหนา หัวข้อ หรือรายการ ปุ่มแต่ละปุ่มระบุว่าจะจัดแบบไหน
@@ -7718,6 +7750,7 @@ ui.tip.split-view:right,แบ่งพื้นที่เขียนเป�
 ui.tip.sprint,จับเวลาเขียนแบบสปรินต์ นับคำที่เขียนได้ในรอบ ตั้งเป้าหมายได้ และเก็บสถิติไว้ในโปรเจกต์
 ui.tip.story-starter,เปิด Story Starter ตั้งต้นเรื่อง ตัวละคร และฉากแรกทีละขั้น แล้วเล่นต่อเป็นตอนกับ AI
 ui.tip.story-starter-toggle,เปิดหรือปิด Story Starter ตั้งต้นเรื่องทีละขั้นแล้วเล่นต่อเป็นตอนกับ AI กดซ้ำเพื่อปิด
+ui.tip.support,เปิดหน้าสนับสนุนโปรเจกต์ในเบราว์เซอร์ สำหรับผู้ที่อยากเลี้ยงกาแฟผู้พัฒนา
 ui.tip.sync-scene-meta,อ่านคุณสมบัติฉากจากส่วนหัวของไฟล์ .md กลับเข้าโปรแกรม ใช้หลังแก้ไฟล์ด้วยโปรแกรมอื่น
 ui.tip.test-run,รันชุดทดสอบของโปรแกรม สำหรับนักพัฒนา
 ui.tip.text-case,เปลี่ยนรูปตัวพิมพ์ของข้อความที่เลือกเป็นแบบที่ระบุ มีผลกับตัวอักษรละติน
@@ -7798,6 +7831,7 @@ ui.tip.ui:tb-source,เปิดดูมาร์กดาวน์ดิบข
 ui.tip.ui:tb-sp-cont,เปิด/ปิดข้อความต่อเนื่องอัตโนมัติของบทภาพยนตร์ — (CONTINUED) ท้ายหน้า และ (MORE) เมื่อบทพูดข้ามหน้า
 ui.tip.ui:tb-sp-ext,ส่วนเสริมท้ายชื่อตัวละคร เช่น (V.O.) เสียงในใจ · (O.S.) อยู่นอกเฟรม · (cont'd) พูดต่อจากที่ค้างไว้
 ui.tip.ui:tb-visual,เปิดสตอรีบอร์ดของฉากนี้ วางภาพต่อกันเพื่อเล่าเรื่องด้วยภาพ
+ui.tip.user-manual,เปิดคู่มือผู้ใช้ฉบับเต็มในโปรแกรม ครบทุกบท อ่านได้ทั้งภาษาอังกฤษและภาษาไทย ไม่ต้องต่ออินเทอร์เน็ต
 ui.tip.visual-tags,จัดการแท็กสีที่ใช้ติดฉาก เช่น สีตามเส้นเรื่องหรือตัวละครหลัก
 ui.tip.word-history,ตรวจหาคำที่ใช้ซ้ำบ่อยและดูสถิติการใช้คำ ช่วยจับคำติดปาก
 ui.tip.workspace,สลับไปใช้ชุดการจัดวางแผงที่ระบุ

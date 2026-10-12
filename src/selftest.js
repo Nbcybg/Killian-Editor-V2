@@ -154,6 +154,10 @@ import { sceneProps } from './scene-props.js';
 import { settingsDialog, versionDialog } from './dialogs.js';
 import { showHomeDialog } from './home-ui.js';
 import { setBugIo, clearBugCache, clearBugSent, resetBugView, openBugStatus } from './bugs/bug-ui.js';   // [alpha.170]
+import { setDocsIo } from './docs-ui.js';                 // [alpha.170] คู่มือในโปรแกรม
+import { setSupportIo } from './support-ui.js';           // [alpha.170] ลิงก์สนับสนุน
+import { SUPPORT_URL, copyrightLine } from './app-info.js';
+import { DOC_LANGS, docLang } from './docs-view.js';
 import { BUG_LIST_URL, bugUrl, bugApiUrl } from './bugs/bug-core.js';
 import { fmtDate as fmtDate170 } from './locale.js';
 import * as spell from './spell.js';
@@ -217,10 +221,13 @@ import { APP_VERSION, CREDITS, FEATURE_PANELS, INV_C, aboutDialog, activate, act
 export async function runTest(projectPath) {
   const out = [];
   const flush = () => kapi.writeFile('/tmp/k2result.txt', out.join('\n'));
+  const KEEP_GOING = location.search.includes('k2keep');
   const check = (name, cond, extra) => {
     out.push((cond ? 'PASS ' : 'FAIL ') + name + (cond ? '' : ' :: ' + extra));
     flush();                                   // เขียนสด ๆ — โดนตัดกลางคันก็เห็น progress
-    if (!cond) throw new Error(name);
+    // [alpha.170] โหมดเก็บข้อแดงทั้งรอบ (KILLIAN_TEST_KEEPGOING=1 → ?k2keep=1): ไม่หยุดที่ข้อแรก — ใช้ไล่ของบนระบบที่ยังไม่เคยรันครบ
+    // (รอบเต็มใช้เวลาเกือบชั่วโมง แดงทีละข้อ = วันละไม่กี่รอบ) · ข้อหลัง ๆ อาจแดงตามกัน อ่านข้อแรกของแต่ละชุดเป็นหลัก · ผลรวมยังเป็น STOP
+    if (!cond && !KEEP_GOING) throw new Error(name);
   };
   // [alpha.88] บันทึก "ตัวเลขที่วัดได้" ลงผลเทสถาวร — ค่าที่ต้องเอาไว้ *ดู* ไม่ใช่ *ตัดสิน*
   // (เพดานความเร็วตั้งหลวมกันเครื่องช้า ตัวเลขจริงจึงต้องมีที่ให้อ่านย้อนหลังเทียบรุ่นต่อรุ่น)
@@ -35651,6 +35658,10 @@ export async function runTest(projectPath) {
         const boxN = ovN.querySelector('.k-dialog'), ttlN = boxN.querySelector('.k-dlg-title');
         const xN = await untilN(() => ovN.querySelector(':scope > .k-dlg-x'));
         check('[169-N] ★ กล่องมีปุ่มปิดที่มุม (อยู่นอกตัวกล่อง — ไม่ถูกนับเป็นปุ่มของกล่อง)', !!xN && !boxN.contains(xN) && boxN.querySelectorAll('button').length === 2);
+        // [alpha.170 · macOS] กล่องเปิดด้วยอนิเมชันขยาย 0.1 วินาที — วัดตำแหน่งตั้งต้นระหว่างนั้นได้ค่ากลางทาง (คลาด ~5px)
+        // แล้วข้อ "ดับเบิลคลิก = กลับกลางจอ" ที่วัดหลังอนิเมชันจบจะแดงตามจังหวะเครื่อง (เจอบน macOS · ผ่านบน Windows โดยบังเอิญ) → รอกล่องนิ่งก่อน
+        await Promise.all(boxN.getAnimations().map((an) => an.finished.catch(() => {})));
+        await untilN(() => { const r1 = boxN.getBoundingClientRect(); return new Promise((res) => requestAnimationFrame(() => { const r2 = boxN.getBoundingClientRect(); res(r1.left === r2.left && r1.top === r2.top && r1.width === r2.width); })); }, 1500);
         const b0 = boxN.getBoundingClientRect();
         const xr0 = xN.getBoundingClientRect();
         check('[169-N] ปุ่มปิดอยู่มุมขวาบนของกล่อง', Math.abs(xr0.right - (b0.right - 8)) <= 3 && Math.abs(xr0.top - (b0.top + 8)) <= 3, Math.round(xr0.right - b0.right) + ',' + Math.round(xr0.top - b0.top));
@@ -35675,7 +35686,8 @@ export async function runTest(projectPath) {
         check('[169-N] ปุ่มปิดตามกล่องไปด้วย', Math.abs(xr3.right - (b3.right - 8)) <= 3 && Math.abs(xr3.top - (b3.top + 8)) <= 3);
         ttlN.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
         const b4 = boxN.getBoundingClientRect();
-        check('[169-N] ดับเบิลคลิกหัวกล่อง = กลับกลางจอ', Math.abs(b4.left - b0.left) <= 1 && Math.abs(b4.top - b0.top) <= 1);
+        check('[169-N] ดับเบิลคลิกหัวกล่อง = กลับกลางจอ', Math.abs(b4.left - b0.left) <= 1 && Math.abs(b4.top - b0.top) <= 1,
+              Math.round(b4.left) + ',' + Math.round(b4.top) + ' / ' + Math.round(b0.left) + ',' + Math.round(b0.top));
         xN.click();
         const ansN = await Promise.race([askP, wN(1500).then(() => 'ค้าง')]);
         check('[169-N] ★ กดปุ่มปิดที่มุม = ทางออกเดียวกับ ยกเลิก', ansN === null && !ovN.isConnected, String(ansN));
@@ -36142,25 +36154,21 @@ export async function runTest(projectPath) {
           await handleCommand('toggle-panel', 'codex'); await wX(150);
         }
 
-        // ── 6) Story Starter: ช่องใส่ภาพประกอบ (แบบ setup wizard) ──
+        // ── 6) Story Starter: ไม่มีช่องภาพประกอบแบบ setup wizard แล้ว ──
+        // [alpha.170] ผู้ใช้: "story starter ตัดรูป ที่เหมือน setup wizzard ออกดีกว่าไม่ชอบเลย" — เดิมมีแถบภาพหัวหน้ารวม + แถบภาพข้าง/หัวของทุกขั้น
         {
-          const names = await kapi.starterArtList();
-          check('[169-X] main บอกรายชื่อไฟล์ภาพของ Story Starter ได้', Array.isArray(names));
           await (await import('./starter/starter-ui.js')).resetStarterView();   // สถานะของแผงค้างจากเทสก่อนหน้าได้ (wizard/แชท)
           await handleCommand('toggle-panel', 'starter');
-          const artX = await untilX(() => document.querySelector('[data-panel-id="starter"] .st-list-wrap .st-art'), 5000);
-          check('[169-X] ★ หน้ารวม Story Starter มีช่องใส่ภาพ (แถบหัว)', !!artX && artX.classList.contains('st-art-top') && artX.dataset.art === 'home-top');
-          if (artX) {
-            await untilX(() => artX.classList.contains('st-art-empty') || artX.classList.contains('st-art-ready'), 3000);
-            const hasFile = (names || []).some((n) => /^(home|default)-top\./i.test(n));
-            const r = artX.getBoundingClientRect();
-            check('[169-X] ช่องแถบหัวได้สัดส่วน 4:1 ตามสเปก (1200×300)', r.width > 100 && Math.abs(r.width / r.height - 4) < 0.25, r.width + '×' + r.height);
-            if (!hasFile) check('[169-X] ★ ไม่มีไฟล์ = กรอบ placeholder บอกขนาดกับชื่อไฟล์ที่ต้องวาง',
-                                artX.querySelector('.st-art-ph-size').textContent === '1200 × 300 px'
-                                && artX.querySelector('.st-art-ph-file').textContent === 'starter/home-top.png'
-                                && getComputedStyle(artX.querySelector('.st-art-ph')).display !== 'none');
-            else check('[169-X] มีไฟล์ = แสดงภาพ ซ่อน placeholder', artX.classList.contains('st-art-ready'));
-          }
+          const listX = await untilX(() => document.querySelector('[data-panel-id="starter"] .st-list-wrap'), 5000);
+          check('[169-X] ★ หน้ารวม Story Starter ไม่มีช่องภาพ/กรอบ placeholder', !!listX && !listX.closest('[data-panel-id="starter"]').querySelector('.st-art, .st-art-ph'));
+          const headX = listX && listX.querySelector('.st-list-head');
+          check('[169-X] ★ หัวหน้ารวมต่อด้วยคำแนะนำทันที (เดิมมีแถบภาพ 4:1 คั่นกลาง)',
+                !!headX && !!headX.nextElementSibling && headX.nextElementSibling.classList.contains('st-hint'),
+                headX && headX.nextElementSibling ? headX.nextElementSibling.className : 'ไม่พบหัว');
+          check('[169-X] ช่องถามรายชื่อไฟล์ภาพถูกถอด (ไม่มี kapi.starterArtList) · ไม่มีโฟลเดอร์ภาพในตัวโปรแกรม',
+                typeof kapi.starterArtList === 'undefined' && !(await fetch('starter/README.md').then((r) => r.ok).catch(() => false)));
+          check('[169-X] CSS ที่โหลดอยู่ไม่มีกฎของช่องภาพ/คอลัมน์ภาพของ wizard เหลือ',
+                ![...document.styleSheets].some((sh) => { try { return [...sh.cssRules].some((r) => /\.st-art|\.st-wz-main|\.st-wz-col/.test(r.selectorText || '')); } catch { return false; } }));
           await handleCommand('toggle-panel', 'starter'); await wX(150);
         }
 
@@ -36793,7 +36801,7 @@ export async function runTest(projectPath) {
             mkIssue({ number: 9, title: 'เทส170 บันทึกแล้วค้าง', labels: [{ name: 'bug' }], created_at: '2026-10-05T03:00:00Z', body: '<!-- k2-report version=2.0.0-alpha.169 -->' }),
             mkIssue({ number: 8, title: 'เทส170 Export PDF blank', state: 'closed', state_reason: 'completed', created_at: '2026-09-20T03:00:00Z',
                       body: 'Version: 2.0.0-alpha.167', milestone: { title: '2.0.0-alpha.168' } }),
-            mkIssue({ number: 7, title: 'ขอโหมดมืด', labels: [{ name: 'enhancement' }] }),
+            mkIssue({ number: 7, title: 'แก้คำผิดในคู่มือ', labels: [{ name: 'documentation' }] }),
             mkIssue({ number: 6, title: 'PR', pull_request: {} }),
             mkIssue({ number: 2, title: 'เทส170 คนนอกเปิดเองบนเว็บ', labels: [{ name: 'bug' }], author_association: 'NONE' }),
             mkIssue({ number: 5, title: 'เทส170 ซ้ำ', labels: [{ name: 'duplicate' }], created_at: '2026-09-01T00:00:00Z' }),
@@ -36823,7 +36831,7 @@ export async function runTest(projectPath) {
           check('[170-B] ★★ หัวคอลัมน์ครบหกตามลำดับ: รหัส · รายละเอียด · สถานะ · พบในรุ่น · วันที่รายงาน · แก้ไขในรุ่น',
                 JSON.stringify(heads) === JSON.stringify([tt('ui.bug.colId'), tt('ui.bug.colTitle'), tt('ui.bug.colStatus'), tt('ui.bug.colFound'), tt('ui.bug.colReported'), tt('ui.bug.colFixed')]),
                 heads.join(' | '));
-          check('[170-B] ★★ รายการ = บั๊ก 5 ตัว (ไม่นับ PR/ข้อเสนอฟีเจอร์/ของที่คนนอกเปิดเองบนเว็บ) เรียงเลขใหม่ก่อน · ถาม GitHub ครั้งเดียว',
+          check('[170-B] ★★ รายการ = บั๊ก 5 ตัว (ไม่นับ PR/งานเอกสาร/ของที่คนนอกเปิดเองบนเว็บ) เรียงเลขใหม่ก่อน · ถาม GitHub ครั้งเดียว',
                 numsB() === '9,8,5,4,3' && fetched.length === 1 && fetched[0] === bugApiUrl(1), numsB() + ' · fetch=' + fetched.length);
           const cellsOf = (num) => [...rowsB().find((r) => r.dataset.num === String(num)).children].map((td) => td.textContent.trim());
           check('[170-B] ★★ แถวของบั๊กที่แก้แล้ว: ครบทุกช่อง (รหัส/รายละเอียด/สถานะ/รุ่นที่พบ/วันที่/รุ่นที่แก้)',
@@ -36937,6 +36945,262 @@ export async function runTest(projectPath) {
             await kapi.menuTestClick('bug-report');
             check('[170-B] กดเมนู รายงานบั๊ก = เปิดกล่องรายงาน', await untilB(() => repBox(), 3000) !== null);
             document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+          }
+
+          // ───────── (จ) [170-F] ★★ ขอฟีเจอร์ — กล่องรายงานเดียวกัน + ตัวกรองชนิดในกล่องสถานะ ─────────
+          // ผู้ใช้: "ปรับปรุง bug report ให้มี request feature เพิ่มเข้ามา"
+          {
+            relayB = 'https://relay.k2test.invalid'; contactB = { label: '', url: '' };
+            localStorage.removeItem('k2-bug-draft'); clearBugCache(); clearBugSent(); resetBugView();
+            document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+            await handleCommand('feature-request');
+            const fb = await untilB(() => repBox());
+            await wB(120);
+            const kindBtn = (k) => repBox().querySelector('.k-bug-kinds .k-bug-kind[data-kind="' + k + '"]');
+            const labsF = () => [...repBox().querySelectorAll('.k-bug-field label')].map((l) => l.textContent).join('|');
+            check('[170-F] ★★ คำสั่ง feature-request = กล่องรายงานในโหมดขอฟีเจอร์ (หัวกล่อง · ตัวเลือกติด · ปุ่มส่ง)',
+                  !!fb && fb.dataset.kind === 'feature' && fb.querySelector('.k-dlg-title').textContent === tt('ui.bug.featureTitle')
+                  && kindBtn('feature').getAttribute('aria-checked') === 'true' && kindBtn('bug').getAttribute('aria-checked') === 'false'
+                  && kindBtn('feature').classList.contains('on') && sendBtn().textContent === tt('ui.bug.btnSendFeature'),
+                  fb ? fb.dataset.kind + ' · ' + fb.querySelector('.k-dlg-title').textContent : 'ไม่เปิด');
+            const rKinds = fb.querySelector('.k-bug-kinds').getBoundingClientRect(), rForm = fb.querySelector('.k-bug-form').getBoundingClientRect();
+            check('[170-F] คำถามของช่องเป็นชุดขอฟีเจอร์ · ทุกช่องมีคำใบ้ · ไม่มีคีย์ดิบ · สวิตช์ชนิดอยู่ในกล่องไม่ล้น',
+                  labsF() === [tt('ui.bug.fTitle'), tt('ui.bug.fWant'), tt('ui.bug.fWhy'), tt('ui.bug.fNow')].join('|')
+                  && fb.querySelector('#k-bug-f-what').placeholder === tt('ui.bug.fWantPh') && fb.querySelector('#k-bug-f-title').placeholder === tt('ui.bug.fTitlePhFeature')
+                  && !rawKey(fb) && seen(kindBtn('bug')) && seen(kindBtn('feature')) && rKinds.left >= rForm.left - 1 && rKinds.right <= rForm.right + 1
+                  && [kindBtn('bug'), kindBtn('feature')].every((b) => b.scrollWidth <= b.clientWidth + 1), labsF());
+            typeIn(fb.querySelector('#k-bug-f-title'), 'เทส170 ขอโหมดอ่านกลางคืน');
+            typeIn(fb.querySelector('#k-bug-f-what'), 'อยากได้เทส170');
+            kindBtn('bug').click(); await wB(60);
+            check('[170-F] ★ สลับเป็นบั๊ก = หัวกล่อง/คำถาม/ปุ่มส่งกลับเป็นชุดบั๊ก · ข้อความที่พิมพ์ยังอยู่',
+                  repBox().dataset.kind === 'bug' && repBox().querySelector('.k-dlg-title').textContent === tt('ui.bug.reportTitle')
+                  && labsF() === [tt('ui.bug.fTitle'), tt('ui.bug.fWhat'), tt('ui.bug.fSteps'), tt('ui.bug.fExpected')].join('|')
+                  && sendBtn().textContent === tt('ui.bug.btnSend') && repBox().querySelector('#k-bug-f-what').value === 'อยากได้เทส170', labsF());
+            // คีย์บอร์ด: ลูกศรขวาในกลุ่มตัวเลือก = ย้ายตัวเลือก (และโฟกัสตาม)
+            kindBtn('bug').focus();
+            kindBtn('bug').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+            await wB(60);
+            check('[170-F] ลูกศรขวาบนสวิตช์ชนิด = เลือกขอฟีเจอร์ + โฟกัสย้ายตาม',
+                  repBox().dataset.kind === 'feature' && document.activeElement === kindBtn('feature') && kindBtn('feature').tabIndex === 0 && kindBtn('bug').tabIndex === -1);
+            repBox().querySelector(':scope > .k-dlg-btns > .k-cancel').click();
+            await untilB(() => !repBox(), 2000);
+            await handleCommand('bug-report');
+            const fb2 = await untilB(() => repBox());
+            await wB(100);
+            check('[170-F] ★ ร่างจำชนิดไว้: เปิดกล่องรายงานใหม่โดยไม่ระบุชนิด = ยังเป็นขอฟีเจอร์ พร้อมข้อความเดิม',
+                  !!fb2 && fb2.dataset.kind === 'feature' && fb2.querySelector('#k-bug-f-title').value === 'เทส170 ขอโหมดอ่านกลางคืน'
+                  && fb2.querySelector('#k-bug-f-what').value === 'อยากได้เทส170', fb2 ? fb2.dataset.kind : '');
+            postRes = { status: 201, ok: true, body: '{"ok":true,"number":88}' };
+            const nPF = posted.length;
+            sendBtn().click();
+            await untilB(() => posted.length === nPF + 1 && !repBox(), 3000);
+            const sentF = JSON.parse((posted[posted.length - 1] || { options: { body: '{}' } }).options.body);
+            check('[170-F] ★★ ส่งคำขอ = POST เข้าตัวกลางพร้อมชนิด · เนื้อใช้หัวข้อย่อยของการขอฟีเจอร์ · บรรทัดกำกับบอกชนิด',
+                  posted.length === nPF + 1 && sentF.kind === 'feature' && Object.keys(sentF).sort().join() === 'body,kind,title,ts,version'
+                  && sentF.title === 'เทส170 ขอโหมดอ่านกลางคืน' && sentF.body.includes('### ' + tt('ui.bug.fWant') + '\nอยากได้เทส170')
+                  && /<!-- k2-report version=\S+ [^>]*kind=feature -->$/.test(sentF.body.trim()), JSON.stringify(sentF).slice(0, 200));
+            const stMsgF = document.getElementById('status');
+            check('[170-F] ส่งแล้ว: กล่องปิด · ร่างถูกล้าง · ข้อความบนแถบสถานะเป็นของคำขอ (ไม่เรียกว่าบั๊ก)',
+                  !repBox() && localStorage.getItem('k2-bug-draft') == null && stMsgF.textContent.includes(ttf('ui.bug.sentOkFeature', '#88'))
+                  && !stMsgF.textContent.includes(ttf('ui.bug.sentOk', '#88')), stMsgF.textContent);
+            document.querySelectorAll('.k-toast').forEach((x) => x.remove());
+
+            // กล่องสถานะ: บั๊กเดิม 5 ตัว + คำขอสามแบบ (ป้ายฟีเจอร์ · ป้ายฟีเจอร์+รับไว้ · ไม่มีป้ายแต่บรรทัดกำกับบอกชนิด = ตัวกลางรุ่นเก่า) + ตัวที่เพิ่งส่ง
+            fakeRes = { status: 200, ok: true, body: JSON.stringify(ISSUES.concat([
+              mkIssue({ number: 12, title: 'เทส170 ขอธีมกระดาษเก่า', labels: [{ name: 'enhancement' }, { name: 'from-app' }], body: '<!-- k2-report version=' + APP_VERSION + ' kind=feature -->' }),
+              mkIssue({ number: 11, title: 'เทส170 ขอส่งออก ODT', labels: [{ name: 'enhancement' }, { name: 'accepted' }] }),
+              mkIssue({ number: 1, title: 'เทส170 ขอนับคำรายบท', state: 'closed', state_reason: 'completed', milestone: { title: '2.0.0-alpha.168' },
+                        body: 'x\n<!-- k2-report version=2.0.0-alpha.167 kind=feature -->' }),
+            ])) };
+            clearBugCache(); resetBugView();
+            await handleCommand('bug-status');
+            const sbF = await untilB(() => stBox());
+            await sbF.closest('.k-overlay').k2ready;
+            await wB(100);
+            const selK = () => stBox().querySelector('.k-bug-f-kind');
+            const setSel = (sel, v) => { sel.value = v; sel.dispatchEvent(new Event('change', { bubbles: true })); };
+            check('[170-F] ★★ รายการรวม = บั๊ก + คำขอ (รวมคำขอที่เพิ่งส่ง) เรียงเลขใหม่ก่อน', numsB() === '88,12,11,9,8,5,4,3,1', numsB());
+            check('[170-F] ★ ช่องกรองชนิด: ทั้งหมด/บั๊ก/คำขอฟีเจอร์ พร้อมจำนวน',
+                  [...selK().options].map((o) => o.value + '=' + o.textContent).join('|')
+                  === ['all=' + ttf('ui.bug.fltKindAll', 9), 'bug=' + ttf('ui.bug.fltKindBug', 5), 'feature=' + ttf('ui.bug.fltKindFeature', 4)].join('|'),
+                  [...selK().options].map((o) => o.textContent).join('|'));
+            const rowF = (n) => rowsB().find((r) => r.dataset.num === String(n));
+            const tagOf = (n) => rowF(n).querySelector('.k-bug-c-title .k-bug-kindtag');
+            check('[170-F] ★★ แถวของคำขอมีป้าย "ฟีเจอร์" นำหน้ารายละเอียด (ข้อความ + ไอคอน) · แถวของบั๊กไม่มี',
+                  [88, 12, 11, 1].every((n) => rowF(n).dataset.kind === 'feature' && tagOf(n) && tagOf(n).textContent === tt('ui.bug.kindTag') && tagOf(n).childElementCount > 0)
+                  && [9, 8, 5, 4, 3].every((n) => rowF(n).dataset.kind === 'bug' && !tagOf(n)) && rowF(12).children[1].textContent.includes('เทส170 ขอธีมกระดาษเก่า'));
+            const stOf = (n) => rowF(n).querySelector('.k-bug-st').textContent.trim();
+            check('[170-F] ★ สถานะของคำขอใช้ชื่อของตัวเอง (รับไว้แล้ว · เพิ่มแล้ว) · บั๊กใช้ชื่อเดิม · ชนิดจากบรรทัดกำกับก็อ่านได้',
+                  stOf(11) === tt('ui.bug.stPlanned') && stOf(1) === tt('ui.bug.stAdded') && stOf(12) === tt('ui.bug.stNew') && stOf(8) === tt('ui.bug.stFixed')
+                  && stOf(9) === tt('ui.bug.stConfirmed'), [11, 1, 12, 8, 9].map(stOf).join(' | '));
+            const stOptF = () => [...stBox().querySelector('.k-bug-f-status').options].map((o) => o.textContent);
+            check('[170-F] ดูรวมสองชนิด: ช่องกรองสถานะบอกชื่อของทั้งสองชนิดเมื่อเรียกต่างกัน (แก้ไขแล้ว / เพิ่มแล้ว) · ที่เรียกเหมือนกันไม่ซ้ำ',
+                  stOptF().includes(ttf('ui.bug.fltOne', tt('ui.bug.stFixed') + ' / ' + tt('ui.bug.stAdded'), 2)) && stOptF().includes(ttf('ui.bug.fltOne', tt('ui.bug.stNew'), 3)),
+                  stOptF().join('|'));
+            setSel(selK(), 'feature');
+            check('[170-F] ★★ กรอง "คำขอฟีเจอร์" = เหลือ 4 · จำนวน/ชื่อในช่องสถานะนับจากชนิดที่ดู · ปุ่มล้างกดได้',
+                  numsB() === '88,12,11,1' && stBox().querySelector('.k-bug-count').textContent === ttf('ui.bug.count', 4, 9)
+                  && stOptF()[0] === ttf('ui.bug.fltAll', 4) && stOptF().includes(ttf('ui.bug.fltOne', tt('ui.bug.stAdded'), 1))
+                  && stBox().querySelector('.k-bug-clear').disabled === false, numsB() + ' · ' + stOptF().join('|'));
+            setSel(selK(), 'bug');
+            check('[170-F] กรอง "บั๊ก" = รายการเดิมห้าตัว', numsB() === '9,8,5,4,3' && stOptF().includes(ttf('ui.bug.fltOne', tt('ui.bug.stFixed'), 1)), numsB());
+            stBox().querySelector('.k-bug-clear').click(); await wB(60);
+            check('[170-F] ล้างตัวกรอง = ชนิดกลับเป็นทั้งหมด', selK().value === 'all' && numsB() === '88,12,11,9,8,5,4,3,1', numsB());
+            const rBarF = stBox().querySelector('.k-bug-bar').getBoundingClientRect(), rDlgF = stBox().getBoundingClientRect();
+            check('[170-F] แถบตัวกรอง (เพิ่มช่องชนิดแล้ว) ยังอยู่ในกล่อง ไม่ล้นแนวนอน · ตารางไม่ล้น',
+                  [...stBox().querySelectorAll('.k-bug-bar > *')].every((e2) => { const r = e2.getBoundingClientRect(); return r.left >= rDlgF.left && r.right <= rDlgF.right + 1; })
+                  && rBarF.right <= rDlgF.right + 1 && stBox().querySelector('.k-bug-wrap').scrollWidth <= stBox().querySelector('.k-bug-wrap').clientWidth + 1);
+            const bF = stBox().querySelector('.k-bug-go-feature');
+            check('[170-F] กล่องสถานะมีปุ่มไปขอฟีเจอร์ (คู่กับปุ่มรายงานบั๊ก) อยู่ในกล่อง', seen(bF) && bF.textContent === tt('ui.bug.featureTitle') && bF.getBoundingClientRect().left >= rDlgF.left);
+            bF.click();
+            const fb3 = await untilB(() => repBox());
+            check('[170-F] ★ จากกล่องสถานะ → ขอฟีเจอร์ = กล่องรายงานในโหมดขอฟีเจอร์', !!fb3 && fb3.dataset.kind === 'feature' && !stBox());
+            document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+            if (kapi.menuLabels && kapi.menuTestClick) {
+              const labsM = await kapi.menuLabels();
+              check('[170-F] ★ เมนู ช่วยเหลือ มี "ขอฟีเจอร์" (ข้อความจริง)', labsM.some((l) => l.endsWith(' > ' + tt('ui.menu.featureRequest'))), labsM.filter((l) => /feature|ฟีเจอร์/i.test(l)).join(' | '));
+              await kapi.menuTestClick('feature-request');
+              const fb4 = await untilB(() => repBox(), 3000);
+              check('[170-F] ★ กดเมนู ขอฟีเจอร์ = กล่องรายงานในโหมดขอฟีเจอร์', !!fb4 && fb4.dataset.kind === 'feature');
+              document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+            }
+            localStorage.removeItem('k2-bug-draft'); clearBugCache(); clearBugSent(); resetBugView();
+          }
+
+          // ───────── (ฉ) [170-D] ★★ คู่มือในโปรแกรม · ลิงก์สนับสนุน · ลิขสิทธิ์ ─────────
+          // ผู้ใช้: "เราทำ คู่มือ และ Extension guide แล้ว check ว่าถูกใส่และเรียกใช้ใน app … default เป็นภาษาอังกฤษ" · "ใส่ link สนับสนุน … ใน app ด้วย"
+          {
+            const openedD = [];
+            const restoreDocs = setDocsIo({ open: async (url) => { openedD.push(url); return true; } });
+            const restoreSup = setSupportIo({ open: async (url) => { openedD.push(url); return true; } });
+            const lang0 = localStorage.getItem('k2-docs-lang');
+            localStorage.removeItem('k2-docs-lang');
+            const docBox = () => document.querySelector('.k-overlay .k-dialog.k-docs-dlg');
+            const docReady = async () => { const b = await untilB(() => docBox()); if (b) await b.closest('.k-overlay').k2ready; await wB(80); return b; };
+            const pathD = () => (docBox() ? docBox().dataset.path : '');
+            const until2 = (fn, ms = 4000) => untilB(fn, ms);
+            try {
+              document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+              const wantLang = docLang(document.documentElement.lang, '');
+              const otherLang = DOC_LANGS.find((l) => l !== wantLang);
+              await handleCommand('user-manual');
+              const db = await docReady();
+              check('[170-D] ★★ คำสั่ง user-manual = เปิดคู่มือผู้ใช้ในโปรแกรม ที่หน้าแรกของภาษาตามกติกา (หน้าจอไทย = ไทย · นอกนั้น = อังกฤษ)',
+                    !!db && pathD() === 'docs/manual/' + wantLang + '/README.md' && db.querySelector('.k-dlg-title').textContent === tt('ui.docs.bookManual')
+                    && db.querySelector('.k-docs-lang').value === wantLang, pathD());
+              check('[170-D] ภาษาตั้งต้นของคู่มือ = อังกฤษสำหรับหน้าจอทุกภาษาที่คู่มือไม่มี',
+                    DOC_LANGS[0] === 'en' && ['de', 'fr', 'ja', 'pt', 'zh', ''].every((l) => docLang(l, '') === 'en'));
+              const bodyD = () => docBox().querySelector('.k-docs-body');
+              check('[170-D] ★★ เนื้อคู่มือวาดจากไฟล์ที่มากับตัวโปรแกรม: มีหัวเรื่อง · หัวข้อ · ลิงก์บท · ไม่มีเครื่องหมายมาร์กดาวน์ดิบ · ไม่มีคีย์ภาษาดิบ',
+                    !!bodyD().querySelector('.k-cl-title') && bodyD().querySelectorAll('.k-cl-h').length >= 4
+                    && bodyD().querySelectorAll('.k-doc-link[data-kind="doc"]').length >= 20 && !/\]\(|\*\*|^#{1,6} /m.test(bodyD().textContent) && !rawKey(docBox()),
+                    bodyD().textContent.slice(0, 120));
+              const img1 = bodyD().querySelector('img.k-doc-img');
+              const imgOk = img1 && await until2(() => img1.complete && img1.naturalWidth > 0, 8000);
+              check('[170-D] ★★ รูปของคู่มือโหลดได้จริง (ไฟล์รูปมากับตัวโปรแกรม) และไม่กว้างเกินเนื้อ',
+                    !!imgOk && img1.getBoundingClientRect().width <= bodyD().clientWidth + 1, img1 ? img1.getAttribute('src') + ' · ' + img1.naturalWidth : 'ไม่มีรูป');
+              const selD = () => docBox().querySelector('.k-docs-sel');
+              check('[170-D] ★ ช่องเลือกบท: ครบทุกบท+ภาคผนวก (≥ 22) · ชื่อบทไม่ใช่ชื่อไฟล์ · อยู่ที่หน้าแรก · ปุ่มก่อนหน้า/ย้อนกลับปิด',
+                    selD().options.length >= 22 && [...selD().options].every((o) => o.textContent.trim() && !/\.md$/.test(o.textContent)) && selD().value === '0'
+                    && docBox().querySelector('.k-docs-prev').disabled && docBox().querySelector('.k-docs-back').disabled && !docBox().querySelector('.k-docs-next').disabled,
+                    selD().options.length + ' · ' + selD().value);
+              const rD = docBox().getBoundingClientRect();
+              check('[170-D] กล่องคู่มืออยู่ในจอ · แถบนำทางไม่ล้นกล่อง · ปุ่มปิดเห็นได้',
+                    rD.top >= 0 && rD.bottom <= innerHeight + 1 && rD.left >= 0 && rD.right <= innerWidth + 1
+                    && [...docBox().querySelectorAll('.k-docs-bar > *')].every((e2) => { const r = e2.getBoundingClientRect(); return r.left >= rD.left && r.right <= rD.right + 1; })
+                    && seen(docBox().querySelector(':scope > .k-dlg-btns > .k-ok')), Math.round(rD.top) + '..' + Math.round(rD.bottom) + ' / ' + innerHeight);
+              docBox().querySelector('.k-docs-next').click();
+              check('[170-D] ★ ปุ่มบทถัดไป = บทที่ 1 · ช่องเลือกบทตาม · ย้อนกลับกดได้',
+                    await until2(() => /\/01-[^/]+\.md$/.test(pathD()) && selD().value === '1' && !docBox().querySelector('.k-docs-back').disabled) === true, pathD());
+              // ลิงก์ออกนอกโปรแกรม (บทที่ 1 มีลิงก์หน้า Releases) = เปิดในเบราว์เซอร์ ตัวอ่านยังอยู่หน้าเดิม
+              const webL = bodyD().querySelector('.k-doc-link[data-kind="web"]');
+              const p1 = pathD();
+              if (webL) webL.click();
+              await wB(80);
+              check('[170-D] ★ ลิงก์เว็บในคู่มือ = เปิดในเบราว์เซอร์ของระบบ (https) · ตัวอ่านอยู่หน้าเดิม',
+                    !!webL && openedD.length === 1 && /^https:\/\//.test(openedD[0]) && pathD() === p1, openedD.join());
+              // ลิงก์ไปบทอื่นในเนื้อ = ไปหน้านั้นในตัวอ่าน
+              const docL = [...bodyD().querySelectorAll('.k-doc-link[data-kind="doc"]')].find((a) => !/README|\/01-/.test(a.textContent) && a.textContent.trim());
+              if (docL) docL.click();
+              check('[170-D] ★★ ลิงก์ไปบทอื่น = เปิดบทนั้นในตัวอ่าน (ไม่ออกนอกโปรแกรม)', !!docL && await until2(() => pathD() !== p1 && /\.md$/.test(pathD())) === true && openedD.length === 1, pathD());
+              docBox().querySelector('.k-docs-back').click();
+              check('[170-D] ปุ่มย้อนกลับ = กลับหน้าที่อ่านอยู่ก่อน', await until2(() => pathD() === p1) === true, pathD());
+              // สลับภาษา: หน้าเดียวกันในอีกภาษา + จำไว้
+              const selL = docBox().querySelector('.k-docs-lang');
+              selL.value = otherLang; selL.dispatchEvent(new Event('change', { bubbles: true }));
+              check('[170-D] ★★ สลับภาษาในตัวอ่าน = หน้าเดียวกันในอีกภาษา และถูกจำไว้',
+                    await until2(() => pathD() === p1.replace('/' + wantLang + '/', '/' + otherLang + '/')) === true && localStorage.getItem('k2-docs-lang') === otherLang, pathD());
+              docBox().querySelector(':scope > .k-dlg-btns > .k-ok').click();
+              check('[170-D] ปุ่มปิด ปิดตัวอ่าน', await until2(() => !docBox(), 2000) === true);
+              await handleCommand('user-manual');
+              await docReady();
+              check('[170-D] ★ เปิดใหม่ = ภาษาที่เลือกไว้ครั้งก่อน', pathD() === 'docs/manual/' + otherLang + '/README.md', pathD());
+              document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+              check('[170-D] Esc ปิดตัวอ่าน', await until2(() => !docBox(), 2000) === true);
+              localStorage.removeItem('k2-docs-lang');
+
+              // คู่มือส่วนขยาย
+              await handleCommand('extension-guide');
+              const dx = await docReady();
+              check('[170-D] ★★ คำสั่ง extension-guide = เปิดคู่มือส่วนขยาย (เล่มของตัวเอง · ครบ 12 บท)',
+                    !!dx && pathD() === 'docs/extension/' + wantLang + '/README.md' && dx.querySelector('.k-dlg-title').textContent === tt('ui.docs.bookExtension')
+                    && dx.querySelector('.k-docs-sel').options.length === 13, pathD() + ' · ' + (dx ? dx.querySelector('.k-docs-sel').options.length : 0));
+              // ไฟล์ชนิดข้อมูล (ไม่ใช่มาร์กดาวน์) เปิดเป็นโค้ดในตัวอ่าน
+              const tsL = [...docBox().querySelectorAll('.k-doc-link[data-kind="file"]')][0];
+              if (tsL) { tsL.click(); await until2(() => /k2\.d\.ts$/.test(pathD())); }
+              check('[170-D] ไฟล์ k2.d.ts เปิดเป็นโค้ดในตัวอ่าน · ช่องเลือกบทโชว์ชื่อไฟล์ · ย้อนกลับได้',
+                    /k2\.d\.ts$/.test(pathD()) && !!docBox().querySelector('.k-docs-body pre.k-cl-code') && docBox().querySelector('.k-docs-body pre.k-cl-code').textContent.length > 500
+                    && docBox().querySelector('.k-docs-sel').selectedOptions[0].textContent === 'k2.d.ts' && !docBox().querySelector('.k-docs-back').disabled, pathD());
+              document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+
+              // กล่อง "เกี่ยวกับ": คู่มือ · สนับสนุน · ลิขสิทธิ์
+              const ovD = aboutDialog();
+              await wB(150);
+              const pM = ovD.querySelector('.k-about-manual'), pSup = ovD.querySelector('.k-about-support'), cp = ovD.querySelector('.k-about-copy');
+              const rL = ovD.querySelector('.k-about-left').getBoundingClientRect(), rFt = ovD.querySelector('.k-about-foot').getBoundingClientRect();
+              check('[170-D] ★★ กล่อง "เกี่ยวกับ": ปุ่มคู่มือ + ปุ่มสนับสนุน (มีไอคอน) + บรรทัดลิขสิทธิ์ Noobcyborg Studio',
+                    seen(pM) && seen(pSup) && seen(cp) && pM.textContent === tt('ui.docs.bookManual') && pSup.textContent === tt('ui.menu.support')
+                    && pSup.childElementCount > 0 && cp.textContent === copyrightLine() && cp.textContent.includes('Noobcyborg Studio'), cp ? cp.textContent : '');
+              check('[170-D] ★ ปุ่มทั้งหกในกล่อง "เกี่ยวกับ" ไม่ล้นฝั่งซ้าย ไม่ทับแถวล่าง · บรรทัดลิขสิทธิ์อยู่ในกล่อง',
+                    [...ovD.querySelectorAll('.k-about-pill')].length === 6
+                    && [...ovD.querySelectorAll('.k-about-pill')].every((p) => { const r = p.getBoundingClientRect(); return r.left >= rL.left && r.right <= rL.right + 1 && r.bottom <= rFt.top + 1; })
+                    && cp.getBoundingClientRect().bottom <= rL.bottom + 1 && cp.getBoundingClientRect().top >= rFt.bottom - 1,
+                    [...ovD.querySelectorAll('.k-about-pill')].map((p) => Math.round(p.getBoundingClientRect().bottom)).join() + ' / ' + Math.round(rFt.top) + ' / ' + Math.round(rL.bottom));
+              const nO = openedD.length;
+              pSup.click();
+              check('[170-D] ★★ กดสนับสนุน = เปิดหน้าสนับสนุนในเบราว์เซอร์ (ลิงก์จาก app-info.js) + บอกบนแถบสถานะ · กล่องเกี่ยวกับยังอยู่',
+                    await until2(() => openedD.length === nO + 1 && document.getElementById('status').textContent.includes(tt('ui.app.supportOpened'))) === true
+                    && openedD[openedD.length - 1] === SUPPORT_URL && /^https:\/\//.test(SUPPORT_URL) && ovD.isConnected, openedD.slice(-1).join());
+              pM.click();
+              const dm = await docReady();
+              check('[170-D] ★ กดคู่มือในกล่อง "เกี่ยวกับ" = กล่องเกี่ยวกับปิด แล้วเปิดคู่มือผู้ใช้', !!dm && !ovD.isConnected && /^docs\/manual\//.test(pathD()));
+              document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+              // เปิดไม่ได้ (main ไม่ยอมเปิดลิงก์) = บอกผู้ใช้ ไม่เงียบ
+              const restoreFail = setSupportIo({ open: async () => false });
+              await handleCommand('support');
+              restoreFail();
+              check('[170-D] ★ เปิดหน้าสนับสนุนไม่ได้ = ข้อความผิดพลาดบนแถบสถานะ (ไม่เงียบ)',
+                    await until2(() => document.getElementById('status').textContent.includes(tt('ui.bug.openFail')), 2000) === true, document.getElementById('status').textContent);
+
+              if (kapi.menuLabels && kapi.menuTestClick) {
+                const labsD = await kapi.menuLabels();
+                const helpHas = (k) => labsD.some((l) => l.endsWith(' > ' + tt(k)));
+                check('[170-D] ★★ เมนู ช่วยเหลือ มี คู่มือผู้ใช้ · คู่มือส่วนขยาย · สนับสนุนโปรเจกต์ (ข้อความจริง ไม่ใช่คีย์)',
+                      helpHas('ui.menu.userManual') && helpHas('ui.menu.extensionGuide') && helpHas('ui.menu.support') && !labsD.some((l) => /ui\.menu\.(userManual|extensionGuide|support)/.test(l)),
+                      labsD.filter((l) => /manual|guide|support|คู่มือ|สนับสนุน/i.test(l)).join(' | '));
+                await kapi.menuTestClick('extension-guide');
+                const dmx = await docReady();
+                check('[170-D] ★ กดเมนู คู่มือส่วนขยาย = เปิดตัวอ่านของเล่มนั้น', !!dmx && /^docs\/extension\//.test(pathD()), pathD());
+                document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+                const nM = openedD.length;
+                await kapi.menuTestClick('support');
+                check('[170-D] ★ กดเมนู สนับสนุนโปรเจกต์ = เปิดหน้าสนับสนุน', await until2(() => openedD.length === nM + 1 && openedD[openedD.length - 1] === SUPPORT_URL, 3000) === true);
+              }
+            } finally {
+              restoreDocs(); restoreSup();
+              if (lang0 == null) localStorage.removeItem('k2-docs-lang'); else localStorage.setItem('k2-docs-lang', lang0);
+              document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+            }
           }
         } finally {
           restoreIo();
@@ -37141,6 +37405,8 @@ export async function runTest(projectPath) {
             (state._panelDrawErrors || 0) === 0,
             (state._panelDrawErrors || 0) + ' ครั้ง · ล่าสุด: ' + (state._panelDrawLastErr || '—'));
 
+    const failedN = out.filter((l) => l.startsWith('FAIL ')).length;
+    if (failedN) throw new Error(failedN + ' FAIL (keep-going)');
     out.push('ALL OK');
   } catch (e) {
     out.push('STOP: ' + e.message + '\n' + (e.stack || ''));

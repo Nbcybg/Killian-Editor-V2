@@ -36,11 +36,25 @@ function syncChangelog() {
   if (fs.existsSync(src)) copyRetry(src, dst);
 }
 
+// [alpha.170] ไฟล์ของคู่มือที่ electron-builder ตัดทิ้งเสมอตามนามสกุล (*.d.ts อยู่ในรายการตัดตายตัวของมัน)
+// คู่มือทั้งสองเล่มถูกแพ็กจาก docs/ ตรง ๆ (package.json → build.files) ยกเว้นไฟล์พวกนี้ → ก๊อปเป็นสำเนาใน renderer/ ด้วยชื่อที่ไม่ถูกตัด
+// รายการต้องตรงกับ DOC_PACKED_COPIES ของ src/docs-view.js (unit `docs-view` เทียบ)
+const DOC_PACKED_COPIES = { 'docs/extension/k2.d.ts': 'renderer/docs-copy/k2.d.ts.txt' };
+function syncDocCopies() {
+  for (const [from, to] of Object.entries(DOC_PACKED_COPIES)) {
+    const src = path.join(__dirname, from), dst = path.join(__dirname, to);
+    if (!fs.existsSync(src)) continue;
+    fs.mkdirSync(path.dirname(dst), { recursive: true });
+    copyRetry(src, dst);
+  }
+}
+
 // [alpha.159] ธีมสี: renderer/themes/themes.json → css ของแต่ละธีม + <link> + src/generated/themes-data.js
 // ต้องมาก่อน syncLanguages() เพราะอาจเติมป้ายชื่อธีมใหม่ลงไฟล์ภาษา
 require('./tools/theme-build.cjs').build(false);
 syncLanguages();
 syncChangelog();
+syncDocCopies();
 
 // [alpha.169] ไอคอนของโปรแกรม: แหล่งเดียว = icons/app-icon.svg → renderer/assets/app-icon.svg
 // (โลโก้บนแถบชื่อ · หน้าจอเปิด · กล่องเกี่ยวกับ ใช้ไฟล์นี้ · .ico/.png ของตัว exe สร้างด้วย tools/make-icon.cjs)

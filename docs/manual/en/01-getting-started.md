@@ -10,15 +10,15 @@
 
 | | Minimum | Recommended |
 |---|---|---|
-| Operating system | Windows 10 64-bit · macOS (Intel x64, or Apple Silicon through Rosetta) · Linux x64 | Windows 10/11 64-bit · a current macOS/Linux |
+| Operating system | Windows 10 64-bit · macOS 12 Monterey (Intel x64, or Apple Silicon through Rosetta 2) · Linux x64 | Windows 10/11 64-bit · macOS 14 or later · a current Linux |
 | CPU | 2 cores, ~2 GHz | 4 cores or more |
 | RAM | 4 GB | 8 GB (large projects · many panels open at once) |
-| Disk space | ~500 MB free, plus room for your work | SSD · 2 GB free or more |
+| Disk space | ~500 MB free on Windows, ~600 MB on macOS, plus room for your work | SSD · 2 GB free or more |
 | Display | 1366 × 768 | 1920 × 1080 or larger |
 | Graphics | Not required | WebGL support (used by Story Network's 3D mode and 3D models) |
 
 - Windows 7 / 8 / 8.1 and 32-bit machines are **not supported**.
-- The numbers above are **estimates** measured on a small project (about 460 MB of memory in use). The app has not been tested on low-end machines or on very large projects.
+- The numbers above are **estimates** measured on a small project (about 460 MB of memory in use on Windows, about 400 MB on macOS). The app has not been tested on low-end machines or on very large projects.
 - The **internet** is used for only four things: calling an AI (if you set one up) · checking for and downloading updates · sending a bug report · viewing bug status. All writing works offline.
 
 ## 1.2 Download and launch
@@ -39,11 +39,18 @@ Things to know about the portable build:
 
 ### macOS — `.dmg` (Intel x64)
 
-1. Open the `.dmg` and drag the app icon into Applications.
-2. The app is **not code-signed yet**. The first time, right-click the icon → **Open** → **Open** again.
-3. Apple Silicon machines (M1 and later) run it through Rosetta — there is no ARM build yet.
+1. Open the `.dmg` (about 143 MB) and drag the app icon into Applications. The app takes about 330 MB there.
+2. The app is **not code-signed yet**. The first time, right-click the icon → **Open** → **Open** again. If macOS still refuses, run `xattr -cr "/Applications/Killian 2.app"` once in Terminal.
+3. Apple Silicon machines (M1 and later) run it through Rosetta 2 — there is no ARM build yet.
 
-> On macOS the app's menus are in the system menu bar and shortcuts use `⌘` instead of `Ctrl`. The macOS build has been tested less than the Windows build.
+| macOS | |
+|---|---|
+| Version | macOS 12 Monterey or later (the minimum Electron 43 supports) |
+| Memory in use | about 400 MB with a small project open |
+| Launch time | About 2 s from launch to an open project (about 5 s the very first time), on the test machine |
+| Tested on | MacBook Pro 15-inch 2019 (8-core Intel Core i9 2.4 GHz · 32 GB RAM · macOS 15.7 Sequoia) — the app's own end-to-end test suite passes there |
+
+> On macOS the window has the system's traffic-light buttons, the app's menus are in the system menu bar, and shortcuts use `⌘` instead of `Ctrl`.
 
 ### Linux
 

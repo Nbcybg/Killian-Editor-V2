@@ -1,7 +1,5 @@
-<h1 align="center">Killian 2</h1>
-
 <p align="center">
-  <strong>A novel and screenplay writing app for the people behind the scenes.</strong>
+  <img src="docs/assets/readme-banner.png" alt="Killian 2 — a novel and screenplay writing app for the people behind the scenes" width="100%">
 </p>
 
 <p align="center">
@@ -9,11 +7,30 @@
   <img alt="Platforms" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-452f5e">
   <img alt="Electron" src="https://img.shields.io/badge/Electron-43-1e1250">
   <img alt="Languages" src="https://img.shields.io/badge/UI%20languages-7-ffc55c">
+  <a href="https://buymeacoffee.com/noobcyborg"><img alt="Support the project" src="https://img.shields.io/badge/support-Buy%20me%20a%20coffee-ff6640"></a>
 </p>
 
 <p align="center">
   English · <a href="README.th.md">ภาษาไทย</a>
 </p>
+
+---
+
+## What's new in 2.0.0-alpha.169
+
+> Only the latest release is listed here. The full history is in [CHANGELOG.md](CHANGELOG.md), and in the app under **Help → Changelog**.
+
+- **Printing prints everything.** *File → Print* used to stop after one page; it now prints the whole document, without on-screen decorations such as spell-check underlines or theme colours.
+- **Exports you can hand over.** Novels export to RTF with headings, bold/italic, colour, lists and alignment intact; plain `.txt` is really plain; screenplay HTML no longer leaks Fountain codes.
+- **Standard Fountain import** — notes, boneyard, centred text, lyrics, dual dialogue and forced page breaks are read correctly.
+- **A native-feeling shell** — system window controls (Snap Layouts on Windows), drag files and project folders into the app, open a project from the OS, and a keyboard-driven menu bar.
+- **Accessibility settings** — high-contrast and colour-blind-safe themes, key-press echo, a reading line band and an on-screen-keyboard shortcut.
+- **File names follow titles.** Books, chapters and scenes are stored under their real names; rename them in K2 or from the OS and the project stays in sync.
+- **Plugins reload without a restart**, and there is now a full [Extension Guide](docs/extension/en/README.md).
+- **The manuals are built in.** *Help → User Manual* and *Help → Extension Guide* open the complete guides inside the app, offline, in English or Thai.
+- **Bug reports and feature requests from inside the app** — send either one from the same dialog and follow its status in a public list, no account needed.
+- **Language switching sticks** — the interface and the system menus stay in the language you picked after a restart.
+- **Smaller things:** a readable *What's new* dialog (one release at a time), a cleaner Quick Open, dialogs whose buttons never fall off the screen, and a *Support the Project* link under **Help**.
 
 ---
 
@@ -44,25 +61,38 @@ It puts the manuscript, the story bible, the planning boards and the production 
 - **Portable and standalone.** On Windows it's a single `.exe` — no installer, no account, no cloud.
 - **Cross-platform.** Windows, macOS and Linux (see [System requirements](#system-requirements)).
 - **Multilingual, Thai-first.** The full UI is available in 7 languages (Thai, English, German, French, Japanese, Portuguese, Chinese), and shortcuts bind to *physical keys* so they work on any keyboard layout.
-- **Compatible with Killian v1.** Projects from the original Python/Tkinter Killian open directly, and files saved by K2 still open in v1.
 
 ### System requirements
 
 | | Minimum | Recommended |
 |---|---|---|
-| **OS** | Windows 10 64-bit · macOS (Intel x64, or Apple Silicon via Rosetta) · Linux x64 | Windows 10 / 11 64-bit · current macOS · current Linux desktop |
+| **OS** | Windows 10 64-bit · macOS 12 (Monterey) on an Intel Mac, or on Apple Silicon through Rosetta 2 · Linux x64 | Windows 10 / 11 64-bit · macOS 14 or later · a current Linux desktop |
 | **CPU** | 2 cores, ~2 GHz | 4 cores or more |
 | **RAM** | 4 GB | 8 GB (large projects, many panels open) |
-| **Disk** | ~500 MB free + space for your work | SSD, 2 GB+ free |
+| **Disk** | ~500 MB free on Windows, ~600 MB on macOS, + space for your work | SSD, 2 GB+ free |
 | **Display** | 1366 × 768 | 1920 × 1080 or higher |
 | **GPU** | Not required | WebGL-capable (3D Story Network and 3D models) |
 
-- **Prebuilt downloads:** Windows x64 (portable `.exe`, ~92 MB, no installer) and macOS **Intel x64** (`.dmg`). There are no ARM or 32-bit builds — Apple Silicon Macs run it through Rosetta.
+- **Prebuilt downloads:** Windows x64 (portable `.exe`, ~92 MB, no installer) and macOS **Intel x64** (`.dmg`, ~143 MB; ~330 MB once copied to Applications). There are no ARM or 32-bit builds — Apple Silicon Macs run it through Rosetta 2.
 - **Linux:** there is no prebuilt package yet — run it from source (see [Building](#building)).
 - The portable build unpacks itself into a temporary folder on every launch (~380 MB), so keep some headroom on the drive that holds `%TEMP%`.
 - Windows 7 / 8 / 8.1 are **not** supported (Electron 43 dropped them).
 - Internet is only needed for AI requests, update checks and bug reports — writing works fully offline.
-- The figures above are estimates based on measured memory use (~460 MB with a small project open) and have not yet been tested on low-end hardware or very large projects.
+- The figures above are estimates based on measured memory use with a small project open — about 460 MB on Windows and about 400 MB on macOS — and have not yet been tested on low-end hardware or very large projects.
+
+#### macOS in detail
+
+| | |
+|---|---|
+| **macOS version** | macOS 12 Monterey or later (the minimum Electron 43 supports). Tested on macOS 15.7 (Sequoia). |
+| **Processor** | Intel (x64) build. Apple Silicon (M-series) Macs run the same build through Rosetta 2; a native ARM build is not available yet. |
+| **Download / installed size** | `.dmg` ~143 MB · `Killian 2.app` ~330 MB in Applications |
+| **Memory in use** | ~400 MB with a small project open (4 processes, measured with `footprint` after 25 seconds idle) |
+| **Launch time** | About 2 s from launch to an open project (about 5 s the very first time), on the test machine |
+| **Your data** | Settings and logs live in `~/Library/Application Support/Killian 2/`; your writing lives in the project folder you choose. |
+| **Gatekeeper** | The build is **not code-signed or notarised**. The first time, right-click **Killian 2** → **Open** → **Open**. If macOS still refuses, run `xattr -cr "/Applications/Killian 2.app"` once in Terminal. |
+| **Interface** | Native traffic-light window buttons, menus in the system menu bar, and shortcuts on `⌘` instead of `Ctrl`. |
+| **Test machine** | MacBook Pro 15-inch 2019 (8-core Intel Core i9 2.4 GHz · 32 GB RAM · macOS 15.7 Sequoia) — the app's own end-to-end test suite passes there. |
 
 ---
 
@@ -70,8 +100,8 @@ It puts the manuscript, the story bible, the planning boards and the production 
 
 | Guide | Where |
 |---|---|
-| **User manual** | [docs/manual/en/](docs/manual/en/README.md) ([ภาษาไทย](docs/manual/th/README.md)) — the full manual: 16 chapters from first launch to troubleshooting, plus appendices listing every menu, shortcut, command and file format. In the app: **Help → Getting Started** for a short tour, and the keyboard-shortcut cheat sheet (reflecting your own bindings). Release notes: [CHANGELOG.md](CHANGELOG.md) (also readable in-app under *What's new*). |
-| **Extension guide** | [docs/extension/en/](docs/extension/en/README.md) ([ภาษาไทย](docs/extension/th/README.md)) — the full guide: plugin anatomy, the `k2` SDK reference, hooks & lifecycle, UI guidelines, data & files, security, packaging & distribution, publishing, debugging, a cookbook, [`k2.d.ts`](docs/extension/k2.d.ts) typings and [working example plugins](docs/extension/examples/README.md). Short version: [docs/plugin-dev.md](docs/plugin-dev.md). |
+| **User manual** | [docs/manual/en/](docs/manual/en/README.md) ([ภาษาไทย](docs/manual/th/README.md)) — the full manual: 16 chapters from first launch to troubleshooting, plus appendices listing every menu, shortcut, command and file format. In the app: **Help → User Manual** opens this same manual offline (English by default, Thai when the interface is Thai), **Help → Getting Started** gives a short tour, and the keyboard-shortcut cheat sheet reflects your own bindings. Release notes: [CHANGELOG.md](CHANGELOG.md) (also readable in-app under *What's new*). |
+| **Extension guide** | [docs/extension/en/](docs/extension/en/README.md) ([ภาษาไทย](docs/extension/th/README.md)) — the full guide: plugin anatomy, the `k2` SDK reference, hooks & lifecycle, UI guidelines, data & files, security, packaging & distribution, publishing, debugging, a cookbook, [`k2.d.ts`](docs/extension/k2.d.ts) typings and [working example plugins](docs/extension/examples/README.md). In the app: **Help → Extension Guide**. Short version: [docs/plugin-dev.md](docs/plugin-dev.md). |
 | Engine & design specs | [docs/](docs/README.md) — specs for the panel system, split view, Kanban, AI modules and more. |
 | Contributor / agent notes | [AGENTS.md](AGENTS.md) — architecture and project rules. |
 
@@ -218,16 +248,16 @@ An end-to-end self-test suite also runs inside the app itself (`KILLIAN_TEST=1`)
 Killian 2 is developed independently. If it helps your writing, here's how you can help it grow:
 
 - ⭐ **Star the repository** and tell other writers and filmmakers about it.
-- 🐞 **Report bugs from inside the app** — use the bug button at the end of the status bar (or **Help → Report a bug**). Reports sent from the app go straight to the maintainers, and you can follow their status in the same dialog or on the [Issues](https://github.com/Nbcybg/Killian-Editor-V2/issues) tab.
+- 🐞 **Report bugs and request features from inside the app** — use the bug button at the end of the status bar (or **Help → Report a bug** / **Help → Request a feature**). Reports and requests sent from the app go straight to the maintainers, and you can follow their status in the app (**Help → Bug & request status**) or on the [Issues](https://github.com/Nbcybg/Killian-Editor-V2/issues) tab.
 - 🌍 **Translate** — UI text lives in simple CSV files in [`languages/`](languages/).
 - 🔌 **Build and share plugins** — start with the [Extension Guide](docs/extension/en/README.md).
 - 🔧 **Contribute code** — fork the repository, make your change on a branch and open a **pull request**. Read [AGENTS.md](AGENTS.md) first for the architecture and project rules (and run `npm run test:unit` before submitting).
-- ☕ **Donate** — *(add your donation link here)*
+- ☕ **Buy me a coffee** — [buymeacoffee.com/noobcyborg](https://buymeacoffee.com/noobcyborg) (also in the app: **Help → Support the Project**).
 
 ---
 
 ## License
 
-Released under the **ISC License**. See `package.json` for the license identifier.
+Released under the **ISC License** — see [LICENSE](LICENSE).
 
-© Killian 2 contributors.
+© 2026 Noobcyborg Studio

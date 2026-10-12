@@ -12,7 +12,7 @@ ui.a11y.oskFail,Could not open a system on-screen keyboard — none of the known
 ui.a11y.oskOpened,Opened the system on-screen keyboard
 ui.a11y.oskSettings,Could not open the on-screen keyboard directly — opened the system keyboard settings instead; switch it on there
 ui.about.bugReport,Report a bug
-ui.about.bugStatus,Bug status
+ui.about.bugStatus,Bug & request status
 ui.about.changelog,What's new
 ui.about.checkUpdate,Check for updates
 ui.about.credits,Credits
@@ -1317,7 +1317,7 @@ ui.app.block, blocks
 ui.app.boardItemHideItem,{0} {0|board is|boards are} hidden by the filter — clear the search box to see them all
 ui.app.boardPlanner,Planning boards
 ui.app.boardPlanner2,Planning boards ({0})
-ui.app.boardPlannerPlannerGraph,Planning boards (Planner) and floor plans
+ui.app.boardPlannerPlannerGraph,Planning boards (Planner)
 ui.app.boardPlannerReadCant,Planning boards (unreadable)
 ui.app.bookNotHasDraft,This book has no draft yet
 ui.app.btnFloatFABClose,Floating button (FAB): off
@@ -1417,7 +1417,6 @@ ui.app.copyResult,Copy results
 ui.app.copyResultConsoleDone,Console output copied
 ui.app.copySaveDoneLine,Log copied ({0} {0|line|lines} matching the filter)
 ui.app.corner,Tilt (degrees)
-ui.app.courierMonoThaiProportionalThai,Courier MonoThai · ProportionalThai (1998)
 ui.app.coverBookReadNot,Could not read the book cover image
 ui.app.creditIcons,The app's icon set (K2 Icons font)
 ui.app.creditThree,3D Story Network (models · backdrops)
@@ -1515,12 +1514,11 @@ ui.app.file,File extension
 ui.app.fileLangK2Csv,Language files (k2_*.csv)
 ui.app.fileNotHas,(this file has no {0} yet)
 ui.app.fileOpen,Open files
-ui.app.fileTaskMarkdownJSON,"Work files are Markdown + JSON, fully compatible with Killian v1"
+ui.app.fileTaskMarkdownJSON,Work files are plain Markdown + JSON
 ui.app.filter,Filter by source
 ui.app.findDiskFindOn,Find on disk
 ui.app.findRowNotFound,Row not found → repairing the tree
 ui.app.folderNotProjectKillian,This folder is not a Killian project (project.khn.json not found)
-ui.app.fontScreenplayPosView,Screenplay font (Thai) — tone-mark positions adapted · see renderer/assets/fonts/THAI-FONTS.txt
 ui.app.fontScreenplayQuoteUnquote,Screenplay font (Latin) — Quote-Unquote Apps
 ui.app.forceCaseBig,Force upper case
 ui.app.forcePrintBigFormat,Force upper case per the standard script format
@@ -1737,7 +1735,6 @@ ui.app.notRememberEditChapter,"No longer remembering ""{0}"" (change this at Scr
 ui.app.notRememberFoundNot,"Not remembered yet (seen fewer than {0} {0|time|times}) — press ""Remember"" to remember it now"
 ui.app.notSave,Unsaved
 ui.app.notSet,(not set)
-ui.app.notSource,Source licence unknown
 ui.app.notUseTemplate2,— No template —
 ui.app.novel, Novel
 ui.app.novel2, Novel ▾
@@ -1962,6 +1959,7 @@ ui.app.startAppShowPage,On start: show the home page first
 ui.app.status2,Status: 
 ui.app.styleWatermark,Watermark template
 ui.app.suggest, (recommended)
+ui.app.supportOpened,Opened the support page in your browser. Thank you!
 ui.app.template,Template
 ui.app.templateManage,Templates (manage)
 ui.app.templatesFillBlockProfile,templates: added the profile block to this project's standard templates
@@ -2357,7 +2355,8 @@ ui.branch.zoomIn,Zoom in
 ui.branch.zoomOut,Zoom out
 ui.bug.btnCopy,Copy report
 ui.bug.btnSend,Send report
-ui.bug.btnStatus,View bug status
+ui.bug.btnSendFeature,Send request
+ui.bug.btnStatus,View status
 ui.bug.clear,Clear filters
 ui.bug.colFixed,Fixed in
 ui.bug.colFound,Found in
@@ -2370,14 +2369,15 @@ ui.bug.contactMailed,"Report copied. Paste it into the email that opened. If no 
 ui.bug.contactMailTip,Copies the report and opens a new email to this address
 ui.bug.copied,Report copied. Paste it into the channel you were given.
 ui.bug.copyFail,Could not copy the report
-ui.bug.count,Showing {0} of {1} {1|bug|bugs}
-ui.bug.empty,No bugs have been reported yet
+ui.bug.count,Showing {0} of {1} {1|report|reports}
+ui.bug.empty,Nothing has been reported yet
 ui.bug.envHead,Environment
 ui.bug.envNote,This line is added to the report automatically. It contains no file names and none of your writing.
 ui.bug.errHttp,GitHub answered with error {0}
 ui.bug.errNet,Could not reach GitHub. Check your internet connection and try again.
 ui.bug.errParse,Could not read the list GitHub sent
 ui.bug.errRate,"GitHub is limiting requests for now. Try again later, or open the list on GitHub."
+ui.bug.featureTitle,Request a feature
 ui.bug.fExpected,What you expected
 ui.bug.fExpectedPh,What should have happened instead (optional)
 ui.bug.fltAll,All statuses ({0})
@@ -2385,23 +2385,37 @@ ui.bug.fltClosed,Closed ({0})
 ui.bug.fltFixedAll,Fixed in: any
 ui.bug.fltFixedNone,No fix version yet
 ui.bug.fltFoundAll,Found in: any
+ui.bug.fltKindAll,All types ({0})
+ui.bug.fltKindBug,Bugs ({0})
+ui.bug.fltKindFeature,Feature requests ({0})
 ui.bug.fltOne,{0} ({1})
 ui.bug.fltOpen,Still open ({0})
+ui.bug.fNow,How you manage today
+ui.bug.fNowPh,A workaround or another app you use for this (optional)
 ui.bug.fSteps,Steps to reproduce
 ui.bug.fStepsPh,1. Open…  2. Click…  3. See…
 ui.bug.fTitle,Title
 ui.bug.fTitlePh,Sum up the problem in one line
+ui.bug.fTitlePhFeature,Sum up the idea in one line
+ui.bug.fWant,What you would like
+ui.bug.fWantPh,Describe the feature or change you have in mind
 ui.bug.fWhat,What happened
 ui.bug.fWhatPh,"Describe what you saw, such as an error message or something that went missing"
-ui.bug.loading,Loading bugs…
-ui.bug.needTitle,Enter a title for the problem first
-ui.bug.noMatch,No bugs match these filters
+ui.bug.fWhy,Why it would help
+ui.bug.fWhyPh,"What you are trying to do, and when you would use it"
+ui.bug.kindBug,Bug report
+ui.bug.kindFeature,Feature request
+ui.bug.kindLabel,Report type
+ui.bug.kindTag,Feature
+ui.bug.loading,Loading the list…
+ui.bug.needTitle,Enter a title first
+ui.bug.noMatch,Nothing matches these filters
 ui.bug.openFail,Could not open the browser
 ui.bug.openWeb,Open on GitHub
 ui.bug.refresh,Refresh
-ui.bug.reportIntro,Reports are sent straight from the app and appear in a bug list anyone can read — leave out personal details and unpublished story text.
+ui.bug.reportIntro,Reports and requests are sent straight from the app and appear in a public list anyone can read — leave out personal details and unpublished story text.
 ui.bug.reportTitle,Report a bug
-ui.bug.rowTip,Open bug {0} in your browser
+ui.bug.rowTip,Open {0} in your browser
 ui.bug.searchPh,"Search ID, details, or version"
 ui.bug.sendClock,The report could not be sent because this computer's date and time are off. Set them correctly and try again — your text is still here.
 ui.bug.sendFail,"The report service answered with error {0}. Your text is still here — try again later, or copy the report and send it another way."
@@ -2410,15 +2424,20 @@ ui.bug.sendNet,Could not send the report. Check your internet connection and try
 ui.bug.sendOff,This version cannot send reports from the app yet. Copy the report and send it through the channel the developer has named.
 ui.bug.sendRate,Too many reports in a short time. Wait a moment and try again.
 ui.bug.sentOk,Report sent as bug {0}
+ui.bug.sentOkFeature,Request sent as {0}
 ui.bug.sortTip,Sort by this column
 ui.bug.source,Source: the app's GitHub Issues
+ui.bug.stAdded,Added
 ui.bug.stale,(The list shown was loaded {0})
-ui.bug.statusTitle,Bug status
+ui.bug.statusTitle,Bug & request status
+ui.bug.stBuilding,In progress
 ui.bug.stConfirmed,Confirmed
+ui.bug.stDeclined,Not planned
 ui.bug.stDuplicate,Duplicate
 ui.bug.stFixed,Fixed
 ui.bug.stNeedInfo,Needs more info
 ui.bug.stNew,Awaiting review
+ui.bug.stPlanned,Planned
 ui.bug.stProgress,Being fixed
 ui.bug.stWontfix,Won't fix
 ui.bug.updated,Last updated {0}
@@ -3223,6 +3242,14 @@ ui.dlgBuilder.sceneOpenBare,The scene begins
 ui.dlgBuilder.selfMono,monologue
 ui.dlgBuilder.unknownName,Unknown
 ui.dlgBuilder.untitled,Untitled
+ui.docs.back,Back
+ui.docs.bookExtension,Extension Guide
+ui.docs.bookManual,User Manual
+ui.docs.chapter,Chapter
+ui.docs.language,Manual language
+ui.docs.next,Next chapter
+ui.docs.notFound,This page of the manual could not be opened: {0}
+ui.docs.prev,Previous chapter
 ui.doctor.allGood,No problems found — the index matches every file
 ui.doctor.badgeTip,"{0} project {0|problem|problems} found (missing files · duplicate rows · broken headers, etc.) — click to review and fix"
 ui.doctor.confirmFix,Repair the {0} selected {0|issue|issues}?
@@ -4658,7 +4685,7 @@ ui.menu.blockCode,Code block
 ui.menu.boardMoodMoodBoard,Mood Board — opens as a side panel; drag images onto it
 ui.menu.btnFloatCornerRight,"Floating button, bottom right (FAB)"
 ui.menu.bugReport,Report a bug…
-ui.menu.bugStatus,Bug status…
+ui.menu.bugStatus,Bug & request status…
 ui.menu.cancelSplitPageScreen,Unsplit screen
 ui.menu.caseBigSmall,Upper/lower case (free)
 ui.menu.centerK,Center
@@ -4706,6 +4733,8 @@ ui.menu.exportLayoutPanelJSON,Export panel layout (JSON)…
 ui.menu.exportProjectZip,Whole project as ZIP…
 ui.menu.exportTop,Export
 ui.menu.exportWorkFlowSteps,Edit export workflow steps…
+ui.menu.extensionGuide,Extension Guide…
+ui.menu.featureRequest,Request a feature…
 ui.menu.file,File
 ui.menu.file2,File
 ui.menu.fitWidePagePaper,Fit to page width
@@ -4854,6 +4883,7 @@ ui.menu.storyTools,Story tools
 ui.menu.storyYoursDialogPrev,Chat with your story (old dialog)…
 ui.menu.suggestTitle,Suggest a title…
 ui.menu.summaryBodyProject,Summarise the project…
+ui.menu.support,Support the Project
 ui.menu.tableCSV,CSV table
 ui.menu.textCaseCycleU,Cycle letter case
 ui.menu.textContCONTINUEDMORE,Continuation text (CONTINUED · MORE · cont'd)
@@ -4864,6 +4894,7 @@ ui.menu.toggleModeNovelChapter,Switch mode novel ↔ screenplay
 ui.menu.tool,Tools
 ui.menu.toolbarCfg,Customize toolbar…
 ui.menu.trialPlayStoryBreak,Play-test the branching story (Player Mode)
+ui.menu.userManual,User Manual…
 ui.menu.view,View
 ui.menu.viewChapter,Script view
 ui.menu.viewNoteAll,View all notes…
@@ -6109,7 +6140,7 @@ ui.roster.showHeadingScene,Show the Scene heading
 ui.roster.showHeadingTime,Show the Time heading
 ui.sb.autoFit,Auto fit to width
 ui.sb.autosave,Auto-save
-ui.sb.bugReport,Report a bug
+ui.sb.bugReport,Report a bug or request a feature
 ui.sb.home,Home
 ui.sb.lineNumbers,Line numbers
 ui.sb.mdCodes,Show Markdown codes
@@ -6871,7 +6902,6 @@ ui.starter.aiWriteIntro,Let AI write the synopsis
 ui.starter.aiWriteIntroShort,One paragraph only
 ui.starter.aiWriteOpener,Let the AI draft the opener
 ui.starter.aiWriteSynopsis,Let AI write the synopsis
-ui.starter.artHint,Artwork slot — drop a file with this name into the app folder
 ui.starter.autoLinkAsk,"Also create a wiki page for ""{0}""?"
 ui.starter.autoLinkGo,Create it
 ui.starter.backToList,Back to the overview
@@ -7484,8 +7514,8 @@ ui.tip.blockStyle,Turns the whole paragraph into a heading level or a quote. Hea
 ui.tip.books,"Manage books and drafts — covers, blurbs, status, and drag to reorder."
 ui.tip.branch-sync,Reads the choices written in this scene as [text] in square brackets and turns them into paths on the branch map.
 ui.tip.branching,"Opens the branching story map, showing where each scene’s choices lead — for visual novels and story games."
-ui.tip.bug-report,Write up a problem you found and send it to the developer straight from the app.
-ui.tip.bug-status,"Lists reported bugs with their status, the version they were found in, and the version that fixed them, with filters."
+ui.tip.bug-report,Write up a problem you found — or switch to a feature request — and send it to the developer straight from the app.
+ui.tip.bug-status,"Lists reported bugs and feature requests with their status, the version they were reported in, and the version that resolved them, with filters."
 ui.tip.changelog,See what each version of the app added or fixed.
 ui.tip.chapter,Creates a new chapter in the book you choose and opens it. A chapter groups several scenes together.
 ui.tip.chapters,"Opens the chapter manager — chapter covers, order, and statistics for every chapter in the book."
@@ -7517,6 +7547,8 @@ ui.tip.export-pdf-builtin,"Exports a PDF directly with the built-in PDF generato
 ui.tip.export-rtf,Exports the screenplay as an RTF file that opens in Word and most word processors.
 ui.tip.export-watermark,"Sets a watermark printed across every page of exported files — a recipient’s name, or the word DRAFT."
 ui.tip.export-zip,"Packs the whole project folder into one ZIP file, for backup or sharing."
+ui.tip.extension-guide,Opens the guide to writing plugins and other extensions inside the app.
+ui.tip.feature-request,Describe a feature you would like and send the request to the developer straight from the app.
 ui.tip.find,Finds and replaces inside the document you have open right now.
 ui.tip.floorplan,"Opens the floor plan — a top-down set plan: place characters, set up cameras/lenses and lights, then block beats against the scene's lines"
 ui.tip.fmt,"Text formatting — bold, headings, lists and so on; each button says which style it applies."
@@ -7718,6 +7750,7 @@ ui.tip.split-view:right,Splits the writing area into left and right panes.
 ui.tip.sprint,"Times a writing sprint, counts the words you write during it, supports a word goal and keeps the stats in the project"
 ui.tip.story-starter,"Opens Story Starter: set up a story, characters and opening scene step by step, then play it out in episodes with AI."
 ui.tip.story-starter-toggle,Opens or closes Story Starter — set a story up step by step and play it out with AI. Press again to close.
+ui.tip.support,"Opens the project's support page in your browser, where you can buy the developer a coffee."
 ui.tip.sync-scene-meta,Reads scene properties back from the .md file headers — use after editing files in another program.
 ui.tip.test-run,Runs the app’s self-test suite (for developers).
 ui.tip.text-case,Changes the selected text to a given letter case. Affects Latin letters.
@@ -7798,6 +7831,7 @@ ui.tip.ui:tb-source,"Shows this scene's raw markdown — exactly what is written
 ui.tip.ui:tb-sp-cont,Toggles the screenplay's automatic continuation marks — (CONTINUED) at page ends and (MORE) when dialogue crosses a page.
 ui.tip.ui:tb-sp-ext,"Adds an extension after a character name — (V.O.) voice-over, (O.S.) off-screen, (cont'd) continuing."
 ui.tip.ui:tb-visual,"Opens this scene’s storyboard, to tell it through a sequence of images."
+ui.tip.user-manual,"Opens the full user manual inside the app — every chapter, in English or Thai, with no internet needed."
 ui.tip.visual-tags,"Manage the colour tags you attach to scenes — by storyline or main character, for example."
 ui.tip.word-history,"Finds frequently repeated words and shows word-usage statistics, to catch your verbal tics."
 ui.tip.workspace,Switches to the specified panel layout.

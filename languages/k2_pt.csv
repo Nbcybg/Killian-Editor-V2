@@ -12,7 +12,7 @@ ui.a11y.oskFail,Não foi possível abrir um teclado virtual do sistema — nenhu
 ui.a11y.oskOpened,Teclado virtual do sistema aberto
 ui.a11y.oskSettings,Não foi possível abrir o teclado virtual diretamente — as configurações de teclado do sistema foram abertas; ative-o por lá
 ui.about.bugReport,Relatar um erro
-ui.about.bugStatus,Status dos erros
+ui.about.bugStatus,Status de erros e pedidos
 ui.about.changelog,Novidades
 ui.about.checkUpdate,Verificar atualizações
 ui.about.credits,Créditos
@@ -1317,7 +1317,7 @@ ui.app.block, blocos
 ui.app.boardItemHideItem,{0} {0|quadro está oculto|quadros estão ocultos} pelo filtro — limpe a caixa de busca para ver todos
 ui.app.boardPlanner,Quadros de planejamento
 ui.app.boardPlanner2,Quadros de planejamento ({0})
-ui.app.boardPlannerPlannerGraph,Quadros de planejamento (Planner) e plantas baixas
+ui.app.boardPlannerPlannerGraph,Quadros de planejamento (Planner)
 ui.app.boardPlannerReadCant,Quadros de planejamento (ilegíveis)
 ui.app.bookNotHasDraft,Este livro ainda não tem rascunho
 ui.app.btnFloatFABClose,Botão flutuante (FAB): desativado
@@ -1417,7 +1417,6 @@ ui.app.copyResult,Copiar resultados
 ui.app.copyResultConsoleDone,Saída do console copiada
 ui.app.copySaveDoneLine,Log copiado ({0} {0|linha|linhas} correspondentes ao filtro)
 ui.app.corner,Inclinação (graus)
-ui.app.courierMonoThaiProportionalThai,Courier MonoThai · ProportionalThai (1998)
 ui.app.coverBookReadNot,Não foi possível ler a imagem de capa do livro
 ui.app.creditIcons,O conjunto de ícones do aplicativo (fonte K2 Icons)
 ui.app.creditThree,Rede da história em 3D (modelos · cenários)
@@ -1515,12 +1514,11 @@ ui.app.file,Extensão do arquivo
 ui.app.fileLangK2Csv,Arquivos de idioma (k2_*.csv)
 ui.app.fileNotHas,(este arquivo ainda não tem {0})
 ui.app.fileOpen,Abrir arquivos
-ui.app.fileTaskMarkdownJSON,"Os arquivos de trabalho são Markdown + JSON, totalmente compatíveis com o Killian v1"
+ui.app.fileTaskMarkdownJSON,Os arquivos de trabalho são Markdown + JSON simples
 ui.app.filter,Filtrar por fonte
 ui.app.findDiskFindOn,Localizar no disco
 ui.app.findRowNotFound,Linha não encontrada → reparando a árvore
 ui.app.folderNotProjectKillian,Esta pasta não é um projeto do Killian (project.khn.json não encontrado)
-ui.app.fontScreenplayPosView,Fonte de roteiro (tailandês) — posições dos tons adaptadas · veja renderer/assets/fonts/THAI-FONTS.txt
 ui.app.fontScreenplayQuoteUnquote,Fonte de roteiro (latina) — Quote-Unquote Apps
 ui.app.forceCaseBig,Forçar maiúsculas
 ui.app.forcePrintBigFormat,Forçar maiúsculas conforme o formato padrão de roteiro
@@ -1737,7 +1735,6 @@ ui.app.notRememberEditChapter,"Não memoriza mais ""{0}"" (altere isso em Roteir
 ui.app.notRememberFoundNot,"Ainda não memorizada (vista menos de {0} {0|vez|vezes}) — clique em ""Memorizar"" para memorizá-la agora"
 ui.app.notSave,Não salvo
 ui.app.notSet,(não definido)
-ui.app.notSource,Licença da fonte desconhecida
 ui.app.notUseTemplate2,— Sem modelo —
 ui.app.novel, Romance
 ui.app.novel2, Romance ▾
@@ -1962,6 +1959,7 @@ ui.app.startAppShowPage,Ao iniciar: mostrar primeiro a página inicial
 ui.app.status2,Status: 
 ui.app.styleWatermark,Modelo de marca d'água
 ui.app.suggest, (recomendado)
+ui.app.supportOpened,A página de apoio foi aberta no navegador. Obrigado!
 ui.app.template,Modelo
 ui.app.templateManage,Modelos (gerenciar)
 ui.app.templatesFillBlockProfile,modelos: bloco de perfil adicionado aos modelos padrão deste projeto
@@ -2357,7 +2355,8 @@ ui.branch.zoomIn,Aumentar zoom
 ui.branch.zoomOut,Diminuir zoom
 ui.bug.btnCopy,Copiar relato
 ui.bug.btnSend,Enviar relato
-ui.bug.btnStatus,Ver status dos erros
+ui.bug.btnSendFeature,Enviar pedido
+ui.bug.btnStatus,Ver status
 ui.bug.clear,Limpar filtros
 ui.bug.colFixed,Corrigido em
 ui.bug.colFound,Encontrado em
@@ -2370,14 +2369,15 @@ ui.bug.contactMailed,"Relato copiado. Cole-o no e-mail que foi aberto. Se nenhum
 ui.bug.contactMailTip,Copia o relato e abre um novo e-mail para este endereço
 ui.bug.copied,Relato copiado. Cole-o no canal indicado.
 ui.bug.copyFail,Não foi possível copiar o relato
-ui.bug.count,Mostrando {0} de {1} {1|erro|erros}
-ui.bug.empty,Nenhum erro foi relatado ainda
+ui.bug.count,Mostrando {0} de {1} {1|item|itens}
+ui.bug.empty,Nada foi relatado ainda
 ui.bug.envHead,Ambiente
 ui.bug.envNote,Esta linha é incluída no relato automaticamente. Ela não contém nomes de arquivos nem conteúdo do seu trabalho.
 ui.bug.errHttp,O GitHub respondeu com o erro {0}
 ui.bug.errNet,Não foi possível acessar o GitHub. Verifique a conexão com a internet e tente de novo.
 ui.bug.errParse,Não foi possível ler a lista enviada pelo GitHub
 ui.bug.errRate,O GitHub está limitando as consultas no momento. Tente mais tarde ou abra a lista no GitHub.
+ui.bug.featureTitle,Pedir um recurso
 ui.bug.fExpected,O que você esperava
 ui.bug.fExpectedPh,O que deveria ter acontecido (opcional)
 ui.bug.fltAll,Todos os status ({0})
@@ -2385,23 +2385,37 @@ ui.bug.fltClosed,Fechados ({0})
 ui.bug.fltFixedAll,Corrigido em: todas
 ui.bug.fltFixedNone,Ainda sem correção
 ui.bug.fltFoundAll,Encontrado em: todas
+ui.bug.fltKindAll,Todos os tipos ({0})
+ui.bug.fltKindBug,Erros ({0})
+ui.bug.fltKindFeature,Pedidos de recursos ({0})
 ui.bug.fltOne,{0} ({1})
 ui.bug.fltOpen,Ainda abertos ({0})
+ui.bug.fNow,Como você faz hoje
+ui.bug.fNowPh,Uma solução alternativa ou outro app que você usa para isso (opcional)
 ui.bug.fSteps,Passos para reproduzir
 ui.bug.fStepsPh,1. Abrir…  2. Clicar…  3. Ver…
 ui.bug.fTitle,Título
 ui.bug.fTitlePh,Resuma o problema em uma linha
+ui.bug.fTitlePhFeature,Resuma a ideia em uma linha
+ui.bug.fWant,O que você gostaria
+ui.bug.fWantPh,Descreva o recurso ou a mudança que você tem em mente
 ui.bug.fWhat,O que aconteceu
 ui.bug.fWhatPh,"Descreva o que você viu, como uma mensagem de erro ou algo que sumiu"
-ui.bug.loading,Carregando erros…
-ui.bug.needTitle,Informe primeiro um título para o problema
-ui.bug.noMatch,Nenhum erro corresponde a estes filtros
+ui.bug.fWhy,Por que ajudaria
+ui.bug.fWhyPh,O que você está tentando fazer e quando usaria
+ui.bug.kindBug,Relato de erro
+ui.bug.kindFeature,Pedido de recurso
+ui.bug.kindLabel,Tipo de relato
+ui.bug.kindTag,Pedido
+ui.bug.loading,Carregando a lista…
+ui.bug.needTitle,Informe primeiro um título
+ui.bug.noMatch,Nenhum item corresponde a estes filtros
 ui.bug.openFail,Não foi possível abrir o navegador
 ui.bug.openWeb,Abrir no GitHub
 ui.bug.refresh,Atualizar
-ui.bug.reportIntro,Os relatos são enviados direto do app e aparecem em uma lista de erros que qualquer pessoa pode ler — não inclua dados pessoais nem texto ainda não publicado.
+ui.bug.reportIntro,Os relatos e pedidos são enviados direto do app e aparecem em uma lista pública que qualquer pessoa pode ler — não inclua dados pessoais nem texto ainda não publicado.
 ui.bug.reportTitle,Relatar um erro
-ui.bug.rowTip,Abrir o erro {0} no navegador
+ui.bug.rowTip,Abrir {0} no navegador
 ui.bug.searchPh,"Buscar ID, detalhes ou versão"
 ui.bug.sendClock,Não foi possível enviar o relato porque a data e a hora deste computador estão incorretas. Ajuste-as e tente de novo — seu texto continua aqui.
 ui.bug.sendFail,O serviço de relatos respondeu com o erro {0}. Seu texto continua aqui — tente mais tarde ou copie o relato e envie de outra forma.
@@ -2410,15 +2424,20 @@ ui.bug.sendNet,Não foi possível enviar o relato. Verifique a conexão com a in
 ui.bug.sendOff,Esta versão ainda não envia relatos pelo app. Copie o relato e envie-o pelo canal indicado pelo desenvolvedor.
 ui.bug.sendRate,Muitos relatos em pouco tempo. Aguarde um instante e tente de novo.
 ui.bug.sentOk,Relato enviado como erro {0}
+ui.bug.sentOkFeature,Pedido enviado como {0}
 ui.bug.sortTip,Ordenar por esta coluna
 ui.bug.source,Fonte: GitHub Issues do app
+ui.bug.stAdded,Adicionado
 ui.bug.stale,(A lista exibida foi carregada em {0})
-ui.bug.statusTitle,Status dos erros
+ui.bug.statusTitle,Status de erros e pedidos
+ui.bug.stBuilding,Em andamento
 ui.bug.stConfirmed,Confirmado
+ui.bug.stDeclined,Não planejado
 ui.bug.stDuplicate,Duplicado
 ui.bug.stFixed,Corrigido
 ui.bug.stNeedInfo,Faltam informações
 ui.bug.stNew,Aguardando análise
+ui.bug.stPlanned,Planejado
 ui.bug.stProgress,Em correção
 ui.bug.stWontfix,Não será corrigido
 ui.bug.updated,Última atualização: {0}
@@ -3223,6 +3242,14 @@ ui.dlgBuilder.sceneOpenBare,A cena começa
 ui.dlgBuilder.selfMono,monólogo
 ui.dlgBuilder.unknownName,Desconhecido
 ui.dlgBuilder.untitled,Sem título
+ui.docs.back,Voltar
+ui.docs.bookExtension,Guia de extensões
+ui.docs.bookManual,Manual do usuário
+ui.docs.chapter,Capítulo
+ui.docs.language,Idioma do manual
+ui.docs.next,Próximo capítulo
+ui.docs.notFound,Não foi possível abrir esta página do manual: {0}
+ui.docs.prev,Capítulo anterior
 ui.doctor.allGood,Nenhum problema encontrado — o índice corresponde a todos os arquivos
 ui.doctor.badgeTip,{0} {0|problema do projeto encontrado|problemas do projeto encontrados} (arquivos ausentes · linhas duplicadas · cabeçalhos quebrados etc.) — clique para revisar e corrigir
 ui.doctor.confirmFix,Reparar {0} {0|problema selecionado|problemas selecionados}?
@@ -4658,7 +4685,7 @@ ui.menu.blockCode,Bloco de código
 ui.menu.boardMoodMoodBoard,Quadro de inspiração — abre como painel lateral; arraste imagens para ele
 ui.menu.btnFloatCornerRight,"Botão flutuante, canto inferior direito (FAB)"
 ui.menu.bugReport,Relatar um erro…
-ui.menu.bugStatus,Status dos erros…
+ui.menu.bugStatus,Status de erros e pedidos…
 ui.menu.cancelSplitPageScreen,Desfazer a divisão da tela
 ui.menu.caseBigSmall,Maiúsculas/minúsculas (livre)
 ui.menu.centerK,Centralizar
@@ -4706,6 +4733,8 @@ ui.menu.exportLayoutPanelJSON,Exportar o layout dos painéis (JSON)…
 ui.menu.exportProjectZip,Projeto inteiro como ZIP…
 ui.menu.exportTop,Exportar
 ui.menu.exportWorkFlowSteps,Editar as etapas do fluxo de exportação…
+ui.menu.extensionGuide,Guia de extensões…
+ui.menu.featureRequest,Pedir um recurso…
 ui.menu.file,Arquivo
 ui.menu.file2,Arquivo
 ui.menu.fitWidePagePaper,Ajustar à largura da página
@@ -4854,6 +4883,7 @@ ui.menu.storyTools,Ferramentas da história
 ui.menu.storyYoursDialogPrev,Converse com a sua história (diálogo antigo)…
 ui.menu.suggestTitle,Sugerir um título…
 ui.menu.summaryBodyProject,Resumir o projeto…
+ui.menu.support,Apoiar o projeto
 ui.menu.tableCSV,Tabela CSV
 ui.menu.textCaseCycleU,Alternar entre maiúsculas/minúsculas
 ui.menu.textContCONTINUEDMORE,Texto de continuação (CONTINUED · MORE · cont'd)
@@ -4864,6 +4894,7 @@ ui.menu.toggleModeNovelChapter,Alternar o modo romance ↔ roteiro
 ui.menu.tool,Ferramentas
 ui.menu.toolbarCfg,Personalizar a barra de ferramentas…
 ui.menu.trialPlayStoryBreak,Testar a história ramificada (Modo Jogador)
+ui.menu.userManual,Manual do usuário…
 ui.menu.view,Exibir
 ui.menu.viewChapter,Visualização do roteiro
 ui.menu.viewNoteAll,Ver todas as notas…
@@ -6109,7 +6140,7 @@ ui.roster.showHeadingScene,Mostrar o título Cena
 ui.roster.showHeadingTime,Mostrar o título Horário
 ui.sb.autoFit,Ajustar automaticamente à largura
 ui.sb.autosave,Salvamento automático
-ui.sb.bugReport,Relatar um erro
+ui.sb.bugReport,Relatar um erro ou pedir um recurso
 ui.sb.home,Início
 ui.sb.lineNumbers,Números de linha
 ui.sb.mdCodes,Mostrar códigos de Markdown
@@ -6871,7 +6902,6 @@ ui.starter.aiWriteIntro,Deixar a IA escrever a sinopse
 ui.starter.aiWriteIntroShort,Apenas um parágrafo
 ui.starter.aiWriteOpener,Deixar a IA esboçar a abertura
 ui.starter.aiWriteSynopsis,Deixar a IA escrever a sinopse
-ui.starter.artHint,Espaço para a arte — solte um arquivo com este nome na pasta do aplicativo
 ui.starter.autoLinkAsk,"Criar também uma página da wiki para ""{0}""?"
 ui.starter.autoLinkGo,Criar
 ui.starter.backToList,Voltar à visão geral
@@ -7484,8 +7514,8 @@ ui.tip.blockStyle,Transforma o parágrafo inteiro em um nível de título ou em 
 ui.tip.books,"Gerencie livros e rascunhos — capas, sinopses, status e arraste para reordenar."
 ui.tip.branch-sync,Lê as escolhas escritas nesta cena como [texto] entre colchetes e as transforma em caminhos no mapa de ramificações.
 ui.tip.branching,"Abre o mapa da história ramificada, mostrando para onde levam as escolhas de cada cena — para visual novels e jogos narrativos."
-ui.tip.bug-report,Descreva um problema encontrado e envie-o ao desenvolvedor direto do app.
-ui.tip.bug-status,"Lista os erros relatados com o status, a versão em que foram encontrados e a versão que os corrigiu, com filtros."
+ui.tip.bug-report,Descreva um problema que você encontrou — ou mude para um pedido de recurso — e envie ao desenvolvedor direto do app.
+ui.tip.bug-status,"Lista os erros relatados e os pedidos de recursos com o status, a versão em que foram relatados e a versão que os resolveu, com filtros."
 ui.tip.changelog,Veja o que cada versão do aplicativo acrescentou ou corrigiu.
 ui.tip.chapter,Cria um novo capítulo no livro que você escolher e o abre. Um capítulo agrupa várias cenas.
 ui.tip.chapters,"Abre o gerenciador de capítulos — capas, ordem e estatísticas de todos os capítulos do livro."
@@ -7517,6 +7547,8 @@ ui.tip.export-pdf-builtin,"Exporta um PDF diretamente com o gerador de PDF integ
 ui.tip.export-rtf,Exporta o roteiro como arquivo RTF que abre no Word e na maioria dos processadores de texto.
 ui.tip.export-watermark,Define uma marca d'água impressa em todas as páginas dos arquivos exportados — o nome do destinatário ou a palavra RASCUNHO.
 ui.tip.export-zip,"Compacta a pasta inteira do projeto em um único arquivo ZIP, para backup ou compartilhamento."
+ui.tip.extension-guide,Abre dentro do app o guia para escrever plugins e outras extensões.
+ui.tip.feature-request,Descreva um recurso que você gostaria e envie o pedido ao desenvolvedor direto do app.
 ui.tip.find,Localiza e substitui dentro do documento aberto agora.
 ui.tip.floorplan,"Abre a planta baixa — uma planta do set vista de cima: posicione personagens, configure câmeras/lentes e luzes e depois marque a movimentação dos beats em relação às falas da cena"
 ui.tip.fmt,"Formatação de texto — negrito, títulos, listas e assim por diante; cada botão indica qual estilo aplica."
@@ -7718,6 +7750,7 @@ ui.tip.split-view:right,Divide a área de escrita em painéis esquerdo e direito
 ui.tip.sprint,"Cronometra um sprint de escrita, conta as palavras que você escreve durante ele, aceita uma meta de palavras e guarda as estatísticas no projeto"
 ui.tip.story-starter,"Abre o Iniciador de história: configure passo a passo uma história, personagens e a cena de abertura e depois jogue-a em episódios com a IA."
 ui.tip.story-starter-toggle,Abre ou fecha o Iniciador de história — configure uma história passo a passo e jogue-a com a IA. Pressione de novo para fechar.
+ui.tip.support,"Abre no navegador a página de apoio do projeto, onde você pode pagar um café ao desenvolvedor."
 ui.tip.sync-scene-meta,Relê as propriedades das cenas a partir dos cabeçalhos dos arquivos .md — use depois de editar arquivos em outro programa.
 ui.tip.test-run,Executa o conjunto de autotestes do aplicativo (para desenvolvedores).
 ui.tip.text-case,Muda o texto selecionado para um determinado estilo de maiúsculas/minúsculas. Afeta letras latinas.
@@ -7798,6 +7831,7 @@ ui.tip.ui:tb-source,"Mostra o markdown bruto desta cena — exatamente o que é 
 ui.tip.ui:tb-sp-cont,Liga ou desliga as marcas de continuação automáticas do roteiro — (CONTINUED) no fim das páginas e (MORE) quando o diálogo atravessa uma página.
 ui.tip.ui:tb-sp-ext,"Adiciona uma extensão depois do nome da personagem — (V.O.) voz em off, (O.S.) fora de cena, (cont'd) continuando."
 ui.tip.ui:tb-visual,"Abre o storyboard desta cena, para contá-la por meio de uma sequência de imagens."
+ui.tip.user-manual,"Abre o manual do usuário completo dentro do app — todos os capítulos, em inglês ou tailandês, sem precisar de internet."
 ui.tip.visual-tags,"Gerencie as tags de cor que você aplica às cenas — por linha narrativa ou personagem principal, por exemplo."
 ui.tip.word-history,"Encontra palavras muito repetidas e mostra estatísticas de uso de palavras, para flagrar seus cacoetes de linguagem."
 ui.tip.workspace,Muda para o layout de painéis especificado.
