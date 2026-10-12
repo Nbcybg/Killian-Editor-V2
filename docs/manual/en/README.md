@@ -2,7 +2,7 @@
 
 **Language:** English · [ภาษาไทย](../th/README.md)
 
-> For Killian 2 version **2.0.0-alpha.169**. Screenshots were taken with the **K2** theme and the English interface, on Windows.
+> For Killian 2 version **2.0.0-alpha.170**. Screenshots were taken with the **K2** theme and the English interface, on Windows.
 > The app is still in alpha — menus, button names and behaviour can change with every release. If what you see on screen does not match this manual, trust the screen, then check **Help → Changelog**.
 
 Killian 2 (K2) is a portable writing app for **game stories, novels and screenplays**. It runs on your own machine with no account and no server, and everything is stored as **Markdown + JSON** files in an ordinary folder that you own.
@@ -68,5 +68,5 @@ Conventions: **bold** = the name of a menu or button on screen · `Ctrl+S` = a s
 ## About this documentation
 
 - Appendices A–C are generated straight from the app's own registries (the real menu, the shortcut dialog, `icons/commands.csv` plus the language file), so they match the stated version.
-- Chapters 1–16 describe the behaviour of alpha.169. Where a feature is very new or has not been tested on every operating system, the manual says so at that point.
+- Chapters 1–16 describe the behaviour of alpha.170. Where a feature is very new or has not been tested on every operating system, the manual says so at that point.
 - Found something wrong or missing in the manual? Report it from inside the app (**Help → Report a bug…**).

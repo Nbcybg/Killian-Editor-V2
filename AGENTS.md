@@ -20,8 +20,8 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **6,497 checks · ALL OK** (alpha.169 รอบต่อ 5 [เกี่ยวกับ · เครดิต · ถอดภาพ Story Starter] · macOS 15.7 Intel · dev · รอบเต็ม ~55 นาทีบน MacBook Pro 2019 · รอบต่อ 2 [รายงานบั๊ก] Windows = 6,456 · รอบต่อ [ภาษา] = 6,379 · alpha.169 = 6,370 · alpha.168 รอบต่อ 4 = 6,342 · รอบต่อ 3 = 6,291 · รอบต่อ 2 a11y = 6,257 · รอบต่อ native = 6,194 · alpha.168 = 6,142 · alpha.167 รอบต่อ 7 = 6,131 · รอบต่อ 6 = 6,113 · รอบต่อ 5 = 6,074 · รอบต่อ 2 = 6,012 · Linux/xvfb รอบต่อ = 5,984 · alpha.166 macOS = 5,902 · Windows alpha.165 = 5,841 · บางรอบ ±2 = เทสเดิมที่มีเงื่อนไขตามจังหวะ) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **12,456 ข้อ · 173 ไฟล์** · ~60–100 วินาที · alpha.169 รอบต่อ 5 — ลดจาก 12,470 เพราะถอดฟีเจอร์ภาพของ Story Starter ตามที่ผู้ใช้สั่ง)
+ปัจจุบัน **6,497 checks · ALL OK** (alpha.170 = alpha.169 รอบต่อ 1–5 [ขยับเลขรุ่น] · macOS 15.7 Intel · dev · รอบเต็ม ~55 นาทีบน MacBook Pro 2019 · รอบต่อ 2 [รายงานบั๊ก] Windows = 6,456 · รอบต่อ [ภาษา] = 6,379 · alpha.169 = 6,370 · alpha.168 รอบต่อ 4 = 6,342 · รอบต่อ 3 = 6,291 · รอบต่อ 2 a11y = 6,257 · รอบต่อ native = 6,194 · alpha.168 = 6,142 · alpha.167 รอบต่อ 7 = 6,131 · รอบต่อ 6 = 6,113 · รอบต่อ 5 = 6,074 · รอบต่อ 2 = 6,012 · Linux/xvfb รอบต่อ = 5,984 · alpha.166 macOS = 5,902 · Windows alpha.165 = 5,841 · บางรอบ ±2 = เทสเดิมที่มีเงื่อนไขตามจังหวะ) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **12,456 ข้อ · 173 ไฟล์** · ~60–100 วินาที · alpha.170 — ลดจาก 12,470 เพราะถอดฟีเจอร์ภาพของ Story Starter ตามที่ผู้ใช้สั่ง)
 **[alpha.169 รอบต่อ 4 · macOS]** โฟลเดอร์งานที่ยังไม่มี `node_modules`: `npm ci` แล้ว `node node_modules/electron/install.js` (สคริปต์ postinstall ของ electron ไม่อยู่ใน `allowScripts` — ไม่รันเอง) ·
 `KILLIAN_TEST_KEEPGOING=1` = ไม่หยุดที่ข้อแดงข้อแรก (เก็บทั้งรอบในครั้งเดียว · ใช้ไล่ของ ไม่ใช่ผลรับรอง)
 **[alpha.167 · Linux/คอนเทนเนอร์]** ใช้ `--use-angle=swiftshader --enable-unsafe-swiftshader` แทน `--disable-gpu` (เทส `[166-M]` ต้องมี WebGL) ·

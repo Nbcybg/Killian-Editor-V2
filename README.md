@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0--alpha.169-ff6640"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0--alpha.170-ff6640"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-452f5e">
   <img alt="Electron" src="https://img.shields.io/badge/Electron-43-1e1250">
   <img alt="Languages" src="https://img.shields.io/badge/UI%20languages-7-ffc55c">
@@ -16,21 +16,17 @@
 
 ---
 
-## What's new in 2.0.0-alpha.169
+## What's new in 2.0.0-alpha.170
 
 > Only the latest release is listed here. The full history is in [CHANGELOG.md](CHANGELOG.md), and in the app under **Help → Changelog**.
 
-- **Printing prints everything.** *File → Print* used to stop after one page; it now prints the whole document, without on-screen decorations such as spell-check underlines or theme colours.
-- **Exports you can hand over.** Novels export to RTF with headings, bold/italic, colour, lists and alignment intact; plain `.txt` is really plain; screenplay HTML no longer leaks Fountain codes.
-- **Standard Fountain import** — notes, boneyard, centred text, lyrics, dual dialogue and forced page breaks are read correctly.
-- **A native-feeling shell** — system window controls (Snap Layouts on Windows), drag files and project folders into the app, open a project from the OS, and a keyboard-driven menu bar.
-- **Accessibility settings** — high-contrast and colour-blind-safe themes, key-press echo, a reading line band and an on-screen-keyboard shortcut.
-- **File names follow titles.** Books, chapters and scenes are stored under their real names; rename them in K2 or from the OS and the project stays in sync.
-- **Plugins reload without a restart**, and there is now a full [Extension Guide](docs/extension/en/README.md).
-- **The manuals are built in.** *Help → User Manual* and *Help → Extension Guide* open the complete guides inside the app, offline, in English or Thai.
-- **Bug reports and feature requests from inside the app** — send either one from the same dialog and follow its status in a public list, no account needed.
-- **Language switching sticks** — the interface and the system menus stay in the language you picked after a restart.
-- **Smaller things:** a readable *What's new* dialog (one release at a time), a cleaner Quick Open, dialogs whose buttons never fall off the screen, and a *Support the Project* link under **Help**.
+- **Report bugs and request features from inside the app.** One dialog sends either a bug report or a feature request straight to the maintainers — no account needed — and **Help → Bug & request status** shows the public list with filters for type, status and version.
+- **The manuals are built in.** *Help → User Manual* and *Help → Extension Guide* open the complete guides inside the app, offline, in English or Thai — 16 chapters plus appendices listing every menu, shortcut and command.
+- **Language switching sticks.** The interface and the system menus stay in the language you picked after a restart (they used to drift apart).
+- **Buttons that lead to Settings land on the right page**, with the relevant field highlighted.
+- **A proper macOS build** — the app has its own icon, its requirements are measured on a real Mac (see [System requirements](#system-requirements)), and dialogs no longer "bounce" after you drag them.
+- **Story Starter is cleaner** — the setup-wizard-style artwork placeholders are gone, so each step uses the full width of the panel.
+- **About and credits tidied up** — credits list only what the app actually ships, plus a *Support the Project* link under **Help** and in the About dialog.
 
 ---
 

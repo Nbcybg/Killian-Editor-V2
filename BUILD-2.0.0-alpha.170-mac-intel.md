@@ -1,11 +1,11 @@
-# BUILD — Killian 2 · 2.0.0-alpha.169 · macOS Intel (x64)
+# BUILD — Killian 2 · 2.0.0-alpha.170 · macOS Intel (x64)
 
 | | |
 |---|---|
-| ไฟล์ | `dist/Killian2-2.0.0-alpha.169-mac-intel.dmg` |
-| ขนาด | 143 MB (142,528,079 ไบต์) · `Killian 2.app` 333 MB |
-| SHA-256 | `bf08d1a29f1d12ed4f9d89172dd35e726759d2fe78bb0cf2660213563a63fda8` |
-| สร้างเมื่อ | 2026-10-12 17:14 (MacBook Pro 15 นิ้ว ปี 2019 · Intel Core i9 · macOS 15.7.4) |
+| ไฟล์ | `dist/Killian2-2.0.0-alpha.170-mac-intel.dmg` |
+| ขนาด | 143 MB (142,523,723 ไบต์) · `Killian 2.app` 333 MB |
+| SHA-256 | `94af5a50b97c612d559f8ec94f276f447430b2abae2b302dde65c63c42487ccd` |
+| สร้างเมื่อ | 2026-10-12 17:32 (MacBook Pro 15 นิ้ว ปี 2019 · Intel Core i9 · macOS 15.7.4) |
 | Electron | 43.2.0 · electron-builder |
 | สถาปัตยกรรม | x64 (Intel) · ลายเซ็น: ไม่มี (`identity: null`) · ไอคอน: `icon.icns` (จาก `build/icon.png`) |
 | macOS ขั้นต่ำ | 12.0 (`LSMinimumSystemVersion`) · Apple Silicon รันผ่าน Rosetta 2 |
@@ -49,7 +49,7 @@ xattr -cr "/Applications/Killian 2.app"
 
 ## มีอะไรใหม่
 
-ดู [CHANGELOG.md](CHANGELOG.md) หัวข้อ alpha.169 → "รอบต่อ 4": ขอฟีเจอร์ในกล่องรายงานบั๊ก · คู่มือในโปรแกรม · ลิงก์สนับสนุน · ลิขสิทธิ์ Noobcyborg Studio ·
+ดู [CHANGELOG.md](CHANGELOG.md) หัวข้อ alpha.170 (= งาน "รอบต่อ 1–5" ของ alpha.169 ขยับเลขรุ่น) — "รอบต่อ 4": ขอฟีเจอร์ในกล่องรายงานบั๊ก · คู่มือในโปรแกรม · ลิงก์สนับสนุน · ลิขสิทธิ์ Noobcyborg Studio ·
 ไอคอนของตัว macOS (เดิมเป็นไอคอน Electron ตั้งต้น) · กล่องโต้ตอบไม่เด้งซ้ำหลังลาก
 "รอบต่อ 5": กล่อง "เกี่ยวกับ" ไม่เอ่ยถึง Killian v1 · เครดิตตรงกับของจริง · Story Starter ไม่มีช่องภาพแบบ setup wizard
 
@@ -61,5 +61,5 @@ node node_modules/electron/install.js     # ครั้งแรกเท่า
 cp package.json /tmp/package.json.bak     # โฟลเดอร์นี้ไม่ใช่ git repo — สำรองไว้เทียบหลัง build
 npm run dist:mac
 diff /tmp/package.json.bak package.json   # ต้องไม่ต่าง
-shasum -a 256 dist/Killian2-2.0.0-alpha.169-mac-intel.dmg
+shasum -a 256 dist/Killian2-2.0.0-alpha.170-mac-intel.dmg
 ```

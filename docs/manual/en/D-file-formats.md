@@ -4,7 +4,7 @@
 
 [← Back to the manual contents](README.md)
 
-> For version **2.0.0-alpha.169**. A Killian project is a folder of plain-text files (`.md` + `.json`). This appendix describes what you see when you open that folder in a file manager.
+> For version **2.0.0-alpha.170**. A Killian project is a folder of plain-text files (`.md` + `.json`). This appendix describes what you see when you open that folder in a file manager.
 > Files marked ⚠ are registries the app maintains itself — **you can edit them by hand, but take care** (close the app first, and keep a backup). If you break one, use **Tools → Project health check**.
 
 ## Layout of a project folder
@@ -73,7 +73,7 @@ pov: Tora
 synopsis: Tora meets a black cat at the Old Market and hears his name called from a dark alley.
 tags: [opening]
 modified: 2026-10-11T16:18:31.844Z
-appVersion: 2.0.0-alpha.169
+appVersion: 2.0.0-alpha.170
 revision: 2
 ---
 That night, Tora stood in the lamplight…
