@@ -8651,3 +8651,15 @@ body.paper-mode .pane.k-paper:not(.wiki-pane) .ProseMirror .find-hit {
 .k-set-page .k-row:has(> .k-font-field) > .k-font-field { flex:1 1 100%; min-width:0; }
 /* แชท AI: แถวปุ่ม "ลองใหม่" ใต้ข้อความผิดพลาด */
 .ai-msg-retry { margin-top:calc(4px * var(--uis)); padding-inline:calc(10px * var(--uis)); }
+
+/* ══ [alpha.170 · menu-arrows] เมนูยาวเกินจอ: ลูกศรเลื่อนบน/ล่าง (ui.js menuScrollArrows) ══
+   ลูกศรอยู่ในกล่องที่เลื่อนแบบ sticky และหักความสูงตัวเองด้วย margin ติดลบ = ซ่อน/โชว์แล้วรายการไม่ขยับ */
+.k-menu.k-menu-arrows { scrollbar-width:none; scroll-padding-block:calc(22px * var(--uis)); }
+.k-menu.k-menu-arrows::-webkit-scrollbar { display:none; }
+.k-menu.k-menu-arrows.k-menu-more::after { display:none; }
+.k-menu-scroll { position:sticky; z-index:2; display:none; height:calc(20px * var(--uis)); line-height:calc(20px * var(--uis));
+  text-align:center; color:var(--dim); background:var(--side); cursor:default; user-select:none; }
+.k-menu-scroll:hover { color:var(--fg); background:var(--hover); }
+.k-menu-scroll-up { top:-5px; margin-bottom:calc(-20px * var(--uis)); border-radius:7px 7px 0 0; }
+.k-menu-scroll-down { bottom:-5px; margin-top:calc(-20px * var(--uis)); border-radius:0 0 7px 7px; }
+.k-menu.k-menu-less > .k-menu-scroll-up, .k-menu.k-menu-more > .k-menu-scroll-down { display:block; }

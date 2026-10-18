@@ -216,6 +216,11 @@ function check(name, cond, extra) {
   const css = src('renderer/style.css');
   check('ไฮไลต์คำค้นบนกระดาษผสมจากสีกระดาษ (ไม่ใช้สีของธีมมืดทับหมึกดำ)',
         /body\.paper-mode \.pane\.k-paper:not\(\.wiki-pane\) \.ProseMirror \.find-hit\s*\{\s*background:color-mix\(in srgb, var\(--st-warn\) \d+%, var\(--paper\)\)/.test(css));
+  const uiSrc = src('src/ui.js');
+  check('★ เมนูยาวเกินจอ = ลูกศรเลื่อนบน/ล่าง (ลำดับรายการไม่เปลี่ยน)', /function menuScrollArrows\(m\)/.test(uiSrc) && /menuScrollArrows\(m\);/.test(uiSrc)
+        && /\.k-menu\.k-menu-less > \.k-menu-scroll-up/.test(css));
+  check('★ ชื่อคลาสของลูกศรเลื่อนไม่ชนลูกศรเมนูย่อย (.k-menu-arrow = ▸ ในแถว)', !/className = 'k-menu-arrow k-menu-arrow-/.test(uiSrc)
+        && !/\.k-menu-arrow-(up|down)/.test(css));
   check('กล่องเครื่องมือ AI กว้างคงที่ (ไม่กระโดดตามเนื้อ)', /\.k-dialog\.k-ai-dlg/.test(css) && /\.k-dialog\.k-ai-summary \{ width:min\(/.test(css));
 }
 

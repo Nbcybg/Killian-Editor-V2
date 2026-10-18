@@ -1,7 +1,8 @@
 {
   "name": "killian2",
-  "version": "2.0.0-alpha.170",
+  "version": "2.0.0-alpha.release.1",
   "description": "โปรแกรมเขียนนิยาย/บทหนัง — Electron + ProseMirror",
+  "desktopName": "killian2.desktop",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -12,7 +13,8 @@
     "test:unit": "node tools/run-unit.cjs",
     "dist": "node build.js && electron-builder --win portable",
     "dist:dir": "node build.js && electron-builder --win dir",
-    "dist:mac": "node build.js && electron-builder --mac dmg --x64"
+    "dist:mac": "node build.js && electron-builder --mac dmg --x64 --arm64",
+    "dist:linux": "node build.js && electron-builder --linux AppImage --x64"
   },
   "keywords": [],
   "author": "Noobcyborg Studio",
@@ -78,7 +80,7 @@
       ]
     },
     "portable": {
-      "artifactName": "Killian2-${version}-portable.exe"
+      "artifactName": "Killian2-${version}-win-x64-portable.exe"
     },
     "mac": {
       "icon": "build/icon.png",
@@ -86,7 +88,8 @@
         {
           "target": "dmg",
           "arch": [
-            "x64"
+            "x64",
+            "arm64"
           ]
         }
       ],
@@ -95,13 +98,28 @@
       "identity": null,
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
-      "artifactName": "Killian2-${version}-mac-intel.dmg"
+      "artifactName": "Killian2-${version}-mac-${arch}.dmg"
     },
     "dmg": {
-      "artifactName": "Killian2-${version}-mac-intel.dmg",
+      "artifactName": "Killian2-${version}-mac-${arch}.dmg",
       "title": "Killian 2 ${version}"
     },
-    "copyright": "Copyright © 2026 Noobcyborg Studio"
+    "copyright": "Copyright © 2026 Noobcyborg Studio",
+    "linux": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Office",
+      "artifactName": "Killian2-${version}-linux-x64.AppImage",
+      "synopsis": "Novel and screenplay writing app",
+      "syncDesktopName": true
+    }
   },
   "allowScripts": {
     "esbuild@0.28.1": true,

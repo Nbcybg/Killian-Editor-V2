@@ -1936,7 +1936,7 @@ function cleanUpdateLeftovers() {
 H('update:source', () => ({
   owner: UPD.UPDATE_OWNER, repo: UPD.UPDATE_REPO,
   gitUrl: UPD.UPDATE_GIT_URL, homeUrl: UPD.UPDATE_HOME_URL, releasesUrl: UPD.UPDATE_RELEASES_URL,
-  current: app.getVersion(), platform: process.platform,
+  current: app.getVersion(), platform: process.platform, arch: process.arch,   // [alpha.release.1] mac มีไฟล์ x64 / arm64
   portableFile: portableExeFile(), canReplace: !!portableExeFile(),
 }));
 

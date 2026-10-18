@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0--alpha.170-ff6640"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0--alpha.release.1-ff6640"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-452f5e">
   <img alt="Electron" src="https://img.shields.io/badge/Electron-43-1e1250">
   <img alt="Languages" src="https://img.shields.io/badge/UI%20languages-7-ffc55c">
@@ -16,19 +16,50 @@
 
 ---
 
-## What's new in 2.0.0-alpha.170
+## Download
 
-> Only the latest release is listed here. The full history is in [CHANGELOG.md](CHANGELOG.md), and in the app under **Help → Changelog**.
+<p align="center">
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.1/Killian2-2.0.0-alpha.release.1-win-x64-portable.exe"><img alt="Download for Windows" src="https://img.shields.io/badge/Windows-x64%20%C2%B7%20portable%20.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.1/Killian2-2.0.0-alpha.release.1-mac-arm64.dmg"><img alt="Download for macOS (Apple Silicon)" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%C2%B7%20.dmg-1e1250?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.1/Killian2-2.0.0-alpha.release.1-mac-x64.dmg"><img alt="Download for macOS (Intel)" src="https://img.shields.io/badge/macOS-Intel%20%C2%B7%20.dmg-452f5e?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.1/Killian2-2.0.0-alpha.release.1-linux-x64.AppImage"><img alt="Download for Linux" src="https://img.shields.io/badge/Linux-x64%20%C2%B7%20AppImage-ff6640?style=for-the-badge&logo=linux&logoColor=white"></a>
+</p>
 
-- **Report bugs and request features from inside the app.** One dialog sends either a bug report or a feature request straight to the maintainers — no account needed — and **Help → Bug & request status** shows the public list with filters for type, status and version.
-- **The manuals are built in.** *Help → User Manual* and *Help → Extension Guide* open the complete guides inside the app, offline, in English or Thai — 16 chapters plus appendices listing every menu, shortcut and command.
-- **Language switching sticks.** The interface and the system menus stay in the language you picked after a restart (they used to drift apart).
-- **Buttons that lead to Settings land on the right page**, with the relevant field highlighted.
-- **A proper macOS build** — the app has its own icon, its requirements are measured on a real Mac (see [System requirements](#system-requirements)), and dialogs no longer "bounce" after you drag them.
-- **Story Starter is cleaner** — the setup-wizard-style artwork placeholders are gone, so each step uses the full width of the panel.
-- **About and credits tidied up** — credits list only what the app actually ships, plus a *Support the Project* link under **Help** and in the About dialog.
-- **A hands-on pre-release pass fixed what real use turned up** — pressing Enter in the find box no longer replaces the match, novel PDFs keep their chapter titles and scene breaks (`* * *` is no longer exported as an empty bullet), project-wide search finds Thai names wherever they appear, new Wiki entries link up in open scenes straight away, and theme names no longer reference other products.
-- **Panels dock instead of floating over your text.** A panel you open for the first time docks beside the writing area (or joins the tab group of a similar panel); it only floats when there is no room for it. The Export Hub also stays open after an export and shows the file it wrote, and novel PDFs use the book’s own typeface on the cover, with page numbers in a matching serif or sans-serif face instead of a typewriter one.
+<p align="center"><b>Version 2.0.0-alpha.release.1</b> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/tag/v2.0.0-alpha.release.1">release page</a> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases">all releases</a></p>
+
+| System | File | First launch |
+|---|---|---|
+| **Windows 10/11** (x64) | `Killian2-2.0.0-alpha.release.1-win-x64-portable.exe` | No installer — double-click to run. SmartScreen may warn about an unknown publisher: **More info → Run anyway**. |
+| **macOS 12+** — Apple Silicon (M1–M4) | `Killian2-2.0.0-alpha.release.1-mac-arm64.dmg` | Drag *Killian 2* to Applications. The app is not notarized yet: open it once with **right-click → Open**, or on macOS 15 use **System Settings → Privacy & Security → Open Anyway**. |
+| **macOS 12+** — Intel | `Killian2-2.0.0-alpha.release.1-mac-x64.dmg` | Same as above. Not sure which Mac you have? **Apple menu → About This Mac** — "Chip: Apple M…" means Apple Silicon. |
+| **Linux** (x64) | `Killian2-2.0.0-alpha.release.1-linux-x64.AppImage` | `chmod +x Killian2-2.0.0-alpha.release.1-linux-x64.AppImage` then run it. Some distributions need `libfuse2` for AppImages. |
+
+Your writing stays in plain Markdown + JSON files in a folder you choose — moving between machines or versions is just copying the folder. The app checks this page for new versions (**Help → Check for updates**) and only contacts the internet when you ask it to or turn on automatic checks.
+
+---
+
+## What's new in 2.0.0-alpha.release.1
+
+> The first release with builds for **Windows, macOS (Intel and Apple Silicon) and Linux**. Only this release is listed here; the full history is in [CHANGELOG.md](CHANGELOG.md) and in the app under **Help → Changelog**.
+
+**Fixed after real-world testing (including AI with a real provider)**
+
+- **Thai in screenplay PDFs prints correctly.** Tone marks no longer vanish and words no longer overlap — every glyph the font substitutes is measured and positioned the way the font intends.
+- **AI tools stop reporting "no problems" when the model said nothing.** Reasoning models that spend their whole budget thinking used to return an empty reply that the plot-hole checker read as "all clear". Empty replies are now explained failures, the app remembers which models think before answering, gives them room, and retries once with a larger budget.
+- **Redesigned AI tool dialogs** — fixed width, a progress bar and a Stop button; the plot-hole checker lets you choose the scope (project, book, chapter or scene) and shows how many scenes and tokens it will send first; "Insert" is labelled *Replace selection* when it replaces your selection.
+- **AI settings that are hard to get wrong** — providers are saved the moment you add or edit them, closing with unsaved changes asks first, presets for seven common providers, a choice between the OpenAI and Anthropic Messages APIs, and *Test connection* now sends a real chat request. HTTP 400 errors say whether a header is missing or the model uses another API.
+- **AI-written prose matches your own paragraphs** (no blank paragraph between every paragraph) and new scenes get a word count.
+- **Chat**: a project without sessions opens straight into a chat box; a failed reply no longer leaves an empty bubble and has a *Try again* button.
+- **The floating + button stays inside the writing area**, so it no longer covers the Send button of a panel docked on the right.
+- **Long menus scroll with arrows** like system menus — the 34-item scene menu fits any window, in the same order as before.
+- **Smaller things**: Wiki tabs come back after a restart · the scene count in the status bar updates after deleting · typing "ภายใน …" / "ภายนอก …" makes a scene heading · the rehearsal room keeps what you typed when you stop to create a cast · *Reset panel layout* can be undone · AI comes before Help in the menu bar · Story Starter folders take the story's first title · the in-app updater picks the right macOS build for Intel or Apple Silicon.
+
+**Also in this release** (from 2.0.0-alpha.170)
+
+- **Report bugs and request features from inside the app**, and follow their status under **Help → Bug & request status**.
+- **The manuals are built in** — *Help → User Manual* and *Help → Extension Guide*, offline, in English and Thai.
+- **Language switching sticks** after a restart, and buttons that lead to Settings land on the right page.
+- **Panels dock beside the writing area** instead of floating over your text; the Export Hub stays open and shows the file it wrote.
 
 ---
 
@@ -227,7 +258,8 @@ Package a distributable:
 
 ```bash
 npm run dist        # Windows x64 portable .exe  → dist/
-npm run dist:mac    # macOS Intel x64 .dmg       → dist/
+npm run dist:mac    # macOS .dmg — Intel x64 + Apple Silicon arm64 (run on a Mac) → dist/
+npm run dist:linux  # Linux x64 AppImage        → dist/
 npm run dist:dir    # unpacked Windows build, for quick local testing
 ```
 

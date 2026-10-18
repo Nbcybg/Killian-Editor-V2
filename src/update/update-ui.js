@@ -54,7 +54,7 @@ export async function checkForUpdates({ silent = false } = {}) {
 
   const info = decideUpdate({
     current: src.current, releases: res.releases, manifestVersion: res.manifestVersion,
-    skip: cfg.updateSkip, platform: src.platform,
+    skip: cfg.updateSkip, platform: src.platform, arch: src.arch || '',
   });
   await saveCfg({ updateLast: Date.now(), updateLastVersion: info.version || '' });
 

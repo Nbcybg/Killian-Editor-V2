@@ -1,0 +1,91 @@
+# สร้างตัวโปรแกรมทุกระบบแล้วแนบเข้า GitHub Release — [2.0.0-alpha.release.1]
+#
+# ทำงานเมื่อ push tag ที่ขึ้นต้นด้วย v (เช่น v2.0.0-alpha.release.1) หรือสั่งเองจากแท็บ Actions → release → Run workflow
+#   1) สร้าง Release ของ tag นั้น (ถ้ายังไม่มี) ด้วยข้อความจาก .github/release-notes.md
+#   2) สร้างตัวโปรแกรมบนเครื่องของแต่ละระบบ แล้วแนบไฟล์เข้า Release เดียวกัน
+#        Windows  → Killian2-<ver>-win-x64-portable.exe
+#        macOS    → Killian2-<ver>-mac-x64.dmg (Intel) + Killian2-<ver>-mac-arm64.dmg (Apple Silicon)   (.dmg สร้างได้บน macOS เท่านั้น)
+#        Linux    → Killian2-<ver>-linux-x64.AppImage
+#   ชื่อไฟล์มาจาก build.*.artifactName ใน package.json — ปุ่มดาวน์โหลดใน README ชี้ชื่อเหล่านี้ตรง ๆ
+#   ตัวอัปเดตในโปรแกรมเลือกไฟล์จากชื่อเดียวกัน (src/update/update-check.js → pickAsset)
+#
+# ยังไม่เซ็น/ไม่ notarize (ไม่มีใบรับรอง) — README บอกวิธีเปิดครั้งแรกของแต่ละระบบไว้แล้ว
+# ไม่มีข้อความจากผู้ใช้ถูกนำไปรันเป็นคำสั่ง — ใช้แค่ชื่อ tag ของรีโปเอง
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'tag ที่จะสร้าง/แนบไฟล์ เช่น v2.0.0-alpha.release.1'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - name: Create the release (if missing)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG มีอยู่แล้ว"
+          else
+            gh release create "$TAG" --verify-tag --title "Killian 2 ${TAG#v}" --notes-file .github/release-notes.md
+          fi
+
+  build:
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: --win portable --x64
+            files: dist/*.exe
+          - os: macos-latest
+            target: --mac dmg --x64 --arm64
+            files: dist/*.dmg
+          - os: ubuntu-latest
+            target: --linux AppImage --x64
+            files: dist/*.AppImage
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Bundle
+        run: node build.js
+      - name: Package
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder ${{ matrix.target }} --publish never
+      - name: Attach to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist
+          gh release upload "$TAG" ${{ matrix.files }} --clobber

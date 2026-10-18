@@ -123,11 +123,24 @@ var ASSET_RULES = {
   mac: [/\.dmg$/i, /mac.*\.zip$/i, /darwin.*\.zip$/i],
   linux: [/\.appimage$/i, /linux.*\.zip$/i, /\.tar\.gz$/i]
 };
-function pickAsset(assets, plat) {
+var ARCH_NAME = {
+  arm64: /(arm64|aarch64|apple[-_ ]?silicon)/i,
+  x64: /(x64|x86[-_]?64|amd64|intel)/i
+};
+function otherArch(name, arch) {
+  return Object.keys(ARCH_NAME).some((k) => k !== arch && ARCH_NAME[k].test(name) && !ARCH_NAME[arch].test(name));
+}
+function pickAsset(assets, plat, arch = "") {
   const list = (assets || []).filter((a) => a && a.name && isAllowedAssetUrl(a.browser_download_url));
+  const want = ARCH_NAME[arch] ? arch : "";
   for (const re of ASSET_RULES[platformKey(plat)] || []) {
-    const hit = list.find((a) => re.test(String(a.name)));
-    if (hit) return hit;
+    const hits = list.filter((a) => re.test(String(a.name)));
+    if (!hits.length) continue;
+    if (!want) return hits[0];
+    const exact = hits.find((a) => ARCH_NAME[want].test(String(a.name)));
+    if (exact) return exact;
+    const neutral = hits.find((a) => !otherArch(String(a.name), want));
+    if (neutral) return neutral;
   }
   return null;
 }
@@ -143,6 +156,7 @@ function decideUpdate({
   manifestVersion = "",
   skip = "",
   platform = "win32",
+  arch = "",
   allowPrerelease = true
 } = {}) {
   const rel = pickRelease(releases, { allowPrerelease });
@@ -161,7 +175,7 @@ function decideUpdate({
   };
   if (rel && isNewer(version, current)) {
     if (skip && cmpVersion(skip, version) === 0) return { ...base, status: "skipped" };
-    const asset = pickAsset(rel.assets, platform);
+    const asset = pickAsset(rel.assets, platform, arch);
     if (asset) {
       return {
         ...base,

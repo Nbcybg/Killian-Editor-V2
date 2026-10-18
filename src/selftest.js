@@ -11307,7 +11307,7 @@ export async function runTest(projectPath) {
       const txt = ov.textContent;
       check('[76-21] กล่องเกี่ยวกับพูดถึง Claude + DeepSeek', txt.includes('Claude') && txt.includes('DeepSeek'));
       check('[76-25] กล่องเกี่ยวกับโชว์เลขรุ่นจริง (preload sandbox อ่าน package.json ไม่ได้)',
-            /alpha\.\d+/.test(txt), APP_VERSION);
+            /^\d+\.\d+\.\d+-/.test(APP_VERSION) && txt.includes(APP_VERSION), APP_VERSION);   // [alpha.release.1] เทียบเลขรุ่นจริง ไม่ฝังรูป alpha.<เลข>
       check('[76-22] แสดงสัญญาอนุญาตของไลบรารี', ov.querySelectorAll('.k-credit-lic').length >= 8,
             ov.querySelectorAll('.k-credit-lic').length);
       // "มองเห็นจริงไหม" ต้องวัด opacity/visibility/ขนาด ไม่ใช่แค่ display (บทเรียน K-1)
@@ -11578,6 +11578,38 @@ export async function runTest(projectPath) {
                 found170.ok === true && found170.holes.some((h) => /MOCK-HOLE/.test(h.description)), JSON.stringify(found170.holes));
           PU.resetThinkingMemory();
         }
+      }
+
+      // ══ [alpha.170] เมนูที่ยาวเกินจอ = ลูกศรเลื่อนบน/ล่าง (เมนูคลิกขวาของฉาก 34 รายการ: "ลบ" เคยอยู่ใต้ขอบจอ) ══
+      {
+        const n170 = Math.ceil(window.innerHeight / 20) + 20;      // ยาวเกินจอแน่ ๆ ทุกขนาดหน้าต่าง
+        const items170 = Array.from({ length: n170 }, (_, i) => ({ label: 'MENU-ROW-' + i, click: () => {} }));
+        items170.splice(3, 0, { label: 'MENU-SUB', sub: () => [{ label: 'x', click: () => {} }] });
+        popupMenu(40, 40, items170);
+        await new Promise((r) => setTimeout(r, 60));
+        const m170 = [...document.querySelectorAll('.k-menu')].pop();
+        const shown170 = (sel) => { const x = m170 && m170.querySelector(sel); return !!x && getComputedStyle(x).display !== 'none' && x.getBoundingClientRect().width > 40; };
+        check('[170-M] ★ เมนูยาวเกินจอมีลูกศรเลื่อนล่าง (กว้างเต็มเมนู) · ยังไม่มีลูกศรบน',
+              !!m170 && m170.classList.contains('k-menu-arrows') && shown170('.k-menu-scroll-down') && !shown170('.k-menu-scroll-up'));
+        check('[170-M] ลูกศรเลื่อนไม่ใช่รายการ (คีย์บอร์ด/การนับรายการไม่เห็น)',
+              m170.querySelectorAll(':scope > .k-menu-item').length === n170 + 1 && !m170.querySelector('.k-menu-scroll.k-menu-item'));
+        const subArrow170 = [...m170.querySelectorAll('.k-menu-item')].find((x) => x.textContent.includes('MENU-SUB'));
+        check('[170-M] ลูกศรของเมนูย่อย (▸) ยังมองเห็น — ชื่อคลาสต้องไม่ชนกับลูกศรเลื่อน',
+              !!subArrow170 && !!subArrow170.querySelector('.k-menu-arrow') && getComputedStyle(subArrow170.querySelector('.k-menu-arrow')).display !== 'none');
+        m170.querySelector('.k-menu-scroll-down').click();
+        await new Promise((r) => setTimeout(r, 60));
+        check('[170-M] ★ คลิกลูกศรล่าง = เลื่อนลงทีละหน้า แล้วลูกศรบนโผล่', m170.scrollTop > 40 && shown170('.k-menu-scroll-up'), m170.scrollTop);
+        m170.scrollTop = m170.scrollHeight;
+        await new Promise((r) => setTimeout(r, 60));
+        const lastRow170 = [...m170.querySelectorAll('.k-menu-item')].pop().getBoundingClientRect();
+        check('[170-M] ★ เลื่อนถึงท้าย: รายการสุดท้ายอยู่ในจอทั้งแถว และลูกศรล่างหายไป',
+              lastRow170.bottom <= window.innerHeight && !shown170('.k-menu-scroll-down'), JSON.stringify([lastRow170.bottom, window.innerHeight]));
+        closeMenu();
+        popupMenu(40, 40, [{ label: 'สั้น', click: () => {} }, { label: 'สั้น 2', click: () => {} }]);
+        await new Promise((r) => setTimeout(r, 40));
+        const short170 = [...document.querySelectorAll('.k-menu')].pop();
+        check('[170-M] เมนูสั้นไม่มีลูกศร', !!short170 && !short170.querySelector('.k-menu-scroll'));
+        closeMenu();
       }
 
       // ---- UI ของ AI ต้องเรียกเอนจินที่เทสไว้ ไม่ใช่ยิง prompt เอง (ข้อ 73–76) ----
@@ -37463,7 +37495,7 @@ export async function runTest(projectPath) {
           const ttlOf = () => (cl.querySelector('.k-cl-title') || {}).textContent || '';
           check('[169-BH] ★★ กล่อง "มีอะไรใหม่": เลือกรุ่นได้ · เปิดที่รุ่นล่าสุด · ไม่ใช่ <pre> ของ Markdown ดิบ',
                 cl.classList.contains('k-changelog-dlg') && cl.querySelectorAll('.k-changelog-sel option').length > 50
-                && /^alpha\.\d+/.test(ttlOf()) && !cl.querySelector('pre.k-changelog') && cl.querySelectorAll('.k-changelog-rich > *').length > 3, ttlOf().slice(0, 60));
+                && /^alpha\.(release\.)?\d+/.test(ttlOf()) && !cl.querySelector('pre.k-changelog') && cl.querySelectorAll('.k-changelog-rich > *').length > 3, ttlOf().slice(0, 60));
           const leafTxt = [...cl.querySelectorAll('.k-changelog-rich *')].filter((n) => !n.children.length && n.tagName !== 'CODE' && n.tagName !== 'PRE').map((n) => n.textContent).join('\n');
           check('[169-BH] ★ กล่อง "มีอะไรใหม่": ไม่มี ** / หัว ## / เส้นตาราง |---| เป็นตัวหนังสือ', !/\*\*[^*\n]+\*\*|^#{2,} |\|-{3,}\|/m.test(leafTxt),
                 (leafTxt.match(/\*\*[^*\n]+\*\*|^#{2,} .*|\|-{3,}\|/m) || [''])[0].slice(0, 80));

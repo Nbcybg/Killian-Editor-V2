@@ -513,12 +513,48 @@ function placeMenu(m, x, y) {
   m.style.maxHeight = Math.max(120, window.innerHeight - 16) + 'px';
   // [alpha.170 · bug hunt 5] เมนูยาว = แถวแน่นขึ้น · ยังล้นจอ = มีเงาจางที่ขอบล่างบอกว่ายังมีรายการ (หายเมื่อเลื่อนถึงสุด)
   if (m.children.length > 22) m.classList.add('k-menu-dense');
-  const syncMore = () => m.classList.toggle('k-menu-more', m.scrollHeight - m.clientHeight - m.scrollTop > 4);
+  const syncMore = () => {
+    m.classList.toggle('k-menu-more', m.scrollHeight - m.clientHeight - m.scrollTop > 4);
+    m.classList.toggle('k-menu-less', m.scrollTop > 4);
+  };
+  menuScrollArrows(m);
   syncMore();
   if (!m._k2more) { m._k2more = 1; m.addEventListener('scroll', syncMore, { passive: true }); }
   const r = m.getBoundingClientRect();
   m.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
   m.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 8)) + 'px';
+}
+
+/**
+ * [alpha.170] เมนูที่ยาวเกินจอ (เมนูคลิกขวาของฉากมี 34 รายการ) → ลูกศรบน/ล่างแบบเมนูของระบบ
+ * ชี้ค้าง = เลื่อนต่อเนื่อง · คลิก = เลื่อนทีละหน้า · ลูกศรโผล่เฉพาะฝั่งที่ยังมีรายการ
+ * เดิมเป็นแถบเลื่อนบาง ๆ + เงาจางที่ขอบล่าง — ที่จอสูง 900 "ลบ" อยู่ใต้ขอบโดยไม่มีอะไรบอกชัด ๆ
+ * ลำดับรายการไม่เปลี่ยน (สเปกของผู้ใช้ใน tree-menu-spec.js) · ลูกศรไม่ใช่ .k-menu-item (คีย์บอร์ด/เทสไม่นับ)
+ */
+function menuScrollArrows(m) {
+  if (m._k2arrows || m.scrollHeight - m.clientHeight <= 4) return false;
+  m._k2arrows = 1;
+  m.classList.add('k-menu-arrows');
+  const mk = (dir) => {
+    const a = document.createElement('div');
+    a.className = 'k-menu-scroll k-menu-scroll-' + dir;
+    a.setAttribute('aria-hidden', 'true');
+    a.textContent = gi(dir === 'up' ? 'chevron-up' : 'chevron-down');
+    let raf = 0;
+    const step = () => { m.scrollTop += dir === 'up' ? -9 : 9; raf = requestAnimationFrame(step); };
+    const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
+    a.addEventListener('mouseenter', () => { stop(); raf = requestAnimationFrame(step); });
+    a.addEventListener('mouseleave', stop);
+    a.addEventListener('mousedown', (e) => e.preventDefault());       // ไม่ดึงโฟกัสจากรายการ
+    a.addEventListener('click', (e) => {
+      e.stopPropagation();
+      m.scrollTop += (dir === 'up' ? -1 : 1) * Math.max(40, m.clientHeight - 60);
+    });
+    return a;
+  };
+  m.prepend(mk('up'));
+  m.append(mk('down'));
+  return true;
 }
 
 function closeSubsFrom(depth) {

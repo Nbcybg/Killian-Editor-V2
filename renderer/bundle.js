@@ -25160,7 +25160,11 @@ ${BLOCK_END}
   function placeMenu(m, x, y) {
     m.style.maxHeight = Math.max(120, window.innerHeight - 16) + "px";
     if (m.children.length > 22) m.classList.add("k-menu-dense");
-    const syncMore = () => m.classList.toggle("k-menu-more", m.scrollHeight - m.clientHeight - m.scrollTop > 4);
+    const syncMore = () => {
+      m.classList.toggle("k-menu-more", m.scrollHeight - m.clientHeight - m.scrollTop > 4);
+      m.classList.toggle("k-menu-less", m.scrollTop > 4);
+    };
+    menuScrollArrows(m);
     syncMore();
     if (!m._k2more) {
       m._k2more = 1;
@@ -25169,6 +25173,40 @@ ${BLOCK_END}
     const r = m.getBoundingClientRect();
     m.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 8)) + "px";
     m.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 8)) + "px";
+  }
+  function menuScrollArrows(m) {
+    if (m._k2arrows || m.scrollHeight - m.clientHeight <= 4) return false;
+    m._k2arrows = 1;
+    m.classList.add("k-menu-arrows");
+    const mk2 = (dir2) => {
+      const a = document.createElement("div");
+      a.className = "k-menu-scroll k-menu-scroll-" + dir2;
+      a.setAttribute("aria-hidden", "true");
+      a.textContent = gi(dir2 === "up" ? "chevron-up" : "chevron-down");
+      let raf = 0;
+      const step = () => {
+        m.scrollTop += dir2 === "up" ? -9 : 9;
+        raf = requestAnimationFrame(step);
+      };
+      const stop = () => {
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0;
+      };
+      a.addEventListener("mouseenter", () => {
+        stop();
+        raf = requestAnimationFrame(step);
+      });
+      a.addEventListener("mouseleave", stop);
+      a.addEventListener("mousedown", (e) => e.preventDefault());
+      a.addEventListener("click", (e) => {
+        e.stopPropagation();
+        m.scrollTop += (dir2 === "up" ? -1 : 1) * Math.max(40, m.clientHeight - 60);
+      });
+      return a;
+    };
+    m.prepend(mk2("up"));
+    m.append(mk2("down"));
+    return true;
   }
   function closeSubsFrom(depth) {
     const keep = [];
@@ -120077,11 +120115,20 @@ ${h.text}`;
     if (s === "darwin" || s === "mac" || s === "macos") return "mac";
     return "linux";
   }
-  function pickAsset(assets, plat) {
+  function otherArch(name5, arch) {
+    return Object.keys(ARCH_NAME).some((k) => k !== arch && ARCH_NAME[k].test(name5) && !ARCH_NAME[arch].test(name5));
+  }
+  function pickAsset(assets, plat, arch = "") {
     const list3 = (assets || []).filter((a) => a && a.name && isAllowedAssetUrl(a.browser_download_url));
+    const want = ARCH_NAME[arch] ? arch : "";
     for (const re of ASSET_RULES[platformKey(plat)] || []) {
-      const hit = list3.find((a) => re.test(String(a.name)));
-      if (hit) return hit;
+      const hits = list3.filter((a) => re.test(String(a.name)));
+      if (!hits.length) continue;
+      if (!want) return hits[0];
+      const exact = hits.find((a) => ARCH_NAME[want].test(String(a.name)));
+      if (exact) return exact;
+      const neutral = hits.find((a) => !otherArch(String(a.name), want));
+      if (neutral) return neutral;
     }
     return null;
   }
@@ -120097,6 +120144,7 @@ ${h.text}`;
     manifestVersion = "",
     skip = "",
     platform: platform2 = "win32",
+    arch = "",
     allowPrerelease = true
   } = {}) {
     const rel = pickRelease(releases, { allowPrerelease });
@@ -120115,7 +120163,7 @@ ${h.text}`;
     };
     if (rel && isNewer(version2, current2)) {
       if (skip && cmpVersion(skip, version2) === 0) return { ...base4, status: "skipped" };
-      const asset = pickAsset(rel.assets, platform2);
+      const asset = pickAsset(rel.assets, platform2, arch);
       if (asset) {
         return {
           ...base4,
@@ -120166,7 +120214,7 @@ ${h.text}`;
     if (!total) return mb(received) + " MB";
     return mb(received) + " / " + mb(total) + " MB";
   }
-  var UPDATE_OWNER, UPDATE_REPO, R, UPDATE_GIT_URL, UPDATE_HOME_URL, UPDATE_RELEASES_URL, UPDATE_API_URL, UPDATE_MANIFEST_URL, UPDATE_ASSET_PREFIX, UPDATE_ISSUES_URL, UPDATE_ISSUES_API_URL, ASSET_RULES, OLD_SUFFIX;
+  var UPDATE_OWNER, UPDATE_REPO, R, UPDATE_GIT_URL, UPDATE_HOME_URL, UPDATE_RELEASES_URL, UPDATE_API_URL, UPDATE_MANIFEST_URL, UPDATE_ASSET_PREFIX, UPDATE_ISSUES_URL, UPDATE_ISSUES_API_URL, ASSET_RULES, ARCH_NAME, OLD_SUFFIX;
   var init_update_check = __esm({
     "src/update/update-check.js"() {
       UPDATE_OWNER = "Nbcybg";
@@ -120184,6 +120232,10 @@ ${h.text}`;
         win: [/portable.*\.exe$/i, /\.exe$/i, /win.*\.zip$/i],
         mac: [/\.dmg$/i, /mac.*\.zip$/i, /darwin.*\.zip$/i],
         linux: [/\.appimage$/i, /linux.*\.zip$/i, /\.tar\.gz$/i]
+      };
+      ARCH_NAME = {
+        arm64: /(arm64|aarch64|apple[-_ ]?silicon)/i,
+        x64: /(x64|x86[-_]?64|amd64|intel)/i
       };
       OLD_SUFFIX = ".k2old";
     }
@@ -120248,7 +120300,8 @@ ${h.text}`;
       releases: res.releases,
       manifestVersion: res.manifestVersion,
       skip: cfg.updateSkip,
-      platform: src2.platform
+      platform: src2.platform,
+      arch: src2.arch || ""
     });
     await saveCfg({ updateLast: Date.now(), updateLastVersion: info.version || "" });
     if (silent && !shouldNotify(info)) return info;
@@ -215406,7 +215459,7 @@ ${css}
         check2("[76-21] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E1E\u0E39\u0E14\u0E16\u0E36\u0E07 Claude + DeepSeek", txt.includes("Claude") && txt.includes("DeepSeek"));
         check2(
           "[76-25] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E42\u0E0A\u0E27\u0E4C\u0E40\u0E25\u0E02\u0E23\u0E38\u0E48\u0E19\u0E08\u0E23\u0E34\u0E07 (preload sandbox \u0E2D\u0E48\u0E32\u0E19 package.json \u0E44\u0E21\u0E48\u0E44\u0E14\u0E49)",
-          /alpha\.\d+/.test(txt),
+          /^\d+\.\d+\.\d+-/.test(APP_VERSION) && txt.includes(APP_VERSION),
           APP_VERSION
         );
         check2(
@@ -215753,6 +215806,52 @@ ${css}
             );
             PU.resetThinkingMemory();
           }
+        }
+        {
+          const n170 = Math.ceil(window.innerHeight / 20) + 20;
+          const items170 = Array.from({ length: n170 }, (_2, i5) => ({ label: "MENU-ROW-" + i5, click: () => {
+          } }));
+          items170.splice(3, 0, { label: "MENU-SUB", sub: () => [{ label: "x", click: () => {
+          } }] });
+          popupMenu(40, 40, items170);
+          await new Promise((r) => setTimeout(r, 60));
+          const m170 = [...document.querySelectorAll(".k-menu")].pop();
+          const shown170 = (sel2) => {
+            const x = m170 && m170.querySelector(sel2);
+            return !!x && getComputedStyle(x).display !== "none" && x.getBoundingClientRect().width > 40;
+          };
+          check2(
+            "[170-M] \u2605 \u0E40\u0E21\u0E19\u0E39\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19\u0E08\u0E2D\u0E21\u0E35\u0E25\u0E39\u0E01\u0E28\u0E23\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E25\u0E48\u0E32\u0E07 (\u0E01\u0E27\u0E49\u0E32\u0E07\u0E40\u0E15\u0E47\u0E21\u0E40\u0E21\u0E19\u0E39) \xB7 \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E25\u0E39\u0E01\u0E28\u0E23\u0E1A\u0E19",
+            !!m170 && m170.classList.contains("k-menu-arrows") && shown170(".k-menu-scroll-down") && !shown170(".k-menu-scroll-up")
+          );
+          check2(
+            "[170-M] \u0E25\u0E39\u0E01\u0E28\u0E23\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 (\u0E04\u0E35\u0E22\u0E4C\u0E1A\u0E2D\u0E23\u0E4C\u0E14/\u0E01\u0E32\u0E23\u0E19\u0E31\u0E1A\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E47\u0E19)",
+            m170.querySelectorAll(":scope > .k-menu-item").length === n170 + 1 && !m170.querySelector(".k-menu-scroll.k-menu-item")
+          );
+          const subArrow170 = [...m170.querySelectorAll(".k-menu-item")].find((x) => x.textContent.includes("MENU-SUB"));
+          check2(
+            "[170-M] \u0E25\u0E39\u0E01\u0E28\u0E23\u0E02\u0E2D\u0E07\u0E40\u0E21\u0E19\u0E39\u0E22\u0E48\u0E2D\u0E22 (\u25B8) \u0E22\u0E31\u0E07\u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19 \u2014 \u0E0A\u0E37\u0E48\u0E2D\u0E04\u0E25\u0E32\u0E2A\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E0A\u0E19\u0E01\u0E31\u0E1A\u0E25\u0E39\u0E01\u0E28\u0E23\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19",
+            !!subArrow170 && !!subArrow170.querySelector(".k-menu-arrow") && getComputedStyle(subArrow170.querySelector(".k-menu-arrow")).display !== "none"
+          );
+          m170.querySelector(".k-menu-scroll-down").click();
+          await new Promise((r) => setTimeout(r, 60));
+          check2("[170-M] \u2605 \u0E04\u0E25\u0E34\u0E01\u0E25\u0E39\u0E01\u0E28\u0E23\u0E25\u0E48\u0E32\u0E07 = \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E25\u0E07\u0E17\u0E35\u0E25\u0E30\u0E2B\u0E19\u0E49\u0E32 \u0E41\u0E25\u0E49\u0E27\u0E25\u0E39\u0E01\u0E28\u0E23\u0E1A\u0E19\u0E42\u0E1C\u0E25\u0E48", m170.scrollTop > 40 && shown170(".k-menu-scroll-up"), m170.scrollTop);
+          m170.scrollTop = m170.scrollHeight;
+          await new Promise((r) => setTimeout(r, 60));
+          const lastRow170 = [...m170.querySelectorAll(".k-menu-item")].pop().getBoundingClientRect();
+          check2(
+            "[170-M] \u2605 \u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E16\u0E36\u0E07\u0E17\u0E49\u0E32\u0E22: \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E2A\u0E38\u0E14\u0E17\u0E49\u0E32\u0E22\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E08\u0E2D\u0E17\u0E31\u0E49\u0E07\u0E41\u0E16\u0E27 \u0E41\u0E25\u0E30\u0E25\u0E39\u0E01\u0E28\u0E23\u0E25\u0E48\u0E32\u0E07\u0E2B\u0E32\u0E22\u0E44\u0E1B",
+            lastRow170.bottom <= window.innerHeight && !shown170(".k-menu-scroll-down"),
+            JSON.stringify([lastRow170.bottom, window.innerHeight])
+          );
+          closeMenu();
+          popupMenu(40, 40, [{ label: "\u0E2A\u0E31\u0E49\u0E19", click: () => {
+          } }, { label: "\u0E2A\u0E31\u0E49\u0E19 2", click: () => {
+          } }]);
+          await new Promise((r) => setTimeout(r, 40));
+          const short170 = [...document.querySelectorAll(".k-menu")].pop();
+          check2("[170-M] \u0E40\u0E21\u0E19\u0E39\u0E2A\u0E31\u0E49\u0E19\u0E44\u0E21\u0E48\u0E21\u0E35\u0E25\u0E39\u0E01\u0E28\u0E23", !!short170 && !short170.querySelector(".k-menu-scroll"));
+          closeMenu();
         }
         const plot = await Promise.resolve().then(() => (init_ai_plot(), ai_plot_exports));
         const dlg = await Promise.resolve().then(() => (init_ai_dialogue(), ai_dialogue_exports));
@@ -246230,7 +246329,7 @@ ${css}
           const ttlOf = () => (cl.querySelector(".k-cl-title") || {}).textContent || "";
           check2(
             '[169-BH] \u2605\u2605 \u0E01\u0E25\u0E48\u0E2D\u0E07 "\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E43\u0E2B\u0E21\u0E48": \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E23\u0E38\u0E48\u0E19\u0E44\u0E14\u0E49 \xB7 \u0E40\u0E1B\u0E34\u0E14\u0E17\u0E35\u0E48\u0E23\u0E38\u0E48\u0E19\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 \xB7 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 <pre> \u0E02\u0E2D\u0E07 Markdown \u0E14\u0E34\u0E1A',
-            cl.classList.contains("k-changelog-dlg") && cl.querySelectorAll(".k-changelog-sel option").length > 50 && /^alpha\.\d+/.test(ttlOf()) && !cl.querySelector("pre.k-changelog") && cl.querySelectorAll(".k-changelog-rich > *").length > 3,
+            cl.classList.contains("k-changelog-dlg") && cl.querySelectorAll(".k-changelog-sel option").length > 50 && /^alpha\.(release\.)?\d+/.test(ttlOf()) && !cl.querySelector("pre.k-changelog") && cl.querySelectorAll(".k-changelog-rich > *").length > 3,
             ttlOf().slice(0, 60)
           );
           const leafTxt = [...cl.querySelectorAll(".k-changelog-rich *")].filter((n2) => !n2.children.length && n2.tagName !== "CODE" && n2.tagName !== "PRE").map((n2) => n2.textContent).join("\n");

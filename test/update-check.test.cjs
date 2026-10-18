@@ -103,6 +103,18 @@ const ASSET = (name) => ({ name, size: 123,
   check('แมคได้ .dmg', U.pickAsset(assets, 'darwin').name === 'Killian2-mac.dmg');
   check('ลินุกซ์ได้ .AppImage', U.pickAsset(assets, 'linux').name === 'Killian2-linux.AppImage');
   check('ไม่มีไฟล์ของระบบนี้คืน null', U.pickAsset([ASSET('Killian2-mac.dmg')], 'win32') === null);
+  // [alpha.release.1] macOS มีสองไฟล์ — เลือกตามสถาปัตยกรรมของเครื่อง (ลำดับที่ GitHub ส่งมาต้องไม่มีผล)
+  const macTwo = [ASSET('Killian2-2.0.0-alpha.release.1-mac-x64.dmg'), ASSET('Killian2-2.0.0-alpha.release.1-mac-arm64.dmg')];
+  check('★ Apple Silicon ได้ไฟล์ arm64', U.pickAsset(macTwo, 'darwin', 'arm64').name.endsWith('mac-arm64.dmg'));
+  check('★ Intel ได้ไฟล์ x64 (ไม่ว่าลำดับไหน)', U.pickAsset(macTwo, 'darwin', 'x64').name.endsWith('mac-x64.dmg')
+        && U.pickAsset(macTwo.slice().reverse(), 'darwin', 'x64').name.endsWith('mac-x64.dmg'));
+  check('ไม่รู้สถาปัตยกรรม = ตัวแรกตามเดิม', U.pickAsset(macTwo, 'darwin').name.endsWith('mac-x64.dmg'));
+  check('มีแต่ไฟล์ของสถาปัตยกรรมอื่น = ไม่เลือก (ไม่ส่งไฟล์ผิดเครื่องให้)', U.pickAsset([macTwo[0]], 'darwin', 'arm64') === null);
+  check('ไฟล์ที่ไม่ระบุสถาปัตยกรรม = ใช้ได้ทุกเครื่อง', U.pickAsset([ASSET('Killian2-mac.dmg')], 'darwin', 'arm64').name === 'Killian2-mac.dmg');
+  check('ชื่อไฟล์ของรุ่นนี้: Windows / Linux', U.pickAsset([ASSET('Killian2-2.0.0-alpha.release.1-win-x64-portable.exe')], 'win32', 'x64')
+        && U.pickAsset([ASSET('Killian2-2.0.0-alpha.release.1-linux-x64.AppImage')], 'linux', 'x64'));
+  check('★ alpha.release.1 ใหม่กว่า alpha.170 (ผู้ใช้รุ่นเก่าเห็นอัปเดต)', U.cmpVersion('2.0.0-alpha.release.1', '2.0.0-alpha.170') === 1
+        && U.cmpVersion('v2.0.0-alpha.release.1', '2.0.0-alpha.release.1') === 0 && U.cmpVersion('2.0.0-alpha.release.2', '2.0.0-alpha.release.1') === 1);
   check('ไฟล์แนบที่ลิงก์มาจากที่อื่นถูกตัดทิ้งตั้งแต่ตอนเลือก',
         U.pickAsset([{ name: 'x.exe', browser_download_url: 'https://evil.example/x.exe' }], 'win32') === null);
   check('.exe ธรรมดาใช้ได้เมื่อไม่มีตัวที่ชื่อ portable',
