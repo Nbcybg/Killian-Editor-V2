@@ -64,9 +64,9 @@ Items ending in `…` open a dialog. Some items in the **Script** menu are only 
 - Italic
 - Underline
 - Strikethrough
-- Heading 1 (+)
-- Heading 2 (+)
-- Heading 3 (+)
+- Heading H1
+- Heading H2
+- Heading H3
 - Normal text
 - Block quote
 - Bulleted list
@@ -96,7 +96,7 @@ Items ending in `…` open a dialog. Some items in the **Script** menu are only 
 
 ## Script menu
 
-*(Screenplay tools. In alpha.169 the macOS system menu bar labels this menu "Chapter" in English — it is the same menu.)*
+*(Screenplay tools.)*
 
 - Show formatting (element outlines + end-of-line marks)
 - Upper/lower case (free)
@@ -218,16 +218,16 @@ Items ending in `…` open a dialog. Some items in the **Script** menu are only 
   - Sunny Lagoon
   - Neon Pop
   - Tropical
-  - Terracotta (Claude Code)
-  - Terminal Peach (opencode)
-  - Moonlight (Kimi)
-  - Code Dark (VS Code)
-  - Document Blue (Word)
-  - Grid Green (Excel)
-  - Slide Brick (PowerPoint)
-  - Platinum (Classic Macintosh)
-  - Tricolor Mobile Suit (Gundam)
-  - Gamer Pink (D.Va)
+  - Terracotta
+  - Terminal Peach
+  - Moonlight
+  - Code Dark
+  - Document Blue
+  - Grid Green
+  - Slide Brick
+  - Platinum
+  - Tricolor Mecha
+  - Gamer Pink
   - Fruit Salad
   - Flower Garden
   - Rainbow
@@ -325,6 +325,20 @@ Items ending in `…` open a dialog. Some items in the **Script** menu are only 
 - Full screen
 - Toggle Developer Tools *(only when running from source / in developer mode)*
 
+## AI menu
+
+- AI settings (provider · Credential · model · parameters)…
+- AI writing assistant panel
+- New chat session
+- Story Starter panel
+- Writing assistant (Expand/Summarize/Rewrite)…
+- Check for plot holes…
+- Generate dialogue…
+- Check character consistency…
+- Worldbuilding…
+- Summarise the project…
+- Suggest a title…
+
 ## Help menu
 
 - Getting Started
@@ -344,20 +358,6 @@ Items ending in `…` open a dialog. Some items in the **Script** menu are only 
   - Developer console…
   - Open Chromium DevTools
 - About Killian 2
-
-## AI menu
-
-- AI settings (provider · Credential · model · parameters)…
-- AI writing assistant panel
-- New chat session
-- Story Starter panel
-- Writing assistant (Expand/Summarize/Rewrite)…
-- Check for plot holes…
-- Generate dialogue…
-- Check character consistency…
-- Worldbuilding…
-- Summarise the project…
-- Suggest a title…
 
 ---
 

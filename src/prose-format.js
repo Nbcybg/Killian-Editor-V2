@@ -620,7 +620,11 @@ export function mdToProseBlocks(md, opts = {}) {
   for (const b of mdBlocks(md, { breakMarker })) {
     const push = (o) => out.push({ ...o, idx: i++ });
     if (b.kind === 'pagebreak') { push({ type: 'pagebreak', text: '' }); continue; }
-    if (b.kind === 'hr') { push({ type: 'hr', text: '' }); continue; }
+    if (b.kind === 'hr') {
+      // ตัวคั่นฉาก (`* * *`) = ย่อหน้ากึ่งกลาง เหมือนที่ mdToHtmlBody เขียนลงไฟล์จริง (กฎ "สองตัวแปลงแก้คู่กัน")
+      push(b.text ? { type: 'p', text: b.text, align: 'center' } : { type: 'hr', text: '' });
+      continue;
+    }
     // [alpha.159 · M7] พาตัวเลือกของรูป (กว้าง %/เต็มหน้า/ขอบมน) ไปด้วย — mdToHtmlBody ใช้มันจัดขนาดจริง
     if (b.kind === 'figure') { push({ type: 'figure', text: '', alt: b.alt, src: b.src, imgOpts: b.imgOpts }); continue; }
     if (b.kind === 'code') { push({ type: 'code', text: b.text, align: b.align }); continue; }

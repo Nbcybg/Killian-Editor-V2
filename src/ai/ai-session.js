@@ -398,6 +398,21 @@ export function contextCapFromError(text) {
 }
 
 /**
+ * [alpha.170] คำตอบที่ล้ม **ทั้งก้อน** (ไม่มีข้อความสักตัว) และเป็นข้อความล่าสุดของเซสชัน = กด "ลองใหม่" ได้
+ * (มีข้อความมาบ้างแล้ว = ปุ่ม "ต่อ" ของ canContinue · สองปุ่มนี้ไม่ขึ้นพร้อมกัน)
+ */
+export function canRetry(session, msg) {
+  if (!session || !msg || msg.role !== 'assistant' || msg.toolResult) return false;
+  if (!msg.error || String(msg.text || '').trim()) return false;
+  const last = [...(session.messages || [])].reverse().find((m) => !m.toolResult);
+  return !!last && last.id === msg.id;
+}
+/** ถอดข้อความหนึ่งก้อนออกจากเซสชัน (คืนเซสชันใหม่ · ไม่แก้ของเดิม) */
+export function dropMessage(session, msgId) {
+  return { ...session, messages: ((session && session.messages) || []).filter((m) => m.id !== msgId) };
+}
+
+/**
  * ข้อความที่จะส่งให้โมเดล + จำนวนที่ต้องตัดทิ้ง
  * เก็บ "ท้ายสุด" ไว้เสมอ (ตัดจากหัว) เพราะบทสนทนาต่อเนื่องอยู่ท้ายสุด
  * @returns {{messages: Array<{role,content}>, dropped: number, tokens: number}}
@@ -405,7 +420,10 @@ export function contextCapFromError(text) {
 export function buildChatMessages(session, opts = {}) {
   const { maxTokens = DEFAULT_HISTORY_TOKENS, estimate = estimateTokens,
           keepLast = HISTORY_KEEP_LAST } = opts;
-  const msgs = ((session && session.messages) || []).filter((m) => m.role === 'user' || m.role === 'assistant');
+  // [alpha.170] คำตอบที่ล้มทั้งก้อนถูกเก็บในเซสชันเป็นข้อความว่าง + error — ห้ามส่งกลับไปเป็น "ผู้ช่วยตอบว่าง"
+  // (ผู้ให้บริการหลายเจ้าปฏิเสธ content ว่างด้วย HTTP 400 = ล้มครั้งเดียวแล้วคุยต่อในเซสชันนั้นไม่ได้อีกเลย)
+  const msgs = ((session && session.messages) || []).filter((m) =>
+    m.role === 'user' || (m.role === 'assistant' && String(m.text || '').trim()));
   const out = [];
   let budget = maxTokens;
   let tokens = 0;

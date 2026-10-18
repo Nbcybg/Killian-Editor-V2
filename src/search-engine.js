@@ -88,6 +88,9 @@ function lineAt(offs, pos) {
 
 // ───────────────────────── Inverted Index ─────────────────────────
 
+// อักษรที่เขียนติดกันไม่เว้นวรรคระหว่างคำ (ไทย · ลาว · เขมร · พม่า · ญี่ปุ่น · จีน) — ตัวตัดคำเชื่อไม่ได้กับชื่อเฉพาะ
+const NO_SPACE_SCRIPT = /[\u0E00-\u0EFF\u1000-\u109F\u1780-\u17FF\u3040-\u30FF\u3400-\u9FFF]/;
+
 export class SearchIndex {
   constructor() {
     this.docs = new Map();        // id → { path, title, tags, status, body, offs, len }
@@ -104,7 +107,9 @@ export class SearchIndex {
     const offs = lineOffsets(body);
     // cache token ของชื่อเรื่องไว้ล่วงหน้า → ตอนให้คะแนนไม่ต้อง tokenize ซ้ำต่อเอกสาร (เร็วขึ้นมาก)
     const titleToks = new Set(tokenizeQuery(title));
-    this.docs.set(id, { path, title, tags, status, body, offs, len: body.length, titleToks });
+    // lc = เนื้อหาตัวเล็ก ไว้ให้ชั้น "ค้นแบบข้อความตรงตัว" ของคำไทย (ดู _docsFor)
+    this.docs.set(id, { path, title, tags, status, body, offs, len: body.length, titleToks,
+                        lc: String(body).toLowerCase(), titleLc: String(title).toLowerCase() });
     // index เนื้อหา (คำ → id → ตำแหน่ง)
     for (const { word, pos } of tokenize(body)) {
       let m = this.index.get(word);
@@ -162,7 +167,7 @@ export class SearchIndex {
     for (const id of ids) {
       const doc = this.docs.get(id);
       if (!doc) continue;
-      results.push(this._scoreDoc(id, doc, hitTokens, radius));
+      results.push(this._scoreDoc(id, doc, hitTokens, radius, [...hitTerms]));
     }
     results.sort((a, b) => b.score - a.score);
     return results.slice(0, limit);
@@ -199,26 +204,46 @@ export class SearchIndex {
   // เอกสารที่มีคำนี้ (รองรับ token ย่อยจาก tokenizer เดียวกัน — เช่น bigram)
   _docsFor(termText) {
     const toks = tokenizeQuery(termText);
-    if (!toks.length) return new Set();
     let acc = null;
     for (const t of toks) {
       const m = this.index.get(t);
       const s = m ? new Set(m.keys()) : new Set();
       acc = acc === null ? s : intersect(acc, s);
     }
-    return acc || new Set();
+    acc = acc || new Set();
+    // ══ [alpha.170 · bug hunt 5] ★ คำไทย (และอักษรที่ไม่เว้นวรรคระหว่างคำ) ต้องค้นแบบ "ข้อความตรงตัว" ด้วย ══
+    // ตัวตัดคำตัดตามบริบท: "มีนา" เดี่ยว ๆ = คำเดียว แต่ "มีนาหยุดเดิน" = มี|นา|หยุด|เดิน
+    // ดัชนีคำจึงไม่มี "มีนา" ของฉากนั้น → ค้นชื่อตัวละครแล้วฉากส่วนใหญ่ไม่ขึ้นเลย (เงียบ ไม่มี error)
+    // ภาษาที่เว้นวรรคระหว่างคำ (อังกฤษ ฯลฯ) ยังเทียบทั้งคำตามเดิม — "cat" ต้องไม่เจอ "category"
+    const raw = String(termText || '').trim().toLowerCase();
+    if (raw.length >= 2 && NO_SPACE_SCRIPT.test(raw)) {
+      for (const [id, d] of this.docs) {
+        if (!acc.has(id) && (d.lc.includes(raw) || d.titleLc.includes(raw))) acc.add(id);
+      }
+    }
+    return acc;
   }
 
   // ให้คะแนน + สร้าง snippet ต่อเอกสาร (hitTokens = token ที่ tokenize ไว้แล้ว, doc.titleToks = cache)
-  _scoreDoc(id, doc, hitTokens, radius) {
+  _scoreDoc(id, doc, hitTokens, radius, rawTerms = []) {
     const matches = [];
     let freq = 0;
     // รวมตำแหน่งของทุกคำที่ hit ในเนื้อหา
     const positions = [];
+    const seen = new Set();
     for (const t of hitTokens) {
       const m = this.index.get(t);
       const arr = m && m.get(id);
-      if (arr) { freq += arr.length; for (const p of arr) positions.push({ pos: p, len: t.length }); }
+      if (arr) { freq += arr.length; for (const p of arr) { positions.push({ pos: p, len: t.length }); seen.add(p); } }
+    }
+    // [alpha.170 · bug hunt 5] ตำแหน่งจากชั้น "ข้อความตรงตัว" ของคำไทย (ที่ตัวตัดคำหั่นกลางคำ) — ไม่นับซ้ำกับของดัชนีคำ
+    for (const rt of rawTerms) {
+      const raw = String(rt || '').trim().toLowerCase();
+      if (raw.length < 2 || !NO_SPACE_SCRIPT.test(raw)) continue;
+      for (let i = doc.lc.indexOf(raw); i !== -1; i = doc.lc.indexOf(raw, i + raw.length)) {
+        if (seen.has(i)) continue;
+        seen.add(i); freq++; positions.push({ pos: i, len: raw.length });
+      }
     }
     positions.sort((a, b) => a.pos - b.pos);
     // ทำ snippet จากตำแหน่งแรก ๆ (สูงสุด 3 จุด, ไม่ซ้อนกัน)
@@ -437,7 +462,9 @@ export function searchPathMatters(root, p) {
   if (!/\.(md|json)$/i.test(k)) return false;
   const r = String(root || '').replace(/\\/g, '/').replace(/\/+$/, '');
   if (!r || !k.toLowerCase().startsWith(r.toLowerCase() + '/')) return false;
-  const top = k.slice(r.length + 1).split('/')[0].toLowerCase();
+  const rel = k.slice(r.length + 1);
+  if (rel.split('/').slice(0, -1).some((seg) => seg.startsWith('.'))) return false;   // โฟลเดอร์จุดนำ = ไม่ใช่งานเขียน
+  const top = rel.split('/')[0].toLowerCase();
   return !SEARCH_SKIP_DIRS.some((d) => d.toLowerCase() === top);
 }
 
@@ -458,6 +485,9 @@ export async function indexProject(root, kapi, parseMd, opts = {}) {
     throwIfCancelled(opts.signal);
     for (const name of await kapi.listDirs(dir)) {
       if (depth === 0 && skip.has(String(name).toLowerCase())) continue;
+      // [alpha.170 · bug hunt 5] โฟลเดอร์จุดนำ (`.k2history` เก็บสำเนา .md ของทุกจุดย้อนกลับ) ไม่ใช่งานเขียน —
+      // เดิมฉากที่เปลี่ยนชื่อแล้วยังโผล่ในผลค้นหาด้วยชื่อเก่า (ผลชี้ไฟล์สำเนา ไม่ใช่ฉากจริง)
+      if (String(name).startsWith('.')) continue;
       const p = await kapi.join(dir, name);
       await walk(p, depth + 1);
     }

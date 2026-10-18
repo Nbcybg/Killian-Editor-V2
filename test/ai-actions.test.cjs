@@ -334,7 +334,8 @@ seed();
        JSON.stringify(rd).slice(0, 200));
     const w1 = await run('scene.write', { title: 'ฉากแรก', text: 'AI เขียนต่อ' });
     ck('[149] ★ แท็บค้างการแก้ → เขียนลงแท็บ ไม่แตะไฟล์', w1.ok && FS.get(scPath) === diskBefore
-       && fake.text === 'เนื้อในแท็บที่ยังไม่บันทึก\n\nAI เขียนต่อ' && log.some((x) => x[0] === 'set' && x[1] === true),
+       // [alpha.170 · บั๊ก 6] ร้อยแก้ว: ขึ้นย่อหน้าใหม่ด้วย \n เดียว (เดิม \n\n = มีย่อหน้าว่างแทรกก่อนข้อความของ AI)
+       && fake.text === 'เนื้อในแท็บที่ยังไม่บันทึก\nAI เขียนต่อ' && log.some((x) => x[0] === 'set' && x[1] === true),
        JSON.stringify(log) + ' ' + fake.text);
     fake.dirty = false; log.length = 0;
     const w2 = await run('scene.write', { title: 'ฉากแรก', text: 'รอบสอง' });

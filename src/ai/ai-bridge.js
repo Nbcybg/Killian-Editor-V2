@@ -39,19 +39,34 @@ function registryClient() {
   const empty = (error, extra = {}) => ({ ok: false, text: '', error, code: 'no-provider',
     usage: { input: 0, output: 0, total: 0 }, cost: { usd: 0 }, ...extra });
   const normUsage = (u) => ({ ...(u || {}), total: (u && (u.total || (u.input || 0) + (u.output || 0))) || 0 });
+  // [alpha.170] คำขอที่กำลังวิ่ง — กล่อง AI สั่งหยุดได้โดยไม่ต้องรู้รหัสคำขอ (เอนจินของแต่ละฟีเจอร์ไม่ได้ส่ง reqId มา)
+  const inflight = new Set();
+  let seq = 0;
+  const track = async (opts, run) => {
+    const reqId = opts.reqId || ('ai-' + Date.now().toString(36) + '-' + (++seq));
+    inflight.add(reqId);
+    try { return await run(reqId); } finally { inflight.delete(reqId); }
+  };
   return {
+    abortAll() {
+      const ids = [...inflight];
+      for (const id of ids) { try { if (kapi.httpAbort) kapi.httpAbort(id); } catch { /* คำขอจบไปแล้ว */ } }
+      return ids.length;
+    },
     async ready() { const p = await currentProvider(); return !!(p && p.model); },
     async complete(opts = {}) {
       const p = await currentProvider();
       if (!p) return empty(t('ui.aiProvider.cantSettingsProviderAI'));
       const messages = (opts.messages && opts.messages.length)
         ? opts.messages : [{ role: 'user', content: opts.prompt || '' }];
-      const r = await providerComplete(p, {
+      const r = await track(opts, (reqId) => providerComplete(p, {
         system: opts.system || '', messages, model: opts.model || undefined,
         temperature: opts.temperature, maxTokens: opts.maxTokens,
-        reqId: opts.reqId, timeoutMs: opts.timeoutMs,
-      });
-      if (!r.ok) return empty(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut });
+        reqId, timeoutMs: opts.timeoutMs,
+      }));
+      // [alpha.170 · บั๊ก 2] ส่งรหัส/รายละเอียดของความล้มเหลวต่อไปด้วย (เดิมทุกอย่างกลายเป็น 'no-provider')
+      if (!r.ok) return empty(r.error, { code: r.code || 'error', detail: r.detail, hints: r.hints,
+                                         status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut });
       const usage = normUsage(r.usage);
       // [alpha.149] ราคาตามเจ้าจริง (priceKeyOf) — เดิม `p.provider` ไม่มีอยู่ในทะเบียนใหม่ = ราคา OpenAI ทุกเจ้า
       return { ok: true, text: (r.text || '').trim(), thinking: r.thinking || '', usage,
@@ -63,16 +78,17 @@ function registryClient() {
       if (!p) return empty(t('ui.aiProvider.cantSettingsProviderAI'));
       const messages = (opts.messages && opts.messages.length)
         ? opts.messages : [{ role: 'user', content: opts.prompt || '' }];
-      const r = await providerStream(p, {
+      const r = await track(opts, (reqId) => providerStream(p, {
         system: opts.system || '', messages, model: opts.model || undefined,
         temperature: opts.temperature, maxTokens: opts.maxTokens,
-        reqId: opts.reqId, timeoutMs: opts.timeoutMs,
-      }, (c) => onChunk(c.delta || '', { partial: c.text }));
+        reqId, timeoutMs: opts.timeoutMs,
+      }, (c) => onChunk(c.delta || '', { partial: c.text })));
       // [alpha.159 · H13] สตรีมล้มกลางทาง = **คืนข้อความที่ไหลมาแล้ว** (`text` + ธง `partial`)
       // เดิมเซ็ตไว้ที่ `partialText` ซึ่งไม่มีผู้เรียกคนไหนอ่าน → ข้อความที่ผู้ใช้เห็นไหลมาหายตอนจบ
       if (!r.ok) {
         const got = r.text || '';
-        return empty(r.error, { status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut,
+        return empty(r.error, { code: r.code || 'error', detail: r.detail, hints: r.hints,
+                                status: r.status, aborted: !!r.aborted, timedOut: !!r.timedOut,
                                 text: got, thinking: r.thinking || '', partial: !!got.trim(), partialText: got });
       }
       const usage = normUsage(r.usage);
@@ -115,6 +131,7 @@ export function getAIClient() {
   // (stream ที่ตกไป complete เองจะไม่ต่อซ้ำ — withUserSystem เช็ค startsWith)
   const baseComplete = _client.complete.bind(_client);
   const baseStream = _client.stream.bind(_client);
+  _client.abortAll = () => 0;   // ทางเก่าไม่มีรหัสคำขอให้หยุด
   _client.complete = (o = {}) => baseComplete({ ...o, system: withUserSystem(o.system, getAISettings()) });
   _client.stream = (o = {}, cb) => baseStream({ ...o, system: withUserSystem(o.system, getAISettings()) }, cb);
   return _client;

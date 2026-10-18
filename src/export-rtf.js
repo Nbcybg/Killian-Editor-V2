@@ -249,7 +249,9 @@ export function generateProseRtf(md, opts = {}) {
         break;
       }
       case 'quote': out.push(base + '\\li720\\ri720\\sa120' + al + ' ' + runsOf(b.text, ['em']) + '\\par'); break;
-      case 'hr': out.push(base + '\\sa120\\brdrb\\brdrs\\brdrw10\\brsp20 \\par'); break;
+      // ตัวคั่นฉาก (`* * *`) = ดาวกึ่งกลาง ไม่ใช่เส้นขีด
+      case 'hr': if (b.text) { out.push(base + '\\qc\\sa120 ' + run(b.text, []) + '\\par'); break; }
+        out.push(base + '\\sa120\\brdrb\\brdrs\\brdrw10\\brsp20 \\par'); break;
       case 'code':
         for (const line of String(b.text).split('\n')) out.push('\\pard\\plain\\f1\\fs' + fs + ' ' + escapeRtf(line) + '\\par');
         break;

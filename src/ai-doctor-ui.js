@@ -43,7 +43,7 @@ export function renderDoctorLocal(id, L, h) {
       label: r.title || r.id, value: r.drag, display: r.drag, sceneId: r.id,
       sub: r.reasons.length ? reasonText(r.reasons, 'drag') : '',
       tone: r.drag >= DRAG_FLAG ? 'slow' : '',
-    }))));
+    })), { max: 100 }));   // [alpha.170 · บั๊ก 16] ค่าอืดเป็นสเกล 0–100
     for (const g of (L.runs || [])) {
       box.append(quoteRow(h, { title: t('ui.aia.slowRun'), meta: tf('ui.aia.runRange', g.from, g.to, g.count),
                                sceneId: g.sceneId, cls: 'aia-doc-warn' }));

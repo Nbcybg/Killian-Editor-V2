@@ -190,7 +190,7 @@ import { APP_VERSION, CREDITS, FEATURE_PANELS, INV_C, aboutDialog, activate, act
          pageScale, pickDraftTarget, plannerInst, pluginDisabled, pluginList, plugins,
          autoFitWidth, autoFitWidthOn, autoFitWidthRestore, currentPageScale, setAutoFitWidth, treeRowAction,
          preloadLangFontUrls, proseFormat, proseFormatSettings, proseIndentOn, proseLayoutEpoch,
-         proseMeasured, prosePageModel, refreshAllMentions, refreshAllSpell, refreshLineGutter,
+         proseMeasured, prosePageModel, refreshAllMentions, refreshAllSpell, refreshLineGutter, reloadWikiNames,
          refreshOutline, refreshSpView, refreshToolbar, refreshTreeQueued, relationDialog, reloadPlugins,
          reloadTabsFromDisk, removeElementsDialog, renderFabMenu, renderFeaturePanel, renderLogPanel,
          renderOpenFeaturePanels, renderPropsPanel, repaginateFast, repaginateNow, repaginateProseNow,
@@ -432,7 +432,7 @@ export async function runTest(projectPath) {
           !!spDisk87.meta.spMap && !!spDisk87.meta.spHash &&
           spDisk87.meta.spMap.length < orig.length / 4,
           spDisk87.meta.spMap + ' / ' + spDisk87.meta.spHash);
-    check('ปุ่มโหมดบน toolbar ขึ้น "บทหนัง"', $('#tb-mode').textContent.includes('บทหนัง'));
+    check('ปุ่มโหมดบน toolbar ขึ้น "บทภาพยนตร์"', $('#tb-mode').textContent.includes('บทภาพยนตร์'));
     const backAsk87 = await answerConvert(() => switchFormat('prose'), true);
     check('[87] ขากลับใช้แผนที่ที่จดไว้ = ไม่มีของหาย จึงไม่ถาม', !backAsk87.asked);
     check('สลับกลับเป็นนิยาย → editor นิยายกลับมา',
@@ -9030,7 +9030,8 @@ export async function runTest(projectPath) {
         const under = [...document.querySelectorAll('#app-root .k-panel[data-panel-id="tree"] [title]')]
           .find((e2) => e2.getBoundingClientRect().width > 10);
         const notesWas = isPanelOpen('notes');
-        if (!notesWas) { togglePanel('notes'); await w165(500); }
+        // [alpha.170 · รอบต่อ 7] เปิดครั้งแรก = ผนึกแล้ว — เทสนี้ต้องการแผง "ลอย" จึงขอลอยตรง ๆ
+        if (!notesWas) { showPanel('notes', { prefer: 'float' }); await w165(500); }
         const fpN = document.querySelector('.k-float-panel[data-panel-id="notes"]');
         if (under && fpN) {
           const ur = under.getBoundingClientRect();
@@ -11174,7 +11175,17 @@ export async function runTest(projectPath) {
         {
           showPanel('ai-chat');
           let cp4 = null;
-          for (let i = 0; i < 40 && !cp4; i++) { await sleep3(50); cp4 = document.querySelector('.ai-chat-search'); }
+          // [alpha.170] โปรเจกต์ที่ยังไม่มีเซสชัน: เปิดแผงครั้งแรกเข้าเซสชันฉบับร่างเลย → กด ← กลับหน้ารายการเหมือนผู้ใช้
+          for (let i = 0; i < 40 && !cp4; i++) {
+            await sleep3(50);
+            cp4 = document.querySelector('.ai-chat-search');
+            const back4 = !cp4 && document.querySelector('#ai-chat-body .ai-chat-back');
+            if (back4) {
+              check('[170-AI] เปิดแชทครั้งแรก (ยังไม่มีเซสชัน) มีช่องพิมพ์ทันที — ฉบับร่าง ยังไม่เขียนไฟล์',
+                    !!document.querySelector('#ai-chat-body textarea') && !!_chatState().cur && _chatState().cur._draft === true);
+              back4.click();
+            }
+          }
           check('[164-R4] เปิดแผงแชท AI ได้', !!cp4);
           if (cp4) {
             const panel = cp4.closest('.k-float-panel, .k-panel');
@@ -11515,6 +11526,57 @@ export async function runTest(projectPath) {
                 thunks.length >= 2 && r.thinking.includes('คิดขั้น 1'), 'thunks=' + thunks.length + ' thinking=' + r.thinking);
         } else {
           check('[115] (ข้าม) เซิร์ฟเวอร์ SSE จำลองไม่พร้อม — ไม่ได้เทสสตรีม', true, r.error || '');
+        }
+      }
+
+      // ══ [alpha.170 · ลองใช้จริง] ★ โมเดลที่คิดก่อนตอบ: คำตอบว่างต้องไม่ถูกอ่านเป็น "ไม่พบปัญหา" ══
+      // เจอบนแอปจริงกับผู้ให้บริการจริง: ตรวจ Plot Hole ได้ out=1500 think=1500 chars=0 แล้วกล่องขึ้น "ไม่พบจุดบกพร่องของพล็อต"
+      // เซิร์ฟเวอร์จำลอง (main.js): MOCK-STARVE = เพดาน < 3000 คิดจนหมดไม่เหลือคำตอบ · MOCK-BLANK = ตอบว่างเสมอ
+      {
+        const PU = await import('./ai/ai-provider-ui.js');
+        const { newProvider: np170 } = await import('./ai/ai-providers.js');
+        const plot170 = await import('./ai/ai-plot.js');
+        const prov170 = np170({ name: 'mock170', model: 'mock-model', params: { maxRetries: 0 },
+          credential: { name: 'mock', baseUrl: 'http://127.0.0.1:8931/v1', allowedDomains: ['127.0.0.1'] } });
+        const last170 = async () => { try { return JSON.parse((await kapi.httpFetch('http://127.0.0.1:8931/v1/last', { method: 'GET' })).body || '{}'); } catch { return {}; } };
+        const ask170 = (text, extra = {}) => PU.complete(prov170, { system: 's', messages: [{ role: 'user', content: text }],
+                                                                    noCompass: true, noUserSystem: true, ...extra });
+        PU.resetThinkingMemory();
+        const ping170 = await ask170('MOCK-STARVE ping', { maxTokens: 8000 });
+        if (!ping170.ok) {
+          check('[170-AI] (ข้าม) เซิร์ฟเวอร์ AI จำลองไม่พร้อม — ไม่ได้เทสคำตอบว่างแบบ end-to-end', true, ping170.error || '');
+        } else {
+          PU.resetThinkingMemory();
+          // 1) คิดจนโควตาหมด → ลองใหม่เองด้วยเพดานที่มากขึ้น แล้วได้คำตอบ
+          const r1 = await ask170('MOCK-STARVE ตรวจ', { maxTokens: 1500 });
+          const b1 = await last170();
+          check('[170-AI] ★ คิดจนโควตาหมด (เพดาน 1500) → ลองใหม่เองแล้วได้คำตอบ', r1.ok && /MOCK-HOLE/.test(r1.text), (r1.error || '') + ' | ' + r1.text);
+          check('[170-AI] ★ รอบลองใหม่ขอเพดานมากขึ้นจริง (≥ 3000)', Number(b1.max_tokens) >= 3000, String(b1.max_tokens));
+          // 2) จำไว้แล้ว: คำขอถัดไปของโมเดลเดียวกันเผื่อที่ให้คิดตั้งแต่รอบแรก
+          const r2 = await ask170('MOCK-STARVE อีกรอบ', { maxTokens: 1500 });
+          const b2 = await last170();
+          check('[170-AI] ★ โมเดลที่รู้แล้วว่าคิดก่อนตอบ: รอบถัดไปเผื่อที่ให้คิดตั้งแต่แรก', r2.ok && Number(b2.max_tokens) > 1500, String(b2.max_tokens));
+          // 3) คำตอบว่าง = ความล้มเหลวที่มีคำอธิบาย ไม่ใช่ ok + ข้อความว่าง
+          const r3 = await ask170('MOCK-BLANK', { maxTokens: 1500 });
+          check('[170-AI] ★ คำตอบว่าง = ล้มพร้อมคำอธิบาย (ไม่ใช่สำเร็จ + ข้อความว่าง)', r3.ok === false && r3.code === 'empty' && !!r3.error, JSON.stringify({ ok: r3.ok, code: r3.code, error: r3.error }));
+          // 4) ทางสตรีม (แชท · ผู้ช่วยเขียน) ได้กติกาเดียวกัน
+          PU.resetThinkingMemory();
+          const s1 = await PU.completeStream(prov170, { system: 's', messages: [{ role: 'user', content: 'MOCK-STARVE stream' }], maxTokens: 1500 }, () => {});
+          check('[170-AI] ★ สตรีม: คิดจนโควตาหมด → ลองใหม่เองแล้วได้คำตอบ', s1.ok && /MOCK-HOLE/.test(s1.text), (s1.error || '') + ' | ' + s1.text);
+          const s2 = await PU.completeStream(prov170, { system: 's', messages: [{ role: 'user', content: 'MOCK-BLANK stream' }], maxTokens: 1500 }, () => {});
+          check('[170-AI] ★ สตรีม: คำตอบว่าง = ล้มพร้อมคำอธิบาย', s2.ok === false && s2.code === 'empty', JSON.stringify({ ok: s2.ok, code: s2.code }));
+          // 5) ตัวตรวจ Plot Hole: AI ตอบว่าง ≠ "ไม่พบจุดบกพร่อง"
+          PU.resetThinkingMemory();
+          const client170 = { complete: (o) => ask170(o.prompt, { system: o.system, maxTokens: o.maxTokens, temperature: o.temperature }) };
+          const blank170 = await plot170.detectPlotHoles([], { client: client170, includeLocal: false,
+            scenes: [{ id: 'x1', title: 'ฉากทดสอบ', text: 'MOCK-BLANK เนื้อฉากทดสอบ' }] });
+          check('[170-AI] ★ ตรวจ Plot Hole: AI ตอบว่าง = รายงานว่าตรวจไม่สำเร็จ (ไม่ใช่ "ไม่พบจุดบกพร่อง")',
+                blank170.ok === false && blank170.failedBatches === 1 && !!blank170.error, JSON.stringify({ ok: blank170.ok, f: blank170.failedBatches, e: blank170.error }));
+          const found170 = await plot170.detectPlotHoles([], { client: client170, includeLocal: false,
+            scenes: [{ id: 'x2', title: 'ฉากทดสอบ', text: 'MOCK-STARVE เนื้อฉากทดสอบ' }] });
+          check('[170-AI] ★ ตรวจ Plot Hole กับโมเดลที่คิดก่อนตอบ: ได้ผลจริงหลังลองใหม่',
+                found170.ok === true && found170.holes.some((h) => /MOCK-HOLE/.test(h.description)), JSON.stringify(found170.holes));
+          PU.resetThinkingMemory();
         }
       }
 
@@ -14570,8 +14632,15 @@ export async function runTest(projectPath) {
           const btn = document.querySelector('.tb-menu[data-m="Script"]');
           check('[57a-3] แถบชื่อมีปุ่มเมนู "บท"', !!btn,
                 [...document.querySelectorAll('.tb-menu')].map((m) => m.dataset.m).join(','));
-          check('[57a-3] ปุ่มเมนู "บท" มีข้อความไทย (ไม่ใช่คีย์ i18n ดิบ)',
-                !!btn && btn.textContent.trim() === 'บท', btn && btn.textContent);
+          check('[57a-3] ปุ่มเมนู "บทภาพยนตร์" มีข้อความไทย (ไม่ใช่คีย์ i18n ดิบ)',
+                !!btn && btn.textContent.trim() === tt('ui.menu.script') && btn.textContent.trim() === 'บทภาพยนตร์', btn && btn.textContent);
+          // [alpha.170 · รอบต่อ 7] ผู้ใช้: "ก็ต้องใช้ บทภาพยนตร์ สิ" — เมนูระบบเคยยืมคีย์ของคำว่า chapter (`ui.common.chapter`)
+          // ไทยจึงชนกับ "บท" ของเล่ม และภาษาอื่นขึ้นว่า "Chapter" ทั้งที่ปุ่มบนแถบชื่อเขียนว่า "Script"
+          if (kapi.menuLabels) {
+            const tops57 = (await kapi.menuLabels()).filter((l) => !l.includes(' > '));
+            check('[170-R7] ★ เมนูระบบเรียกเมนูบทภาพยนตร์ชื่อเดียวกับปุ่มบนแถบชื่อ (ไม่ยืมคำว่า "บท" ของ chapter)',
+                  tops57.includes(tt('ui.menu.script')) && !tops57.includes(tt('ui.common.chapter')), tops57.join(' | '));
+          }
           // [alpha.162 · W4] ★★ เทียบ "สองทาง" กับเมนูจริงใน main.js — เดิมฮาร์ดโค้ดรายชื่อไว้เจ็ดตัว
           // จึงไม่มีใครจับได้ว่าเมนู Tools (เทียบบท · ตรวจคำซ้ำ · คลังคำพ้อง · แทนที่ทั้งโปรเจกต์ ·
           // สปรินต์ · ตรวจสุขภาพโปรเจกต์ · ชุดเครื่องมือผู้แปล) ไม่มีปุ่มเปิดบนแถบชื่อเลย
@@ -21328,6 +21397,17 @@ export async function runTest(projectPath) {
         showPanel('ai-chat');
         await renderFeaturePanel('ai-chat');
         await new Promise((r) => setTimeout(r, 200));
+        // [alpha.170] ยังไม่มีเซสชัน: เปิดแผงครั้งแรก = เซสชันฉบับร่างพร้อมช่องพิมพ์ (ครั้งเดียวต่อโปรเจกต์)
+        if (_chatState().view === 'session') {
+          check('[170-AI] เปิดแชทครั้งแรก (ยังไม่มีเซสชัน) มีช่องพิมพ์ทันที',
+                !!document.querySelector('#ai-chat-body textarea'));
+          check('[170-AI] เซสชันที่เปิดให้เองเป็นฉบับร่าง (ยังไม่เขียนไฟล์)',
+                !!_chatState().cur && _chatState().cur._draft === true);
+          _chatState().cur = null; _chatState().view = 'list';
+          await renderFeaturePanel('ai-chat');
+          await new Promise((r) => setTimeout(r, 200));
+          check('[170-AI] กลับหน้ารายการแล้วไม่ถูกดันเข้าเซสชันซ้ำ', _chatState().view === 'list', _chatState().view);
+        }
         const host = document.getElementById('ai-chat-body');
         check('[61-2] แผงแชทวาดเนื้อหาแล้ว', !!host && host.children.length > 0);
         check('[61-2] หน้ารายการมีช่องค้นหาเซสชัน', !!host.querySelector('.ai-chat-search'));
@@ -23410,12 +23490,12 @@ export async function runTest(projectPath) {
 
           // ── ขั้นแท็ก: กดปุ่มจริง → ต้องถูกบันทึกลงดิสก์เอง (สเปกข้อ 8) ──
           const tagBtn94 = [...document.querySelectorAll('#starter-body .st-tag-group .st-tag')]
-            .find((b) => b.textContent === 'fantasy');
+            .find((b) => b.dataset.tag === 'fantasy');
           check('[a94] ขั้นแรกมีแท็กสำเร็จรูปให้กด', !!tagBtn94);
           tagBtn94.click(); await wait62(120);
           check('[a94] กดแท็กแล้วติดสถานะเลือกทันที',
                 [...document.querySelectorAll('#starter-body .st-tag-picked .st-tag')]
-                  .some((x) => x.textContent.startsWith('fantasy')));
+                  .some((x) => x.dataset.tag === 'fantasy'));
           check('[a94] บันทึกอัตโนมัติ: มีคิวค้างอยู่จริง (ไม่ได้เขียนทุกคีย์กด)', SS.pendingSaves() > 0);
           await SS.flushStarterSaves();
           const onDisk94 = await SS.readStarter(st94.slug);
@@ -24208,6 +24288,18 @@ export async function runTest(projectPath) {
       // ทางแก้ตามที่ผู้ใช้กำหนด: เปิดแผงครั้งแรก = **ลอยกลางจอ** ไม่ใช่ผนึก → ไม่แตะเลย์เอาต์เลย
       {
         resetPanels(); await wait62(260);
+        {
+          // [alpha.170 · bug hunt 5] (0) เลย์เอาต์ตั้งต้น · ยังไม่มีแผงชั้นเดียวกันเปิดอยู่ → ผนึกเป็นคอลัมน์ใหม่ข้างพื้นที่เขียน
+          const w0 = (id) => { const e = document.querySelector(`#app-root .k-panel[data-panel-id="${id}"]`); return e ? Math.round(e.getBoundingClientRect().width) : 0; };
+          const tree0 = w0('tree');
+          togglePanel('comments'); await wait62(420);
+          check('[170-BH5] ★★ แผงแรกสุดของฝั่งนั้น → ผนึกเป็นคอลัมน์ใหม่ข้างพื้นที่เขียน (ไม่ลอย) · Explorer กว้างเท่าเดิม',
+                w0('comments') > 200 && !document.querySelector('.k-float-panel[data-panel-id="comments"]')
+                && Math.abs(w0('tree') - tree0) <= 3 && w0('docs') >= PL.MIN_CANVAS_PX - 2,
+                'comments=' + w0('comments') + ' tree ' + tree0 + '→' + w0('tree') + ' docs=' + w0('docs'));
+          togglePanel('comments'); await wait62(260);
+          resetPanels(); await wait62(260);
+        }
         showPanel('props', { targetId: 'docs', side: 'right', forceMove: true });
         await wait62(340);
         const wOf = (id) => {
@@ -24224,20 +24316,42 @@ export async function runTest(projectPath) {
         check('[66r7] เตรียมสภาพ: ตั้งแผง A ไว้ที่ ~450px', Math.abs(aW - 450) <= 8, String(aW));
 
         // เปิดแผงอื่นผ่านทางเข้าฝั่งผู้ใช้ (togglePanel = เมนู/ปุ่ม toolbar)
+        const room7 = wOf('docs') - PL.MIN_CANVAS_PX;      // ที่ที่พื้นที่เขียนให้ได้ ณ ตอนกดเปิด
         togglePanel('kanban');
         await wait62(420);
+        // ══ [alpha.170 · bug hunt 5] ผู้ใช้เปลี่ยนกติกา: "แผงที่เปิดครั้งแรก ให้เป็น dock" ══
+        // เดิม (66r7) = ลอยกลางจอ เพื่อไม่บีบแผงที่จัดไว้ · ตอนนี้ = ผนึก โดยเหตุผลเดิมยังต้องจริง: **แผง A ขนาดไม่เปลี่ยน**
+        //   · มีแผงชั้นเดียวกัน (แคบ/กว้าง) ผนึกอยู่ → เป็นแท็บในกลุ่มนั้น
+        //   · ไม่มี → คอลัมน์ใหม่ เอาที่จากพื้นที่เขียนเท่านั้น · ที่ไม่พอขั้นต่ำของแผง (กระดานกว้าง 800) → ลอยตามเดิม
+        // (1) แผงกว้างตอนที่ไม่พอ → ยังลอย และไม่แตะแผง A
         const fl7 = document.querySelector('.k-float-panel[data-panel-id="kanban"]');
-        check('[66r7] เปิดแผงใหม่ผ่านเมนู → ได้ **แผงลอย** ไม่ใช่ผนึกเข้า dock', !!fl7);
-        if (fl7) {
-          const r7 = fl7.getBoundingClientRect();
-          const cx = Math.abs((r7.left + r7.width / 2) - window.innerWidth / 2);
-          check('[66r7] และลอยอยู่กลางจอ', cx < 40, String(Math.round(cx)));
-        }
+        const dk7k = document.querySelector('#app-root .k-panel[data-panel-id="kanban"]');
+        check('[170-BH5] ★ แผงกว้างเปิดครั้งแรก: พื้นที่เขียนให้ที่ไม่ถึงขั้นต่ำของแผง → ลอย · พอ → ผนึก (ไม่มีทางได้แถบแคบที่ใช้ไม่ได้)',
+              room7 < 640 ? (!!fl7 && !dk7k) : (!fl7 && !!dk7k),
+              'room=' + room7 + ' float=' + !!fl7 + ' dock=' + !!dk7k);
         check('[66r7] **เปิดแผงใหม่แล้วแผง A ขนาดไม่เปลี่ยนเลย** (อาการที่ผู้ใช้เจอ)',
               Math.abs(wOf('props') - aW) <= 2, `${aW} → ${wOf('props')}`);
         check('[66r7] เปิดแผงใหม่แล้วไม่เกิดช่องว่างค้าง', auditPanelGaps().length === 0,
               JSON.stringify(auditPanelGaps()));
         togglePanel('kanban'); await wait62(280);
+        // (2) แผงแคบใบใหม่ → เป็นแท็บในกลุ่มของแผง A (ชั้นเดียวกัน) ไม่ลอยทับเนื้อเรื่อง
+        togglePanel('backlinks'); await wait62(420);
+        const bl7 = document.querySelector('#app-root .k-panel[data-panel-id="backlinks"]');
+        const grp7 = bl7 && bl7.closest('.k-tab-group');
+        check('[170-BH5] ★★ เปิดแผงครั้งแรกผ่านเมนู → **ผนึก** เป็นแท็บในกลุ่มของแผงชั้นเดียวกัน ไม่ใช่แผงลอยทับเนื้อเรื่อง',
+              !!bl7 && bl7.getBoundingClientRect().width > 0 && !!grp7
+              && !document.querySelector('.k-float-panel[data-panel-id="backlinks"]'),
+              'dock=' + !!bl7 + ' grp=' + !!grp7);
+        check('[170-BH5] ผนึกแล้วพื้นที่เขียนยังไม่แคบกว่าขั้นต่ำ', wOf('docs') >= PL.MIN_CANVAS_PX - 2, String(wOf('docs')));
+        togglePanel('backlinks'); await wait62(260);
+        // (3) แผงที่ผู้ใช้เคยทำให้ลอยไว้เอง → เปิดใหม่กลับไปลอยที่เดิม (ไม่ถูกบังคับผนึก)
+        showPanel('notes', { prefer: 'float' }); await wait62(300);
+        hidePanel('notes'); await wait62(220);
+        togglePanel('notes'); await wait62(360);
+        check('[170-BH5] แผงที่เคยลอยไว้ → เปิดใหม่ยังลอย (เคารพที่ผู้ใช้จัดไว้)',
+              !!document.querySelector('.k-float-panel[data-panel-id="notes"]'));
+        togglePanel('notes'); await wait62(220);
+        showPanel('props'); await wait62(260);        // แผง A กลับมาเป็นแท็บที่เปิดอยู่ ก่อนเทสกลุ่มข้างล่าง
 
         // กฎกลุ่มบนจอจริง: เอาแผงมา group กับ A → ขนาดกลุ่มต้องยึด A (ไม่โตขึ้น ไม่หดลง)
         getPanelManager().dockPanel('notes', 'center', 'props');
@@ -24938,7 +25052,8 @@ export async function runTest(projectPath) {
                 n17 > 0 && !!document.querySelector('.k-menu'), String(n17));
           const labels17 = [...document.querySelectorAll('.k-menu .k-menu-item')].map((d) => d.textContent).join('|');
           check('[62-17] เมนูมีคำสั่ง "ตรวจใหม่" และ "ตั้งค่า"',
-                /ตรวจใหม่/.test(labels17) && /ตั้งค่า/.test(labels17), labels17);
+                // [alpha.170 · รอบต่อ 7] เทียบกับคีย์ภาษา ไม่ใช่คำที่พิมพ์ไว้ในเทส (ถ้อยคำเปลี่ยนเป็น "ตรวจบทภาพยนตร์ใหม่ทั้งเรื่อง")
+                labels17.includes(tt('ui.app.checkNewChapter').trim()) && /ตั้งค่า/.test(labels17), labels17);
           closeMenu();
         }
       }
@@ -25615,7 +25730,7 @@ export async function runTest(projectPath) {
         check('[79-3] ภาพสถานะรู้ว่าเปิดโปรเจกต์ไหน', snap79.root === state.root, snap79.root);
         check('[79-3] ภาพสถานะเก็บรายการแท็บที่เปิดอยู่',
               Array.isArray(snap79.tabs.open) && snap79.tabs.open.length === [...state.tabs.keys()]
-                .filter((f) => !f.startsWith('::') && !f.endsWith('.json')).length,
+                .filter((f) => !f.startsWith('::') && (!f.endsWith('.json') || !!state.tabs.get(f).wiki)).length,
               JSON.stringify(snap79.tabs.open));
         check('[79-3] ภาพสถานะเก็บเลย์เอาต์แผง', !!snap79.panels.layout);
         check('[79-3] ภาพสถานะเก็บกล่องหน้าต่าง', !!snap79.win && snap79.win.w > 0,
@@ -37394,6 +37509,105 @@ export async function runTest(projectPath) {
         document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
         document.querySelectorAll('#k-toasts > *').forEach((x) => x.remove());
         check('[169-BH] เก็บกวาด: ไม่มีแท็บ/กล่องของเทสค้าง', !state.tabs.has(probeBH) && !document.querySelector('.k-overlay'));
+      }
+
+      // ══ [alpha.170 · bug hunt 5] ★★ ของที่เจอจากการ "ลองใช้โปรแกรมจริง" ก่อน release ══
+      // ผู้ใช้: "ให้คุณทดลองใช้โปรแกรมจริง ๆ ไม่ใช่ e2e แล้วดูว่าเจอ bug อะไรบ้าง" → "แก้หมดเลย"
+      //   · Ctrl+F → พิมพ์ → Enter เคย "ลบคำที่เจอ" (ตัวจับไม่กัน default แล้วย้ายโฟกัสไปเอกสารกลางการกดปุ่ม)
+      //   · ค้นทั้งโปรเจกต์หาชื่อไทยที่เขียนติดคำถัดไปไม่เจอ · ผลซ้ำจาก .k2history
+      //   · สร้างเอนทิตี้ Wiki ใหม่แล้วฉากที่เปิดค้างอยู่ไม่ถูกลิงก์จนกว่าจะแก้ย่อหน้านั้น
+      {
+        const w5 = (ms) => new Promise((r) => setTimeout(r, ms));
+        const until5 = async (fn, ms = 8000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (await fn()) return true; } catch {} await w5(50); } return false; };
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        closeMenu();
+        const U5 = await import('./ui.js');
+        const probe5 = await kapi.join(state.root, 'k2test-170bh5.md');
+        await kapi.writeFile(probe5, dumpMdFile({ title: 'เทสค้นหา170', type: 'scene', format: 'prose' },
+          'คำนำของฉาก\nมีนาร้อยเจ็ดสิบเดินเข้ามาช้า ๆ\n“มีนาร้อยเจ็ดสิบ” เขาเรียก\nจบฉาก'));
+        await openScene(probe5, null);
+        const ok5 = await until5(() => state.tabs.has(probe5) && state.active && state.active.file === probe5 && !!state.active.editor);
+        check('[170-BH5] เปิดฉากทดสอบได้', ok5);
+        const view5 = state.active.editor.view;
+        const text5 = () => view5.state.doc.textContent;
+        const before5 = text5();
+
+        // ── (ก) แถบค้นหา ──
+        openFind();
+        const fq5 = $('#find-q'); const fr5 = $('#find-r');
+        fq5.value = 'มีนาร้อยเจ็ดสิบ'; doFind();
+        check('[170-BH5] แถบค้นหานับผลได้ 2', /^2/.test($('#find-n').textContent), $('#find-n').textContent);
+        fq5.focus();
+        const ev5 = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true });
+        fq5.dispatchEvent(ev5);
+        await w5(80);
+        check('[170-BH5] ★★ Enter ในช่องค้นหา: กัน default · โฟกัสยังอยู่ในช่อง · เอกสารไม่ถูกแตะ',
+              ev5.defaultPrevented && document.activeElement === fq5 && text5() === before5,
+              'prevented=' + ev5.defaultPrevented + ' active=' + (document.activeElement && (document.activeElement.id || document.activeElement.className)));
+        check('[170-BH5] ผลที่กำลังยืนอยู่มีกรอบบอก แม้โฟกัสอยู่ในช่องค้นหา', view5.dom.querySelectorAll('.find-cur').length === 1,
+              view5.dom.querySelectorAll('.find-cur').length);
+        // เอกสารเปลี่ยนขณะแถบเปิด → ตัวเลขนับใหม่ (เดิมค้าง "2 ผล")
+        state.active.editor.setMarkdown('คำนำของฉาก\nมีนาร้อยเจ็ดสิบเดินเข้ามาช้า ๆ\nจบฉาก');
+        markDirty(state.active);
+        check('[170-BH5] เอกสารเปลี่ยนขณะแถบค้นหาเปิด → จำนวนผลนับใหม่', /^1/.test($('#find-n').textContent), $('#find-n').textContent);
+        fr5.focus();
+        const evR5 = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true });
+        fr5.dispatchEvent(evR5);
+        check('[170-BH5] Esc ในช่อง "แทนที่" ปิดแถบค้นหา (เดิมปุ่มนี้ไม่ทำอะไรในช่องนั้น)', !$('#findbar').classList.contains('on'));
+        await saveTab(state.active);
+
+        // ── (ข) ค้นทั้งโปรเจกต์ ──
+        invalidateSearchIndex();
+        const hits5 = await runProjectSearch('มีนาร้อยเจ็ด', { includeJson: false });
+        const hit5 = hits5.find((h) => h.file === probe5);
+        check('[170-BH5] ★★ ค้นทั้งโปรเจกต์เจอคำไทยที่เขียนติดคำถัดไป (ตัวตัดคำหั่นกลางชื่อ)',
+              !!hit5 && (hit5.matches || []).length >= 1, JSON.stringify(hits5.map((h) => h.name)));
+        check('[170-BH5] ผลค้นหาไม่มีสำเนาจากโฟลเดอร์จุดนำ (.k2history)',
+              hits5.every((h) => !/[\\/]\.[^\\/]+[\\/]/.test(String(h.file).slice(String(state.root).length))),
+              JSON.stringify(hits5.map((h) => h.file)));
+
+        // ── (ค) เอนทิตี้ Wiki ใหม่ → ฉากที่เปิดค้างอยู่ถูกลิงก์ทันที ──
+        const wasMention5 = state.settings.autoMention;
+        state.settings.autoMention = true;
+        const entDir5 = await kapi.join(state.root, 'Wiki', 'characters');
+        await kapi.mkdir(entDir5);
+        const ent5 = await kapi.join(entDir5, 'k2test-170bh5.json');
+        const mentions5 = () => [...view5.dom.querySelectorAll('.k-mention')].filter((m) => m.textContent === 'มีนาร้อยเจ็ดสิบ').length;
+        const m0 = mentions5();
+        await kapi.writeFile(ent5, JSON.stringify({ id: 'k2test-170bh5', entityTypeKey: 'characters', name: 'มีนาร้อยเจ็ดสิบ',
+          aliases: [], fields: {}, customProperties: {}, images: [], sections: [], relationships: [] }, null, 2));
+        await reloadWikiNames();
+        await w5(80);
+        check('[170-BH5] ★★ ชื่อเอนทิตี้ใหม่ถูกไฮไลต์ในฉากที่เปิดค้างอยู่ทันที (ไม่ต้องแก้ย่อหน้าก่อน)',
+              m0 === 0 && mentions5() === 1, m0 + ' → ' + mentions5());
+        await kapi.remove(ent5).catch(() => {});
+        await reloadWikiNames();
+        await w5(80);
+        check('[170-BH5] ลบเอนทิตี้แล้วไฮไลต์หายตาม', mentions5() === 0, mentions5());
+        state.settings.autoMention = wasMention5;
+
+        // ── (ง) กล่อง ──
+        const pS5 = U5.saveAllDialog([{ key: 'k5', title: 'W5', file: 'W5.md' }], { noDiscard: true });
+        await w5(60);
+        const ovS5 = [...document.querySelectorAll('.k-overlay')].pop();
+        check('[170-BH5] กล่องของคำสั่ง "บันทึกทั้งหมด" ไม่มีปุ่ม "ไม่บันทึก" (ในบริบทนั้น = ยกเลิก)',
+              !!ovS5 && !!ovS5.querySelector('.k-saveall') && !ovS5.querySelector('.k-discard') && !!ovS5.querySelector('.k-ok'));
+        ovS5.querySelector('.k-cancel').click(); await pS5;
+        const pA5 = U5.ask('ชื่อทดสอบ170', { required: true });
+        await w5(60);
+        const ovA5 = [...document.querySelectorAll('.k-overlay')].pop();
+        ovA5.querySelector('.k-ok').click(); await w5(60);
+        check('[170-BH5] ช่องที่ "ต้องกรอก": ตกลงทั้งที่ว่าง = กล่องไม่ปิดเงียบ + ชี้ช่อง',
+              document.body.contains(ovA5) && ovA5.querySelector('.k-dlg-input').classList.contains('k-input-need'));
+        ovA5.querySelector('.k-cancel').click();
+        check('[170-BH5] ยกเลิกยังคืน null ตามเดิม', (await pA5) === null);
+
+        // ── เก็บกวาด ──
+        if (state.tabs.has(probe5)) closeTab(probe5, { discard: true });
+        await kapi.remove(probe5).catch(() => {});
+        invalidateSearchIndex();
+        document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
+        check('[170-BH5] เก็บกวาด: ไม่มีแท็บ/กล่องของเทสค้าง', !state.tabs.has(probe5) && !document.querySelector('.k-overlay'));
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══

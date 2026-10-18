@@ -17,6 +17,7 @@ import { PARAM_DEFS } from '../ai/ai-providers.js';
 import * as C from './builder-core.js';
 import { gi } from '../icons.js';
 import { panelEmpty } from '../panels/panel-chrome.js';
+import { CAT_TH } from '../wiki.js';
 
 // ────────────────────────────── สถานะของแผง ──────────────────────────────
 const S = {
@@ -228,42 +229,63 @@ function openSession(s, file) {
 }
 
 // ── สร้างเซสชันใหม่ ──────────────────────────────────────────────
-async function newSessionFlow() {
+// [alpha.170] `keep` = ค่าที่กรอกค้างไว้ก่อนแวะไปสร้างคณะ — เดิมกด "สร้างคณะนักแสดง" แล้วกล่องนี้ถูกปิดทิ้ง
+// สถานการณ์ที่พิมพ์ไว้หายหมด และต้องเปิดกล่องใหม่เอง · ตอนนี้ปิดตัวจัดการคณะแล้วกลับมาที่กล่องนี้พร้อมของเดิม
+async function newSessionFlow(keep = {}) {
   await loadAll(true);
   const ov = el('div', 'k-overlay');
-  const box = el('div', 'k-dialog k-wide');
+  const box = el('div', 'k-dialog k-wide dlgb-newsess');
   box.append(el('div', 'k-dlg-title', t('ui.dlgb.newSession')));
+  // แต่ละช่อง = ป้ายอยู่บน ช่องอยู่ล่าง (เดิมป้าย "สถานการณ์…" ไปต่อท้ายปุ่มสร้างคณะบนบรรทัดเดียวกัน)
+  const fieldBox = (labelText, ...nodes) => {
+    const f = el('div', 'dlgb-field');
+    f.append(el('label', '', labelText), ...nodes);
+    box.append(f);
+    return f;
+  };
 
   // เลือกคณะ
-  box.append(el('label', '', t('ui.dlgb.pickPreset')));
-  const sel = el('select', 'dlgb-full');
+  const sel = el('select', 'k-dlg-select dlgb-full');
   for (const p of S.presets) sel.append(el('option', '', `${p.name} (${(p.cast || []).length})`, ));
   [...sel.options].forEach((o, i) => { o.value = S.presets[i].id; });
   if (!S.presets.length) {
     const o = el('option', '', t('ui.dlgb.noPresetYet')); o.value = ''; sel.append(o);
   }
-  box.append(sel);
-
-  const bMake = el('button', '', t('ui.dlgb.makePreset'));
-  bMake.onclick = async () => { ov.remove(); await presetManager(); };
-  box.append(bMake);
+  if (keep.presetId && S.presets.some((p) => p.id === keep.presetId)) sel.value = keep.presetId;
+  else if (keep.presetCount != null && S.presets.length > keep.presetCount) sel.value = S.presets[S.presets.length - 1].id;   // คณะที่เพิ่งสร้าง
+  const bMake = el('button', 'cmp-mini', t('ui.dlgb.makePreset'));
+  bMake.type = 'button';
+  const presetRow = el('div', 'dlgb-preset-pick');
+  presetRow.append(sel, bMake);
+  fieldBox(t('ui.dlgb.pickPreset'), presetRow);
 
   // สถานการณ์
-  box.append(el('label', '', t('ui.dlgb.situationLabel')));
   const sit = el('textarea', 'dlgb-ta');
   sit.placeholder = t('ui.dlgb.situationPh');
-  box.append(sit);
+  sit.value = keep.situation || '';
+  fieldBox(t('ui.dlgb.situationLabel'), sit);
 
-  box.append(el('label', '', t('ui.dlgb.titleLabel')));
-  const title = el('input', 'dlgb-full');
+  const title = el('input', 'k-dlg-input dlgb-full');
   title.placeholder = t('ui.dlgb.titleAutoPh');
-  box.append(title);
+  title.value = keep.title || '';
+  fieldBox(t('ui.dlgb.titleLabel'), title);
+
+  bMake.onclick = async () => {
+    const back = { situation: sit.value, title: title.value, presetId: sel.value, presetCount: S.presets.length };
+    ov.remove();
+    await presetManager(() => newSessionFlow(back));
+  };
+
+  // ยังไม่มีคณะ = สร้างเซสชันไม่ได้ — บอกในกล่อง (เดิมข้อความไปขึ้นแถบสถานะหลังฉากหลังของกล่อง)
+  const note = el('div', 'dlgb-newsess-note dim', S.presets.length ? '' : t('ui.dlgb.needPreset'));
+  box.append(note);
 
   const btns = el('div', 'k-dlg-btns');
   const ok = el('button', 'k-ok', t('ui.dlgb.create'));
+  ok.disabled = !S.presets.length;
   ok.onclick = async () => {
     const p = S.presets.find((x) => x.id === sel.value);
-    if (!p) { setStatus(t('ui.dlgb.needPreset')); return; }
+    if (!p) { note.textContent = t('ui.dlgb.needPreset'); setStatus(t('ui.dlgb.needPreset')); return; }
     const s = C.sessionFromPreset(p, {
       situation: sit.value.trim(),
       title: title.value.trim() || C.titleFromSituation(sit.value),
@@ -276,11 +298,12 @@ async function newSessionFlow() {
   };
   const cancel = el('button', 'k-cancel', t('ui.common.cancel'));
   cancel.onclick = () => ov.remove();
-  btns.append(ok, cancel);
+  btns.append(cancel, ok);                         // ปุ่มหลักอยู่ขวาสุด (กฎ alpha.162 · W4)
   box.append(btns);
   ov.append(box); document.body.append(ov);
-  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  sit.focus();
+  // คลิกนอกกล่อง: ปิดเฉพาะตอนยังไม่ได้พิมพ์อะไร (กันสถานการณ์ที่พิมพ์ไว้ยาว ๆ หายเพราะคลิกพลาด)
+  ov.onclick = (e) => { if (e.target === ov && !sit.value.trim() && !title.value.trim()) ov.remove(); };
+  (S.presets.length ? sit : bMake).focus();
 }
 
 // ══════════════════════════════ B) ตัวเซสชัน ══════════════════════════════
@@ -766,7 +789,7 @@ function sessionHeadMenu(ev) {
 }
 
 // ══════════════════════════════ จัดการคณะนักแสดง ══════════════════════════════
-async function presetManager() {
+async function presetManager(onClose) {
   await loadAll(true);
   const ov = el('div', 'k-overlay');
   const box = el('div', 'k-dialog k-wide');
@@ -808,11 +831,12 @@ async function presetManager() {
     castEditor(p, async () => { await savePresets(); draw(); });
   };
   const bClose = el('button', 'k-cancel', t('ui.common.close'));
-  bClose.onclick = () => { ov.remove(); redraw(); };
-  btns.append(bAdd, bClose);
+  const shut = () => { ov.remove(); redraw(); if (typeof onClose === 'function') onClose(); };
+  bClose.onclick = shut;
+  btns.append(bClose, bAdd);                       // ปุ่มหลักอยู่ขวาสุด
   box.append(btns);
   ov.append(box); document.body.append(ov);
-  ov.onclick = (e) => { if (e.target === ov) { ov.remove(); redraw(); } };
+  ov.onclick = (e) => { if (e.target === ov) shut(); };
 }
 
 /**
@@ -842,7 +866,8 @@ async function castEditor(holder, onSave) {
       const o0 = el('option', '', t('ui.dlgb.pickFromWiki')); o0.value = ''; sel.append(o0);
       for (const r of rows) {
         if ((holder.cast || []).some((c) => c.name === r.name)) continue;
-        const o = el('option', '', `${r.name} · ${r.cat}`); o.value = r.path; sel.append(o);
+        // [alpha.170] ชื่อหมวดเป็นภาษาของหน้าจอ (เดิมโชว์ชื่อโฟลเดอร์ดิบ "ธนิน · characters")
+        const o = el('option', '', `${r.name} · ${CAT_TH[r.cat] || r.cat}`); o.value = r.path; sel.append(o);
       }
       const bAdd = el('button', '', t('ui.dlgb.addToCast'));
       bAdd.onclick = () => {

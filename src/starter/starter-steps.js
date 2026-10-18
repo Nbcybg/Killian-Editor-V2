@@ -11,10 +11,11 @@ import { gi } from '../icons.js';   // [alpha.162 · W6 ข้อ 1] ไอค�
 import { t, tf } from '../i18n.js';
 import { TAG_GROUPS, W_FIELDS } from './starter-steps-def.js';
 import { toggleTag, hasTag, normalizeTags } from './starter-model.js';
+import { tagLabel } from './starter-tags.js';
 import {
   namePrompt, introPrompt, descPrompt, blurbPrompt, wFieldPrompt, SYS_WRITER,
 } from './starter-prompt.js';
-import { importImage, importFromGallery, imageUrl } from './starter-store.js';
+import { importImage, importFromGallery, imageUrl, adoptStarterName } from './starter-store.js';
 import { renderCastStep } from './starter-cast.js';
 import { aiBtn, askAI } from './starter-ai.js';
 import { richEditor } from './starter-richtext.js';
@@ -110,7 +111,8 @@ function renderTags(host, ctx) {
     const rows = normalizeTags(s.tags);
     if (!rows.length) { picked.append(el('div', 'st-dim', t('ui.starter.noTagYet'))); return; }
     for (const tg of rows) {
-      const c = el('span', 'st-tag on', tg);
+      const c = el('span', 'st-tag on', tagLabel(tg));
+      c.dataset.tag = tg;                          // ค่าจริงของแท็ก (ป้ายบนจอเป็นภาษาของหน้าจอ)
       const x = el('span', 'st-tag-x', gi('times'));
       x.onclick = () => { s.tags = toggleTag(s.tags, tg); ctx.save(); redrawAll(); };
       c.append(x);
@@ -126,7 +128,8 @@ function renderTags(host, ctx) {
       box.append(el('div', 'st-tag-group-label', g.label));
       const list = el('div', 'st-tag-list');
       for (const tg of g.tags) {
-        const b = el('button', 'st-tag' + (hasTag(s.tags, tg) ? ' on' : ''), tg);
+        const b = el('button', 'st-tag' + (hasTag(s.tags, tg) ? ' on' : ''), tagLabel(tg));
+        b.dataset.tag = tg;
         b.onclick = () => { s.tags = toggleTag(s.tags, tg); ctx.save(); redrawAll(); };
         list.append(b);
       }
@@ -163,6 +166,14 @@ function renderTags(host, ctx) {
 
 async function renderIntro(host, ctx) {
   const s = ctx.starter;
+  const adoptName = async () => {
+    try {
+      if (await adoptStarterName(s)) {
+        const h = host.querySelector('.st-folder-hint');
+        if (h) h.textContent = tf('ui.starter.folderFixed', s.slug);
+      }
+    } catch (e) { log('warn', 'starter: adopt name', e); }
+  };
 
   // ── ชื่อเรื่อง ──
   const nameRow = field(t('ui.starter.fName'), s.name,
@@ -173,14 +184,17 @@ async function renderIntro(host, ctx) {
     const out = await askAI('story-name', namePrompt(s), SYS_WRITER(), reqId);
     if (!out) return;
     if (!pickLine(nameBtns, out, (v) => {
-      s.name = v; nameRow.__input.value = v; ctx.save();
+      s.name = v; nameRow.__input.value = v; ctx.save(); adoptName();
     })) setStatus(t('ui.starter.aiNoResult'));
   }));
   nameRow.append(nameBtns);
   host.append(nameRow);
 
   // เปลี่ยนชื่อเรื่องแล้ว **ชื่อโฟลเดอร์ไม่ตาม** โดยตั้งใจ (ทำตาม renameSection)
-  host.append(el('div', 'st-hint', tf('ui.starter.folderFixed', s.slug)));
+  // [alpha.170] ยกเว้น **ชื่อแรก**: โฟลเดอร์ที่ยังเป็นชื่อชั่วคราวได้ชื่อจากชื่อเรื่องตอนออกจากช่อง (adoptStarterName)
+  const folderHint = el('div', 'st-hint st-folder-hint', tf('ui.starter.folderFixed', s.slug));
+  host.append(folderHint);
+  nameRow.__input.addEventListener('change', () => adoptName());
 
   // ── ผู้แต่ง ──
   host.append(field(t('ui.starter.fAuthor'), s.author,

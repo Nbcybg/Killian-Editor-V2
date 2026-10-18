@@ -1,7 +1,7 @@
 // recycle.js — ถังขยะ: ลบไปถังขยะ / กู้คืน / ล้างถังขยะเก่า (retention)
 // ตรรกะที่ไม่แตะดิสก์ (อายุของของในถัง · ชื่อกันชน) อยู่ใน recycle-core.js ซึ่งมี unit test
 import { t, tf } from './i18n.js';
-import { buildTree, closeTab, guid, refreshNetwork, saveTab, flushTabForMove } from './app.js';
+import { buildTree, reloadWikiNames, closeTab, guid, refreshNetwork, saveTab, flushTabForMove } from './app.js';
 import { setStatus, smart, state, logAction, setStatusAction } from './core.js';
 import { confirmBox } from './ui.js';
 import { purgeCandidates, originalName } from './recycle-core.js';
@@ -19,7 +19,7 @@ export async function restoreFromTrash(p, fname) {
       const AC = await import('./gallery/album-core.js');
       await AC.restoreFromRecycle(kapi, info.root || state.root, p, info);
       await kapi.remove(sidecar);
-      await buildTree(); smart.loadNames(state.root);
+      await buildTree(); reloadWikiNames();
       setStatus(info.kind === 'album' ? t('ui.trash.recoverRestoreAlbumDone') : t('ui.trash.recoverRestoreImageDone'));
       return;
     }
@@ -38,7 +38,7 @@ export async function restoreFromTrash(p, fname) {
       await kapi.move(p, await kapi.join(info.root, folder));
       if (folder !== info.folderName) note = tf('ui.trash.restoredRenamed', folder);
       await kapi.remove(sidecar);
-      await buildTree(); smart.loadNames(state.root);
+      await buildTree(); reloadWikiNames();
       refreshNetwork();
       setStatus(note || t('ui.trash.recoverRestoreBookDone')); return;
     }
@@ -69,7 +69,7 @@ export async function restoreFromTrash(p, fname) {
     await kapi.move(p, await kapi.join(memoDir, name));
     if (name !== want) note = tf('ui.trash.restoredRenamed', name);
   }
-  await buildTree(); smart.loadNames(state.root);
+  await buildTree(); reloadWikiNames();
   refreshNetwork();
   logAction('recycle', t('ui.trash.recoverRestoreDone'), { from: p, name: fname, note });
   setStatus(note || t('ui.trash.recoverRestoreDone'));
@@ -236,7 +236,7 @@ export async function deleteToTrash(file, label) {
   }
   const dst = await trashPathFor(file);      // [alpha.162 · W1-4] ชื่อปลายทางไม่ชนกัน
   await kapi.move(file, dst);
-  await buildTree(); smart.loadNames(state.root);
+  await buildTree(); reloadWikiNames();
   refreshNetwork();
   // [alpha.128] การลบเป็นสิ่งที่ต้องไล่ย้อนได้ที่สุด แต่เดิมไม่มีร่องรอยในบันทึกเลยสักบรรทัด
   // (คำสั่งพวกนี้มาจากเมนูคลิกขวา จึงไม่ผ่าน handleCommand ที่จด `cmd:` ให้)

@@ -261,7 +261,8 @@ function buildMenu() {
   // [alpha.124 ข้อ 43] ติดป้าย ⚠ ให้รายการที่หาโฟลเดอร์ไม่เจอแล้ว — เห็นตั้งแต่ในเมนู
   // ว่าอันไหนพัง ไม่ต้องกดเข้าไปเจอคำเตือนถึงจะรู้ (ยังกดได้ ฝั่ง renderer จะถามว่าลบออกไหม)
   const recents = readRecent().map((p) => ({
-    label: (fs.existsSync(p) ? '' : '⚠ ') + p, click: cmd('open-project-path', p),
+    // [alpha.170 · bug hunt 5] ชื่อผลงานก่อน ทางไฟล์ตามหลัง (เดิมเป็นทางเต็มยาว ๆ ทั้งบรรทัด หาชื่อไม่เจอ)
+    label: (fs.existsSync(p) ? '' : '⚠ ') + path.basename(p) + '   —   ' + path.dirname(p), click: cmd('open-project-path', p),
   }));
   const tpl = [
     { id: 'File', label: tt('ui.menu.file2'), submenu: [
@@ -379,7 +380,7 @@ function buildMenu() {
       { label: tt('ui.menu.mapChar'), click: cmd('char-map') },   // [alpha.164 ข้อ D] เดิมอยู่เมนูมุมมอง
     ] },
     // ---- alpha.57: เมนูเฉพาะงานบทภาพยนตร์ ----
-    { id: 'Script', label: tt('ui.common.chapter'), submenu: [
+    { id: 'Script', label: tt('ui.menu.script'), submenu: [
       // [alpha.162 · W4] มุมมองหน้ากระดาษหกโหมดเคยอยู่ทั้งที่นี่และในเมนู "รูปแบบ" (ก๊อปกันคนละที่)
       // → ย้ายไปอยู่เมนู "มุมมอง" ที่เดียว ซึ่งเป็นที่ที่ผู้ใช้มองหาอยู่แล้ว
       chk(tt('ui.menu.showFormatLineMargin'), toggles.showFormat,
@@ -611,6 +612,27 @@ function buildMenu() {
       { role: 'togglefullscreen', label: tt('ui.menu.fullScreen') },
       ...(TEST || process.env.KILLIAN_DEV ? [{ role: 'toggleDevTools' }] : []),
     ] },
+    // [alpha.170] เมนู AI มาก่อน "ช่วยเหลือ" — ช่วยเหลือเป็นเมนูสุดท้ายตามธรรมเนียมของทุกระบบ (เดิม AI ห้อยท้ายหลังช่วยเหลือ)
+    { id: 'AI', label: 'AI', submenu: [
+      { label: tt('ui.menu.settingsAIProviderCredential'),
+        click: cmd('ai-settings') },
+      { type: 'separator' },
+      // [alpha.61 ข้อ 2] แชทเป็นแผงแบบ opencode — เซสชันเก็บใน Sessions/ ของโปรเจกต์
+      chk(tt('ui.menu.panelAIAssistantWrite'), toggles.panels['ai-chat'], cmd('toggle-panel', 'ai-chat')),
+      { label: tt('ui.menu.sessionNew'), click: cmd('ai-chat-new') },
+      { type: 'separator' },
+      // [alpha.94] Story Starter — สร้างเรื่อง/ตัวละครทีละขั้น แล้วเล่นเป็นตอนกับ Game Master
+      chk(tt('ui.menu.panelStoryStarter'), toggles.panels['starter'], cmd('toggle-panel', 'starter')),
+      { type: 'separator' },
+      { label: tt('ui.menu.assistantWriteExpandSummarize'), click: cmd('ai-assistant') },
+      { label: tt('ui.menu.checkPlotHole'), click: cmd('ai-plot') },
+      { label: tt('ui.menu.newDialogue'), click: cmd('ai-dialogue') },
+      { label: tt('ui.menu.checkAlwaysCharacter'), click: cmd('ai-consistency') },
+      { label: tt('ui.menu.newWorldWorldbuilding'), click: cmd('ai-world') },
+      { type: 'separator' },
+      { label: tt('ui.menu.summaryBodyProject'), click: cmd('ai-summary') },
+      { label: tt('ui.menu.suggestTitle'), click: cmd('ai-title') },
+    ] },
     { id: 'Help', label: tt('ui.menu.help2'), submenu: [
       // ══ [alpha.162 · W4] เมนูช่วยเหลือเคยไม่มี "ของพื้นฐาน" เลย ══
       // คู่มือปุ่มลัดมีคำสั่ง (`cheatsheet` + Ctrl+Alt+/) มาตั้งแต่ .124 แต่ไม่เคยอยู่ในเมนูไหน
@@ -649,26 +671,6 @@ function buildMenu() {
       ] },
       { type: 'separator' },
       { label: tt('ui.common.killian'), click: cmd('about') },
-    ] },
-    { id: 'AI', label: 'AI', submenu: [
-      { label: tt('ui.menu.settingsAIProviderCredential'),
-        click: cmd('ai-settings') },
-      { type: 'separator' },
-      // [alpha.61 ข้อ 2] แชทเป็นแผงแบบ opencode — เซสชันเก็บใน Sessions/ ของโปรเจกต์
-      chk(tt('ui.menu.panelAIAssistantWrite'), toggles.panels['ai-chat'], cmd('toggle-panel', 'ai-chat')),
-      { label: tt('ui.menu.sessionNew'), click: cmd('ai-chat-new') },
-      { type: 'separator' },
-      // [alpha.94] Story Starter — สร้างเรื่อง/ตัวละครทีละขั้น แล้วเล่นเป็นตอนกับ Game Master
-      chk(tt('ui.menu.panelStoryStarter'), toggles.panels['starter'], cmd('toggle-panel', 'starter')),
-      { type: 'separator' },
-      { label: tt('ui.menu.assistantWriteExpandSummarize'), click: cmd('ai-assistant') },
-      { label: tt('ui.menu.checkPlotHole'), click: cmd('ai-plot') },
-      { label: tt('ui.menu.newDialogue'), click: cmd('ai-dialogue') },
-      { label: tt('ui.menu.checkAlwaysCharacter'), click: cmd('ai-consistency') },
-      { label: tt('ui.menu.newWorldWorldbuilding'), click: cmd('ai-world') },
-      { type: 'separator' },
-      { label: tt('ui.menu.summaryBodyProject'), click: cmd('ai-summary') },
-      { label: tt('ui.menu.suggestTitle'), click: cmd('ai-title') },
     ] },
   ];
   Menu.setApplicationMenu(buildMenuSafe(tpl));
@@ -1589,8 +1591,10 @@ ipcMain.handle('edit:role', (e, role) => {
   if (!EDIT_ROLES.has(role)) return false;
   try { e.sender[role](); return true; } catch { return false; }
 });
-H('dialog:openProject', async () => {
-  const r = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
+// [alpha.170 · bug hunt 5] กล่องของระบบต้องบอกว่ากำลังเลือกอะไร — 'new' = ที่เก็บของผลงานใหม่ · อื่น ๆ = เปิดผลงาน
+H('dialog:openProject', async (kind) => {
+  const title = kind === 'new' ? tt('ui.main.pickNewProjectFolder') : tt('ui.main.pickProjectFolder');
+  const r = await dialog.showOpenDialog(win, { title, buttonLabel: tt('ui.main.pickFolderBtn'), properties: kind === 'new' ? ['openDirectory', 'createDirectory'] : ['openDirectory'] });
   return r.canceled ? null : r.filePaths[0];
 });
 H('dialog:openImage', async () => {
@@ -2313,6 +2317,31 @@ function startMockSse() {
             })();
           };
           const mode = (s) => last.includes(s);
+          // ══ [alpha.170] โมเดลที่ "คิดก่อนตอบ" ══
+          //   MOCK-STARVE = เพดานคำตอบต่ำกว่า 3000 → ใช้คิดจนหมด ไม่เหลือคำตอบ (finish=length · reasoning = เพดาน)
+          //                 เพดานพอ → ตอบ JSON จริง · พิสูจน์ว่าโปรแกรมลองใหม่ด้วยเพดานที่มากขึ้นเอง
+          //   MOCK-BLANK  = ตอบว่างเสมอ (ไม่มีร่องรอยการคิด) · พิสูจน์ว่าคำตอบว่างไม่ถูกอ่านเป็น "ไม่พบปัญหา"
+          // รองรับทั้งคำขอแบบสตรีมและแบบรอทั้งก้อน (เครื่องมือ AI ส่วนใหญ่เป็นแบบหลัง — เดิมเซิร์ฟเวอร์นี้ตอบเป็น SSE อย่างเดียว)
+          if (mode('MOCK-STARVE') || mode('MOCK-BLANK')) {
+            const mt = Number(j.max_tokens || j.max_completion_tokens || 0);
+            const blank = mode('MOCK-BLANK');
+            const starve = !blank && mt > 0 && mt < 3000;
+            const answer = JSON.stringify([{ type: 'plot-thread', severity: 'major', sceneId: '',
+              description: 'MOCK-HOLE found after retry', evidence: '', suggestion: '' }]);
+            if (j.stream !== true) {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              const out = starve ? mt : (blank ? 0 : 40);
+              return res.end(JSON.stringify({ id: 'mock', model: 'mock-model',
+                choices: [{ index: 0, message: { role: 'assistant', content: (starve || blank) ? '' : answer },
+                            finish_reason: starve ? 'length' : 'stop' }],
+                usage: { prompt_tokens: 10, completion_tokens: out, total_tokens: 10 + out,
+                         completion_tokens_details: { reasoning_tokens: starve ? mt : 0 } } }));
+            }
+            res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+            if (starve) { sse(chunk({ reasoning_content: 'thinking… ' })); sse(chunk({}, 'length')); res.write('data: [DONE]\n\n'); return res.end(); }
+            if (blank) { sse(chunk({}, 'stop')); res.write('data: [DONE]\n\n'); return res.end(); }
+            return drip([answer], 20, 'stop');
+          }
           // [alpha.168] prompt ของผังพื้นที่: ตอบ JSON {image, video} ทีละก้อน (เครื่องหมายอยู่ในโน้ตของจังหวะ)
           if (mode('MOCK-FPPROMPT')) {
             res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });

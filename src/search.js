@@ -35,7 +35,14 @@ export function searchPlugin() {
         return { query, matches, decos };
       },
     },
-    props: { decorations(state) { return searchKey.getState(state).decos; } },
+    props: {
+      decorations(state) {
+        const s = searchKey.getState(state);
+        const sel = state.selection;
+        const cur = s.matches.find((m) => m.from === sel.from && m.to === sel.to);
+        return cur ? s.decos.add(state.doc, [Decoration.inline(cur.from, cur.to, { class: 'find-cur' })]) : s.decos;
+      },
+    },
   });
 }
 
@@ -44,7 +51,8 @@ export function setQuery(view, q) {
   return searchKey.getState(view.state).matches.length;
 }
 
-export function gotoMatch(view, dir) {
+export function gotoMatch(view, dir, opts) {
+  if (!view) return 0;
   const { matches } = searchKey.getState(view.state);
   if (!matches.length) return 0;
   const cur = view.state.selection.from;
@@ -52,7 +60,8 @@ export function gotoMatch(view, dir) {
   if (!m) m = dir > 0 ? matches[0] : matches[matches.length - 1];
   view.dispatch(view.state.tr.setSelection(
     TextSelection.create(view.state.doc, m.from, m.to)).scrollIntoView());
-  view.focus();
+  // `focus:false` = ผู้เรียกอยู่ในช่องค้นหา (กด Enter) — ห้ามย้ายโฟกัสไปเอกสารกลางการกดปุ่ม
+  if (!opts || opts.focus !== false) view.focus();
   return matches.indexOf(m) + 1;
 }
 

@@ -30,6 +30,7 @@ ui.ai.charADesc,"คำอธิบายตัวละคร A (บุคล�
 ui.ai.charB,ตัวละคร B: 
 ui.ai.charBDesc,คำอธิบายตัวละคร B
 ui.ai.chatPlaceholder,ถามเกี่ยวกับเรื่องของคุณ…
+ui.ai.checkedScenes,ตรวจ {0} ฉาก
 ui.ai.collecting,กำลังรวบรวมข้อมูล…
 ui.ai.collectingScenes,กำลังรวบรวมข้อมูลฉาก…
 ui.ai.connectAICant,เชื่อมต่อ AI ไม่ได้: 
@@ -44,8 +45,6 @@ ui.ai.dialogueLabel,บทสนทนา:
 ui.ai.dialogueTitle,สร้างบทสนทนา
 ui.ai.dialogueWorking,กำลังสร้างบทสนทนา…
 ui.ai.edit,ร้อยแก้ว
-ui.ai.entityReadFail,อ่านไฟล์เอนทิตี้ไม่สำเร็จ
-ui.ai.entityUnnamed,เอนทิตี้ไม่มีชื่อ
 ui.ai.error,เกิดข้อผิดพลาด
 ui.ai.errorMark,เกิดข้อผิดพลาด
 ui.ai.errorRetry,เกิดข้อผิดพลาด กรุณาลองใหม่
@@ -75,10 +74,10 @@ ui.ai.needBothChars,กรุณาใส่ชื่อตัวละครท
 ui.ai.needSetup,ตั้งค่า AI ก่อนที่ เมนู AI → ตั้งค่า AI
 ui.ai.new,สร้าง
 ui.ai.noAnswer,(ไม่มีคำตอบ)
+ui.ai.noCharacters,ยังไม่มีตัวละครใน Wiki — เพิ่มตัวละครก่อนแล้วค่อยตรวจ
 ui.ai.noInconsist,ไม่พบความไม่สม่ำเสมอ
 ui.ai.noPlotHoles,ไม่พบจุดบกพร่องของพล็อต
 ui.ai.noProject,ยังไม่ได้เปิดโปรเจกต์
-ui.ai.noScenes,(ไม่พบฉากในโปรเจกต์นี้)
 ui.ai.notChangeTone,ไม่เปลี่ยนโทน
 ui.ai.notKnownProvider,ไม่รู้จักผู้ให้บริการ: 
 ui.ai.notSet,(ยังไม่ตั้ง)
@@ -91,23 +90,36 @@ ui.ai.opSummarize,สรุปความ
 ui.ai.opTone,เปลี่ยนโทน
 ui.ai.orWord,หรือ
 ui.ai.partialKept,เก็บข้อความที่ได้มาก่อนการเชื่อมต่อขาดไว้แล้ว
-ui.ai.pickEntity,เลือกเอนทิตี้ (ตัวละคร) ก่อน
+ui.ai.pickCharacter,ตัวละคร
 ui.ai.plotTitle,ตรวจสอบ Plot Hole
 ui.ai.plotWorking,กำลังตรวจสอบ Plot Holes…
 ui.ai.readAnswerAICant,อ่านคำตอบจาก AI ไม่ได้ (ไม่ใช่ JSON)
 ui.ai.readFail,อ่านไฟล์ไม่สำเร็จ: 
+ui.ai.replaceSelection,แทนที่ข้อความที่เลือก
+ui.ai.replyCut,คำตอบของ AI ถูกตัดก่อนจบ (ชนเพดานความยาว) — เพิ่ม Maximum Number of Tokens ของผู้ให้บริการแล้วลองใหม่
+ui.ai.replyUnreadable,AI ตอบไม่เป็นรูปแบบที่โปรแกรมอ่านได้ — ลองใหม่อีกครั้ง หรือเปลี่ยนโมเดล
 ui.ai.result,ประมวลผล
 ui.ai.resultLabel,ผลลัพธ์:
+ui.ai.runAgain,ตรวจอีกครั้ง
 ui.ai.sample1,เรื่องนี้มีตัวละครอะไรบ้าง
 ui.ai.sample2,ช่วยสรุปฉากที่มีไฟต์ให้หน่อย
 ui.ai.savedToWiki,บันทึกลง Wiki แล้ว: 
 ui.ai.saveWiki,บันทึกลง Wiki
 ui.ai.sceneLabel,ฉาก: 
+ui.ai.scopeBook,เฉพาะเล่มนี้
+ui.ai.scopeChapter,เฉพาะบทนี้
+ui.ai.scopeEmpty,ขอบเขตนี้ไม่มีฉากที่มีเนื้อหา
+ui.ai.scopeLabel,ขอบเขต
+ui.ai.scopeProject,ทั้งโปรเจกต์
+ui.ai.scopeScene,เฉพาะฉากนี้
+ui.ai.scopeSummary,จะส่ง {0} ฉาก (ประมาณ {1} โทเคน) ให้ {2}
 ui.ai.searchingProject,กำลังค้นข้อมูลในโปรเจกต์…
 ui.ai.sendingToAi,กำลังส่งให้ AI วิเคราะห์…
 ui.ai.smallLess,เล็กน้อย
 ui.ai.sources,อ้างอิง: 
 ui.ai.speakerLabel,ผู้พูด: 
+ui.ai.startCheck,เริ่มตรวจ
+ui.ai.stop,หยุด
 ui.ai.textLabel,ข้อความ:
 ui.ai.textNotOk,สตรีมข้อความไม่สำเร็จ: 
 ui.ai.toneCasual,กันเอง
@@ -124,6 +136,7 @@ ui.ai.wCity,เมือง
 ui.ai.wCulture,วัฒนธรรม
 ui.ai.wEconomy,เศรษฐกิจ
 ui.ai.wFaction,กลุ่ม/ฝ่าย
+ui.ai.wikiProfileUsed,ใช้บุคลิกจาก Wiki: {0}
 ui.ai.wMagic,ระบบเวทมนตร์
 ui.ai.wordAsk,คำถาม: 
 ui.ai.working,กำลังประมวลผล…
@@ -821,6 +834,8 @@ ui.aiError.innerUseItemOut,เซิร์ฟเวอร์ในเครื�
 ui.aiError.itemMaxTokensHigh,ตัวที่ผิดบ่อย: Max Tokens สูงเกินที่โมเดลรับ · Reasoning Effort / Thinking mode ที่โมเดลนี้ไม่มี · Response Format = json_object
 ui.aiError.itemTLSToUse,ใบรับรองความปลอดภัย (TLS) ของปลายทางใช้ไม่ได้
 ui.aiError.keyBindOutlineCheck,คีย์บางเจ้าผูกกับองค์กร/โครงการ — ตรวจว่าคีย์นี้ใช้กับ Base URL นี้ได้จริง
+ui.aiError.missingHeader,คำขอขาดส่วนหัว (header) ที่ผู้ให้บริการต้องการ
+ui.aiError.missingHeaderHint,เพิ่มส่วนหัวที่ข้อความของเซิร์ฟเวอร์ระบุ ลงในช่อง Custom Headers ของผู้ให้บริการ (บรรทัดละ ชื่อ: ค่า)
 ui.aiError.model,โมเดล: 
 ui.aiError.modelOllamaLMStudio,ถ้าเป็นโมเดลในเครื่อง (Ollama / LM Studio / llama.cpp) — เปิดโปรแกรมนั้นให้ทำงานอยู่ก่อน
 ui.aiError.modelThinkReasoningUse,โมเดลที่คิดเยอะ (reasoning) ใช้เวลานาน — ลดระดับการใช้ความคิด หรือลดความยาวคำตอบ
@@ -830,7 +845,7 @@ ui.aiError.nextNotMissingCenter,ต่อกับเซิร์ฟเวอร
 ui.aiError.notAPIKeySend,เซิร์ฟเวอร์ไม่รับกุญแจ (API key) ที่ส่งไป
 ui.aiError.notTo,ไปไม่ถึงเซิร์ฟเวอร์
 ui.aiError.provider,ผู้ให้บริการ: 
-ui.aiError.providerNotParamSend,ผู้ให้บริการไม่รับพารามิเตอร์ที่ส่งไป ({0})
+ui.aiError.providerNotParamSend,ผู้ให้บริการปฏิเสธคำขอ ({0})
 ui.aiError.putKeyNewSettings,ใส่คีย์ใหม่ที่ ตั้งค่า AI → แก้ผู้ให้บริการ → Credential แล้วกด Save Credential
 ui.aiError.reply,เซิร์ฟเวอร์ตอบ: 
 ui.aiError.sideProviderHasProblem,ฝั่งผู้ให้บริการมีปัญหา ({0})
@@ -845,8 +860,10 @@ ui.aiError.toNotHas,ปลายทางไม่มีอยู่จริง
 ui.aiError.tryNewTimesAdd,ลองใหม่อีกครั้ง หรือเพิ่ม Max Retries ใน Parameters
 ui.aiError.tryOpenBaseURL,ถ้าเป็นเครื่องในบ้าน ลองเปิด Base URL ในเบราว์เซอร์ดูว่าตอบไหม
 ui.aiError.userPress,ผู้ใช้กดหยุดเอง
-ui.aiError.viewTextBottomName,ดูข้อความของเซิร์ฟเวอร์ด้านล่าง — มักบอกชื่อฟิลด์ที่ผิดมาตรง ๆ
+ui.aiError.viewTextBottomName,"ดูบรรทัด ""เซิร์ฟเวอร์ตอบ"" ด้านบน — มักบอกชื่อฟิลด์ที่ผิดมาตรง ๆ"
 ui.aiError.wordUseTime,เซิร์ฟเวอร์บอกว่าคำขอใช้เวลานานเกินไป
+ui.aiError.wrongProtocol,โมเดลนี้ไม่รับคำขอรูปแบบที่ส่งไป
+ui.aiError.wrongProtocolHint,"เปลี่ยน ""รูปแบบ API"" ของผู้ให้บริการ (OpenAI-compatible หรือ Anthropic Messages) หรือเลือกโมเดลอื่น"
 ui.aiField.askField,ช่วยเขียนค่าของช่อง “{0}” ให้หน่อย
 ui.aiField.hasCurrent,ตอนนี้ช่องนี้มีข้อความว่า “{0}” — ให้เกลาหรือต่อยอดจากของเดิม อย่าเปลี่ยนใจความ
 ui.aiField.headKnown,ข้อมูลที่รู้แล้ว:
@@ -894,7 +911,7 @@ ui.aiHub.iTitle,แนะนำชื่อเรื่อง
 ui.aiHub.iTitleDesc,ขอชื่อเรื่องหลายแบบมาเลือก
 ui.aiHub.iWorld,สร้างโลก
 ui.aiHub.iWorldDesc,ร่างสถานที่ วัฒนธรรม หรือกติกาของโลกลง Wiki
-ui.aiHub.needScene,ต้องเปิดฉากหรือบทไว้ก่อนถึงจะใช้ได้
+ui.aiHub.needScene,ต้องเปิดฉากหรือบทภาพยนตร์ไว้ก่อนถึงจะใช้ได้
 ui.aiHub.notReady,ยังไม่ได้ตั้งค่า AI
 ui.aiHub.openNow,เปิดอยู่
 ui.aiHub.openSettings,เปิดกล่องตั้งค่า AI
@@ -934,6 +951,10 @@ ui.aiProvider.addProvider,เพิ่มผู้ให้บริการ
 ui.aiProvider.addProviderNew,เพิ่มผู้ให้บริการใหม่
 ui.aiProvider.allowedDomains,โดเมนที่อนุญาตให้ส่งคำขอ HTTP
 ui.aiProvider.apiKey,คีย์ API
+ui.aiProvider.apiKind,รูปแบบ API
+ui.aiProvider.apiKindAnthropic,Anthropic Messages (messages)
+ui.aiProvider.apiKindHint,เจ้าส่วนใหญ่ใช้แบบ OpenAI-compatible · เลือก Anthropic Messages เมื่อโมเดล Claude ตอบว่าไม่รองรับโปรโตคอล
+ui.aiProvider.apiKindOpenai,OpenAI-compatible (chat/completions)
 ui.aiProvider.baseUrl,ที่อยู่ API (Base URL)
 ui.aiProvider.baseURLModel,Base URL: {0} · โมเดล: {1} · 
 ui.aiProvider.btnSendText,ปุ่มส่งข้อความในแชท
@@ -944,6 +965,7 @@ ui.aiProvider.busyTest,กำลังทดสอบ…
 ui.aiProvider.cantPickModel,ยังไม่ได้เลือกโมเดล
 ui.aiProvider.cantSettingsProviderAI,ยังไม่ได้ตั้งค่าผู้ให้บริการ AI (เมนู AI → ตั้งค่า AI)
 ui.aiProvider.connectOkFoundModel,เชื่อมต่อสำเร็จ — พบ {0} โมเดล
+ui.aiProvider.credNameHint,เว้นว่าง = ใช้ชื่อผู้ให้บริการ
 ui.aiProvider.defaultsFail,บันทึกชุดผู้ให้บริการไว้ในเครื่องไม่สำเร็จ
 ui.aiProvider.defaultsHave,ในเครื่องนี้มี {0} ราย
 ui.aiProvider.defaultsImport,ใช้ผู้ให้บริการของฉัน
@@ -961,13 +983,21 @@ ui.aiProvider.domainAllow,โดเมนที่อนุญาต: {0}
 ui.aiProvider.domainNotListAllowed,โดเมนนี้ไม่อยู่ในรายการ Allowed HTTP Request Domains: 
 ui.aiProvider.edit,แก้ไข
 ui.aiProvider.editProvider,แก้ไขผู้ให้บริการ
+ui.aiProvider.emptyDetail,โทเคนที่ใช้คิด: {0} · เพดาน max_tokens: {1}
+ui.aiProvider.emptyHintEffort,ลดระดับการคิด (Reasoning Effort) หรือเลือกโมเดลที่ไม่คิดก่อนตอบ
+ui.aiProvider.emptyHintModel,ลองส่งใหม่ หรือเปลี่ยนโมเดล — บางโมเดลตอบว่างเมื่อเนื้อหาถูกกรอง
+ui.aiProvider.emptyHintTokens,เพิ่ม Maximum Number of Tokens ของผู้ให้บริการ (หรือตั้ง -1 = ไม่จำกัด)
+ui.aiProvider.emptyReply,AI ตอบกลับมาว่างเปล่า
+ui.aiProvider.emptyThinking,AI ใช้โควตาคำตอบไปกับการคิดจนหมด จึงไม่มีคำตอบ
 ui.aiProvider.fetchListModel,⟳ ดึงรายชื่อโมเดล
 ui.aiProvider.fileKeepKeyPart,ไฟล์นี้เก็บคีย์ส่วนตัวของแต่ละ Credential — อย่าแชร์ อย่าใส่ใน zip ที่ส่งต่อ
 ui.aiProvider.foundModel,พบ {0} โมเดล
+ui.aiProvider.hideKey,ซ่อนคีย์
 ui.aiProvider.historyTokens,งบประวัติแชท (token)
 ui.aiProvider.historyTokensHint,"0 = อัตโนมัติ (60% ของขีดจำกัดโมเดล · ไม่รู้ขีดจำกัด = 32,000)"
 ui.aiProvider.keepSplitFolderProject,เก็บแยกที่ {0} ในโฟลเดอร์โปรเจกต์ — ไม่อยู่ใน project.khn.json ที่แชร์กัน
 ui.aiProvider.lineNewExampleCom,คั่นด้วยจุลภาคหรือขึ้นบรรทัดใหม่ · รองรับ *.example.com · เว้นว่าง = ไม่จำกัด
+ui.aiProvider.modelsLoaded,{0} โมเดล — เลือกตัวที่จะใช้เป็นค่าเริ่มต้น
 ui.aiProvider.nameCredential,ชื่อ Credential
 ui.aiProvider.nameProvider,ชื่อผู้ให้บริการ
 ui.aiProvider.nameSeeDropdownEg,"ชื่อที่จะเห็นใน dropdown เช่น ""OpenAI ที่ทำงาน"" หรือ ""Ollama เครื่องตัวเอง"""
@@ -978,13 +1008,22 @@ ui.aiProvider.notHasProviderPress,"ยังไม่มีผู้ให้บ
 ui.aiProvider.notPick,(ยังไม่เลือก)
 ui.aiProvider.notRemember,ไม่จำกัด
 ui.aiProvider.notSendValue,(ไม่ส่งค่านี้)
+ui.aiProvider.preset,ชุดสำเร็จรูป
+ui.aiProvider.presetHint,เลือกแล้วเติมที่อยู่ API ให้ — ยังต้องใส่คีย์ของคุณเอง
+ui.aiProvider.presetPick,— กรอกเอง —
 ui.aiProvider.pressFetchListModel,"กด ""ดึงรายชื่อโมเดล"" เพื่อขอรายการจาก API ของเจ้านี้"
+ui.aiProvider.providerDeleted,ลบผู้ให้บริการแล้ว: {0}
+ui.aiProvider.providerSaved,บันทึกผู้ให้บริการแล้ว: {0}
+ui.aiProvider.saveCredential,บันทึกคีย์ไว้ก่อน
 ui.aiProvider.saveCredentialDoneKey,บันทึก Credential แล้ว (คีย์เก็บแยกที่ 
 ui.aiProvider.saveProvider,บันทึกผู้ให้บริการ
 ui.aiProvider.secCredential,ข้อมูลรับรอง (Credential)
 ui.aiProvider.secModel,โมเดล (Model)
 ui.aiProvider.secParams,พารามิเตอร์ (Parameters)
+ui.aiProvider.showKey,แสดงคีย์
 ui.aiProvider.skSkipEmptyNot,sk-… (เว้นว่างได้ถ้าเซิร์ฟเวอร์ไม่ต้องใช้คีย์ เช่น Ollama)
+ui.aiProvider.testChatFail,พบ {0} โมเดล แต่ {1} แชทไม่ได้: {2}
+ui.aiProvider.testChatOk,เชื่อมต่อสำเร็จ — พบ {0} โมเดล · {1} ตอบแชทได้
 ui.aiProvider.testConnect,ทดสอบการเชื่อมต่อ
 ui.aiProvider.toReplyBackDone,ปลายทางตอบกลับแล้ว แต่ไม่มีรายชื่อโมเดลในคำตอบ
 ui.aiProvider.useDoneTokensTimes,ใช้ไปแล้ว {0} tokens · {1} ครั้ง · ประมาณ ${2}
@@ -1299,7 +1338,7 @@ ui.app.aiAnalysis,ผลวิเคราะห์ AI
 ui.app.all,ทุกที่มา
 ui.app.allLine,เหมือนกันทุกบรรทัด
 ui.app.app,ฐานของโปรแกรม
-ui.app.appWriteNovelScreenplay,โปรแกรมเขียนนิยาย/บทภาพยนตร์ — Electron + ProseMirror
+ui.app.appWriteNovelScreenplay,โปรแกรมเขียนนิยาย/บทภาพยนตร์
 ui.app.auto,— อัตโนมัติ —
 ui.app.autoFitWidthOff,ปิดซูมพอดีความกว้างอัตโนมัติ — กลับไปใช้ซูมที่ตั้งไว้เอง
 ui.app.autoFitWidthOn,เปิดซูมพอดีความกว้างอัตโนมัติ
@@ -1308,7 +1347,7 @@ ui.app.autosaveRunN,บันทึกอัตโนมัติสำเร็
 ui.app.back,กลับไปฟอร์ม
 ui.app.backSceneNormalDone,"""{0}"" กลับเป็นฉากปกติแล้ว"
 ui.app.backVersionLatestSave,กลับไปยังเวอร์ชันล่าสุดที่บันทึก
-ui.app.badgeUseScreenplayOpenScene,ป้ายนี้ใช้กับบทภาพยนตร์ — เปิดฉากที่เป็นบทก่อน
+ui.app.badgeUseScreenplayOpenScene,ป้ายนี้ใช้กับบทภาพยนตร์ — เปิดฉากที่เป็นบทภาพยนตร์ก่อน
 ui.app.beforeDel,ก่อนลบ 
 ui.app.bind,ผูกกับ
 ui.app.bindCardDocProject,ผูกการ์ดกับเอกสารในโปรเจกต์
@@ -1367,20 +1406,20 @@ ui.app.changeNameMapDone,เปลี่ยนชื่อแผนที่แ�
 ui.app.changeNamePlanDone,เปลี่ยนชื่อแผนแล้ว
 ui.app.changeTitle,เปลี่ยนชื่อเรื่องเป็น: 
 ui.app.chapter,บทที่ {0}
-ui.app.chapterFilm, บทหนัง
-ui.app.chapterFilm2, บทหนัง ▾
+ui.app.chapterFilm, บทภาพยนตร์
+ui.app.chapterFilm2, บทภาพยนตร์ ▾
 ui.app.chapterFirstNotHas,บทแรกยังไม่มีฉาก
 ui.app.chapterHeading,บท/หัวข้อ
-ui.app.chapterNotHasElement,บทนี้ยังไม่มี element ที่มีเนื้อหาให้ลบ
-ui.app.chapterPageFilePerson,บท “{0}” · {1} หน้า — จะได้ไฟล์ละคน ลายน้ำต่างกัน
-ui.app.characterChapter,ตัวละครในบทนี้
+ui.app.chapterNotHasElement,บทภาพยนตร์นี้ยังไม่มี element ที่มีเนื้อหาให้ลบ
+ui.app.chapterPageFilePerson,บทภาพยนตร์ “{0}” · {1} หน้า — จะได้ไฟล์ละคน ลายน้ำต่างกัน
+ui.app.characterChapter,ตัวละครในบทภาพยนตร์นี้
 ui.app.characterLineDialoguePage,{0} ตัวละคร · {1} บรรทัดบทพูด · {2} หน้า
-ui.app.checkChapterBeforeExport,ตรวจบทก่อนส่งออก: ปิด
-ui.app.checkChapterBeforeExport2,ตรวจบทก่อนส่งออก: เปิด
-ui.app.checkChapterNotOk,ตรวจบทไม่สำเร็จ
-ui.app.checkDone,รูปแบบบทไม่มีข้อผิดพลาด ▾
+ui.app.checkChapterBeforeExport,ตรวจบทภาพยนตร์ก่อนส่งออก: ปิด
+ui.app.checkChapterBeforeExport2,ตรวจบทภาพยนตร์ก่อนส่งออก: เปิด
+ui.app.checkChapterNotOk,ตรวจบทภาพยนตร์ไม่สำเร็จ
+ui.app.checkDone,รูปแบบบทภาพยนตร์ไม่มีข้อผิดพลาด ▾
 ui.app.checkNew,ตรวจใหม่
-ui.app.checkNewChapter, ตรวจใหม่ทั้งบท
+ui.app.checkNewChapter, ตรวจบทภาพยนตร์ใหม่ทั้งเรื่อง
 ui.app.checkScreenplay,ตรวจบทภาพยนตร์
 ui.app.checkWord,พจนานุกรมตรวจคำผิด
 ui.app.clearResult,ล้างผล
@@ -1403,7 +1442,7 @@ ui.app.closeTabDiscard,ปิดโดยไม่บันทึก
 ui.app.closeTabSave,บันทึกแล้วปิด
 ui.app.cmdLibraryImageFail,คำสั่งคลังรูปล้มเหลว: 
 ui.app.cmdUseScreenplayOpenScene,"คำสั่งนี้ใช้กับบทภาพยนตร์
-เปิดฉากที่เป็นบทก่อน แล้วลองใหม่"
+เปิดฉากที่เป็นบทภาพยนตร์ก่อน แล้วลองใหม่"
 ui.app.compareVersion,เทียบเวอร์ชัน — 
 ui.app.compareVersion2,เทียบเวอร์ชัน
 ui.app.consoleDev,คอนโซลนักพัฒนา
@@ -1466,7 +1505,7 @@ ui.app.docsEmptyNoTab,ยังไม่ได้เปิดเอกสาร
 ui.app.docsEmptyNoTabHint,คลิกฉากในแผงโปรเจกต์ทางซ้ายเพื่อเริ่มเขียน
 ui.app.doItemSet,ทำตัวติดตั้ง/พกพา
 ui.app.doneDoneFile,เสร็จแล้ว {0} ไฟล์
-ui.app.doneOpenBackChapter,"""{0}"" ให้แล้ว (เปิดกลับได้ที่ บท → ตัวพิมพ์ใหญ่/เล็ก)"
+ui.app.doneOpenBackChapter,"""{0}"" ให้แล้ว (เปิดกลับได้ที่ บทภาพยนตร์ → ตัวพิมพ์ใหญ่/เล็ก)"
 ui.app.draft,ฉบับร่าง
 ui.app.draftNotHasChapter,ฉบับร่างนี้ยังไม่มีบท — สร้างบทก่อน
 ui.app.dragMoveBar,ลากเพื่อย้ายแถบ
@@ -1498,8 +1537,8 @@ ui.app.exitModeRead,ออกจากโหมดอ่าน
 ui.app.explorerReadLibraryImage,explorer: อ่านคลังรูปไม่ได้
 ui.app.explorerReadMapsJson,explorer: อ่าน maps.json ไม่ได้
 ui.app.exportAlignFail,อ่านการจัดหน้าของฉากมาใส่ไฟล์ที่ส่งออกไม่สำเร็จ
-ui.app.exportChapter,ส่งออกบท 
-ui.app.exportChapterDraft,ส่งออกบทจากฉบับร่างไหน
+ui.app.exportChapter,ส่งออกบทภาพยนตร์ 
+ui.app.exportChapterDraft,ส่งออกบทภาพยนตร์จากฉบับร่างไหน
 ui.app.exportDone,ส่งออก .{0} แล้ว: {1}
 ui.app.exportDraft,ส่งออกฉบับร่างไหน
 ui.app.exportFontCssFail,ฝังฟอนต์ลงไฟล์ส่งออกไม่สำเร็จ
@@ -1516,13 +1555,13 @@ ui.app.fileNotHas,(ไฟล์นี้ยังไม่มี{0})
 ui.app.fileOpen,ไฟล์ที่เปิดอยู่
 ui.app.fileTaskMarkdownJSON,ไฟล์งานเป็น Markdown + JSON ธรรมดา
 ui.app.filter,กรองตามที่มา
-ui.app.findDiskFindOn,หาในดิสก์ (Find on disk)
+ui.app.findDiskFindOn,หาในดิสก์
 ui.app.findRowNotFound,หาแถวไม่เจอ → ซ่อมต้นไม้
 ui.app.folderNotProjectKillian,โฟลเดอร์นี้ไม่ใช่โปรเจกต์ Killian (ไม่พบ project.khn.json)
 ui.app.fontScreenplayQuoteUnquote,ฟอนต์บทภาพยนตร์ (ละติน) — Quote-Unquote Apps
 ui.app.forceCaseBig,บังคับตัวพิมพ์ใหญ่
-ui.app.forcePrintBigFormat,บังคับพิมพ์ใหญ่ตามรูปแบบบทมาตรฐาน
-ui.app.foundErrorChapterEg,"พบ {0} ข้อผิดพลาดในบท (เช่น “{1}”)
+ui.app.forcePrintBigFormat,บังคับพิมพ์ใหญ่ตามรูปแบบบทภาพยนตร์มาตรฐาน
+ui.app.foundErrorChapterEg,"พบ {0} ข้อผิดพลาดในบทภาพยนตร์ (เช่น “{1}”)
 ส่งออกต่อไปเลยไหม?"
 ui.app.foundSceneMention,พบ {0} ฉากที่กล่าวถึง “{1}”
 ui.app.goalFromSaves,นับจากประวัติคำ (อัปเดตหลังบันทึก)
@@ -1576,7 +1615,7 @@ ui.app.jsonUnreadable,อ่านไฟล์ {0} ไม่ได้ (ไฟล
 ui.app.jsonUnreadableNoBackup,อ่านไฟล์ {0} ไม่ได้ และเก็บสำเนาไม่ได้ — จะไม่บันทึกทับไฟล์นี้จนกว่าจะอ่านได้
 ui.app.keyEnglish,key (อังกฤษ)
 ui.app.keyPlugin,คีย์ลัดปลั๊กอินพัง: 
-ui.app.killianEditor,คิเลียน อีดิเตอร์ 
+ui.app.killianEditor,Killian 2 · v
 ui.app.kind,ชนิด
 ui.app.label,ป้ายชื่อ
 ui.app.label2,ป้ายชื่อ (ไทย)
@@ -1688,7 +1727,7 @@ ui.app.noteDoneNotMerge,"""{0}"" เป็นโน้ตแล้ว — จะ
 ui.app.notFoundDocAt,ไม่พบเอกสารที่ตรงกับคำค้น
 ui.app.notFoundElementAt,ไม่พบ element ที่ตรงเงื่อนไข
 ui.app.notFoundError,ไม่พบข้อผิดพลาด 🎉
-ui.app.notFoundErrorChapter,ไม่พบข้อผิดพลาดในบทนี้
+ui.app.notFoundErrorChapter,ไม่พบข้อผิดพลาดในบทภาพยนตร์นี้
 ui.app.notFoundFileDisk,ไม่พบไฟล์ในดิสก์: 
 ui.app.notFoundFileExplorer,ไม่พบไฟล์นี้ใน Explorer (อาจถูกลบ/ย้ายไปแล้ว)
 ui.app.notFoundFileLang,ไม่พบไฟล์ภาษา (languages/k2_th.csv · k2_{0}.csv)
@@ -1701,16 +1740,16 @@ ui.app.notHas2,(ไม่มี)
 ui.app.notHas3,ไม่มี
 ui.app.notHasBookNew,ยังไม่มีเล่ม — สร้างเล่มก่อน
 ui.app.notHasChapter,— ยังไม่มีบท —
-ui.app.notHasChapterExport,ยังไม่มีบทให้ส่งออก — เปิดฉากบทภาพยนตร์ก่อน
+ui.app.notHasChapterExport,ยังไม่มีบทภาพยนตร์ให้ส่งออก — เปิดฉากบทภาพยนตร์ก่อน
 ui.app.notHasChapterOther,ไม่มีบทอื่นให้ย้ายไป
-ui.app.notHasDialogueChapter,ยังไม่มีบทพูดในบทนี้
+ui.app.notHasDialogueChapter,ยังไม่มีบทพูดในบทภาพยนตร์นี้
 ui.app.notHasDraftExport,ยังไม่มีฉบับร่างให้ส่งออก
 ui.app.notHasDraftNew,ยังไม่มีฉบับร่าง — สร้างเล่ม/ฉบับร่างก่อน
 ui.app.notHasFileHas,ไม่มี{0}ที่ {1} (ไฟล์นี้มี {2})
 ui.app.notHasFileOpen,ยังไม่มีไฟล์ให้เปิด
 ui.app.notHasFileTask,ยังไม่มีไฟล์งานวิจัย
 ui.app.notHasHeadingHead,(ยังไม่มีหัวข้อ/หัวฉาก)
-ui.app.notHasHeadScene,ยังไม่มีหัวฉากในบทนี้
+ui.app.notHasHeadScene,ยังไม่มีหัวฉากในบทภาพยนตร์นี้
 ui.app.notHasImage,(ยังไม่มีรูป)
 ui.app.notHasImageLibrary,ยังไม่มีรูปในคลัง
 ui.app.notHasLineAt,(ไม่มีบรรทัดที่ตรงตัวกรอง)
@@ -1731,7 +1770,7 @@ ui.app.notMustRememberWord,ไม่ต้องจำคำนี้
 ui.app.notOpen,(ยังไม่เปิด)
 ui.app.notOutDone,ไม่ออกแล้ว
 ui.app.notPick,ไม่เลือก
-ui.app.notRememberEditChapter,"ไม่จำ ""{0}"" อีก (แก้ได้ที่ บท → จัดการ SmartType)"
+ui.app.notRememberEditChapter,"ไม่จำ ""{0}"" อีก (แก้ได้ที่ บทภาพยนตร์ → จัดการ SmartType)"
 ui.app.notRememberFoundNot,"ยังไม่จำ (เจอไม่ถึง {0} ครั้ง) — กดปุ่ม ""จำ"" เพื่อจำเลย"
 ui.app.notSave,ยังไม่บันทึก
 ui.app.notSet,(ไม่ตั้ง)
@@ -1784,14 +1823,14 @@ ui.app.out, เพื่อออก
 ui.app.outNotSave,ออกโดยไม่บันทึก
 ui.app.page, · {0} หน้า
 ui.app.pageAtCursor,หน้า {0} / {1}
-ui.app.pageChapterNotOk,นับหน้าบทไม่สำเร็จ
+ui.app.pageChapterNotOk,นับหน้าบทภาพยนตร์ไม่สำเร็จ
 ui.app.pageGuidesOff,ปิดเส้นบอกขอบกระดาษแล้ว
 ui.app.pageGuidesOn,เปิดเส้นบอกขอบกระดาษแล้ว
 ui.app.pageNotName, · หน้าตาไม่เหมือนชื่อ
 ui.app.pageNovelNotOk,นับหน้านิยายไม่สำเร็จ
 ui.app.pageNumClose,เลขหน้า: ปิด
 ui.app.pageNumOpenRightMargin,"เลขหน้า: เปิด (ชิดขวา {0}"" · {1}"" จากขอบบน)"
-ui.app.pageNumStartChapter,เลขหน้าเริ่มต้น (บท)
+ui.app.pageNumStartChapter,เลขหน้าเริ่มต้น (บทภาพยนตร์)
 ui.app.pageOf,หน้า {0} / {1}
 ui.app.pagePage,ไปที่หน้า {0} จาก {1} หน้า
 ui.app.panelLoadFileWindow,[แผง] โหลดไฟล์ที่หน้าต่างแผงแก้ไม่สำเร็จ: 
@@ -1809,9 +1848,9 @@ ui.app.pickFolderToBefore,เลือกโฟลเดอร์ปลายท
 ui.app.pickMapTo,— เลือกแผนที่ปลายทาง —
 ui.app.pickSceneViewProps,(เลือกฉากเพื่อดูคุณสมบัติ)
 ui.app.pickTextBeforeDone,เลือกข้อความก่อน แล้วค่อยเปลี่ยนรูปตัวพิมพ์
-ui.app.pickTypeElementNeed,เลือกประเภท element ที่ต้องการลบทั้งหมดออกจากบท
+ui.app.pickTypeElementNeed,เลือกประเภท element ที่ต้องการลบทั้งหมดออกจากบทภาพยนตร์
 ui.app.pinPin,ปักหมุด
-ui.app.placeChapter,สถานที่ในบทนี้
+ui.app.placeChapter,สถานที่ในบทภาพยนตร์นี้
 ui.app.placeScenePage,{0} สถานที่ · {1} ฉาก · {2} หน้า
 ui.app.plannedName,มีแผนชื่อนี้อยู่แล้ว
 ui.app.plannerOpenPanelDup,planner: เปิดแผงซ้ำ — คำนวณพิกัด canvas ใหม่
@@ -1869,7 +1908,7 @@ ui.app.registerPanelFail,registerPanel ล้มเหลว:
 ui.app.remember,เลิกจำเอง
 ui.app.remember2,จำ
 ui.app.rememberTimes,จำอีกครั้ง
-ui.app.rememberWordChapterFound,จำคำจากบทเมื่อเจอซ้ำอย่างน้อย
+ui.app.rememberWordChapterFound,จำคำจากบทภาพยนตร์เมื่อเจอซ้ำอย่างน้อย
 ui.app.rememberWordFoundTimes,จำคำนี้ไว้เดา แม้จะเจอครั้งเดียว
 ui.app.removeElementsFail,remove-elements ล้มเหลว
 ui.app.removeElementsKeepVersion,remove-elements: เก็บเวอร์ชันก่อนลบไม่สำเร็จ (ลบต่อ)
@@ -1927,7 +1966,7 @@ ui.app.searchStylePrint,ค้นหาแบบยอมพิมพ์ผิ�
 ui.app.selectAllNeedEditor,ต้องอยู่ในตัวแก้ไขก่อนถึงจะเลือกทั้งหมดได้
 ui.app.sendOpenWindowMain,ส่งไปเปิดที่หน้าต่างหลักแล้ว
 ui.app.setCat,ตั้งหมวด…
-ui.app.settingsFormatCheckChapter, ตั้งค่ารูปแบบ/การตรวจบท…
+ui.app.settingsFormatCheckChapter, ตั้งค่ารูปแบบ/การตรวจบทภาพยนตร์…
 ui.app.showFormatClose,แสดงรูปแบบ: ปิด
 ui.app.showFormatOpenLine,แสดงรูปแบบ: เปิด (เส้นขอบ element + เครื่องหมายจบบรรทัด)
 ui.app.showHideLevel,แสดง/ซ่อนระดับ 
@@ -1947,13 +1986,13 @@ ui.app.spellNoSuggest,ไม่มีคำที่แนะนำ
 ui.app.spellReplaced,"แทนคำ ""{0}"" ด้วย ""{1}"" แล้ว"
 ui.app.spellReplaceFail,แทนคำไม่สำเร็จ
 ui.app.spellSuggestHead,คำที่น่าจะถูก
-ui.app.spErrMarkOff,ปิดเส้นบอกจุดผิดในบทแล้ว
-ui.app.spErrMarkOn,เปิดเส้นบอกจุดผิดในบทแล้ว
-ui.app.spErrMarkToggle,แสดงเส้นบอกจุดผิดในบท
+ui.app.spErrMarkOff,ปิดเส้นบอกจุดผิดในบทภาพยนตร์แล้ว
+ui.app.spErrMarkOn,เปิดเส้นบอกจุดผิดในบทภาพยนตร์แล้ว
+ui.app.spErrMarkToggle,แสดงเส้นบอกจุดผิดในบทภาพยนตร์
 ui.app.splitF,"แยก ""{0}"" เป็นหน้าต่างลอยแล้ว (ดับเบิลคลิกหัวหน้าต่าง = คืนเป็นแท็บ)"
 ui.app.splitWindowFloat,แยกเป็นหน้าต่างลอย
-ui.app.spThaiOff,ฟอนต์ไทยในบท: ไม่ปรับ — ปล่อยตามฟอนต์สำรองของระบบ
-ui.app.spThaiOn,ฟอนต์ไทยในบท: ปรับสัดส่วน {0}% (ตัวไทยพอดีระยะบรรทัดของบท)
+ui.app.spThaiOff,ฟอนต์ไทยในบทภาพยนตร์: ไม่ปรับ — ปล่อยตามฟอนต์สำรองของระบบ
+ui.app.spThaiOn,ฟอนต์ไทยในบทภาพยนตร์: ปรับสัดส่วน {0}% (ตัวไทยพอดีระยะบรรทัดของบทภาพยนตร์)
 ui.app.startAppOpenProject,เริ่มโปรแกรม: เปิดโปรเจกต์ล่าสุดทันที (ข้ามหน้าแรก)
 ui.app.startAppShowPage,เริ่มโปรแกรม: แสดงหน้าแรกก่อน
 ui.app.status2,สถานะ: 
@@ -1979,8 +2018,8 @@ ui.app.timeEndNotForce,เวลาจบ (ไม่บังคับ — ส�
 ui.app.timesSpeak,ครั้งที่พูด
 ui.app.timeStoryStart,เวลาในเรื่อง (เริ่ม)
 ui.app.title,Killian 2
-ui.app.toggleModeChapterFilm,สลับเป็นโหมดบทหนัง
-ui.app.toggleModeDocNovel,สลับโหมดเอกสาร นิยาย ↔ บทหนัง ({sc:toggle-format})
+ui.app.toggleModeChapterFilm,สลับเป็นโหมดบทภาพยนตร์
+ui.app.toggleModeDocNovel,สลับโหมดเอกสาร นิยาย ↔ บทภาพยนตร์ ({sc:toggle-format})
 ui.app.toggleModeNovel,สลับเป็นโหมดนิยาย
 ui.app.trash,ถังขยะ ({0})
 ui.app.tryNew,ลองใหม่
@@ -1992,7 +2031,7 @@ ui.app.user,ผู้ใช้
 ui.app.useReorderTimeText,ใช้จัดลำดับเมื่อเวลาเป็นข้อความ
 ui.app.valignPlannerOnly,จัดแนวตั้งใช้ได้เฉพาะในกระดานวางแผน
 ui.app.valueRememberAllWord, — ค่า 1 = จำทุกคำที่พิมพ์ (คำพิมพ์ผิดจะติดมาด้วย)
-ui.app.versionEditF,เวอร์ชันที่แก้ไข: {0}  ·  รอบแก้ #{1}
+ui.app.versionEditF,แก้ไขมาแล้ว {1} รอบ
 ui.app.viewListAll, ดูรายการทั้งหมด…
 ui.app.viewSample,ดูตัวอย่าง
 ui.app.webMoreElectron,เอนจินเว็บ + รันไทม์ที่มากับ Electron
@@ -2002,7 +2041,7 @@ ui.app.wordCmdNotRemember,คำที่สั่งไม่ให้จำ ({
 ui.app.wordCmdRemember,คำที่สั่งให้จำเอง ({0})
 ui.app.wordCountRebuilt,คำนวณจำนวนคำใหม่แล้ว {0} ฉาก
 ui.app.wordCountSyncFail,ปรับจำนวนคำให้ตรงกับไฟล์ไม่สำเร็จ
-ui.app.wordKeepThingPrint,"คำเหล่านี้เก็บจาก ""สิ่งที่พิมพ์ในบทนี้"" — กดปุ่มกากบาทท้ายคำเพื่อสั่งไม่ให้จำอีก"
+ui.app.wordKeepThingPrint,"คำเหล่านี้เก็บจาก ""สิ่งที่พิมพ์ในบทภาพยนตร์นี้"" — กดปุ่มกากบาทท้ายคำเพื่อสั่งไม่ให้จำอีก"
 ui.app.wordPageNameFile,คำนำหน้าชื่อไฟล์
 ui.app.workFlowMine,เวิร์กโฟลว์ของฉัน
 ui.app.writeCode,เขียนโค้ด
@@ -2611,7 +2650,7 @@ ui.common.center,กึ่งกลาง
 ui.common.changeNameBook,เปลี่ยนชื่อเล่ม…
 ui.common.chapter,บท
 ui.common.chapter2,บท: 
-ui.common.chapterFilm,บทหนัง
+ui.common.chapterFilm,บทภาพยนตร์
 ui.common.chapterN,บทที่ {{n}}
 ui.common.chapterOne2,บทที่หนึ่ง
 ui.common.character,ตัวละคร
@@ -2640,6 +2679,7 @@ ui.common.delMoveTrash,ลบ (ย้ายไปถังขยะ)
 ui.common.desc,คำอธิบาย
 ui.common.detailed,ละเอียด
 ui.common.dialogue,บทพูด
+ui.common.discardChangesAsk,มีค่าที่แก้ไว้แต่ยังไม่ได้บันทึก — ปิดโดยไม่บันทึกหรือไม่
 ui.common.dot,จุด
 ui.common.dotStart,จุดเริ่ม
 ui.common.draftTextDraft,ร่าง — ข้อความล้วน (Draft)
@@ -2770,7 +2810,7 @@ ui.common.renameNew,ตั้งชื่อใหม่
 ui.common.renameVersionSkipEmpty,ตั้งชื่อเวอร์ชัน (เว้นว่างได้)
 ui.common.repeat,⧉ ทำซ้ำ
 ui.common.replaceBtn,แทนที่
-ui.common.restart,เริ่มใหม่
+ui.common.restart,เริ่มโปรแกรมใหม่
 ui.common.revertBtn,กลับไปฉบับที่บันทึก
 ui.common.right,ขวา
 ui.common.right2,ชิดขวา
@@ -2850,6 +2890,7 @@ ui.compile.msg,<!-- ขึ้นหน้าใหม่ -->
 ui.compile.nameScene,ชื่อฉาก
 ui.compile.nextSummaryStats,ต่อท้ายด้วยสรุปสถิติ
 ui.compile.notSpecifyStatus,ไม่ระบุสถานะ
+ui.compile.novelPdf,นิยาย → PDF (ชื่อบท · ตัวคั่นฉาก)
 ui.compile.onlySceneStatus,เอาเฉพาะฉากที่สถานะ…
 ui.compile.pageBreakAllChapter,ขึ้นหน้าใหม่ทุกบท
 ui.compile.pageListCharacterCast,หน้ารายชื่อตัวละคร (Cast of Characters)
@@ -3063,7 +3104,7 @@ ui.dlg.settingsFactory,รีเซ็ตเป็นค่าโรงงาน
 ui.dlg.settingsFactoryAsk,คืนค่าตั้งค่าทั้งหมดกลับเป็นค่าเริ่มต้นของโปรแกรม? (ค่าปัจจุบันจะถูกเก็บไว้ให้กดคืนค่าก่อนหน้าได้)
 ui.dlg.settingsFactoryDone,รีเซ็ตเป็นค่าโรงงานแล้ว
 ui.dlg.settingsFactoryHint,คืนทุกหัวข้อกลับเป็นค่าเริ่มต้น — ค่าเดิมยังกดคืนได้
-ui.dlg.settingsNoProject,ยังไม่ได้เปิดโปรเจกต์ — แสดงเฉพาะค่าระดับผู้ใช้ (ใช้กับทุกผลงาน)
+ui.dlg.settingsNoProject,ยังไม่ได้เปิดโปรเจกต์ — แสดงเฉพาะค่าระดับผู้ใช้ (ใช้กับทุกโปรเจกต์)
 ui.dlg.settingsPrevFail,เก็บค่าตั้งค่าก่อนหน้าไม่สำเร็จ
 ui.dlg.settingsRevert,คืนค่าก่อนหน้า
 ui.dlg.settingsRevertAsk,คืนค่าตั้งค่ากลับเป็นชุดก่อนการบันทึกครั้งล่าสุด?
@@ -3415,7 +3456,7 @@ ui.fab.actQuickNote,โน้ตด่วนของฉาก
 ui.fab.actQuickOpen,เปิดไฟล์ด่วน
 ui.fab.actSaveAll,บันทึกทั้งหมด
 ui.fab.actScene,สร้างฉาก
-ui.fab.actSearch,ค้นทั้งผลงาน
+ui.fab.actSearch,ค้นทั้งโปรเจกต์
 ui.fab.actSettings,ตั้งค่า
 ui.fab.actSnapshot,สำรองข้อมูลเดี๋ยวนี้
 ui.fab.actTemplate,สร้างจากแม่แบบ
@@ -3435,7 +3476,7 @@ ui.fab.grpFile,ไฟล์
 ui.fab.grpView,มุมมอง/แผง
 ui.fab.grpWrite,ระหว่างเขียน
 ui.fab.hint,เลือกคำสั่งที่จะให้โผล่บนปุ่มลอยได้สูงสุด {0} คำสั่ง — ติ๊กแล้วเห็นผลทันที · ย้ายตัวปุ่มได้ด้วยการคลิกขวาค้างแล้วลาก
-ui.fab.needProject,เปิดผลงานก่อนจึงจะสร้างของใหม่ได้
+ui.fab.needProject,เปิดโปรเจกต์ก่อนจึงจะสร้างของใหม่ได้
 ui.fab.posReset,คืนปุ่มลอยกลับมุมขวาล่างแล้ว
 ui.fab.posSaved,จำตำแหน่งปุ่มลอยแล้ว
 ui.filterCommands,กรองคำสั่ง…
@@ -3480,7 +3521,7 @@ ui.fmtcfg.showAll,แสดงทุกปุ่มในโหมด{0}
 ui.fonts.allChar,ทุกอักขระ
 ui.fonts.ayuthayaMacFloat,Ayuthaya (macOS · วรรณยุกต์ลอย)
 ui.fonts.chineseJapanese,จีน/ญี่ปุ่น (คันจิ)
-ui.fonts.courierPrimeDefaultChapter,Courier Prime (ละติน · มาตรฐานบท)
+ui.fonts.courierPrimeDefaultChapter,Courier Prime (ละติน · มาตรฐานบทภาพยนตร์)
 ui.fonts.cyrillic,ซีริลลิก
 ui.fonts.english,ละติน (อังกฤษ)
 ui.fonts.khmer,เขมร
@@ -4083,12 +4124,12 @@ ui.home.close,ปิดหน้าแรก
 ui.home.closePageFirst,ปิดหน้าแรก
 ui.home.copyPath,คัดลอกที่อยู่โฟลเดอร์
 ui.home.editLatest,แก้ไขล่าสุด: 
-ui.home.export,ส่งออก
+ui.home.export,ส่งออก .zip
 ui.home.exportProjectOpenFile,ส่งออกโปรเจกต์ที่เปิดอยู่เป็นไฟล์ .zip
 ui.home.homeLoadProjectFail,home: โหลดโปรเจกต์ล้มเหลว
 ui.home.homePanelLoadFail,home-panel: โหลดล้มเหลว
 ui.home.homeReadProjectFail,home: อ่านโปรเจกต์ล้มเหลว: 
-ui.home.import,นำเข้า
+ui.home.import,นำเข้า .zip
 ui.home.importProjectFileZip,นำเข้าโปรเจกต์จากไฟล์ .zip
 ui.home.language,ภาษา
 ui.home.msg, โดย 
@@ -4173,7 +4214,7 @@ ui.html.tbLinenum,แสดงเลขบรรทัด
 ui.html.tbLog,บันทึกการทำงาน
 ui.html.tbMaps,แผนที่
 ui.html.tbMdCodes,ซ่อนรหัสนำหน้าบรรทัด (. @ > $shot # …)
-ui.html.tbMode,สลับโหมดเอกสาร นิยาย ↔ บทหนัง
+ui.html.tbMode,สลับโหมดเอกสาร นิยาย ↔ บทภาพยนตร์
 ui.html.tbModeText,นิยาย ▾
 ui.html.tbNetwork,ผังความสัมพันธ์
 ui.html.tbNote,โน้ตด่วน — จดความคิดตอนนี้ไว้ก่อน
@@ -4265,7 +4306,7 @@ ui.importSp.import,นำเข้าจาก:
 ui.importSp.importNotOk,นำเข้าไม่สำเร็จ: 
 ui.importSp.notFoundFileHTML,ไม่พบไฟล์ HTML ใน .celtx — อาจเป็น Celtx รุ่นเก่าที่เก็บเป็น XML ตรงๆ
 ui.importSp.notKnownFormatFile,ไม่รู้จักรูปแบบไฟล์: 
-ui.importSp.previewEmpty,อ่านไฟล์แล้วไม่พบเนื้อบทเลย
+ui.importSp.previewEmpty,อ่านไฟล์แล้วไม่พบเนื้อบทภาพยนตร์เลย
 ui.importSp.previewTitle,ตัวอย่างบทที่จะนำเข้า
 ui.importSp.readFileNotOk,อ่านไฟล์ไม่สำเร็จ: 
 ui.importSp.replaceTab,แทนที่เนื้อในแท็บที่เปิดอยู่
@@ -4370,6 +4411,9 @@ ui.logline.saved,บันทึก Logline แล้ว
 ui.logline.stakes,เดิมพัน (Stakes)
 ui.logline.title,Logline
 ui.logline.why,AI ใช้เป็นเข็มทิศ ช่วยให้เนื้อเรื่องไม่หลุดแกน
+ui.main.pickFolderBtn,เลือกโฟลเดอร์นี้
+ui.main.pickNewProjectFolder,เลือกที่เก็บโปรเจกต์ใหม่ — โฟลเดอร์ของโปรเจกต์จะถูกสร้างไว้ข้างใน
+ui.main.pickProjectFolder,เลือกโฟลเดอร์ของโปรเจกต์ที่จะเปิด
 ui.mapAi.aroundHead,รอบตัว (ใกล้ไปไกล):
 ui.mapAi.cut,(ตัดส่วนที่เหลือเพราะยาวเกิน — ใช้คำสั่ง map.where ถามทีละชื่อได้)
 ui.mapAi.head,## ตำแหน่งบนแผนที่ (จากแผง แผนที่ ของผู้เขียน)
@@ -4689,11 +4733,11 @@ ui.menu.bugStatus,สถานะบั๊กและคำขอ…
 ui.menu.cancelSplitPageScreen,ยกเลิกแยกหน้าจอ
 ui.menu.caseBigSmall,ตัวพิมพ์ใหญ่/เล็ก (ให้อิสระ)
 ui.menu.centerK,กึ่งกลาง
-ui.menu.chapterFilm,บทหนัง
+ui.menu.chapterFilm,บทภาพยนตร์
 ui.menu.cheatsheet,ปุ่มลัดทั้งหมด…
 ui.menu.checkAlwaysCharacter,ตรวจสอบความสม่ำเสมอของตัวละคร…
 ui.menu.checkBeforePrintExport,ตรวจก่อนพิมพ์/ส่งออก
-ui.menu.checkChapterListError,ตรวจทั้งบท (รายการข้อผิดพลาด)…
+ui.menu.checkChapterListError,ตรวจบทภาพยนตร์ทั้งเรื่อง (รายการข้อผิดพลาด)…
 ui.menu.checkFindErrorU,ตรวจหาข้อผิดพลาดถัดไป
 ui.menu.checkFindWordDup,ตรวจหาคำซ้ำ · สถิติการใช้คำ (Word History)…
 ui.menu.checkPlotHole,ตรวจสอบ Plot Hole…
@@ -4705,7 +4749,7 @@ ui.menu.codexCodex,สารานุกรม (Codex)
 ui.menu.collapse,ย่อ
 ui.menu.collapseUI,ย่อ UI
 ui.menu.commentScenePanel,คอมเมนต์ในฉากนี้ (แผง)
-ui.menu.compareChapter,เปรียบเทียบบท / สคริปต์…
+ui.menu.compareChapter,เปรียบเทียบบทภาพยนตร์สองฉบับ…
 ui.menu.consoleDev,คอนโซลนักพัฒนา…
 ui.menu.copyC,คัดลอก
 ui.menu.coverTitlePages,หน้าปก (Title Pages)…
@@ -4749,7 +4793,7 @@ ui.menu.fmtSvg,รูปเวกเตอร์ SVG
 ui.menu.fmtZip,ZIP (รูปที่ใช้จริง)
 ui.menu.fontLangOther,ฟอนต์ตามภาษา (ไทย/ละติน/อื่น ๆ)…
 ui.menu.forceCaseBigOnly,บังคับตัวพิมพ์ใหญ่เฉพาะชนิด
-ui.menu.forcePrintBigFormat,บังคับพิมพ์ใหญ่ตามรูปแบบบทมาตรฐาน (หัวฉาก · ชื่อตัวละคร · ทรานซิชัน)
+ui.menu.forcePrintBigFormat,บังคับพิมพ์ใหญ่ตามรูปแบบบทภาพยนตร์มาตรฐาน (หัวฉาก · ชื่อตัวละคร · ทรานซิชัน)
 ui.menu.format,รูปแบบ
 ui.menu.format2,รูปแบบ
 ui.menu.formatNovelParaRange,รูปแบบนิยาย (ย่อหน้า · ช่วงบรรทัด · หัวข้อ)…
@@ -4758,7 +4802,7 @@ ui.menu.fullScreen,เต็มจอ
 ui.menu.graphAreaFloorPlan,ผังพื้นที่ (Floor Plan)
 ui.menu.graphDialogueNextPage,กราฟบทพูดต่อหน้า (Dialogue Chart)…
 ui.menu.graphStoryBreakBranch,ผังเรื่องแตกสาย (Branch Tree)
-ui.menu.heading,หัวข้อ {0} ({1}+{2})
+ui.menu.heading,หัวข้อ H{0}
 ui.menu.headPaperAllPage,หัวกระดาษทุกหน้า (Page Headers)…
 ui.menu.help,ช่วยเหลือ
 ui.menu.help2,ช่วยเหลือ
@@ -4858,7 +4902,7 @@ ui.menu.saveRunAppLog,บันทึกการทำงานของโป�
 ui.menu.saveS,บันทึก
 ui.menu.scene,ไปที่ฉาก…
 ui.menu.screenplayAllFountainFDX,"บทภาพยนตร์ทุกฟอร์แมต (Fountain, FDX, Celtx, Adobe Story, Fade In Pro)"
-ui.menu.script,บท
+ui.menu.script,บทภาพยนตร์
 ui.menu.searchF,ค้นหา…
 ui.menu.searchFileQuickO,ค้นหาไฟล์ด่วน…
 ui.menu.searchProjectF,ค้นหาทั้งโปรเจกต์
@@ -4890,13 +4934,13 @@ ui.menu.textContCONTINUEDMORE,ข้อความต่อเนื่อง (
 ui.menu.textNormal,ข้อความปกติ
 ui.menu.theme,ธีมสี
 ui.menu.thesaurusT,คลังคำพ้อง/คำตรงข้าม…
-ui.menu.toggleModeNovelChapter,สลับโหมด นิยาย ↔ บทหนัง
+ui.menu.toggleModeNovelChapter,สลับโหมด นิยาย ↔ บทภาพยนตร์
 ui.menu.tool,เครื่องมือ
 ui.menu.toolbarCfg,ปรับปุ่มบนแถบเครื่องมือ…
 ui.menu.trialPlayStoryBreak,ทดลองเล่นเรื่องแตกสาย (Player Mode)
 ui.menu.userManual,คู่มือผู้ใช้…
 ui.menu.view,มุมมอง
-ui.menu.viewChapter,มุมมองบท
+ui.menu.viewChapter,มุมมองบทภาพยนตร์
 ui.menu.viewNoteAll,ดูโน้ตทั้งหมด…
 ui.menu.viewPagePaper,มุมมองหน้ากระดาษ
 ui.menu.wordSpeakLift,คำพูดยกมา
@@ -5274,6 +5318,7 @@ ui.panel.historyTitle,ประวัติการทำงาน
 ui.panel.jumpedInMain,กระโดดไปตำแหน่งนั้นที่หน้าต่างหลักแล้ว
 ui.panel.kanbanTitle,Kanban
 ui.panel.layoutReset,รีเซ็ตการจัดวางแผงแล้ว
+ui.panel.layoutRestored,คืนการจัดวางแผงเดิมแล้ว
 ui.panel.logTitle,บันทึกการทำงานของโปรแกรม (Log)
 ui.panel.manage,จัดการแผง
 ui.panel.mapsTitle,แผนที่
@@ -5407,19 +5452,19 @@ ui.pdf.addPage,เพิ่มหน้า
 ui.pdf.addText,เพิ่มข้อความ
 ui.pdf.areaPrint,0 = เท่าพื้นที่พิมพ์ที่เหลือ
 ui.pdf.busyNew,กำลังสร้าง…
-ui.pdf.cantSetCoverChapter,ยังไม่ได้ตั้งหน้าปก — เมนู บท → หน้าปก
+ui.pdf.cantSetCoverChapter,ยังไม่ได้ตั้งหน้าปก — เมนู บทภาพยนตร์ → หน้าปก
 ui.pdf.caseBig,ตัวพิมพ์ใหญ่
-ui.pdf.chapterPage,บท “{0}” · {1} หน้า — 
-ui.pdf.chapterPageFirstNot,ธรรมเนียมบท: หน้าแรกไม่ใส่
+ui.pdf.chapterPage,บทภาพยนตร์ “{0}” · {1} หน้า — 
+ui.pdf.chapterPageFirstNot,ธรรมเนียมบทภาพยนตร์: หน้าแรกไม่ใส่
 ui.pdf.clickTextPaperEdit,คลิกข้อความในกระดาษเพื่อแก้ · กรอบเส้นประ = พื้นที่พิมพ์
-ui.pdf.closeChapterHeadPaper,ยังปิดอยู่ — เมนู บท → หัวกระดาษ
+ui.pdf.closeChapterHeadPaper,ยังปิดอยู่ — เมนู บทภาพยนตร์ → หัวกระดาษ
 ui.pdf.closeHeadPaperDone,ปิดหัวกระดาษแล้ว
 ui.pdf.colorMode,โหมดสี
 ui.pdf.colorModeColor,สี
 ui.pdf.colorModeHint,ขาวดำ = ธรรมเนียมบทที่ส่งกองถ่าย · สี = ฉบับอ่านเอง
 ui.pdf.colorModeMono,ขาวดำ
 ui.pdf.cover,แนบหน้าปก
-ui.pdf.coverPasteBeforePage,หน้าปกจะถูกวางไว้ก่อนหน้าแรกของบท และไม่นับรวมกับเลขหน้า · 
+ui.pdf.coverPasteBeforePage,หน้าปกจะถูกวางไว้ก่อนหน้าแรกของบทภาพยนตร์ และไม่นับรวมกับเลขหน้า · 
 ui.pdf.coverTitlePages,หน้าปก (Title Pages)
 ui.pdf.dashLineUnder,ขีดเส้นใต้
 ui.pdf.default,ค่าเริ่มต้น
@@ -5432,11 +5477,10 @@ ui.pdf.doneDonePageToc,เสร็จแล้ว — {0} หน้า · ส�
 ui.pdf.draftTwo,ร่างที่สอง
 ui.pdf.drawFrameRoundNote,วาดกรอบรอบโน้ตที่ยังพิมพ์อยู่
 ui.pdf.dupPage,ทำสำเนาหน้านี้ไว้ถัดไป
-ui.pdf.emptyFontChapter,ว่าง = ฟอนต์ของบท
+ui.pdf.emptyFontChapter,ว่าง = ฟอนต์ของบทภาพยนตร์
 ui.pdf.emptyNotPutWatermark,ว่าง = ไม่ใส่ลายน้ำ
 ui.pdf.exportPDFItemNew,ส่งออก PDF (ตัวสร้างในโปรแกรม)
 ui.pdf.exportPDFPdfLib,ส่งออก PDF (pdf-lib)
-ui.pdf.exportPDFPrevUse,"(เมนู ""ส่งออกเป็น PDF…"" เดิมยังใช้ Chromium อยู่ตามปกติ)"
 ui.pdf.gapXYInch,"ระยะ x/y เป็น ""นิ้ววัดจากขอบกระดาษ"" เหมือนแท็บหน้ากระดาษ"
 ui.pdf.headPaperAllPage,หัวกระดาษทุกหน้า
 ui.pdf.headPaperAllPage2,หัวกระดาษทุกหน้า (Page Headers)
@@ -5460,7 +5504,7 @@ ui.pdf.newPDF,สร้าง PDF…
 ui.pdf.newPDFNotOk,สร้าง PDF ไม่สำเร็จ
 ui.pdf.notHasCover,ไม่มีหน้าปก
 ui.pdf.notPrintElement,ไม่พิมพ์ element เหล่านี้
-ui.pdf.numbersWinHint,"ช่องนี้ชนะค่าใน ""ตั้งค่ารูปแบบบท"" — ติ๊กแล้วได้เลย"
+ui.pdf.numbersWinHint,"ช่องนี้ชนะค่าใน ""ตั้งค่ารูปแบบบทภาพยนตร์"" — ติ๊กแล้วได้เลย"
 ui.pdf.openDoneCountPage,(เปิดแล้วจำนวนหน้าอาจเพิ่ม) · ใช้ได้กับตัวสร้าง PDF ในโปรแกรม
 ui.pdf.openFileDonePage,เปิดไฟล์แล้วไปที่หน้า
 ui.pdf.openHeadPaperDone,เปิดหัวกระดาษแล้ว
@@ -6006,15 +6050,15 @@ ui.project.group,กลุ่ม/ฝ่าย
 ui.project.hasProject,มีโปรเจกต์นี้อยู่แล้ว
 ui.project.investigateBack,สืบสวน/ลึกลับ
 ui.project.investigation,การสืบสวน
-ui.project.newProjectTemplate,สร้างโปรเจกต์จากเทมเพลต
+ui.project.newProjectPick,สร้างโปรเจกต์ใหม่ — เลือกแบบตั้งต้น
 ui.project.newProjectTemplateDone,สร้างโปรเจกต์จากเทมเพลตแล้ว: 
-ui.project.novelFantasyWorldbuilding,"นิยายแฟนตาซี — worldbuilding, เผ่าพันธุ์, เวทมนตร์"
-ui.project.novelInvestigateCharacterSuspect,"นิยายสืบสวน — ตัวละคร suspects, clues, timeline"
+ui.project.novelFantasyWorldbuilding,นิยายแฟนตาซี — สร้างโลก เผ่าพันธุ์ เวทมนตร์
+ui.project.novelInvestigateCharacterSuspect,นิยายสืบสวน — ผู้ต้องสงสัย เบาะแส เส้นเวลา
 ui.project.readCant,อ่านเอนทิตี้ไม่ได้: 
 ui.project.sceneFirst,ฉากแรกของ 
 ui.project.screenplay,บทภาพยนตร์
 ui.project.start,คดีเริ่มต้น
-ui.project.structureChapterFilmAct,"โครงสร้างบทหนัง — 3 องก์, scenes เป็นบทภาพยนตร์"
+ui.project.structureChapterFilmAct,โครงสร้างบทภาพยนตร์ — 3 องก์ ฉากเขียนแบบบทภาพยนตร์
 ui.project.structureNovelChapterScene,โครงสร้างนิยายทั่วไป — บท+ฉาก+ตัวละคร+สถานที่
 ui.props.act,องก์ (Act)
 ui.props.actHint,เช่น องก์ 1
@@ -6287,14 +6331,14 @@ ui.settings.shortcuts,ปุ่มลัด
 ui.settings.shortcutsHint,"คลิก ""แก้"" แล้วกดปุ่มลัดชุดใหม่ (ต้องมี Ctrl/⌘) · ปุ่มลัดที่ซ้ำกันจะถูกเตือน"
 ui.settings.spellCheck,ตรวจคำผิด
 ui.settings.spellCheckDict,ใช้พจนานุกรมของโปรแกรม (ไทย+อังกฤษ)
-ui.settings.spellCheckDictHint,คลังคำออฟไลน์ ไทย+อังกฤษ · รู้จักคำที่เพิ่มเอง · ปิด = เหลือแค่ตัวตรวจของ Chromium (อังกฤษอย่างเดียว · ต้องโหลดคลังคำจากอินเทอร์เน็ตก่อน ไม่มีเน็ต = ไม่ขีดอะไรเลย)
+ui.settings.spellCheckDictHint,คลังคำออฟไลน์ ไทย+อังกฤษ · รู้จักคำที่เพิ่มเอง · ปิด = เหลือแค่ตัวตรวจของระบบ (อังกฤษอย่างเดียว · ต้องโหลดคลังคำจากอินเทอร์เน็ตก่อน ไม่มีเน็ต = ไม่ขีดอะไรเลย)
 ui.settings.spellCheckHint,ขีดเส้นใต้คำสะกดผิด (ขีดเส้นเดียวเสมอ ไม่ซ้อนกัน)
-ui.settings.spFontFamily,แบบอักษรบทหนัง
-ui.settings.spFontFamilyHint,ฟอนต์เฉพาะโหมดบทภาพยนตร์ (ค่าเริ่มต้น Courier New ตามมาตรฐานบท)
+ui.settings.spFontFamily,แบบอักษรบทภาพยนตร์
+ui.settings.spFontFamilyHint,ฟอนต์เฉพาะโหมดบทภาพยนตร์ (ค่าเริ่มต้น Courier Prime ตามมาตรฐานบทภาพยนตร์)
 ui.settings.themeK2,K2 (จานสีประจำโปรแกรม)
 ui.settings.themeK2Light,K2 สว่าง
 ui.settings.title,ตั้งค่า
-ui.settings.uiScale,ย่อ/ขยายทั้งเปลือกโปรแกรม
+ui.settings.uiScale,ย่อ/ขยายหน้าตาโปรแกรมทั้งหมด
 ui.settings.uiScaleHint,ปุ่ม แผง แท็บ และกล่อง ขยายตามทั้งหมด (75–200%) — ไม่แตะขนาดเอกสาร
 ui.settings.writing,ตัวแก้ไข
 ui.setTpl.a11yFind,การช่วยการเข้าถึง accessibility แสดงปุ่มที่กด แป้นพิมพ์ คอนทราสต์สูง ตาบอดสี ขาวดำ แถบบรรทัด เคอร์เซอร์ พิมพ์ดีด เสียงพิมพ์ดีด แป้นพิมพ์บนจอ
@@ -6365,8 +6409,8 @@ ui.setTpl.big,ใหญ่
 ui.setTpl.bodyStory,เนื้อเรื่อง
 ui.setTpl.bold,หนา
 ui.setTpl.bottomBottom,ล่าง (Bottom)
-ui.setTpl.btnChapterFilm,ปุ่มบทหนัง
-ui.setTpl.btnChapterFilmTabFind,ปุ่มบทหนัง tab enter element
+ui.setTpl.btnChapterFilm,ปุ่มบทภาพยนตร์
+ui.setTpl.btnChapterFilmTabFind,ปุ่มบทภาพยนตร์ tab enter element
 ui.setTpl.btnEachItemNew,ควบคุมว่าปุ่มแต่ละตัวจะสร้างหรือสลับเป็น element ใด
 ui.setTpl.btnFloatCornerRight,ปุ่มลอยมุมขวาล่าง (FAB)
 ui.setTpl.btnFloatFAB,ปุ่มลอย (FAB)
@@ -6375,15 +6419,15 @@ ui.setTpl.btnKeyShortcutFind,ปุ่มลัด คีย์ลัด shortcu
 ui.setTpl.btnScrollGraph,ปุ่มเลื่อนผัง (แพน)
 ui.setTpl.btnUsePressChange,"ปุ่มที่ใช้ (กด ""เปลี่ยน"" แล้วกดปุ่มใหม่)"
 ui.setTpl.btnViewD,ปุ่มหมุนมุมมอง 3D
-ui.setTpl.chapter,เครดิตบท
+ui.setTpl.chapter,เครดิตของบทภาพยนตร์
 ui.setTpl.checkTopScreen,การตรวจทานบนจอ
 ui.setTpl.closeDefaultFinalDraft,"ปิด (ค่าเริ่มต้น · แนว Final Draft) = บรรทัดถัดไปเป็น ""บรรยาย"" เขียนเปล่า ๆ ได้เลย ไม่ต้องมีรหัสนำหน้า · เปิด = ใช้เขียนบทพูดยาวหลายบรรทัดติดกัน แล้วบรรยายต้องขึ้นต้นด้วย !"
 ui.setTpl.closeDonePanelHistory,ปิดแล้วแผงประวัติจะไม่มีอะไรใหม่เพิ่ม (ของเดิมยังอยู่)
 ui.setTpl.closeEnterLineNew,ปิด = Enter ขึ้นบรรทัดใหม่ชนิดเดิม · ปุ่มอื่นไม่ทำงาน
 ui.setTpl.closeNoteHistory,ปิดการจดประวัติ
-ui.setTpl.closePageNumNot,ปิด = หน้าที่เลขจริงเป็น 1 ไม่พิมพ์เลข (ธรรมเนียมบทของบางคน) · หน้าปก/รายชื่อไม่นับอยู่แล้ว
-ui.setTpl.closePutCONTINUEDOnly,ปิดอยู่ = ใส่ (CONTINUED) เฉพาะหน้าที่มีหัวฉากอยู่ก่อน (ธรรมเนียมบทถ่ายทำ)
-ui.setTpl.colorAppBarPanel,สีของเปลือกโปรแกรม (แถบ · แผง · กล่อง) — ไม่แตะหน้ากระดาษและไฟล์ที่ส่งออก
+ui.setTpl.closePageNumNot,ปิด = หน้าที่เลขจริงเป็น 1 ไม่พิมพ์เลข (ธรรมเนียมบทภาพยนตร์ของบางคน) · หน้าปก/รายชื่อไม่นับอยู่แล้ว
+ui.setTpl.closePutCONTINUEDOnly,ปิดอยู่ = ใส่ (CONTINUED) เฉพาะหน้าที่มีหัวฉากอยู่ก่อน (ธรรมเนียมบทภาพยนตร์ฉบับถ่ายทำ)
+ui.setTpl.colorAppBarPanel,สีของหน้าตาโปรแกรม (แถบ · แผง · กล่อง) — ไม่แตะหน้ากระดาษและไฟล์ที่ส่งออก
 ui.setTpl.colorChar,สีตัวอักษร
 ui.setTpl.colorHeading,สีหัวข้อ
 ui.setTpl.colorMarginLineColor,สีขอบแผ่น เส้นประ และสีหมึก คำนวณตามให้อัตโนมัติ
@@ -6393,13 +6437,13 @@ ui.setTpl.colorStoryNetworkField,สีและการควบคุมข�
 ui.setTpl.contCONTINUED,ต่อเนื่อง (CONTINUED)
 ui.setTpl.copyrightBy,ลิขสิทธิ์โดย (Copyright by)
 ui.setTpl.dash,ขีด
-ui.setTpl.dashLineDotChapter,ขีดเส้นบอกจุดที่ผิดในบท
+ui.setTpl.dashLineDotChapter,ขีดเส้นบอกจุดที่ผิดในบทภาพยนตร์
 ui.setTpl.dashLineNot,ขีดท้ายบรรทัดติดกันไม่เกิน
 ui.setTpl.dataNextContactInformation,ข้อมูลติดต่อ (Contact information)
 ui.setTpl.dataResultTask,ข้อมูลผลงาน
 ui.setTpl.dataResultTaskAuthorFind,ข้อมูลผลงาน ผู้เขียน อีเมล ตัวแทน ลิขสิทธิ์ agent
-ui.setTpl.dataTopCoverChapter,ข้อมูลบนหน้าปกบท/ต้นฉบับ — ใช้ตอนพิมพ์และส่งออก
-ui.setTpl.defaultChapterPtAll,มาตรฐานบท = 12pt ทุกภาษา
+ui.setTpl.dataTopCoverChapter,ข้อมูลบนหน้าปกบทภาพยนตร์/ต้นฉบับ — ใช้ตอนพิมพ์และส่งออก
+ui.setTpl.defaultChapterPtAll,มาตรฐานบทภาพยนตร์ = 12pt ทุกภาษา
 ui.setTpl.defaultInchNotCollapse,มาตรฐาน 0.3–0.5 นิ้ว · 0 = ไม่ย่อ
 ui.setTpl.defaultLineInchChange,มาตรฐาน = 1 (6 บรรทัด/นิ้ว) · เปลี่ยนแล้วจำนวนบรรทัดต่อหน้าเปลี่ยนตาม
 ui.setTpl.defaultSourcePtFormat,มาตรฐานต้นฉบับ = 12pt
@@ -6419,10 +6463,10 @@ ui.setTpl.fillNumChapterAuto,เติมเลขบทอัตโนมัต
 ui.setTpl.fontHeading,ฟอนต์หัวข้อ
 ui.setTpl.fontLang,ฟอนต์ตามภาษา
 ui.setTpl.fontLangRangeCharFind,ฟอนต์ตามภาษา ช่วงอักขระ
-ui.setTpl.fontRangeCharUse,ฟอนต์ตามช่วงอักขระ (ใช้ได้ทั้งนิยายและบท)
+ui.setTpl.fontRangeCharUse,ฟอนต์ตามช่วงอักขระ (ใช้ได้ทั้งนิยายและบทภาพยนตร์)
 ui.setTpl.formatBodyStoryNovel,"รูปแบบของ ""เนื้อเรื่องนิยาย"" — ย่อหน้าบรรทัดแรก · ช่วงบรรทัด · หัวข้อ · ยกคำพูด · ค่าที่ตั้งที่นี่ใช้ทั้งบนจอและตอนส่งออก"
-ui.setTpl.formatChapter,รูปแบบบท
-ui.setTpl.formatChapterElementWideFind,รูปแบบบท element เยื้อง ความกว้าง
+ui.setTpl.formatChapter,รูปแบบบทภาพยนตร์
+ui.setTpl.formatChapterElementWideFind,รูปแบบบทภาพยนตร์ รูปแบบบท element เยื้อง ความกว้าง
 ui.setTpl.formatNovel,รูปแบบนิยาย
 ui.setTpl.formatNovelParaRangeFind,รูปแบบนิยาย ย่อหน้า ช่วงบรรทัด หัวข้อ ยกคำพูด
 ui.setTpl.formatNumChapter,รูปแบบเลขบท
@@ -6528,7 +6572,7 @@ ui.setTpl.showNumSceneHead,แสดงเลขฉากข้างหัว�
 ui.setTpl.showPageNum,แสดงเลขหน้า
 ui.setTpl.size,ขนาด (เท่า)
 ui.setTpl.sizeCardPageFirst,ขนาดการ์ดหน้าแรก (px)
-ui.setTpl.sizeCharUI,ขนาดตัวหนังสือของเปลือก (px)
+ui.setTpl.sizeCharUI,ขนาดตัวหนังสือของโปรแกรม (px)
 ui.setTpl.sizeFontNovelPt,ขนาดฟอนต์นิยาย (pt)
 ui.setTpl.sizeFontScreenplayPt,ขนาดฟอนต์บทภาพยนตร์ (pt)
 ui.setTpl.sizePaper,ขนาดกระดาษ
@@ -6547,12 +6591,12 @@ ui.setTpl.startupLastHome,เปิดโปรเจกต์ล่าสุด
 ui.setTpl.storyNetwork,ผังความสัมพันธ์
 ui.setTpl.storyNetworkColorBtnFind,story network สี ปุ่มเมาส์ ผัง
 ui.setTpl.subGoals,เป้าหมายจำนวนคำ
-ui.setTpl.subShellSize,ขนาดของเปลือกโปรแกรม
+ui.setTpl.subShellSize,ขนาดของหน้าตาโปรแกรม
 ui.setTpl.tab,Tab →
 ui.setTpl.tabAi,ผู้ช่วย AI
 ui.setTpl.tabAiFind,ai ผู้ช่วย ผู้ให้บริการ คีย์ โมเดล
 ui.setTpl.tableFontApp,ตารางเดียวคุมฟอนต์ทั้งโปรแกรม:
-ui.setTpl.tabPageNum,เลขฉาก · เลขหน้า (บท)
+ui.setTpl.tabPageNum,เลขฉาก · เลขหน้า
 ui.setTpl.tabPageNumFind,เลขหน้า เลขฉาก continued ตัดหน้า ข้อความเริ่มต้น
 ui.setTpl.tabSave,บันทึกและสำรอง
 ui.setTpl.tabSaveFind,บันทึก อัตโนมัติ สำรอง เวอร์ชัน ถังขยะ backup autosave recycle
@@ -6637,7 +6681,7 @@ ui.shortcode.grpTime,วันเวลา
 ui.shortcode.grpWiki,ข้อมูลจาก Wiki
 ui.shortcode.grpWork,เกี่ยวกับผลงาน
 ui.shortcode.liveCtxFail,อ่านข้อมูลสำหรับโค้ดสั้นไม่สำเร็จ
-ui.shortcode.needEditor,เปิดฉากหรือบทก่อนถึงจะแทรกโค้ดสั้นได้
+ui.shortcode.needEditor,เปิดฉากหรือบทภาพยนตร์ก่อนถึงจะแทรกโค้ดสั้นได้
 ui.shortcode.needField,เลือก/คลิกช่องข้อความก่อนถึงจะแทรกโค้ดสั้นได้
 ui.shortcode.no,ไม่ใช่
 ui.shortcode.statsScanFail,นับสถิติโปรเจกต์ไม่สำเร็จ
@@ -6754,18 +6798,18 @@ ui.shortcuts.saveAll,บันทึกทั้งหมด
 ui.shortcuts.saveAs,บันทึกเป็น…
 ui.shortcuts.selectScene,เลือกทั้งฉาก
 ui.shortcuts.settings,ตั้งค่าโปรเจกต์
-ui.shortcuts.spActBreak,บทหนัง: ตอน
+ui.shortcuts.spActBreak,บทภาพยนตร์: ตอน
 ui.shortcuts.spCycleNote,เฉพาะตอนพิมพ์ในบทภาพยนตร์ — ที่อื่นคีย์เดียวกันนี้ใช้สลับแท็บ
-ui.shortcuts.spDialogue,บทหนัง: บทพูด
+ui.shortcuts.spDialogue,บทภาพยนตร์: บทพูด
 ui.shortcuts.splitView,แยกหน้าจอ
-ui.shortcuts.spNextElem,บทหนัง: element ถัดไป
-ui.shortcuts.spNote,บทหนัง: โน้ต
-ui.shortcuts.spParenthetical,บทหนัง: วงเล็บ
-ui.shortcuts.spPrevElem,บทหนัง: element ก่อนหน้า
+ui.shortcuts.spNextElem,บทภาพยนตร์: element ถัดไป
+ui.shortcuts.spNote,บทภาพยนตร์: โน้ต
+ui.shortcuts.spParenthetical,บทภาพยนตร์: วงเล็บ
+ui.shortcuts.spPrevElem,บทภาพยนตร์: element ก่อนหน้า
 ui.shortcuts.sprint,จับเวลาเขียน
-ui.shortcuts.spShot,บทหนัง: ช็อต
-ui.shortcuts.spSwitchElem,บทหนัง: สลับชนิด element
-ui.shortcuts.spTransition,บทหนัง: ทรานซิชัน
+ui.shortcuts.spShot,บทภาพยนตร์: ช็อต
+ui.shortcuts.spSwitchElem,บทภาพยนตร์: สลับชนิด element
+ui.shortcuts.spTransition,บทภาพยนตร์: ทรานซิชัน
 ui.shortcuts.strikethrough,ขีดฆ่า
 ui.shortcuts.subscript,ตัวห้อย
 ui.shortcuts.superscript,ตัวยก
@@ -6863,7 +6907,7 @@ ui.sprint.title,สปรินต์การเขียน
 ui.sprint.wpm,{0} คำ/นาที
 ui.sprint.written,{0} คำ
 ui.sprint.writtenGoal,{0} / {1} คำ
-ui.spTitlePages.chapter,บทโดย
+ui.spTitlePages.chapter,บทภาพยนตร์โดย
 ui.spTitlePages.new,สร้างจาก 
 ui.spTitlePages.notNamedStory,ไม่มีชื่อเรื่อง
 ui.spValidator.act,ตอน
@@ -6871,7 +6915,7 @@ ui.spValidator.cantCharacterDialogue,วงเล็บกำพร้า — �
 ui.spValidator.characterNotHasDialogue,ตัวละคร “{0}” ไม่มีบทสนทนาตามหลัง
 ui.spValidator.dialogueNotNamedCharacter,บทพูดกำพร้า — ไม่มีชื่อตัวละครนำหน้า
 ui.spValidator.error,{0} ข้อผิดพลาด
-ui.spValidator.hasBodyChapterBefore,มีเนื้อบทก่อนหัวฉากแรก — ควรขึ้นหัวฉาก (INT./EXT.) ก่อน
+ui.spValidator.hasBodyChapterBefore,มีเนื้อบทภาพยนตร์ก่อนหัวฉากแรก — ควรขึ้นหัวฉาก (INT./EXT.) ก่อน
 ui.spValidator.headScene,หัวฉาก
 ui.spValidator.headSceneTwoNot,หัวฉากติดกันสองอัน — “{0}” ไม่มีเนื้อฉาก
 ui.spValidator.itemView,{0} ข้อควรดู
@@ -7018,7 +7062,7 @@ ui.starter.fIntro,เรื่องย่อ
 ui.starter.fIntroPlaceholder,เล่าคร่าว ๆ ว่าเรื่องนี้เกี่ยวกับอะไร หนึ่งย่อหน้าพอ
 ui.starter.fName,ชื่อเรื่อง
 ui.starter.fNamePlaceholder,เช่น ดาบแห่งรุ่งอรุณ
-ui.starter.folderFixed,เก็บอยู่ในโฟลเดอร์ Starters/{0} — เปลี่ยนชื่อเรื่องแล้วชื่อโฟลเดอร์ไม่เปลี่ยนตาม
+ui.starter.folderFixed,เก็บอยู่ในโฟลเดอร์ Starters/{0} — โฟลเดอร์ได้ชื่อจากชื่อเรื่องที่ตั้งครั้งแรก เปลี่ยนชื่อเรื่องทีหลังชื่อโฟลเดอร์ไม่เปลี่ยนตาม
 ui.starter.foreignAsk,“{0}” ดูเหมือนย้ายมาจากโปรเจกต์อื่น — ให้จับคู่ตัวละครกับ Wiki ของโปรเจกต์นี้เลยไหม
 ui.starter.fPrompts,คำสั่งเฉพาะตัวละคร
 ui.starter.fPromptsHint,ข้อกำหนดที่อยากให้ AI ยึดเวลาเขียนถึงตัวละครนี้
@@ -7304,6 +7348,37 @@ ui.starter.wWhy,ทำไม (Why)
 ui.starter.wWhyHint,แรงผลักดันหรือเหตุผลเบื้องหลัง
 ui.starter.yesterday,เมื่อวาน
 ui.starter.you,คุณ
+ui.starterTag.action,แอ็กชัน
+ui.starterTag.allAges,ทุกวัย
+ui.starterTag.bittersweet,หวานปนขม
+ui.starterTag.comedy,ตลก
+ui.starterTag.cyberpunk,ไซเบอร์พังก์
+ui.starterTag.dark,มืดหม่น
+ui.starterTag.drama,ดราม่า
+ui.starterTag.epic,มหากาพย์
+ui.starterTag.fantasy,แฟนตาซี
+ui.starterTag.gritty,ดิบเถื่อน
+ui.starterTag.harem,ฮาเร็ม
+ui.starterTag.historical,อิงประวัติศาสตร์
+ui.starterTag.horror,สยองขวัญ
+ui.starterTag.isekai,ต่างโลก
+ui.starterTag.lighthearted,เบาสมอง
+ui.starterTag.mature,ผู้ใหญ่
+ui.starterTag.medieval,ยุคกลาง
+ui.starterTag.modern,ยุคปัจจุบัน
+ui.starterTag.mystery,สืบสวน
+ui.starterTag.postApocalyptic,หลังวันสิ้นโลก
+ui.starterTag.romance,โรแมนซ์
+ui.starterTag.satirical,เสียดสี
+ui.starterTag.school,โรงเรียน
+ui.starterTag.sciFi,ไซไฟ
+ui.starterTag.sliceOfLife,ชีวิตประจำวัน
+ui.starterTag.space,อวกาศ
+ui.starterTag.steampunk,สตีมพังก์
+ui.starterTag.teen,วัยรุ่น
+ui.starterTag.thriller,ระทึกขวัญ
+ui.starterTag.urbanFantasy,แฟนตาซีในเมือง
+ui.starterTag.wholesome,อบอุ่นใจ
 ui.status.addStatus,+ เพิ่มสถานะ
 ui.status.addStatusDone,เพิ่มสถานะแล้ว: 
 ui.status.copied,คัดลอกแล้ว
@@ -7397,32 +7472,32 @@ ui.textCase.lowerCaseItemSmall,lower case — ตัวเล็กทั้ง�
 ui.textCase.sentenceCaseSentenceItem,Sentence case — ขึ้นต้นประโยคตัวใหญ่
 ui.textCase.titleCaseStyleTitle,Title Case — แบบชื่อเรื่อง
 ui.textCase.uPPERCASEItemBig,UPPER CASE — ตัวใหญ่ทั้งหมด
-ui.themes.claude,ดินเผา (แบบ Claude Code)
+ui.themes.claude,ดินเผา
 ui.themes.cvdByDark,ตาบอดสีน้ำเงิน–เหลือง (มืด) · แดง/เขียวน้ำทะเล
 ui.themes.cvdByLight,ตาบอดสีน้ำเงิน–เหลือง (สว่าง) · แดง/เขียวน้ำทะเล
 ui.themes.cvdRgDark,ตาบอดสีแดง–เขียว (มืด) · ฟ้า/ส้ม
 ui.themes.cvdRgLight,ตาบอดสีแดง–เขียว (สว่าง) · น้ำเงิน/ส้ม
-ui.themes.dva,เกมเมอร์ชมพู (แบบ D.Va)
-ui.themes.excel,ตารางเขียว (แบบ Excel)
+ui.themes.dva,เกมเมอร์ชมพู
+ui.themes.excel,ตารางเขียว
 ui.themes.flower,สวนดอกไม้
 ui.themes.fruit,สลัดผลไม้
-ui.themes.gundam,โมบิลสูทไตรรงค์ (แบบกันดั้ม)
+ui.themes.gundam,หุ่นรบไตรรงค์
 ui.themes.hcDark,คอนทราสต์สูง (มืด)
 ui.themes.hcLight,คอนทราสต์สูง (สว่าง)
-ui.themes.kimi,จันทร์เงา (แบบ Kimi)
+ui.themes.kimi,จันทร์เงา
 ui.themes.lagoon,ลากูนแดดจ้า
-ui.themes.macintosh,แพลทินัม (แบบ Macintosh คลาสสิก)
+ui.themes.macintosh,แพลทินัม
 ui.themes.monoDark,ขาวดำล้วน (มืด)
 ui.themes.monoLight,ขาวดำล้วน (สว่าง)
 ui.themes.neonPop,นีออนป๊อป
-ui.themes.opencode,เทอร์มินัลพีช (แบบ opencode)
+ui.themes.opencode,เทอร์มินัลพีช
 ui.themes.plumWine,ไวน์พลัม
-ui.themes.powerpoint,สไลด์ส้มอิฐ (แบบ PowerPoint)
+ui.themes.powerpoint,สไลด์ส้มอิฐ
 ui.themes.rainbow,สายรุ้ง
 ui.themes.sakuraMist,หมอกซากุระ
 ui.themes.tropical,ทรอปิคอล
-ui.themes.vscode,โค้ดมืด (แบบ VS Code)
-ui.themes.word,เอกสารน้ำเงิน (แบบ Word)
+ui.themes.vscode,โค้ดมืด
+ui.themes.word,เอกสารน้ำเงิน
 ui.thes.close,ปิด
 ui.thes.copied,คัดลอก: 
 ui.thes.notFound,"ไม่พบคำพ้อง/คำตรงข้ามสำหรับ """
@@ -7615,7 +7690,7 @@ ui.tip.new-entity:locations,สร้างหน้าสถานที่ใ�
 ui.tip.new-entity:lore,สร้างหน้าตำนานหรือความรู้ของโลกในเรื่องใน Wiki เช่น ประวัติศาสตร์ ศาสนา หรือกฎของเวทมนตร์
 ui.tip.new-from-template,สร้างโปรเจกต์ใหม่จากเทมเพลตที่วางโครงเรื่องและหมวด Wiki ไว้ให้แล้ว
 ui.tip.new-project,สร้างโปรเจกต์เปล่าในโฟลเดอร์ที่เลือก ไฟล์งานทั้งหมดเป็น .md และ .json ที่เปิดแก้นอกโปรแกรมได้
-ui.tip.next-tab,สลับไปแท็บถัดไปตามลำดับบนแถบแท็บ (ท้ายแถบวนกลับแท็บแรก) · ขณะพิมพ์บทภาพยนตร์ ปุ่มแรกของคำสั่งนี้ใช้วนชนิด element แทน (ตั้งได้ที่ ตั้งค่า → ปุ่มบทหนัง)
+ui.tip.next-tab,สลับไปแท็บถัดไปตามลำดับบนแถบแท็บ (ท้ายแถบวนกลับแท็บแรก) · ขณะพิมพ์บทภาพยนตร์ ปุ่มแรกของคำสั่งนี้ใช้วนชนิด element แทน (ตั้งได้ที่ ตั้งค่า → ปุ่มบทภาพยนตร์)
 ui.tip.onset-toggle,"ฉากที่ตั้งเป็น ""ฉากมีปัญหา"": สลับดูฉบับเดิม (อ่านอย่างเดียว) กับฉบับแก้ไข — แถบสี + ! หน้าบรรทัดบอกจุดที่ต่าง · พิมพ์/ส่งออกใช้ฉบับแก้ไขเสมอ"
 ui.tip.open-project,เปิดโฟลเดอร์โปรเจกต์ที่มีอยู่ (โฟลเดอร์ที่มีไฟล์ project.khn.json)
 ui.tip.open-project-path,เปิดโปรเจกต์จากรายการโปรเจกต์ล่าสุด
@@ -7623,7 +7698,7 @@ ui.tip.osk,เปิดแป้นพิมพ์บนจอของระบ
 ui.tip.page-guides,แสดงเส้นประบอกระยะขอบกระดาษทั้งสี่ด้าน ช่วยดูว่าข้อความจะอยู่ตรงไหนบนหน้าจริง
 ui.tip.page-headers,ตั้งหัวกระดาษที่พิมพ์ทุกหน้า เช่น ชื่อเรื่อง ชื่อผู้เขียน หรือเลขฉบับร่าง
 ui.tip.page-numbers,แสดงหรือซ่อนเลขหน้ามุมขวาบนของกระดาษในบทภาพยนตร์
-ui.tip.page-setup,ตั้งขนาดกระดาษ ระยะขอบ และรูปแบบของบท ซึ่งมีผลทั้งบนจอและในไฟล์ที่ส่งออก
+ui.tip.page-setup,ตั้งขนาดกระดาษ ระยะขอบ และรูปแบบของบทภาพยนตร์ ซึ่งมีผลทั้งบนจอและในไฟล์ที่ส่งออก
 ui.tip.pageView,เลือกวิธีแสดงหน้ากระดาษ: ปกติสำหรับเขียน · จัดหน้าเพื่อดูรอยต่อหน้าจริง · ร่างเพื่ออ่านเนื้อล้วนเร็ว ๆ
 ui.tip.panel-system,เลือกแผงที่จะแสดงหรือซ่อน และดูว่าแต่ละแผงใช้ทำอะไร
 ui.tip.panels-hide-all,ซ่อนแผงทั้งหมดชั่วคราว เหลือแต่พื้นที่เขียน กดอีกครั้งเพื่อคืนแผงกลับที่เดิม
@@ -7678,8 +7753,8 @@ ui.tip.plNew,เริ่มกระดานเปล่าใบใหม่ 
 ui.tip.plOpen,สลับไปกระดานใบอื่นในโปรเจกต์นี้ ถ้ากระดานปัจจุบันยังไม่บันทึกจะถามก่อน
 ui.tip.plPng,ส่งออกกระดานเป็นรูป PNG ความละเอียดสองเท่า ครอบเฉพาะบริเวณที่มีของจริง
 ui.tip.plugin:k2test:hello,คำสั่งตัวอย่างของปลั๊กอินทดสอบ ใช้ยืนยันว่าระบบปลั๊กอินลงทะเบียนคำสั่งได้
-ui.tip.prev-tab,สลับไปแท็บก่อนหน้าตามลำดับบนแถบแท็บ (แท็บแรกวนไปแท็บท้าย) · ขณะพิมพ์บทภาพยนตร์ ปุ่มแรกของคำสั่งนี้ใช้วนชนิด element แทน (ตั้งได้ที่ ตั้งค่า → ปุ่มบทหนัง)
-ui.tip.print,พิมพ์เอกสารที่เปิดอยู่ตามรูปแบบหน้ากระดาษที่ตั้งไว้ ถ้าเปิดการตรวจก่อนพิมพ์ไว้จะตรวจบทก่อน
+ui.tip.prev-tab,สลับไปแท็บก่อนหน้าตามลำดับบนแถบแท็บ (แท็บแรกวนไปแท็บท้าย) · ขณะพิมพ์บทภาพยนตร์ ปุ่มแรกของคำสั่งนี้ใช้วนชนิด element แทน (ตั้งได้ที่ ตั้งค่า → ปุ่มบทภาพยนตร์)
+ui.tip.print,พิมพ์เอกสารที่เปิดอยู่ตามรูปแบบหน้ากระดาษที่ตั้งไว้ ถ้าเปิดการตรวจก่อนพิมพ์ไว้จะตรวจบทภาพยนตร์ก่อน
 ui.tip.project-doctor,ตรวจว่าทะเบียนฉากตรงกับไฟล์จริง หาไฟล์กำพร้า ฉากที่ใช้ไฟล์ซ้ำกัน โฟลเดอร์ผี และหัวไฟล์ที่พัง แล้วซ่อมให้
 ui.tip.project-replace,แทนที่คำในเนื้อฉากและโน้ตทุกไฟล์ของโปรเจกต์ในครั้งเดียว ดูตัวอย่างก่อน และข้ามฉากที่ล็อกไว้
 ui.tip.project-setup,ตั้งข้อมูลผลงาน เช่น ผู้เขียน ตัวแทน และลิขสิทธิ์ ที่ใช้บนหน้าปกและในไฟล์ที่ส่งออก
@@ -7690,7 +7765,7 @@ ui.tip.quick-open,ค้นหาไฟล์ในโปรเจกต์ด�
 ui.tip.quick-start,แนะนำการใช้งานเบื้องต้น: โปรเจกต์ การเขียน Wiki แผง และการส่งออก
 ui.tip.read-book,อ่านทั้งเล่มต่อกันเป็นเอกสารเดียวแบบอ่านอย่างเดียว เหมาะกับการอ่านทวนภาพรวม
 ui.tip.reading-mode,เข้าโหมดอ่านเต็มจอ ซ่อนแถบเครื่องมือและแผงทั้งหมด เหลือแต่หน้ากระดาษ
-ui.tip.remove-elements,ลบบรรทัดทุกบรรทัดของ element ที่เลือกออกจากบทในครั้งเดียว เช่น ลบโน้ตทั้งหมดก่อนส่งบท ย้อนกลับได้
+ui.tip.remove-elements,ลบบรรทัดทุกบรรทัดของ element ที่เลือกออกจากบทภาพยนตร์ในครั้งเดียว เช่น ลบโน้ตทั้งหมดก่อนส่งบทภาพยนตร์ ย้อนกลับได้
 ui.tip.reopen-closed-tab,เปิดเอกสารที่เพิ่งปิดไปกลับมาอีกครั้ง ย้อนได้ทีละแท็บตามลำดับที่ปิด
 ui.tip.replace,เปิดแถบค้นหาโดยไปยืนที่ช่องแทนที่เลย ใช้กับเอกสารที่เปิดอยู่ตอนนี้เท่านั้น
 ui.tip.reset-panels,คืนการจัดวางแผงทั้งหมดเป็นค่าเริ่มต้นของโปรแกรม ใช้เมื่อแผงหายหรือจัดจนสับสน
@@ -7713,8 +7788,8 @@ ui.tip.show-panel,เปิดแผงที่ระบุ ถ้าแผง�
 ui.tip.smart-manage,ดูและลบคำที่ SmartType จำไว้ เช่น ชื่อตัวละครที่พิมพ์ผิดแล้วถูกจำไป
 ui.tip.sp-auto-capitalize,ให้โปรแกรมเปลี่ยนตัวแรกของประโยคในบทภาพยนตร์เป็นตัวพิมพ์ใหญ่ให้เองขณะพิมพ์
 ui.tip.sp-auto-correct-i,ให้โปรแกรมแก้ i ที่พิมพ์เดี่ยว ๆ เป็น I ให้เองในบทภาพยนตร์ภาษาอังกฤษ
-ui.tip.sp-check-all,ตรวจรูปแบบทั้งบทแล้วแสดงรายการจุดที่ผิด คลิกแต่ละรายการเพื่อไปยังบรรทัดนั้น
-ui.tip.sp-check-toggle,ตรวจรูปแบบบทก่อนพิมพ์หรือส่งออกทุกครั้ง ถ้าพบจุดผิดจะถามก่อนทำต่อ
+ui.tip.sp-check-all,ตรวจรูปแบบของบทภาพยนตร์ทั้งเรื่องแล้วแสดงรายการจุดที่ผิด คลิกแต่ละรายการเพื่อไปยังบรรทัดนั้น
+ui.tip.sp-check-toggle,ตรวจรูปแบบบทภาพยนตร์ก่อนพิมพ์หรือส่งออกทุกครั้ง ถ้าพบจุดผิดจะถามก่อนทำต่อ
 ui.tip.sp-compare,เปรียบเทียบเอกสารสองแท็บทีละบรรทัด ดูว่าเพิ่ม ลบ หรือแก้อะไรไประหว่างสองฉบับ
 ui.tip.sp-continued,ใส่ข้อความต่อเนื่อง (CONTINUED · MORE · CONT'D) ให้อัตโนมัติเมื่อฉากหรือบทพูดขาดข้ามหน้า
 ui.tip.sp-element,เปลี่ยนชนิดของบรรทัดในบทภาพยนตร์ เช่น หัวฉาก บรรยาย ตัวละคร หรือบทพูด
@@ -7724,10 +7799,10 @@ ui.tip.sp-element:dialogue,เปลี่ยนบรรทัดนี้เ�
 ui.tip.sp-element:note,เปลี่ยนบรรทัดนี้เป็นโน้ตของผู้เขียน ไว้เตือนตัวเอง ไม่ใช่เนื้อบทที่นักแสดงอ่าน
 ui.tip.sp-element:parenthetical,เปลี่ยนบรรทัดนี้เป็นวงเล็บกำกับการพูด เช่น (กระซิบ) วางระหว่างชื่อตัวละครกับบทพูด
 ui.tip.sp-element:shot,เปลี่ยนบรรทัดนี้เป็นคำกำกับช็อต เช่น CLOSE ON ใช้เมื่อจำเป็นต้องระบุมุมกล้องจริง ๆ
-ui.tip.sp-element:transition,เปลี่ยนบรรทัดนี้เป็นทรานซิชัน เช่น CUT TO: วางชิดขวาตามรูปแบบบทมาตรฐาน
+ui.tip.sp-element:transition,เปลี่ยนบรรทัดนี้เป็นทรานซิชัน เช่น CUT TO: วางชิดขวาตามรูปแบบบทภาพยนตร์มาตรฐาน
 ui.tip.sp-extension,เติมส่วนเสริมท้ายชื่อตัวละคร เช่น (V.O.) เสียงบรรยาย หรือ (O.S.) พูดจากนอกจอ
-ui.tip.sp-find-error,กระโดดไปยังจุดถัดไปในบทที่ตัวตรวจบทเห็นว่าผิดรูปแบบ
-ui.tip.sp-force-case,บังคับตัวพิมพ์ใหญ่ตามรูปแบบบทมาตรฐานที่หัวฉาก ชื่อตัวละคร และทรานซิชัน ปิดไว้ถ้าต้องการพิมพ์ตามใจ
+ui.tip.sp-find-error,กระโดดไปยังจุดถัดไปในบทภาพยนตร์ที่ตัวตรวจเห็นว่าผิดรูปแบบ
+ui.tip.sp-force-case,บังคับตัวพิมพ์ใหญ่ตามรูปแบบบทภาพยนตร์มาตรฐานที่หัวฉาก ชื่อตัวละคร และทรานซิชัน ปิดไว้ถ้าต้องการพิมพ์ตามใจ
 ui.tip.sp-report,เปิดรายงานของบทภาพยนตร์ เช่น รายงานตัวละคร สถานที่ หรือกราฟบทพูด
 ui.tip.sp-report:character,รายงานว่าตัวละครแต่ละคนปรากฏในฉากไหนและพูดมากน้อยแค่ไหน
 ui.tip.sp-report:chart,กราฟแสดงว่าแต่ละหน้ามีบทพูดของตัวละครไหนมากน้อยแค่ไหน
@@ -7764,7 +7839,7 @@ ui.tip.text-case:TC,ขึ้นต้นคำสำคัญด้วยตั
 ui.tip.text-case:UC,เปลี่ยนข้อความที่เลือกเป็นตัวพิมพ์ใหญ่ทั้งหมด
 ui.tip.thesaurus,หาคำพ้องความหมายและคำตรงข้ามของคำที่เลือกไว้ ช่วยเลี่ยงการใช้คำเดิมซ้ำ ๆ
 ui.tip.timeline,เปิดเส้นเวลาของเรื่อง เรียงเหตุการณ์และฉากตามเวลาในเรื่อง ดูเป็นการ์ดหรือแผนภูมิ Gantt
-ui.tip.title-pages,สร้างหรือแก้หน้าปกของบทและของเล่ม ที่จะใส่ไว้หน้าแรกของไฟล์ที่ส่งออก
+ui.tip.title-pages,สร้างหรือแก้หน้าปกของบทภาพยนตร์และของเล่ม ที่จะใส่ไว้หน้าแรกของไฟล์ที่ส่งออก
 ui.tip.toggle-fab,แสดงหรือซ่อนปุ่มลอยมุมขวาล่างที่รวมคำสั่งสร้างของใหม่ไว้
 ui.tip.toggle-format,สลับไฟล์นี้ระหว่างนิยายกับบทภาพยนตร์ เนื้อหาเดิมถูกแปลงให้ตามไวยากรณ์ของอีกโหมด
 ui.tip.toggle-home-always,เปิดหน้าแรกทุกครั้งที่เริ่มโปรแกรม แม้จะเคยเปิดโปรเจกต์ค้างไว้
@@ -7783,7 +7858,7 @@ ui.tip.toggle-panel:dashboard,ภาพรวมความคืบหน้�
 ui.tip.toggle-panel:dialogue,รวมบทพูดทั้งผลงาน — กรองตามเล่ม/บท/ฉาก/ตัวละคร คลิกกระโดดไป แก้ได้ทันที
 ui.tip.toggle-panel:dlgb,ให้ AI สวมบทตัวละครจาก Wiki คุยกันทีละเทิร์น แล้วหยิบบรรทัดที่ชอบไปใส่บทที่เคอร์เซอร์ — เปิดตอนคิดบทพูดไม่ออก
 ui.tip.toggle-panel:docs,พื้นที่เขียนหลัก — แท็บทุกใบที่เปิดอยู่ ทั้งฉาก บทภาพยนตร์ และหน้า Wiki (ปิดไม่ได้)
-ui.tip.toggle-panel:floorplan,ผังกองถ่ายมุมบน (แบบ Shot Designer) — ตัวละครจาก Wiki พร้อมทิศที่หันและระยะสายตา · กล้อง (บอดี้/เลนส์/ขาตั้ง/ราง) · ไฟ · รูปทรง · จังหวะที่อ้างอิงบรรทัดของฉาก
+ui.tip.toggle-panel:floorplan,ผังกองถ่ายมุมบน — ตัวละครจาก Wiki พร้อมทิศที่หันและระยะสายตา · กล้อง (บอดี้/เลนส์/ขาตั้ง/ราง) · ไฟ · รูปทรง · จังหวะที่อ้างอิงบรรทัดของฉาก
 ui.tip.toggle-panel:gallery,รูปทั้งหมดในโฟลเดอร์ Images ของโปรเจกต์ — ลากลงเอกสารเพื่อแทรก หรือเลือกเป็นปก/รูปประจำตัวใน Wiki
 ui.tip.toggle-panel:gallery-board,ผืนผ้าใบวางรูปอ้างอิงของแต่ละอัลบั้ม — เปิดคู่กับแผงคลังรูปแล้วลากรูปมาวางได้เลย · ย้าย/ปรับขนาด/ซูมได้อิสระ · เอาออกจากกระดานไม่ลบไฟล์
 ui.tip.toggle-panel:history,ไทม์ไลน์ว่าทำอะไรกับไฟล์ในโปรเจกต์ไปบ้าง แล้วย้อนกลับไปจุดไหนก็ได้ · จำนวนครั้งที่เก็บตั้งได้ที่ ตั้งค่า → ข้อมูลผลงาน (ค่าเริ่มต้น 32)
@@ -7801,7 +7876,7 @@ ui.tip.toggle-panel:props,คุณสมบัติของฉากที่
 ui.tip.toggle-panel:record,จดว่าวันนี้ทำอะไรไปบ้าง — อารมณ์ จำนวนคำ เวลาที่ใช้ แท็ก · ส่งออกเป็น CSV ไปทำสรุปต่อได้
 ui.tip.toggle-panel:search,ค้นข้อความทั้งโปรเจกต์ — ทุกฉาก ทุกเล่ม และหน้า Wiki · คลิกผลลัพธ์เพื่อเปิดไฟล์ที่บรรทัดนั้น
 ui.tip.toggle-panel:starter,สร้างเรื่อง ตัวละคร และฉากเริ่มต้น แล้วเล่นเป็นตอน ๆ กับ AI
-ui.tip.toggle-panel:statusbar,ข้อมูลย่อของงานที่เปิดอยู่ — จำนวนคำ/หน้า · ข้อผิดพลาดในบท · แถบซูมหน้ากระดาษ
+ui.tip.toggle-panel:statusbar,ข้อมูลย่อของงานที่เปิดอยู่ — จำนวนคำ/หน้า · ข้อผิดพลาดในบทภาพยนตร์ · แถบซูมหน้ากระดาษ
 ui.tip.toggle-panel:timeline,"ลำดับเหตุการณ์ตาม ""เวลาในเรื่อง"" — สลับมุมมองการ์ด/Gantt ได้ · ฉากที่ตั้ง storyDate ไว้จะขึ้นเอง"
 ui.tip.toggle-panel:toolbar,ปุ่มจัดรูปแบบและสวิตช์โหมดทั้งหมด — ตัวหนา/เอียง · จัดหน้า · โหมดอ่าน/โฟกัส · เปิด-ปิดแผงอื่น
 ui.tip.toggle-panel:tree,สารบัญของผลงานทั้งเล่ม — เล่ม → บท → ฉาก พร้อม Wiki คลังรูป และถังขยะ · ลากสลับลำดับได้ · ช่องค้นหาด้านบนกรองได้ทั้งชื่อ แท็ก และสถานะ
@@ -8055,7 +8130,7 @@ ui.treeMenu.rename,เปลี่ยนชื่อ
 ui.treeMenu.renameProject,เปลี่ยนชื่อ
 ui.treeMenu.reorder,เปลี่ยนลำดับ…
 ui.treeMenu.restore,กู้คืนจากชุดสำรอง…
-ui.treeMenu.reveal,หาใน disk
+ui.treeMenu.reveal,หาในดิสก์
 ui.treeMenu.saveVersion,บันทึกเวอร์ชันนี้
 ui.treeMenu.sceneFromMemo,สร้างฉากจาก Memo นี้…
 ui.treeMenu.searchIn,ค้นหาในนี้
@@ -8064,7 +8139,7 @@ ui.treeMenu.splitView,เปิดในแยกหน้าจอ (Split view)
 ui.treeMenu.star,ติดดาว
 ui.treeMenu.starOff,เอาดาวออก
 ui.treeMenu.status,สถานะ
-ui.treeMenu.switchFormat,เปลี่ยนเป็นนิยาย/บทหนัง
+ui.treeMenu.switchFormat,เปลี่ยนเป็นนิยาย/บทภาพยนตร์
 ui.treeMenu.titlePage,หน้าปก (Title Page)…
 ui.treeMenu.toMemo,เปลี่ยนเป็น Memo
 ui.treeMenu.versionHistory,ประวัติเวอร์ชัน…
@@ -8310,7 +8385,7 @@ ui.xhub.fMdDesc,ต้นฉบับข้อความ เปิดแก้
 ui.xhub.fPdf,PDF
 ui.xhub.fPdfDesc,หน้ากระดาษจริง ฝังฟอนต์ไทย คัดลอกข้อความได้
 ui.xhub.fRtf,Rich Text (RTF)
-ui.xhub.fRtfDesc,เปิดใน Word ได้ · นิยายคงตัวหนา/เอียง/หัวข้อ · บทคงระยะเยื้อง
+ui.xhub.fRtfDesc,เปิดใน Word ได้ · นิยายคงตัวหนา/เอียง/หัวข้อ · บทภาพยนตร์คงระยะเยื้อง
 ui.xhub.fTxt,ข้อความล้วน
 ui.xhub.fTxtDesc,ไม่มีสัญลักษณ์จัดรูปแบบใด ๆ
 ui.xhub.fWm,PDF ลายน้ำรายคน
@@ -8323,6 +8398,7 @@ ui.xhub.kindAuto,ตามไฟล์ต้นทาง
 ui.xhub.kindProse,นิยาย (ร้อยแก้ว)
 ui.xhub.kindScript,บทภาพยนตร์
 ui.xhub.needProject,เปิดโปรเจกต์ก่อนจึงจะส่งออกได้
+ui.xhub.needScriptHint,เลือกปลายทางอื่น หรือเลือกช่วงที่เป็นบทภาพยนตร์
 ui.xhub.needScriptOnly,ปลายทางนี้ใช้ได้เฉพาะเอกสารที่เป็นบทภาพยนตร์
 ui.xhub.noDraft,(ยังไม่มีฉบับร่างในโปรเจกต์นี้)
 ui.xhub.noPreview,(ไม่มีตัวอย่างให้แสดง)

@@ -79,7 +79,8 @@ check('CSS ตอนส่งออกต่อตาข่ายไทยทั
 check('บล็อกโค้ดในไฟล์ที่ส่งออกต่อตาข่ายไทย',
   /'font-family:' \+ withThaiFallback\('"Courier Prime"/.test(js('prose-format.js')));
 check('หน้าปก/หน้าคั่นของศูนย์รวมการส่งออกต่อตาข่ายไทย',
-  /font-family:\$\{withThaiFallback\(proseFontStack\(pf\)\)\}/.test(js('export-hub.js')));
+  // [alpha.170] ฟอนต์ที่จอใช้อยู่จริงมาก่อน (กฎ alpha.132r3) — ทั้งสองทางยังต้องผ่านตาข่ายไทย
+  /font-family:\$\{withThaiFallback\((?:liveProseFonts\(\)\.fontStack \|\| )?proseFontStack\(pf\)\)\}/.test(js('export-hub.js')));
 check('ลายน้ำ (export-watermark) ต่อตาข่ายไทย',
   /withThaiFallback\('"Courier Prime","Courier Final Draft"/.test(js('export-watermark.js')));
 check('หน้าเทียบฉบับ (sp-compare) มีฟอนต์ไทยในลูกโซ่',

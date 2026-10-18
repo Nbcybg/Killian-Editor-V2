@@ -172,6 +172,11 @@ export async function detectPlotHoles(sceneIds = [], options = {}) {
       maxTokens: options.maxTokens || 1500,
     });
     if (!res.ok) { failed++; lastError = res.error; continue; }        // batch เดียวพังต้องไม่ล้มทั้งชุด
+    // [alpha.170 · บั๊ก 2] คำตอบที่ไม่มี JSON ให้อ่าน (ว่าง · ถูกตัด · ตอบเป็นเรียงความ) = รอบนี้ล้ม
+    // เดิมอ่านได้รายการว่างแล้วรายงานว่า "ไม่พบจุดบกพร่อง" ทั้งที่ AI ยังไม่ได้ตอบอะไรเลย
+    if (extractJson(res.text) == null) {
+      failed++; lastError = tt(res.truncated ? 'ui.ai.replyCut' : 'ui.ai.replyUnreadable'); continue;
+    }
     holes.push(...parsePlotHoles(res.text, { sceneIds: built.sceneIds, titles }));
     if (res.usage) { usage.input += res.usage.input || 0; usage.output += res.usage.output || 0; }
     cost += (res.cost && res.cost.usd) || 0;

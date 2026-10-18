@@ -19,7 +19,7 @@ import {
   searchSessions, buildChatMessages, historyBudget, contextCapFromError, DEFAULT_HISTORY_TOKENS,
   rawJson, shareMarkdown, estimateTokens,
   parseChatMarkdown, REASONING_EFFORTS, effortLabel, isReasoningEffort,
-  joinContinuation, canContinue,
+  joinContinuation, canContinue, canRetry, dropMessage,
 } from './ai-session.js';
 // [alpha.145] ทักษะ (Skills/*.md) — คำสั่งประจำตัวที่ผู้ใช้เขียนเอง เปิด/ปิดรายเซสชัน
 import { SKILL_DIR, loadSkills, buildSkillsPrompt, skillsLabel,
@@ -374,6 +374,15 @@ export async function renderAIChatPanel(host) {
     const fresh = S.sessions.find((x) => x.id === S.cur.id);
     S.cur = fresh || null;
   }
+  // [alpha.170] โปรเจกต์ที่ยังไม่มีเซสชันสักอัน: เปิดแผงครั้งแรก = เข้าเซสชันฉบับร่างเลย (มีช่องพิมพ์ทันที)
+  // เดิมได้หน้ารายการว่าง ต้องกด "เซสชันใหม่" ก่อนถึงจะพิมพ์ได้ · ครั้งเดียวต่อโปรเจกต์ —
+  // ผู้ใช้กด ← กลับหน้ารายการแล้วต้องไม่ถูกดันกลับเข้าเซสชันทุกครั้งที่แผงวาดใหม่
+  // (ฉบับร่างยังไม่เขียนไฟล์ จนกว่าจะส่งข้อความแรก — กติกาเดิมของ alpha.63r4)
+  if (!S.cur && !S.sessions.length && S.autoRoot !== state.root) {
+    S.autoRoot = state.root;
+    S.cur = draftSession();
+    S.view = 'session';
+  }
   if (!S.cur && S.view !== 'list') S.view = 'list';
   draw();
   return S.host;
@@ -712,6 +721,8 @@ function msgNode(m, view = DEFAULT_VIEW, sess = null) {
   const txt = asMd ? mdNode(shown) : el('div', 'ai-msg-text', shown);
   n.append(who, txt);
   if (!shown && m.calls && m.calls.length) txt.remove();
+  // [alpha.170] คำตอบที่ล้มทั้งก้อน: ไม่มีข้อความ = ไม่มีฟอง (เดิมค้างกรอบว่างเหนือข้อความผิดพลาด) · ไม่มีอะไรให้คัดลอกด้วย
+  if (!shown && m.error) { txt.remove(); copy.remove(); }
 
   if (view === 'verbose' && m.system) n.append(foldBlock(tt('ui.aiChatPanel.systemPromptSendRound'), m.system));
   if ((view === 'thinking' || view === 'verbose') && m.thinking) {
@@ -750,6 +761,16 @@ function msgNode(m, view = DEFAULT_VIEW, sess = null) {
     btn.title = tt('ui.aiChatPanel.continueTip');
     btn.append(icon('chevron-right', 14), document.createTextNode(tt('ui.aiChatPanel.continueBtn')));
     btn.onclick = () => { btn.disabled = true; continueReply(sess.id, m.id); };
+    bar.append(btn);
+    n.append(bar);
+  }
+  // [alpha.170] ล้มทั้งก้อน → ปุ่ม "ลองใหม่" ส่งคำถามเดิมอีกรอบ (เดิมต้องพิมพ์ข้อความเดิมซ้ำเอง)
+  if (sess && canRetry(sess, m) && !isRunning(sess.id)) {
+    const bar = el('div', 'ai-msg-cont ai-msg-retry');
+    const btn = el('button', 'ai-msg-cont-btn ai-msg-retry-btn');
+    btn.type = 'button';
+    btn.append(icon('refresh', 14), document.createTextNode(tt('ui.app.tryNew')));
+    btn.onclick = () => { btn.disabled = true; retryReply(sess.id, m.id); };
     bar.append(btn);
     n.append(bar);
   }
@@ -1130,6 +1151,22 @@ export async function continueReply(sessionId, msgId) {
   const prov = s.providerId ? await providerById(s.providerId) : await currentProvider();
   if (!prov) { setStatus(tt('ui.aiChatPanel.cantSettingsProviderAI')); return false; }
   await runAssistant(sessionId, prov, { query: lastUserText(s), continueOf: msgId });
+  return true;
+}
+
+/**
+ * [alpha.170] ปุ่ม "ลองใหม่" — ถอดคำตอบที่ล้มทั้งก้อนออก แล้วถามรอบเดิมอีกครั้ง
+ * @returns {Promise<boolean>} false = ลองใหม่ไม่ได้ (ไม่ใช่ข้อความล่าสุด · มีข้อความมาแล้ว · กำลังทำงานอยู่)
+ */
+export async function retryReply(sessionId, msgId) {
+  if (S.sending) return false;
+  const s = sessById(sessionId);
+  const m = s && (s.messages || []).find((x) => x.id === msgId);
+  if (!m || !canRetry(s, m)) return false;
+  const prov = s.providerId ? await providerById(s.providerId) : await currentProvider();
+  if (!prov) { setStatus(tt('ui.aiChatPanel.cantSettingsProviderAI')); return false; }
+  const next = await commitSess(dropMessage(s, msgId));
+  await runAssistant(sessionId, prov, { query: lastUserText(next) });
   return true;
 }
 

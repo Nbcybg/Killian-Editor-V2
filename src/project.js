@@ -136,7 +136,7 @@ export async function showTemplateDialog({ allowBlank = false } = {}) {
   return new Promise((resolve) => {
     const ov = el('div', 'k-overlay');
     const box = el('div', 'k-dialog');
-    box.append(el('div', 'k-dlg-title', t('ui.project.newProjectTemplate')));
+    box.append(el('div', 'k-dlg-title', t('ui.project.newProjectPick')));
 
     const grid = el('div', 'k-newproj-grid');   // [alpha.169] คลาสของตัวเอง (เดิมยืม .tpl-card ของตัวจัดการเทมเพลต → ชื่อ/คำอธิบายวางคนละฝั่ง)
     const entries = Object.entries(TEMPLATES);

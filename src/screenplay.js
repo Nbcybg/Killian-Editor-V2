@@ -7,7 +7,7 @@ import { history, undo, redo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap, toggleMark, chainCommands } from 'prosemirror-commands';
 import { parseScript, SP_ELEMS, TAB_CYCLE, NEXT_ELEM,
-         splitCharacter, withExtension, blocksToMd } from './fountain.js';
+         splitCharacter, withExtension, blocksToMd, typedSceneHeading } from './fountain.js';
 import { state, DEFAULT_SP_CYCLE, spCycleKeys, spKeyMatch } from './core.js';
 // [alpha.88] ระยะเว้นนำของ element — ใช้ตัดสินว่ากด Enter แล้วต้องแทรกบรรทัดว่างกี่บรรทัด
 import { blankLinesBefore } from './sp-format.js';
@@ -389,11 +389,51 @@ export class SPEditor {
   setElement(el) {
     const b = this.curBlock();
     if (!b) return false;                      // เลือกรูปอยู่ = ไม่มีบล็อกให้เปลี่ยนชนิด
-    this.view.dispatch(this.view.state.tr.setNodeMarkup(b.pos, null,
-      { el, align: b.node.attrs.align || null }));
+    let tr = this.view.state.tr.setNodeMarkup(b.pos, null,
+      { el, align: b.node.attrs.align || null });
+    tr = this._fitLeadBlanks(tr, b, el);
+    this.view.dispatch(tr);
     this.view.focus();
     if (this.onElement) this.onElement(el);
     return true;
+  }
+
+  /**
+   * [alpha.170 · บั๊ก 17] เปลี่ยนชนิดของบล็อกที่ **ยังว่าง** → บรรทัดว่างนำที่ Enter แทรกไว้ต้องตามชนิดใหม่
+   *
+   * Enter แทรกบรรทัดว่างนำเป็นบล็อกจริงตามชนิดถัดไป (หัวฉาก = 2 · ตัวละคร = 1 · บทพูด = 0 — alpha.88)
+   * แล้วผู้ใช้สลับชนิด (Ctrl+Tab) ก่อนพิมพ์: เดิมบรรทัดว่างคงจำนวนของชนิดเก่า = ระยะเว้นผิดติดไปถึงไฟล์และ PDF
+   * แตะเฉพาะบรรทัดว่างที่ "Enter เป็นคนแทรก" จริง: ว่าง · ชนิดเดียวกับบล็อกเดิม · จำนวนเท่าที่ชนิดเดิมกำหนดพอดี
+   * · มีบล็อกจริงอยู่ข้างหน้า — บรรทัดว่างที่ผู้ใช้เว้นเองไม่เข้าเงื่อนไขนี้ จึงไม่ถูกยุ่ง
+   */
+  _fitLeadBlanks(tr, b, el) {
+    const oldEl = b.node.attrs.el;
+    if (oldEl === el || String(b.node.textContent || '').trim()) return tr;
+    const doc = this.view.state.doc;
+    const fmt = { elements: state.settings && state.settings.spElements };
+    const had = blankLinesBefore(oldEl, fmt), want = blankLinesBefore(el, fmt);
+    if (had === want) return tr;
+    const idx = doc.resolve(b.pos).index(0);
+    const lead = [];                            // ใกล้บล็อกปัจจุบันก่อน (ตำแหน่งมาก → น้อย)
+    let pos = b.pos;
+    for (let i = idx - 1; i >= 0; i--) {
+      const n = doc.child(i);
+      if (n.type !== spSchema.nodes.sp || n.attrs.el !== oldEl || String(n.textContent || '').trim()) break;
+      pos -= n.nodeSize;
+      lead.push({ pos, size: n.nodeSize, align: n.attrs.align || null });
+    }
+    if (lead.length !== had || idx - lead.length <= 0) return tr;
+    if (want > had) {
+      const more = [];
+      for (let i = had; i < want; i++) more.push(spSchema.nodes.sp.create({ el }));
+      tr = tr.insert(b.pos, Fragment.fromArray(more));      // แทรกหน้าบล็อกปัจจุบัน — เคอร์เซอร์ตามไปเอง
+    }
+    const drop = Math.max(0, had - want);
+    lead.forEach((x, i) => {
+      if (i < drop) tr = tr.delete(x.pos, x.pos + x.size);   // ลบจากตัวที่อยู่ท้ายสุดก่อน ตำแหน่งข้างหน้าไม่เลื่อน
+      else tr = tr.setNodeMarkup(x.pos, null, { el, align: x.align });
+    });
+    return tr;
   }
 
   // จัดหน้าบล็อกบทหนังในช่วงเลือก (arg: 'left'|'center'|'right'|'justify')
@@ -490,7 +530,7 @@ export class SPEditor {
     const cur = this.curBlock();
     if (!cur) return;
     const text = cur.node.textContent.trim();
-    if (/^(int\.|ext\.|int\/ext\.|i\/e\.|est\.|ฉาก)\s/i.test(text)) {
+    if (typedSceneHeading(text)) {
       const { node, pos } = cur;
       this.view.dispatch(this.view.state.tr.setNodeMarkup(pos, null, {
         el: 'scene', align: node.attrs.align || null

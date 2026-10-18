@@ -30,6 +30,7 @@ ui.ai.charADesc,"Character A description (personality, speech, goal…)"
 ui.ai.charB,Character B: 
 ui.ai.charBDesc,Character B description
 ui.ai.chatPlaceholder,Ask about your story…
+ui.ai.checkedScenes,{0} {0|scene|scenes} checked
 ui.ai.collecting,Collecting data…
 ui.ai.collectingScenes,Collecting scenes…
 ui.ai.connectAICant,Cannot connect to the AI: 
@@ -44,8 +45,6 @@ ui.ai.dialogueLabel,Dialogue:
 ui.ai.dialogueTitle,Generate dialogue
 ui.ai.dialogueWorking,Generating dialogue…
 ui.ai.edit,Prose
-ui.ai.entityReadFail,Could not read the entity file
-ui.ai.entityUnnamed,Unnamed entity
 ui.ai.error,Something went wrong
 ui.ai.errorMark,Something went wrong
 ui.ai.errorRetry,"Something went wrong, please try again"
@@ -75,10 +74,10 @@ ui.ai.needBothChars,Enter both character names
 ui.ai.needSetup,Set up AI first: menu AI → AI settings
 ui.ai.new,Create
 ui.ai.noAnswer,(no answer)
+ui.ai.noCharacters,"No characters in the Wiki yet — add a character first, then run the check"
 ui.ai.noInconsist,No inconsistencies found
 ui.ai.noPlotHoles,No plot holes found
 ui.ai.noProject,No project is open
-ui.ai.noScenes,(no scenes in this project)
 ui.ai.notChangeTone,Keep the tone
 ui.ai.notKnownProvider,Unknown provider: 
 ui.ai.notSet,(not set)
@@ -91,23 +90,36 @@ ui.ai.opSummarize,Summarize
 ui.ai.opTone,Change tone
 ui.ai.orWord,or
 ui.ai.partialKept,Kept the text received before the connection dropped
-ui.ai.pickEntity,Select an entity (character) first
+ui.ai.pickCharacter,Character
 ui.ai.plotTitle,Plot hole check
 ui.ai.plotWorking,Checking for plot holes…
 ui.ai.readAnswerAICant,Could not read the AI's answer (not JSON)
 ui.ai.readFail,Could not read file: 
+ui.ai.replaceSelection,Replace selection
+ui.ai.replyCut,The AI's answer was cut off before the end (length limit) — raise the provider's Maximum Number of Tokens and try again
+ui.ai.replyUnreadable,The AI answered in a form the app cannot read — try again or switch models
 ui.ai.result,Processing
 ui.ai.resultLabel,Result:
+ui.ai.runAgain,Check again
 ui.ai.sample1,Who are the characters in this story?
 ui.ai.sample2,Summarize the fight scenes for me
 ui.ai.savedToWiki,Saved to the Wiki: 
 ui.ai.saveWiki,Save to Wiki
 ui.ai.sceneLabel,Scene: 
+ui.ai.scopeBook,This book only
+ui.ai.scopeChapter,This chapter only
+ui.ai.scopeEmpty,No scenes with text in this scope
+ui.ai.scopeLabel,Scope
+ui.ai.scopeProject,Whole project
+ui.ai.scopeScene,This scene only
+ui.ai.scopeSummary,Will send {0} {0|scene|scenes} (about {1} {1|token|tokens}) to {2}
 ui.ai.searchingProject,Searching the project…
 ui.ai.sendingToAi,Sending to AI…
 ui.ai.smallLess,Minor
 ui.ai.sources,Sources: 
 ui.ai.speakerLabel,Speaker: 
+ui.ai.startCheck,Start check
+ui.ai.stop,Stop
 ui.ai.textLabel,Text:
 ui.ai.textNotOk,Text stream failed: 
 ui.ai.toneCasual,Casual
@@ -124,6 +136,7 @@ ui.ai.wCity,City
 ui.ai.wCulture,Culture
 ui.ai.wEconomy,Economy
 ui.ai.wFaction,Faction
+ui.ai.wikiProfileUsed,Using the Wiki profile: {0}
 ui.ai.wMagic,Magic system
 ui.ai.wordAsk,Question: 
 ui.ai.working,Working…
@@ -821,6 +834,8 @@ ui.aiError.innerUseItemOut,Servers on a local network often use self-signed cert
 ui.aiError.itemMaxTokensHigh,Common culprits: Max Tokens above what the model accepts · a Reasoning Effort / Thinking mode this model lacks · Response Format = json_object
 ui.aiError.itemTLSToUse,The server's security certificate (TLS) is not valid
 ui.aiError.keyBindOutlineCheck,Some providers tie keys to an organization/project — check that this key works with this Base URL
+ui.aiError.missingHeader,The request is missing a header the provider requires
+ui.aiError.missingHeaderHint,"Add the header named in the server message to the provider's Custom Headers (one ""name: value"" per line)"
 ui.aiError.model,Model: 
 ui.aiError.modelOllamaLMStudio,For a local model (Ollama / LM Studio / llama.cpp) — make sure that program is running first
 ui.aiError.modelThinkReasoningUse,Reasoning models take longer — lower the reasoning effort or shorten the reply
@@ -830,7 +845,7 @@ ui.aiError.nextNotMissingCenter,Could not connect to the server (the network dro
 ui.aiError.notAPIKeySend,The server rejected the API key that was sent
 ui.aiError.notTo,Did not reach the server
 ui.aiError.provider,Provider: 
-ui.aiError.providerNotParamSend,The provider rejected a parameter that was sent ({0})
+ui.aiError.providerNotParamSend,The provider rejected the request ({0})
 ui.aiError.putKeyNewSettings,"Enter a new key in AI Settings → Edit provider → Credential, then click Save Credential"
 ui.aiError.reply,Server replied: 
 ui.aiError.sideProviderHasProblem,The provider is having problems ({0})
@@ -845,8 +860,10 @@ ui.aiError.toNotHas,Endpoint not found (404)
 ui.aiError.tryNewTimesAdd,"Try again, or increase Max Retries in Parameters"
 ui.aiError.tryOpenBaseURL,"For a machine at home, try opening the Base URL in a browser to see if it responds"
 ui.aiError.userPress,Stopped by the user
-ui.aiError.viewTextBottomName,See the server message below — it usually names the wrong field directly
+ui.aiError.viewTextBottomName,See the server reply line above — it usually names the wrong field directly
 ui.aiError.wordUseTime,The server says the request took too long
+ui.aiError.wrongProtocol,This model does not accept the request format that was sent
+ui.aiError.wrongProtocolHint,"Change the provider's ""API format"" (OpenAI-compatible or Anthropic Messages), or pick another model"
 ui.aiField.askField,Write the value for the field “{0}”.
 ui.aiField.hasCurrent,"The field currently reads “{0}” — polish or build on it, do not change its meaning."
 ui.aiField.headKnown,What is already known:
@@ -934,6 +951,10 @@ ui.aiProvider.addProvider,Add provider
 ui.aiProvider.addProviderNew,Add a new provider
 ui.aiProvider.allowedDomains,Allowed HTTP Request Domains
 ui.aiProvider.apiKey,API key
+ui.aiProvider.apiKind,API format
+ui.aiProvider.apiKindAnthropic,Anthropic Messages (messages)
+ui.aiProvider.apiKindHint,Most providers are OpenAI-compatible · choose Anthropic Messages when a Claude model says the protocol is not supported
+ui.aiProvider.apiKindOpenai,OpenAI-compatible (chat/completions)
 ui.aiProvider.baseUrl,Base URL
 ui.aiProvider.baseURLModel,Base URL: {0} · Model: {1} · 
 ui.aiProvider.btnSendText,Send button in chat
@@ -944,6 +965,7 @@ ui.aiProvider.busyTest,Testing…
 ui.aiProvider.cantPickModel,No model selected yet
 ui.aiProvider.cantSettingsProviderAI,No AI provider set up yet (menu AI → AI settings)
 ui.aiProvider.connectOkFoundModel,Connected — found {0} {0|model|models}
+ui.aiProvider.credNameHint,Leave empty to use the provider name
 ui.aiProvider.defaultsFail,Could not save the providers on this computer
 ui.aiProvider.defaultsHave,{0} saved on this computer
 ui.aiProvider.defaultsImport,Use my providers
@@ -961,13 +983,21 @@ ui.aiProvider.domainAllow,Allowed domains: {0}
 ui.aiProvider.domainNotListAllowed,This domain is not in the Allowed HTTP Request Domains list: 
 ui.aiProvider.edit,Edit
 ui.aiProvider.editProvider,Edit provider
+ui.aiProvider.emptyDetail,Thinking tokens: {0} · max_tokens limit: {1}
+ui.aiProvider.emptyHintEffort,"Lower the Reasoning Effort, or pick a model that does not think before answering"
+ui.aiProvider.emptyHintModel,Try again or switch models — some models answer with nothing when content is filtered
+ui.aiProvider.emptyHintTokens,Raise the provider's Maximum Number of Tokens (or set -1 for no limit)
+ui.aiProvider.emptyReply,The AI returned an empty reply
+ui.aiProvider.emptyThinking,"The AI spent its whole answer budget on thinking, so there is no answer"
 ui.aiProvider.fetchListModel,⟳ Fetch model list
 ui.aiProvider.fileKeepKeyPart,This file holds the private key of each Credential — do not share it or put it in a zip you pass on
 ui.aiProvider.foundModel,Found {0} {0|model|models}
+ui.aiProvider.hideKey,Hide key
 ui.aiProvider.historyTokens,Chat history budget (tokens)
 ui.aiProvider.historyTokensHint,"0 = automatic (60% of the model limit; 32,000 when unknown)"
 ui.aiProvider.keepSplitFolderProject,Stored separately at {0} in the project folder — not in the shared project.khn.json
 ui.aiProvider.lineNewExampleCom,Comma- or newline-separated · supports *.example.com · leave empty = no limit
+ui.aiProvider.modelsLoaded,{0} {0|model|models} — pick the one to use by default
 ui.aiProvider.nameCredential,Credential name
 ui.aiProvider.nameProvider,Provider name
 ui.aiProvider.nameSeeDropdownEg,"The name shown in the dropdown, e.g. ""OpenAI at work"" or ""Ollama on this machine"""
@@ -978,13 +1008,22 @@ ui.aiProvider.notHasProviderPress,"No providers yet — press ""Add"", then ente
 ui.aiProvider.notPick,(not selected)
 ui.aiProvider.notRemember,Unlimited
 ui.aiProvider.notSendValue,(don't send this value)
+ui.aiProvider.preset,Preset
+ui.aiProvider.presetHint,Fills in the API address for you — you still enter your own key
+ui.aiProvider.presetPick,— Fill in by hand —
 ui.aiProvider.pressFetchListModel,"Press ""Fetch model list"" to request the list from this provider's API"
+ui.aiProvider.providerDeleted,Provider deleted: {0}
+ui.aiProvider.providerSaved,Provider saved: {0}
+ui.aiProvider.saveCredential,Save key now
 ui.aiProvider.saveCredentialDoneKey,Credential saved (the key is stored separately at 
 ui.aiProvider.saveProvider,Save provider
 ui.aiProvider.secCredential,Credential
 ui.aiProvider.secModel,Model
 ui.aiProvider.secParams,Parameters
+ui.aiProvider.showKey,Show key
 ui.aiProvider.skSkipEmptyNot,"sk-… (can be left empty if the server needs no key, e.g. Ollama)"
+ui.aiProvider.testChatFail,"Found {0} {0|model|models}, but {1} cannot chat: {2}"
+ui.aiProvider.testChatOk,Connected — found {0} {0|model|models} · chat works with {1}
 ui.aiProvider.testConnect,Test connection
 ui.aiProvider.toReplyBackDone,"The endpoint replied, but the reply has no model list"
 ui.aiProvider.useDoneTokensTimes,Used {0} {0|token|tokens} · {1} {1|call|calls} · about ${2}
@@ -1299,7 +1338,7 @@ ui.app.aiAnalysis,AI analysis results
 ui.app.all,All sources
 ui.app.allLine,Same on every line
 ui.app.app,App default
-ui.app.appWriteNovelScreenplay,Novel/screenplay writing app — Electron + ProseMirror
+ui.app.appWriteNovelScreenplay,Novel/screenplay writing app
 ui.app.auto,— Automatic —
 ui.app.autoFitWidthOff,Auto-fit page width is off — back to the zoom you set
 ui.app.autoFitWidthOn,Auto-fit page width is on
@@ -1393,7 +1432,7 @@ Click = view full image · drag into a scene to insert the image"
 ui.app.close2,Turned off after a crash
 ui.app.closeAllDirtyAsk,{0} {0|tab has|tabs have} unsaved changes
 ui.app.closeAllKeptUnsaved,Closed {0} {0|tab|tabs} · kept {1} {1|tab|tabs} that could not be saved
-ui.app.closeAppHasList,Close the app — {0} {0|item|items} are unsaved
+ui.app.closeAppHasList,Close the app — {0} unsaved {0|item|items}
 ui.app.closeAppPendingList,Closing the app · {0} pending {0|item|items}
 ui.app.closeNotSave,Close without saving
 ui.app.closePrint,Off (printed exactly as it is)
@@ -1576,7 +1615,7 @@ ui.app.jsonUnreadable,Could not read {0} (the file is damaged) — the original 
 ui.app.jsonUnreadableNoBackup,Could not read {0} and could not keep a copy — nothing will be saved over it until it can be read
 ui.app.keyEnglish,key (English)
 ui.app.keyPlugin,Plugin shortcut broken: 
-ui.app.killianEditor,Killian Editor 
+ui.app.killianEditor,Killian 2 · v
 ui.app.kind,Type
 ui.app.label,Label
 ui.app.label2,Label (Thai)
@@ -1729,7 +1768,7 @@ ui.app.notMoveSkipDraft,Moving between drafts is not supported yet
 ui.app.notMoveSkipDraft2,Moving between drafts/sections is not supported yet
 ui.app.notMustRememberWord,Don't remember this word
 ui.app.notOpen,(not opened)
-ui.app.notOutDone,Staying
+ui.app.notOutDone,Don't quit
 ui.app.notPick,None
 ui.app.notRememberEditChapter,"No longer remembering ""{0}"" (change this at Script → Manage SmartType)"
 ui.app.notRememberFoundNot,"Not remembered yet (seen fewer than {0} {0|time|times}) — press ""Remember"" to remember it now"
@@ -1992,7 +2031,7 @@ ui.app.user,User
 ui.app.useReorderTimeText,Used for ordering when the time is text
 ui.app.valignPlannerOnly,Vertical align only works on the planner board
 ui.app.valueRememberAllWord, — value 1 = remember every word typed (typos included)
-ui.app.versionEditF,Edited version: {0}  ·  revision #{1}
+ui.app.versionEditF,Edited {1} {1|time|times}
 ui.app.viewListAll, View the full list…
 ui.app.viewSample,Preview
 ui.app.webMoreElectron,Web engine + runtime bundled with Electron
@@ -2640,6 +2679,7 @@ ui.common.delMoveTrash,Delete (move to the trash)
 ui.common.desc,Description
 ui.common.detailed,Detailed
 ui.common.dialogue,Dialogue
+ui.common.discardChangesAsk,You have changes that are not saved yet. Close without saving?
 ui.common.dot,Dotted
 ui.common.dotStart,Start
 ui.common.draftTextDraft,Draft — plain text (Draft)
@@ -2770,7 +2810,7 @@ ui.common.renameNew,Rename
 ui.common.renameVersionSkipEmpty,Version name (optional)
 ui.common.repeat,⧉ Duplicate
 ui.common.replaceBtn,Replace
-ui.common.restart,Start over
+ui.common.restart,Restart
 ui.common.revertBtn,Revert
 ui.common.right,Right
 ui.common.right2,Align right
@@ -2850,6 +2890,7 @@ ui.compile.msg,<!-- page break -->
 ui.compile.nameScene,Scene name
 ui.compile.nextSummaryStats,Append a statistics summary
 ui.compile.notSpecifyStatus,No status
+ui.compile.novelPdf,Novel → PDF (chapter titles · scene breaks)
 ui.compile.onlySceneStatus,Only scenes with status…
 ui.compile.pageBreakAllChapter,New page for every chapter
 ui.compile.pageListCharacterCast,Cast of Characters page
@@ -4083,12 +4124,12 @@ ui.home.close,Close Home
 ui.home.closePageFirst,Close the home page
 ui.home.copyPath,Copy the folder path
 ui.home.editLatest,Last modified: 
-ui.home.export,Export
+ui.home.export,Export .zip
 ui.home.exportProjectOpenFile,Export the open project as a .zip file
 ui.home.homeLoadProjectFail,home: failed to load projects
 ui.home.homePanelLoadFail,home-panel: failed to load
 ui.home.homeReadProjectFail,home: failed to read project: 
-ui.home.import,Import
+ui.home.import,Import .zip
 ui.home.importProjectFileZip,Import a project from a .zip file
 ui.home.language,Language
 ui.home.msg, by 
@@ -4370,6 +4411,9 @@ ui.logline.saved,Logline saved
 ui.logline.stakes,Stakes
 ui.logline.title,Logline
 ui.logline.why,AI uses this as a compass so the story stays on track
+ui.main.pickFolderBtn,Choose this folder
+ui.main.pickNewProjectFolder,Choose where to keep the new project — its folder is created inside
+ui.main.pickProjectFolder,Choose the project folder to open
 ui.mapAi.aroundHead,Around it (nearest first):
 ui.mapAi.cut,(The rest was cut for length — use the map.where command to ask about one name)
 ui.mapAi.head,## Map positions (from the author's Maps panel)
@@ -4758,7 +4802,7 @@ ui.menu.fullScreen,Full screen
 ui.menu.graphAreaFloorPlan,Floor Plan
 ui.menu.graphDialogueNextPage,Dialogue per page chart (Dialogue Chart)…
 ui.menu.graphStoryBreakBranch,Branching story chart (Branch Tree)
-ui.menu.heading,Heading {0} ({1}+{2})
+ui.menu.heading,Heading H{0}
 ui.menu.headPaperAllPage,Page Headers…
 ui.menu.help,Help
 ui.menu.help2,Help
@@ -5274,6 +5318,7 @@ ui.panel.historyTitle,History
 ui.panel.jumpedInMain,Jumped to that spot in the main window
 ui.panel.kanbanTitle,Kanban
 ui.panel.layoutReset,Panel layout reset
+ui.panel.layoutRestored,Previous panel layout restored
 ui.panel.logTitle,Application Log
 ui.panel.manage,Manage panels
 ui.panel.mapsTitle,Maps
@@ -5436,7 +5481,6 @@ ui.pdf.emptyFontChapter,Empty = the script's font
 ui.pdf.emptyNotPutWatermark,Empty = no watermark
 ui.pdf.exportPDFItemNew,Export PDF (built-in builder)
 ui.pdf.exportPDFPdfLib,Export PDF (pdf-lib)
-ui.pdf.exportPDFPrevUse,"(the old ""Export as PDF…"" menu still uses Chromium as usual)"
 ui.pdf.gapXYInch,"The x/y distances are ""inches from the paper edge"", like on the paper tab"
 ui.pdf.headPaperAllPage,Header on every page
 ui.pdf.headPaperAllPage2,Page Headers
@@ -6006,7 +6050,7 @@ ui.project.group,Groups/factions
 ui.project.hasProject,This project already exists
 ui.project.investigateBack,Mystery/detective
 ui.project.investigation,The investigation
-ui.project.newProjectTemplate,New project from template
+ui.project.newProjectPick,New project — choose a starting template
 ui.project.newProjectTemplateDone,Created a project from the template: 
 ui.project.novelFantasyWorldbuilding,"Fantasy novel — worldbuilding, races, magic"
 ui.project.novelInvestigateCharacterSuspect,"Mystery novel — suspects, clues, timeline"
@@ -6287,10 +6331,10 @@ ui.settings.shortcuts,Shortcuts
 ui.settings.shortcutsHint,Click Edit then press new key combo
 ui.settings.spellCheck,Spell check
 ui.settings.spellCheckDict,Use the app's dictionary (Thai+English)
-ui.settings.spellCheckDictHint,Offline Thai + English word list · knows your added words · off = only Chromium's checker remains (English only · downloads its dictionary first; offline = no underlines at all)
+ui.settings.spellCheckDictHint,Offline Thai + English word list · knows your added words · off = only the system's built-in checker remains (English only · downloads its dictionary first; offline = no underlines at all)
 ui.settings.spellCheckHint,Underline misspelled words (always a single underline
 ui.settings.spFontFamily,Screenplay Font
-ui.settings.spFontFamilyHint,Font used only in screenplay mode (default: Courier New)
+ui.settings.spFontFamilyHint,Font used only in screenplay mode (default: Courier Prime)
 ui.settings.themeK2,K2 (house palette)
 ui.settings.themeK2Light,K2 Light
 ui.settings.title,Settings
@@ -7018,7 +7062,7 @@ ui.starter.fIntro,Synopsis
 ui.starter.fIntroPlaceholder,Roughly what this story is about — one paragraph is enough
 ui.starter.fName,Title
 ui.starter.fNamePlaceholder,e.g. Sword of the Dawn
-ui.starter.folderFixed,Stored in the folder Starters/{0} — renaming the story doesn't rename the folder
+ui.starter.folderFixed,Stored in the folder Starters/{0} — the folder takes the first title you give the story; renaming the story later doesn't rename the folder
 ui.starter.foreignAsk,“{0}” looks like it came from another project — match its characters to this project's Wiki now?
 ui.starter.fPrompts,Character prompts
 ui.starter.fPromptsHint,Rules the AI should follow whenever it writes this character
@@ -7304,6 +7348,37 @@ ui.starter.wWhy,Why
 ui.starter.wWhyHint,The driving force or reason behind it
 ui.starter.yesterday,Yesterday
 ui.starter.you,You
+ui.starterTag.action,action
+ui.starterTag.allAges,all ages
+ui.starterTag.bittersweet,bittersweet
+ui.starterTag.comedy,comedy
+ui.starterTag.cyberpunk,cyberpunk
+ui.starterTag.dark,dark
+ui.starterTag.drama,drama
+ui.starterTag.epic,epic
+ui.starterTag.fantasy,fantasy
+ui.starterTag.gritty,gritty
+ui.starterTag.harem,harem
+ui.starterTag.historical,historical
+ui.starterTag.horror,horror
+ui.starterTag.isekai,isekai
+ui.starterTag.lighthearted,lighthearted
+ui.starterTag.mature,mature
+ui.starterTag.medieval,medieval
+ui.starterTag.modern,modern
+ui.starterTag.mystery,mystery
+ui.starterTag.postApocalyptic,post-apocalyptic
+ui.starterTag.romance,romance
+ui.starterTag.satirical,satirical
+ui.starterTag.school,school
+ui.starterTag.sciFi,sci-fi
+ui.starterTag.sliceOfLife,slice of life
+ui.starterTag.space,space
+ui.starterTag.steampunk,steampunk
+ui.starterTag.teen,teen
+ui.starterTag.thriller,thriller
+ui.starterTag.urbanFantasy,urban fantasy
+ui.starterTag.wholesome,wholesome
 ui.status.addStatus,+ Add status
 ui.status.addStatusDone,Status added: 
 ui.status.copied,Copied
@@ -7397,32 +7472,32 @@ ui.textCase.lowerCaseItemSmall,lower case — all lower case
 ui.textCase.sentenceCaseSentenceItem,Sentence case — capitalise the start of sentences
 ui.textCase.titleCaseStyleTitle,Title Case — like a title
 ui.textCase.uPPERCASEItemBig,UPPER CASE — all upper case
-ui.themes.claude,Terracotta (Claude Code)
+ui.themes.claude,Terracotta
 ui.themes.cvdByDark,Blue–Yellow Colour-blind (Dark) · Red/Teal
 ui.themes.cvdByLight,Blue–Yellow Colour-blind (Light) · Red/Teal
 ui.themes.cvdRgDark,Red–Green Colour-blind (Dark) · Blue/Orange
 ui.themes.cvdRgLight,Red–Green Colour-blind (Light) · Blue/Orange
-ui.themes.dva,Gamer Pink (D.Va)
-ui.themes.excel,Grid Green (Excel)
+ui.themes.dva,Gamer Pink
+ui.themes.excel,Grid Green
 ui.themes.flower,Flower Garden
 ui.themes.fruit,Fruit Salad
-ui.themes.gundam,Tricolor Mobile Suit (Gundam)
+ui.themes.gundam,Tricolor Mecha
 ui.themes.hcDark,High Contrast (Dark)
 ui.themes.hcLight,High Contrast (Light)
-ui.themes.kimi,Moonlight (Kimi)
+ui.themes.kimi,Moonlight
 ui.themes.lagoon,Sunny Lagoon
-ui.themes.macintosh,Platinum (Classic Macintosh)
+ui.themes.macintosh,Platinum
 ui.themes.monoDark,Monochrome (Dark)
 ui.themes.monoLight,Monochrome (Light)
 ui.themes.neonPop,Neon Pop
-ui.themes.opencode,Terminal Peach (opencode)
+ui.themes.opencode,Terminal Peach
 ui.themes.plumWine,Plum Wine
-ui.themes.powerpoint,Slide Brick (PowerPoint)
+ui.themes.powerpoint,Slide Brick
 ui.themes.rainbow,Rainbow
 ui.themes.sakuraMist,Sakura Mist
 ui.themes.tropical,Tropical
-ui.themes.vscode,Code Dark (VS Code)
-ui.themes.word,Document Blue (Word)
+ui.themes.vscode,Code Dark
+ui.themes.word,Document Blue
 ui.thes.close,Close
 ui.thes.copied,Copied: 
 ui.thes.notFound,"No synonyms/antonyms for """
@@ -7783,7 +7858,7 @@ ui.tip.toggle-panel:dashboard,Progress overview — word count against goals · 
 ui.tip.toggle-panel:dialogue,"All dialogue in the project — filter, jump, edit inline"
 ui.tip.toggle-panel:dlgb,"Let AI play your Wiki characters turn by turn, then drop the lines you like into the script at the cursor — open it when you are stuck on dialogue"
 ui.tip.toggle-panel:docs,"The main writing area — every open tab: scenes, screenplays and Wiki pages (cannot be closed)"
-ui.tip.toggle-panel:floorplan,Top-down set plan (Shot Designer style) — Wiki characters with facing and sight lines · cameras (body/lens/support/track) · lights · shapes · beats tied to lines of the scene
+ui.tip.toggle-panel:floorplan,Top-down set plan — Wiki characters with facing and sight lines · cameras (body/lens/support/track) · lights · shapes · beats tied to lines of the scene
 ui.tip.toggle-panel:gallery,"Every image in the project's Images folder — drag into a document to insert, or choose as a cover/portrait in the Wiki"
 ui.tip.toggle-panel:gallery-board,A canvas for each album's reference images — open it beside the image library and drag images on · move/resize/zoom freely · removing from the board doesn't delete files
 ui.tip.toggle-panel:history,"A timeline of what was done to the project's files, with a way back to any point · how many are kept is set at Settings → Project info (default 32)"
@@ -8071,7 +8146,7 @@ ui.treeMenu.versionHistory,Version history…
 ui.treeMenu.view,View
 ui.treeMenu.viewQuickNotes,View quick notes
 ui.treeMenu.visual,Visual telling
-ui.ui.hasFileCantSave,{0} {0|file|files} are unsaved
+ui.ui.hasFileCantSave,{0} unsaved {0|file|files}
 ui.ui.notSave,Don't save
 ui.ui.savePick,Save selected ({0})
 ui.upd.autoHint,"Off = no internet access at startup · You can still check with the button below, or from the Help menu"
@@ -8323,6 +8398,7 @@ ui.xhub.kindAuto,Match the source files
 ui.xhub.kindProse,Novel (prose)
 ui.xhub.kindScript,Screenplay
 ui.xhub.needProject,Open a project before exporting
+ui.xhub.needScriptHint,"Pick another format, or choose a range that is a screenplay"
 ui.xhub.needScriptOnly,This format only works with screenplays
 ui.xhub.noDraft,(no draft in this project)
 ui.xhub.noPreview,(nothing to preview)

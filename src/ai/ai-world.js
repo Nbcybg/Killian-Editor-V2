@@ -200,7 +200,7 @@ export async function generateWorld(type, prompt, options = {}) {
   const call = () => client.complete({
     prompt: built.prompt, system: built.system, feature: 'worldbuilding:' + type,
     model: options.model, temperature: options.temperature ?? 0.9,   // สร้างโลก = ต้องการความหลากหลาย
-    maxTokens: options.maxTokens || 1800,
+    maxTokens: options.maxTokens || 3000,   // [alpha.170] JSON ภาษาไทยของโลกหนึ่งชิ้นยาวเกิน 1800 โทเคนเป็นปกติ → ถูกตัดกลางทาง
   });
   let res = await call();
   if (!res.ok) return { ...res, prompt: built.prompt };
@@ -209,6 +209,10 @@ export async function generateWorld(type, prompt, options = {}) {
   if (!world.ok && options.retryOnMissing !== false) {
     res = await call();
     if (res.ok) world = parseWorld(type, res.text);
+  }
+  // [alpha.170 · บั๊ก 2] ถูกตัดก่อนจบ = บอกตรง ๆ (เดิมขึ้น "ตอบไม่ตรงโครง" ซึ่งพาไปแก้ผิดจุด)
+  if (!world.ok && res.ok && res.truncated) {
+    return { ok: false, world, prompt: built.prompt, error: tt('ui.ai.replyCut'), code: 'truncated', usage: res.usage };
   }
   if (!world.ok) return { ok: false, world, prompt: built.prompt, error: tt('ui.aiWorld.aIReplyNotAt'), code: 'bad-shape', usage: res.usage };
   return { ok: true, world, prompt: built.prompt, usage: res.usage, cost: res.cost, raw: res.text };

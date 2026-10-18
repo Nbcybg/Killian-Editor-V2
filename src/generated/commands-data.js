@@ -1287,7 +1287,7 @@ export const COMMAND_ICON = {
   "ui:tb-source": "code-alt",
   "ui:tb-sp-cont": "",
   "ui:tb-sp-ext": "character-extension",
-  "ui:tb-visual": "image",
+  "ui:tb-visual": "film",
   "user-manual": "book",
   "visual-tags": "",
   "word-history": "",

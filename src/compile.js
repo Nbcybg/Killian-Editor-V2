@@ -197,6 +197,10 @@ export const PRESETS = [
   // ไม่เปิด sp-continued เพราะตัวสร้าง PDF จัดหน้าเองแล้วใส่ CONTINUED ให้ตอนวาด
   wf('screenplay-pdf', t('ui.compile.screenplayPDFTocCover'), 'pdf',
      ['skip-memo', 'strip-comments', ['omit-elements', { types: 'note' }]]),
+  // [alpha.170 · bug hunt 5] PDF ของ "นิยาย" — เดิมพรีเซ็ต ext=pdf มีตัวเดียว (ของบทภาพยนตร์) นิยายจึงได้ไฟล์ที่
+  // ไม่มีชื่อบทและไม่มีตัวคั่นฉาก · ต้องอยู่ **หลัง** screenplay-pdf (ตัวแรกที่ ext=pdf = ค่าของทางที่ไม่ระบุชนิด)
+  wf('prose-pdf', t('ui.compile.novelPdf'), 'pdf',
+     ['skip-memo', 'strip-comments', 'chapter-heading', 'scene-separator']),
 ];
 
 export function newWorkflow(name) {
@@ -245,7 +249,7 @@ export function stripMarkdown(s) {
     switch (b.kind) {
       case 'code': out.push(b.text); break;
       case 'pagebreak': out.push('<!--pagebreak-->'); break;
-      case 'hr': out.push(''); break;
+      case 'hr': out.push(b.text || ''); break;
       case 'figure': out.push(String(b.alt || '')); break;
       case 'li': out.push((b.ordered ? (Number.isFinite(b.num) ? b.num : 1) + '. ' : '• ') + plainInline(b.text)); break;
       default: out.push(plainInline(b.text));
@@ -297,7 +301,14 @@ export function mdToHtmlBody(md, o = {}) {
   for (const b of mdBlocks(md, { breakMarker: PAGE_BREAK })) {
     const al = b.align;
     if (b.kind === 'pagebreak') { closeAll(); out.push('<div class="pb"></div>'); continue; }
-    if (b.kind === 'hr') { closeAll(); out.push('<hr>'); continue; }
+    if (b.kind === 'hr') {
+      closeAll();
+      // ตัวคั่นฉาก (`* * *`) = ดาวกึ่งกลาง ไม่ใช่เส้นขีด — ธรรมเนียมของหนังสือนิยาย
+      out.push(b.text ? '<p class="k-scene-break" style="text-align:center;text-indent:0" data-align="center">'
+                        + esc(b.text) + '</p>'
+                      : '<hr>');
+      continue;
+    }
     if (b.kind === 'figure') {
       closeAll();
       // โครงเดียวกับ `toDOM` ของโหนด figure ในตัวแก้ไข (รูปเดี่ยวใน <figure> ไม่มีคำบรรยาย)

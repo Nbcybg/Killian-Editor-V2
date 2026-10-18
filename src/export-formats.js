@@ -144,6 +144,10 @@ export function defaultWorkflowFor(fmtKey, workflows = PRESETS, kind = '') {
   }
   // [alpha.169 · bug hunt] RTF ของนิยายประกอบจากมาร์กดาวน์ (generateProseRtf) — ต้องได้เวิร์กโฟลว์ที่ **ไม่ตัด**
   // เครื่องหมายทิ้ง ไม่งั้นตัวหนา/เอียง/หัวข้อ/รายการหายก่อนถึงตัวสร้างไฟล์ (เดิมตกไปพรีเซ็ต "ข้อความล้วน")
+  if (fmtKey === 'pdf' && kind === 'prose') {
+    const pp = workflows.find((w) => w.id === 'prose-pdf');
+    if (pp) return pp;
+  }
   const want = { pdf: 'pdf', html: 'html', txt: 'txt', md: 'md', rtf: kind === 'prose' ? 'md' : 'txt', fdx: 'txt' }[fmtKey] || 'md';
   return (workflows.find((w) => w.ext === want && w.builtIn)
        || workflows.find((w) => w.ext === want)
@@ -178,4 +182,18 @@ export function suggestName(title, fmtKey, opts) {
   return buildExportName(o.template || DEFAULT_EXPORT_NAME,
                          { title: String(title || ''), ...(o.ctx || {}) },
                          formatDef(fmtKey).ext);
+}
+
+/**
+ * [alpha.170 · bug hunt 5] ฟอนต์ของ "เลขหน้า" ในไฟล์ PDF ของนิยาย
+ * เลขหน้าถูกประทับด้วย pdf-lib หลัง Chromium พิมพ์เนื้อเรื่อง (ต้องข้ามหน้าปก) — ชุดฟอนต์ที่ส่งให้คือของบทภาพยนตร์
+ * (Courier) เลขหน้าของนิยายจึงเป็นตัวพิมพ์ดีดอยู่เล่มเดียวทั้งหน้า · เลขหน้าเป็นตัวเลขล้วน จึงใช้ฟอนต์มาตรฐานของ PDF ได้
+ * โดยไม่ต้องฝังไฟล์: เนื้อเรื่องไม่มีเชิง = 'sans' · ตั้งใจใช้ฟอนต์พิมพ์ดีด = '' (ทางเดิม) · นอกนั้น = 'serif'
+ */
+export function proseNumberFont(stack) {
+  const s = String(stack || '').toLowerCase();
+  if (!s) return 'serif';
+  if (/courier|monospace|consolas|typewriter/.test(s.split(',')[0])) return '';
+  const generic = s.split(',').map((x) => x.trim()).filter((x) => x === 'serif' || x === 'sans-serif' || x === 'monospace')[0];
+  return generic === 'sans-serif' ? 'sans' : generic === 'monospace' ? '' : 'serif';
 }

@@ -17,6 +17,7 @@ import { showAISettingsDialog, currentProvider } from './ai/ai-provider-ui.js';
 import { openScene, safeName } from './app.js';
 import { parseMdFile } from './md.js';
 import { liveBody } from './tab-bridge.js';   // [alpha.160 · P1-3]
+import { isEmptyJsonReply } from './ai/ai-prose.js';   // [alpha.170 · บั๊ก 16]
 import { mergeSceneMeta } from './scene-meta.js';   // [alpha.160] คุณสมบัติหนักจาก frontmatter
 import { priceKeyOf } from './ai/ai-providers.js';
 import {
@@ -242,7 +243,9 @@ function statsBar(stats) {
 /** แถบสัดส่วน — items: [{label, value, sub, sceneId, tone}] */
 function barList(items, opts = {}) {
   const wrap = el('div', 'aia-bars');
-  const max = Math.max(1, ...items.map((i) => Number(i.value) || 0));
+  // [alpha.170 · บั๊ก 16] คะแนนที่มีสเกลตายตัว (x/10 · ค่าอืด 0–100) วาดเทียบเพดานของสเกล — เดิมเทียบกับค่าสูงสุดในรายการ
+  // ฉากที่ได้ 36 จาก 100 จึงขึ้นแถบแดงเต็มทั้งแถบ เหมือนแย่ที่สุด ทั้งที่ยังต่ำกว่าเกณฑ์
+  const max = opts.max > 0 ? opts.max : Math.max(1, ...items.map((i) => Number(i.value) || 0));
   for (const it of items.slice(0, opts.limit || 40)) {
     const row = el('div', 'aia-bar-row');
     if (it.sceneId) { row.classList.add('is-link'); row.onclick = () => jumpToScene(it.sceneId); }
@@ -251,7 +254,7 @@ function barList(items, opts = {}) {
     head.append(el('span', 'aia-bar-val', String(it.display != null ? it.display : it.value)));
     const track = el('div', 'aia-bar-track');
     const fill = el('div', 'aia-bar-fill' + (it.tone ? ' tone-' + it.tone : ''));
-    fill.style.width = Math.round(100 * (Number(it.value) || 0) / max) + '%';
+    fill.style.width = Math.max(0, Math.min(100, Math.round(100 * (Number(it.value) || 0) / max))) + '%';
     track.append(fill);
     row.append(head, track);
     if (it.sub) row.append(el('div', 'aia-bar-sub', it.sub));
@@ -405,7 +408,7 @@ function compositionView(L) {
 function scoreBox(criteria, total, head) {
   const wrap = el('div', 'aia-score');
   wrap.append(el('div', 'aia-score-total', (head ? head + ' ' : '') + total + '/10'));
-  wrap.append(barList((criteria || []).map((c) => ({ label: c.label, value: c.score, display: c.score + '/10', sub: c.note }))));
+  wrap.append(barList((criteria || []).map((c) => ({ label: c.label, value: c.score, display: c.score + '/10', sub: c.note })), { max: 10 }));
   return wrap;
 }
 
@@ -430,7 +433,9 @@ function renderAI(id, ai) {
     }
     box.append(ul);
   } else {
-    box.append(el('div', 'aia-ai-text', (ai.raw || '').trim() || t('ui.aia.aiNoFinding')));
+    // [alpha.170 · บั๊ก 16] AI ตอบ "ไม่มีข้อสังเกต" เป็น JSON ว่าง ([] · {} · ในบล็อกโค้ด) = ข้อความของโปรแกรม ไม่ใช่โชว์ "[]" ดิบ
+    const raw = (ai.raw || '').trim();
+    box.append(el('div', 'aia-ai-text', !raw || isEmptyJsonReply(raw) ? t('ui.aia.aiNoFinding') : raw));
   }
   // "หลังใช้งาน" — โทเคนที่ใช้จริงของรอบนี้
   if (ai.usage) box.append(el('div', 'aia-cost',

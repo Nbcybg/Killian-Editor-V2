@@ -67,6 +67,8 @@ The app remembers your choices for next time.
 | Watermark | Text over every page (blank = none) |
 | Colour mode | **Black and white** = the convention for scripts sent to a shoot · **Colour** = a reading copy |
 
+- The dialog shows only the options that apply to the kind of document: **Running headers** and **scene numbers** appear for screenplays only, and **Cast of characters page** appears for a novel only when that book actually has a cast list.
+- After an export **the dialog stays open** — it shows an "Exported:" line with the file name and a **Show in folder** button, so you can go straight on to another format (close it with Esc or the close button).
 - Cover and cast pages are **not numbered** — numbering starts at the first body page.
 - The PDF embeds fonts itself. If the app cannot find an embeddable font for a script used in the text (Thai, for instance), it warns you that those characters will come out as `?`. Set a font (`.ttf`/`.otf`) in **Settings → Fonts by language**.
 - The fonts, sizes, margins, alignment, colours and images in the file match what you see in layout view.

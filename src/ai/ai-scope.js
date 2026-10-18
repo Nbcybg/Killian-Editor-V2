@@ -30,6 +30,24 @@ export function scopePrefix(scope, activeFile, root) {
   return null;
 }
 
+/**
+ * [alpha.170] ตัดรายการฉากตามขอบเขตที่เลือกในกล่องเครื่องมือ AI (ตรวจ Plot Hole ฯลฯ) — ยึดฉากของแท็บที่เปิดอยู่
+ * เดิมเครื่องมือส่ง **ทั้งเรื่อง** ทันทีที่เปิดกล่อง โดยไม่ถามขอบเขตและไม่บอกว่าจะส่งกี่ฉาก
+ * @param {Array<{path,section,chapterId,text}>} all  ฉากทั้งหมด (ร่างหลักของแต่ละเล่ม)
+ * @param {'project'|'book'|'chapter'|'scene'} scope
+ * @param {string} activePath  ไฟล์ของแท็บที่เปิดอยู่ ('' = ไม่มี → ขอบเขตที่ต้องมีแท็บได้รายการว่าง ไม่ใช่ทั้งโปรเจกต์)
+ */
+export function scopeScenes(all, scope, activePath) {
+  const key = (x) => norm(x).toLowerCase();
+  const rows = Array.isArray(all) ? all : [];
+  const here = activePath ? rows.find((s) => key(s.path) === key(activePath)) : null;
+  const withText = (list) => list.filter((s) => String(s.text || '').trim());
+  if (scope === 'scene') return here ? withText([here]) : [];
+  if (scope === 'chapter') return here ? withText(rows.filter((s) => s.section === here.section && s.chapterId === here.chapterId)) : [];
+  if (scope === 'book') return here ? withText(rows.filter((s) => s.section === here.section)) : [];
+  return withText(rows);
+}
+
 /** ไฟล์นี้อยู่ใต้ prefix ไหม (เทียบแบบมีตัวคั่น — "บท1" ต้องไม่จับ "บท10") */
 export function underPrefix(file, prefix) {
   const f = norm(file).toLowerCase(), p = norm(prefix).toLowerCase();

@@ -30,6 +30,7 @@ ui.ai.charADesc,角色 A 的描述（性格、说话方式、目标……）
 ui.ai.charB,角色 B： 
 ui.ai.charBDesc,角色 B 的描述
 ui.ai.chatPlaceholder,询问有关你的故事的问题……
+ui.ai.checkedScenes,已检查 {0} 个场景
 ui.ai.collecting,正在收集数据……
 ui.ai.collectingScenes,正在收集场景……
 ui.ai.connectAICant,无法连接到 AI： 
@@ -44,8 +45,6 @@ ui.ai.dialogueLabel,对白：
 ui.ai.dialogueTitle,生成对白
 ui.ai.dialogueWorking,正在生成对白……
 ui.ai.edit,叙述文
-ui.ai.entityReadFail,无法读取实体文件
-ui.ai.entityUnnamed,未命名实体
 ui.ai.error,出了点问题
 ui.ai.errorMark,出了点问题
 ui.ai.errorRetry,出了点问题，请重试
@@ -75,10 +74,10 @@ ui.ai.needBothChars,请输入两个角色的名字
 ui.ai.needSetup,请先设置 AI：菜单 AI → AI 设置
 ui.ai.new,创建
 ui.ai.noAnswer,（无回复）
+ui.ai.noCharacters,Wiki 中还没有角色——请先添加角色再检查
 ui.ai.noInconsist,未发现不一致
 ui.ai.noPlotHoles,未发现情节漏洞
 ui.ai.noProject,未打开任何项目
-ui.ai.noScenes,（此项目中没有场景）
 ui.ai.notChangeTone,保持语气
 ui.ai.notKnownProvider,未知的提供商： 
 ui.ai.notSet,（未设置）
@@ -91,23 +90,36 @@ ui.ai.opSummarize,总结
 ui.ai.opTone,改变语气
 ui.ai.orWord,或
 ui.ai.partialKept,已保留连接中断前收到的文本
-ui.ai.pickEntity,请先选择一个实体（角色）
+ui.ai.pickCharacter,角色
 ui.ai.plotTitle,情节漏洞检查
 ui.ai.plotWorking,正在检查情节漏洞……
 ui.ai.readAnswerAICant,无法读取 AI 的回答（不是 JSON）
 ui.ai.readFail,无法读取文件： 
+ui.ai.replaceSelection,替换所选文本
+ui.ai.replyCut,AI 的回答在结束前被截断（达到长度上限）——请调高 Maximum Number of Tokens 后重试
+ui.ai.replyUnreadable,AI 的回答格式应用无法读取——请重试或更换模型
 ui.ai.result,处理中
 ui.ai.resultLabel,结果：
+ui.ai.runAgain,再次检查
 ui.ai.sample1,这个故事里有哪些角色？
 ui.ai.sample2,帮我总结一下打斗场景
 ui.ai.savedToWiki,已保存到 Wiki： 
 ui.ai.saveWiki,保存到 Wiki
 ui.ai.sceneLabel,场景： 
+ui.ai.scopeBook,仅本册
+ui.ai.scopeChapter,仅本章
+ui.ai.scopeEmpty,此范围内没有带正文的场景
+ui.ai.scopeLabel,范围
+ui.ai.scopeProject,整个项目
+ui.ai.scopeScene,仅本场景
+ui.ai.scopeSummary,将把 {0} 个场景（约 {1} 个令牌）发送给 {2}
 ui.ai.searchingProject,正在搜索项目……
 ui.ai.sendingToAi,正在发送给 AI……
 ui.ai.smallLess,轻微
 ui.ai.sources,来源： 
 ui.ai.speakerLabel,说话人： 
+ui.ai.startCheck,开始检查
+ui.ai.stop,停止
 ui.ai.textLabel,文本：
 ui.ai.textNotOk,文本流式传输失败： 
 ui.ai.toneCasual,随意
@@ -124,6 +136,7 @@ ui.ai.wCity,城市
 ui.ai.wCulture,文化
 ui.ai.wEconomy,经济
 ui.ai.wFaction,派系
+ui.ai.wikiProfileUsed,使用 Wiki 中的设定：{0}
 ui.ai.wMagic,魔法体系
 ui.ai.wordAsk,问题： 
 ui.ai.working,处理中……
@@ -821,6 +834,8 @@ ui.aiError.innerUseItemOut,局域网中的服务器常使用自签名证书 — 
 ui.aiError.itemMaxTokensHigh,常见原因：最大 Token 数超过模型可接受范围 · 此模型不支持的推理强度 / 思考模式 · 响应格式 = json_object
 ui.aiError.itemTLSToUse,服务器的安全证书（TLS）无效
 ui.aiError.keyBindOutlineCheck,部分提供商会将密钥绑定到组织/项目 — 请检查此密钥是否适用于该基础 URL
+ui.aiError.missingHeader,请求缺少提供方要求的请求头
+ui.aiError.missingHeaderHint,把服务器消息中指出的请求头加到该提供方的 Custom Headers 中（每行一个“名称: 值”）
 ui.aiError.model,模型： 
 ui.aiError.modelOllamaLMStudio,使用本地模型（Ollama / LM Studio / llama.cpp）时 — 请先确认该程序正在运行
 ui.aiError.modelThinkReasoningUse,推理模型耗时更长 — 请降低推理强度或缩短回复
@@ -830,7 +845,7 @@ ui.aiError.nextNotMissingCenter,无法连接到服务器（网络中断）
 ui.aiError.notAPIKeySend,服务器拒绝了发送的 API 密钥
 ui.aiError.notTo,未到达服务器
 ui.aiError.provider,提供商： 
-ui.aiError.providerNotParamSend,提供商拒绝了发送的某个参数（{0}）
+ui.aiError.providerNotParamSend,提供方拒绝了请求 ({0})
 ui.aiError.putKeyNewSettings,在 AI 设置 → 编辑提供商 → 凭据 中输入新密钥，然后点击“保存凭据”
 ui.aiError.reply,服务器回复： 
 ui.aiError.sideProviderHasProblem,提供商出现问题（{0}）
@@ -845,8 +860,10 @@ ui.aiError.toNotHas,找不到端点（404）
 ui.aiError.tryNewTimesAdd,请重试，或在“参数”中增大“最大重试次数”
 ui.aiError.tryOpenBaseURL,对于家里的机器，请尝试在浏览器中打开基础 URL，看看是否有响应
 ui.aiError.userPress,已被用户停止
-ui.aiError.viewTextBottomName,请查看下方的服务器消息 — 它通常会直接指出出错的字段
+ui.aiError.viewTextBottomName,请看上方的服务器回复一行——通常会直接指出出错的字段
 ui.aiError.wordUseTime,服务器表示请求耗时过长
+ui.aiError.wrongProtocol,该模型不接受所发送的请求格式
+ui.aiError.wrongProtocolHint,更改该提供方的“API 格式”（OpenAI 兼容或 Anthropic Messages），或选择其他模型
 ui.aiField.askField,请填写字段“{0}”的值。
 ui.aiField.hasCurrent,该字段当前内容为“{0}”— 请润色或在此基础上扩展，不要改变其含义。
 ui.aiField.headKnown,已知信息：
@@ -934,6 +951,10 @@ ui.aiProvider.addProvider,添加提供商
 ui.aiProvider.addProviderNew,添加新的提供商
 ui.aiProvider.allowedDomains,允许的 HTTP 请求域名
 ui.aiProvider.apiKey,API 密钥
+ui.aiProvider.apiKind,API 格式
+ui.aiProvider.apiKindAnthropic,Anthropic Messages (messages)
+ui.aiProvider.apiKindHint,大多数提供方兼容 OpenAI · 当 Claude 模型提示不支持该协议时，请选择 Anthropic Messages
+ui.aiProvider.apiKindOpenai,OpenAI 兼容 (chat/completions)
 ui.aiProvider.baseUrl,基础 URL
 ui.aiProvider.baseURLModel,基础 URL：{0} · 模型：{1} · 
 ui.aiProvider.btnSendText,聊天中的发送按钮
@@ -944,6 +965,7 @@ ui.aiProvider.busyTest,测试中……
 ui.aiProvider.cantPickModel,尚未选择模型
 ui.aiProvider.cantSettingsProviderAI,尚未设置 AI 提供商（菜单 AI → AI 设置）
 ui.aiProvider.connectOkFoundModel,已连接 — 找到 {0} 个模型
+ui.aiProvider.credNameHint,留空 = 使用提供方名称
 ui.aiProvider.defaultsFail,无法在此电脑上保存提供商
 ui.aiProvider.defaultsHave,此电脑上已保存 {0} 个
 ui.aiProvider.defaultsImport,使用我的提供商
@@ -961,13 +983,21 @@ ui.aiProvider.domainAllow,允许的域名：{0}
 ui.aiProvider.domainNotListAllowed,此域名不在“允许的 HTTP 请求域名”列表中： 
 ui.aiProvider.edit,编辑
 ui.aiProvider.editProvider,编辑提供商
+ui.aiProvider.emptyDetail,思考令牌：{0} · max_tokens 上限：{1}
+ui.aiProvider.emptyHintEffort,降低 Reasoning Effort，或选择不会先思考再回答的模型
+ui.aiProvider.emptyHintModel,请重试或更换模型——有些模型在内容被过滤时会返回空白
+ui.aiProvider.emptyHintTokens,调高该提供方的 Maximum Number of Tokens（或设为 -1 表示不限制）
+ui.aiProvider.emptyReply,AI 返回了空回复
+ui.aiProvider.emptyThinking,AI 把回答额度全部用在了思考上，因此没有回答
 ui.aiProvider.fetchListModel,⟳ 获取模型列表
 ui.aiProvider.fileKeepKeyPart,此文件保存每个凭据的私钥 — 请勿分享，也不要放进要转交的 zip 中
 ui.aiProvider.foundModel,找到 {0} 个模型
+ui.aiProvider.hideKey,隐藏密钥
 ui.aiProvider.historyTokens,聊天历史预算（Token）
 ui.aiProvider.historyTokensHint,"0 = 自动（模型上限的 60%；未知时为 32,000）"
 ui.aiProvider.keepSplitFolderProject,单独存储在项目文件夹的 {0} 中 — 不会存入共享的 project.khn.json
 ui.aiProvider.lineNewExampleCom,以逗号或换行分隔 · 支持 *.example.com · 留空 = 不限制
+ui.aiProvider.modelsLoaded,{0} 个模型 — 选择默认使用的模型
 ui.aiProvider.nameCredential,凭据名称
 ui.aiProvider.nameProvider,提供商名称
 ui.aiProvider.nameSeeDropdownEg,下拉列表中显示的名称，例如“工作用的 OpenAI”或“本机的 Ollama”
@@ -978,13 +1008,22 @@ ui.aiProvider.notHasProviderPress,暂无提供商 — 点击“添加”，输�
 ui.aiProvider.notPick,（未选择）
 ui.aiProvider.notRemember,不限
 ui.aiProvider.notSendValue,（不发送此值）
+ui.aiProvider.preset,预设
+ui.aiProvider.presetHint,自动填入 API 地址——仍需输入您自己的密钥
+ui.aiProvider.presetPick,— 手动填写 —
 ui.aiProvider.pressFetchListModel,点击“获取模型列表”，向此提供商的 API 请求列表
+ui.aiProvider.providerDeleted,已删除提供方：{0}
+ui.aiProvider.providerSaved,已保存提供方：{0}
+ui.aiProvider.saveCredential,先保存密钥
 ui.aiProvider.saveCredentialDoneKey,凭据已保存（密钥单独存储在 
 ui.aiProvider.saveProvider,保存提供商
 ui.aiProvider.secCredential,凭据
 ui.aiProvider.secModel,模型
 ui.aiProvider.secParams,参数
+ui.aiProvider.showKey,显示密钥
 ui.aiProvider.skSkipEmptyNot,sk-…（如果服务器不需要密钥，可留空，例如 Ollama）
+ui.aiProvider.testChatFail,找到 {0} 个模型，但 {1} 无法聊天：{2}
+ui.aiProvider.testChatOk,连接成功 — 找到 {0} 个模型 · {1} 可以回应聊天请求
 ui.aiProvider.testConnect,测试连接
 ui.aiProvider.toReplyBackDone,端点已响应，但响应中没有模型列表
 ui.aiProvider.useDoneTokensTimes,已用 {0} 个 Token · {1} 次调用 · 约 ${2}
@@ -1299,7 +1338,7 @@ ui.app.aiAnalysis,AI 分析结果
 ui.app.all,所有来源
 ui.app.allLine,每行相同
 ui.app.app,应用默认值
-ui.app.appWriteNovelScreenplay,小说/剧本写作应用 — Electron + ProseMirror
+ui.app.appWriteNovelScreenplay,小说/剧本写作应用
 ui.app.auto,— 自动 —
 ui.app.autoFitWidthOff,已关闭页面宽度自动适配 — 恢复为你设置的缩放
 ui.app.autoFitWidthOn,已开启页面宽度自动适配
@@ -1576,7 +1615,7 @@ ui.app.jsonUnreadable,无法读取 {0}（文件已损坏）— 原文件已保�
 ui.app.jsonUnreadableNoBackup,无法读取 {0}，也无法保留副本 — 在其可被读取之前，不会向其中保存任何内容
 ui.app.keyEnglish,键（英文）
 ui.app.keyPlugin,插件快捷键已损坏： 
-ui.app.killianEditor,Killian Editor 
+ui.app.killianEditor,Killian 2 · v
 ui.app.kind,类型
 ui.app.label,标签
 ui.app.label2,标签（泰文）
@@ -1729,7 +1768,7 @@ ui.app.notMoveSkipDraft,暂不支持在草稿之间移动
 ui.app.notMoveSkipDraft2,暂不支持在草稿/分区之间移动
 ui.app.notMustRememberWord,不记住此词
 ui.app.notOpen,（未打开）
-ui.app.notOutDone,保持原状
+ui.app.notOutDone,不退出
 ui.app.notPick,无
 ui.app.notRememberEditChapter,不再记住“{0}”（可在 剧本 → 管理 SmartType 中更改）
 ui.app.notRememberFoundNot,尚未记住（出现不足 {0} 次）— 点击“记住”即可立即记住
@@ -1992,7 +2031,7 @@ ui.app.user,用户
 ui.app.useReorderTimeText,当时间为文本时用于排序
 ui.app.valignPlannerOnly,垂直对齐仅在规划器看板上有效
 ui.app.valueRememberAllWord, — 值 1 = 记住每个输入过的词（包括拼写错误）
-ui.app.versionEditF,已编辑版本：{0}  ·  修订 #{1}
+ui.app.versionEditF,已编辑 {1} 次
 ui.app.viewListAll, 查看完整列表……
 ui.app.viewSample,预览
 ui.app.webMoreElectron,Electron 自带的 Web 引擎和运行时
@@ -2640,6 +2679,7 @@ ui.common.delMoveTrash,删除（移至回收站）
 ui.common.desc,描述
 ui.common.detailed,详细
 ui.common.dialogue,对白
+ui.common.discardChangesAsk,有尚未保存的更改。不保存就关闭吗？
 ui.common.dot,点线
 ui.common.dotStart,起点
 ui.common.draftTextDraft,草稿 — 纯文本（Draft）
@@ -2770,7 +2810,7 @@ ui.common.renameNew,重命名
 ui.common.renameVersionSkipEmpty,版本名称（可选）
 ui.common.repeat,⧉ 复制
 ui.common.replaceBtn,替换
-ui.common.restart,重新开始
+ui.common.restart,重新启动
 ui.common.revertBtn,还原
 ui.common.right,右
 ui.common.right2,右对齐
@@ -2850,6 +2890,7 @@ ui.compile.msg,<!-- page break -->
 ui.compile.nameScene,场景名称
 ui.compile.nextSummaryStats,附加统计摘要
 ui.compile.notSpecifyStatus,无状态
+ui.compile.novelPdf,小说 → PDF（章节标题 · 场景分隔）
 ui.compile.onlySceneStatus,仅包含以下状态的场景……
 ui.compile.pageBreakAllChapter,每章另起一页
 ui.compile.pageListCharacterCast,角色表页
@@ -4083,12 +4124,12 @@ ui.home.close,关闭主页
 ui.home.closePageFirst,关闭主页
 ui.home.copyPath,复制文件夹路径
 ui.home.editLatest,最后修改： 
-ui.home.export,导出
+ui.home.export,导出 .zip
 ui.home.exportProjectOpenFile,将已打开的项目导出为 .zip 文件
 ui.home.homeLoadProjectFail,home：加载项目失败
 ui.home.homePanelLoadFail,home-panel：加载失败
 ui.home.homeReadProjectFail,home：读取项目失败： 
-ui.home.import,导入
+ui.home.import,导入 .zip
 ui.home.importProjectFileZip,从 .zip 文件导入项目
 ui.home.language,语言
 ui.home.msg, 作者： 
@@ -4370,6 +4411,9 @@ ui.logline.saved,一句话梗概已保存
 ui.logline.stakes,利害关系
 ui.logline.title,一句话梗概
 ui.logline.why,AI 会把它当作罗盘，使故事不偏离正轨
+ui.main.pickFolderBtn,选择此文件夹
+ui.main.pickNewProjectFolder,选择新项目的存放位置 — 项目文件夹将创建在其中
+ui.main.pickProjectFolder,选择要打开的项目文件夹
 ui.mapAi.aroundHead,周边（由近及远）：
 ui.mapAi.cut,（其余内容因篇幅被截断 — 如需查询某个名称，请使用 map.where 命令）
 ui.mapAi.head,## 地图位置（来自作者的地图面板）
@@ -4758,7 +4802,7 @@ ui.menu.fullScreen,全屏
 ui.menu.graphAreaFloorPlan,平面图
 ui.menu.graphDialogueNextPage,每页对白图表（Dialogue Chart）……
 ui.menu.graphStoryBreakBranch,故事分支图表（Branch Tree）
-ui.menu.heading,标题 {0}（{1}+{2}）
+ui.menu.heading,标题 H{0}
 ui.menu.headPaperAllPage,页眉……
 ui.menu.help,帮助
 ui.menu.help2,帮助
@@ -5274,6 +5318,7 @@ ui.panel.historyTitle,历史记录
 ui.panel.jumpedInMain,已在主窗口中跳转到该位置
 ui.panel.kanbanTitle,看板
 ui.panel.layoutReset,面板布局已重置
+ui.panel.layoutRestored,已恢复之前的面板布局
 ui.panel.logTitle,应用日志
 ui.panel.manage,管理面板
 ui.panel.mapsTitle,地图
@@ -5436,7 +5481,6 @@ ui.pdf.emptyFontChapter,留空 = 使用剧本的字体
 ui.pdf.emptyNotPutWatermark,留空 = 无水印
 ui.pdf.exportPDFItemNew,导出 PDF（内置生成器）
 ui.pdf.exportPDFPdfLib,导出 PDF（pdf-lib）
-ui.pdf.exportPDFPrevUse,（旧的“导出为 PDF……”菜单仍照常使用 Chromium）
 ui.pdf.gapXYInch,x/y 距离为“距纸张边缘的英寸数”，与纸张标签页相同
 ui.pdf.headPaperAllPage,每页显示页眉
 ui.pdf.headPaperAllPage2,页眉
@@ -6006,7 +6050,7 @@ ui.project.group,团体/派系
 ui.project.hasProject,此项目已存在
 ui.project.investigateBack,悬疑/侦探
 ui.project.investigation,调查
-ui.project.newProjectTemplate,从模板新建项目
+ui.project.newProjectPick,新建项目 — 选择起始模板
 ui.project.newProjectTemplateDone,已根据模板创建项目： 
 ui.project.novelFantasyWorldbuilding,奇幻小说 — 世界观、种族、魔法
 ui.project.novelInvestigateCharacterSuspect,悬疑小说 — 嫌疑人、线索、时间线
@@ -6287,10 +6331,10 @@ ui.settings.shortcuts,快捷键
 ui.settings.shortcutsHint,点击“编辑”，然后按下新的组合键
 ui.settings.spellCheck,拼写检查
 ui.settings.spellCheckDict,使用应用自带词典（泰文 + 英文）
-ui.settings.spellCheckDictHint,离线泰文 + 英文词表 · 会识别你添加的词 · 关闭 = 仅保留 Chromium 的检查器（仅限英文 · 需先下载词典；离线时完全没有下划线）
+ui.settings.spellCheckDictHint,离线泰文 + 英文词表 · 会识别你添加的词 · 关闭 = 仅保留 系统内置的检查器（仅限英文 · 需先下载词典；离线时完全没有下划线）
 ui.settings.spellCheckHint,为拼写错误的词加下划线（始终为单下划线
 ui.settings.spFontFamily,剧本字体
-ui.settings.spFontFamilyHint,仅在剧本模式下使用的字体（默认：Courier New）
+ui.settings.spFontFamilyHint,仅在剧本模式下使用的字体（默认：Courier Prime）
 ui.settings.themeK2,K2（官方配色）
 ui.settings.themeK2Light,K2 浅色
 ui.settings.title,设置
@@ -7018,7 +7062,7 @@ ui.starter.fIntro,梗概
 ui.starter.fIntroPlaceholder,这个故事大致讲什么 — 一段话就够了
 ui.starter.fName,标题
 ui.starter.fNamePlaceholder,例如：黎明之剑
-ui.starter.folderFixed,保存在文件夹 Starters/{0} 中 — 重命名故事不会重命名该文件夹
+ui.starter.folderFixed,保存在文件夹 Starters/{0} 中 — 文件夹以第一次设定的故事名称命名，之后重命名故事不会重命名该文件夹
 ui.starter.foreignAsk,“{0}”似乎来自其他项目 — 现在就将其角色与此项目的 Wiki 进行匹配？
 ui.starter.fPrompts,角色提示词
 ui.starter.fPromptsHint,AI 每次撰写此角色时都应遵循的规则
@@ -7304,6 +7348,37 @@ ui.starter.wWhy,为什么
 ui.starter.wWhyHint,背后的驱动力或原因
 ui.starter.yesterday,昨天
 ui.starter.you,你
+ui.starterTag.action,动作
+ui.starterTag.allAges,全年龄
+ui.starterTag.bittersweet,苦乐参半
+ui.starterTag.comedy,喜剧
+ui.starterTag.cyberpunk,赛博朋克
+ui.starterTag.dark,黑暗
+ui.starterTag.drama,剧情
+ui.starterTag.epic,史诗
+ui.starterTag.fantasy,奇幻
+ui.starterTag.gritty,冷峻写实
+ui.starterTag.harem,后宫
+ui.starterTag.historical,历史
+ui.starterTag.horror,恐怖
+ui.starterTag.isekai,异世界
+ui.starterTag.lighthearted,轻松
+ui.starterTag.mature,成人
+ui.starterTag.medieval,中世纪
+ui.starterTag.modern,现代
+ui.starterTag.mystery,悬疑
+ui.starterTag.postApocalyptic,末日后
+ui.starterTag.romance,爱情
+ui.starterTag.satirical,讽刺
+ui.starterTag.school,校园
+ui.starterTag.sciFi,科幻
+ui.starterTag.sliceOfLife,日常
+ui.starterTag.space,太空
+ui.starterTag.steampunk,蒸汽朋克
+ui.starterTag.teen,青少年
+ui.starterTag.thriller,惊悚
+ui.starterTag.urbanFantasy,都市奇幻
+ui.starterTag.wholesome,温馨
 ui.status.addStatus,+ 添加状态
 ui.status.addStatusDone,已添加状态： 
 ui.status.copied,已复制
@@ -7397,32 +7472,32 @@ ui.textCase.lowerCaseItemSmall,lower case — 全部小写
 ui.textCase.sentenceCaseSentenceItem,Sentence case — 句首字母大写
 ui.textCase.titleCaseStyleTitle,Title Case — 如同标题
 ui.textCase.uPPERCASEItemBig,UPPER CASE — 全部大写
-ui.themes.claude,陶土红（Claude Code）
+ui.themes.claude,陶土红
 ui.themes.cvdByDark,蓝黄色盲（深色）· 红/青绿
 ui.themes.cvdByLight,蓝黄色盲（浅色）· 红/青绿
 ui.themes.cvdRgDark,红绿色盲（深色）· 蓝/橙
 ui.themes.cvdRgLight,红绿色盲（浅色）· 蓝/橙
-ui.themes.dva,玩家粉（D.Va）
-ui.themes.excel,网格绿（Excel）
+ui.themes.dva,玩家粉
+ui.themes.excel,网格绿
 ui.themes.flower,花园
 ui.themes.fruit,水果沙拉
-ui.themes.gundam,三色机动战士（高达）
+ui.themes.gundam,三色机甲
 ui.themes.hcDark,高对比度（深色）
 ui.themes.hcLight,高对比度（浅色）
-ui.themes.kimi,月光（Kimi）
+ui.themes.kimi,月光
 ui.themes.lagoon,阳光泻湖
-ui.themes.macintosh,铂金（经典 Macintosh）
+ui.themes.macintosh,铂金
 ui.themes.monoDark,单色（深色）
 ui.themes.monoLight,单色（浅色）
 ui.themes.neonPop,霓虹波普
-ui.themes.opencode,终端蜜桃（opencode）
+ui.themes.opencode,终端蜜桃
 ui.themes.plumWine,梅子酒
-ui.themes.powerpoint,幻灯片砖红（PowerPoint）
+ui.themes.powerpoint,幻灯片砖红
 ui.themes.rainbow,彩虹
 ui.themes.sakuraMist,樱花雾
 ui.themes.tropical,热带
-ui.themes.vscode,代码深色（VS Code）
-ui.themes.word,文档蓝（Word）
+ui.themes.vscode,代码深色
+ui.themes.word,文档蓝
 ui.thes.close,关闭
 ui.thes.copied,已复制： 
 ui.thes.notFound,"没有找到近义词/反义词: """
@@ -7783,7 +7858,7 @@ ui.tip.toggle-panel:dashboard,进度概览 — 对照目标的字数 · 各状�
 ui.tip.toggle-panel:dialogue,项目中的所有对白 — 可筛选、跳转、就地编辑
 ui.tip.toggle-panel:dlgb,让 AI 轮流扮演你的 Wiki 角色，再把喜欢的台词放入剧本的光标处 — 卡在对白上时可以打开它
 ui.tip.toggle-panel:docs,主写作区域 — 所有打开的标签页：场景、剧本和 Wiki 页面（无法关闭）
-ui.tip.toggle-panel:floorplan,俯视的布景图（Shot Designer 风格）— 带朝向和视线的 Wiki 角色 · 摄影机（机身/镜头/支架/轨道）· 灯光 · 图形 · 与场景台词关联的节拍
+ui.tip.toggle-panel:floorplan,俯视的布景图 — 带朝向和视线的 Wiki 角色 · 摄影机（机身/镜头/支架/轨道）· 灯光 · 图形 · 与场景台词关联的节拍
 ui.tip.toggle-panel:gallery,项目 Images 文件夹中的所有图片 — 拖入文档即可插入，或在 Wiki 中选作封面/肖像
 ui.tip.toggle-panel:gallery-board,每个相册参考图片的画布 — 在图库旁打开，并把图片拖上去 · 可自由移动/缩放/放大 · 从看板移除不会删除文件
 ui.tip.toggle-panel:history,项目文件所做操作的时间线，可回到任意时间点 · 保留数量在“设置 → 项目信息”中设定（默认 32）
@@ -8323,6 +8398,7 @@ ui.xhub.kindAuto,与源文件保持一致
 ui.xhub.kindProse,小说（叙述文）
 ui.xhub.kindScript,剧本
 ui.xhub.needProject,导出前请先打开一个项目
+ui.xhub.needScriptHint,请选择其他格式，或选择属于剧本的范围
 ui.xhub.needScriptOnly,此格式仅适用于剧本
 ui.xhub.noDraft,（此项目中没有草稿）
 ui.xhub.noPreview,（没有可预览的内容）

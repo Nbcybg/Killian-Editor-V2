@@ -10,7 +10,8 @@
 
 import { t, tf } from '../i18n.js';
 import { state, setStatus, smart } from '../core.js';
-import { dumpMdFile, parseMdFile } from '../md.js';
+import { dumpMdFile, parseMdFile, countWords } from '../md.js';
+import { aiProseText, appendProse } from './ai-prose.js';   // [alpha.170 · บั๊ก 6]
 import { listScenes, listEntities } from '../project-scan.js';
 // [alpha.149] ★ ไฟล์ที่เปิดอยู่ในแท็บ ต้องถูกแก้ "ผ่านแท็บ" — เขียนดิสก์ตรง ๆ แล้วแท็บยังถือของเก่า
 // พอผู้ใช้บันทึก ข้อความที่ AI เขียนก็หาย (วัดจริง: ไฟล์มี → กด Ctrl+S → หาย) · รายละเอียดหัว tab-bridge.js
@@ -385,16 +386,19 @@ const HANDLERS = {
     const order0 = Math.max(0, ...list0.map((s) => s.order || 0)) + 1;
     const fileName = await freeSceneFileName(b.draftPath, c.ch.folderName, String(a.title), takenSceneFiles(snap));
     const file = assertInside(await kapi.join(chDir, fileName));
+    // [alpha.170 · บั๊ก 6] ร้อยแก้วจาก AI คั่นย่อหน้าด้วยบรรทัดว่าง — ไฟล์งานใช้หนึ่งบรรทัดต่อย่อหน้า
+    const body0 = aiProseText(a.text);
     await kapi.writeFile(file, dumpMdFile(
-      { title: String(a.title), type: 'scene', format: 'prose', pov: '', tags: [] }, String(a.text || '')));
+      { title: String(a.title), type: 'scene', format: 'prose', pov: '', tags: [] }, body0));
     let dup = false;
     await mutateJson(kapi, sf, (d) => {
       d.chapters = d.chapters || {};
       const list = d.chapters[c.ch.guid] || [];
       if (list.some((s) => eq(s.title, a.title))) { dup = true; return false; }
       const order = Math.max(0, ...list.map((s) => s.order || 0)) + 1;
+      // [alpha.170 · บั๊ก 5] จำนวนคำของเนื้อที่เขียนมาด้วย — เดิม 0 เสมอ: Explorer ไม่โชว์จำนวนคำ · ยอดรวมบนหน้าแรกขาด
       d.chapters[c.ch.guid] = [...list, { id: guid(), title: String(a.title), order, fileName,
-        chapterGuid: c.ch.guid, date: '', isFavorite: false, wordCount: 0, synopsis: String(a.synopsis || '') }];
+        chapterGuid: c.ch.guid, date: '', isFavorite: false, wordCount: countWords(body0), synopsis: String(a.synopsis || '') }];
     }, { fallback: EMPTY_SCENES });
     if (dup) { await kapi.remove(file).catch(() => {}); return err(tf('ui.aiActions.chapterHasScene', a.title)); }
     return ok(tf('ui.aiActions.newSceneDone', a.title, b.title, c.ch.title));
@@ -407,15 +411,18 @@ const HANDLERS = {
     const { meta, body: diskBody } = parseMdFile(raw);
     const lk = await sceneLockOf(sc, meta);
     if (lk) return lockedErr(sc.title, lk);
-    const add = String(a.text || '');
     const mode = String(a.mode || 'append');
     const h = tabHandle(sc.path);
     const live = !!(h && h.kind !== 'wiki');
     // [alpha.149] ต่อจาก "เนื้อที่ผู้ใช้เห็นอยู่" — แท็บที่ค้างการแก้ไว้ชนะไฟล์บนดิสก์
     const body = live ? h.getText() : diskBody;
+    // [alpha.170 · บั๊ก 6] ร้อยแก้ว = หนึ่งบรรทัดต่อย่อหน้า (บทภาพยนตร์คงบรรทัดว่างไว้ — เป็นตัวคั่น element)
+    const prose = String((meta && meta.format) || 'prose') !== 'screenplay';
+    const add = prose ? aiProseText(a.text) : String(a.text || '');
+    const gap = prose ? '\n' : '\n\n';
     const next = mode === 'replace' ? add
-               : mode === 'prepend' ? (add + (body ? '\n\n' + body : ''))
-               : (body ? body.replace(/\s+$/, '') + '\n\n' + add : add);
+               : mode === 'prepend' ? (add + (body ? gap + body : ''))
+               : (prose ? appendProse(body, add) : (body ? body.replace(/\s+$/, '') + gap + add : add));
     const verb = mode === 'replace' ? t('ui.common.overwrite') : mode === 'prepend' ? t('ui.common.insertPage') : t('ui.aiActions.writeNext');
     const msg = tf('ui.aiActions.sceneDoneMergeChar', verb, sc.title, next.length);
     if (live && h.dirty) {
@@ -427,6 +434,15 @@ const HANDLERS = {
     // เขียน dumpMdFile ตรง ๆ = คอมเมนต์ของฉากหายถาวร (ทั้งตอนแท็บเปิดไม่ค้างและตอนไม่ได้เปิด)
     await writeMdKeepingComments(kapi, sc.path, dumpMdFile(meta, next));
     if (live) await h.reloadFromDisk();          // แท็บเห็นของใหม่ทันที · บันทึกทีหลังจะไม่เขียนทับอีก
+    // [alpha.170 · บั๊ก 5] จำนวนคำในทะเบียนตามเนื้อที่เพิ่งเขียน (ทางคลิกทำตอนบันทึกแท็บ — ทางนี้ไม่ผ่านแท็บ)
+    try {
+      await mutateJson(kapi, await kapi.join(sc.draftPath, 'scenes.json'), (d) => {
+        const row = (((d.chapters || {})[sc.chapterId]) || []).find((r) => r.id === sc.id);
+        const n = countWords(next);
+        if (!row || row.wordCount === n) return false;
+        row.wordCount = n;
+      });
+    } catch { /* ทะเบียนอัปเดตไม่ได้ไม่ควรทำให้การเขียนที่สำเร็จแล้วกลายเป็นล้มเหลว */ }
     return ok(msg);
   },
 
@@ -537,7 +553,9 @@ export async function refreshAfterActions() {
   try {
     const app = await import('../app.js');
     await app.buildTree();
-    await smart.loadNames(state.root);
+    // [alpha.170 · บั๊ก 4] ทางกลางของ "รายชื่อ Wiki เปลี่ยน" — เดิมเรียกแค่ loadNames: ฉากที่เปิดค้างอยู่ไม่ถูกไฮไลต์
+    // ชื่อของเอนทิตี้ที่ AI เพิ่งสร้าง และ "ฉากที่กล่าวถึง" ในหน้า Wiki ว่างจนกดรีเฟรชเอง
+    await app.reloadWikiNames();
     app.refreshNetwork();
     setStatus(t('ui.aiActions.aIEditProjectDone'));
   } catch { /* รีเฟรชไม่ได้ไม่ควรทำให้คำสั่งที่สำเร็จไปแล้วกลายเป็นล้มเหลว */ }

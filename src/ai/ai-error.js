@@ -150,9 +150,22 @@ export function describeHttpError(e = {}) {
     hints = [t('ui.aiError.doneTryNew'), t('ui.aiError.checkPageProvider'),
              t('ui.aiError.addMaxRetriesParameters')];
   } else if (status === 400 || status === 422) {
-    reason = tf('ui.aiError.providerNotParamSend', String(status));
-    hints = [t('ui.aiError.viewTextBottomName'),
-             t('ui.aiError.itemMaxTokensHigh')];
+    // [alpha.170 · บั๊ก 14] 400 ไม่ได้แปลว่า "พารามิเตอร์ผิด" เสมอ — อ่านข้อความของเซิร์ฟเวอร์ก่อนจัดประเภท
+    // (เจอจริง: เกตเวย์ขอ header เพิ่ม · โมเดลไม่รับโปรโตคอล chat/completions — คำแนะนำเรื่อง Max Tokens พาหลงทาง)
+    const kind = badRequestKind(srvMsg || rawBody);
+    if (kind === 'header') {
+      code = 'http-' + status + '-header';
+      reason = t('ui.aiError.missingHeader');
+      hints = [t('ui.aiError.missingHeaderHint')];
+    } else if (kind === 'protocol') {
+      code = 'http-' + status + '-protocol';
+      reason = t('ui.aiError.wrongProtocol');
+      hints = [t('ui.aiError.wrongProtocolHint')];
+    } else {
+      reason = tf('ui.aiError.providerNotParamSend', String(status));
+      hints = [t('ui.aiError.viewTextBottomName'),
+               t('ui.aiError.itemMaxTokensHigh')];
+    }
   } else if (status >= 500) {
     reason = tf('ui.aiError.sideProviderHasProblem', String(status));
     hints = [t('ui.aiError.doneTryNewNot')];
@@ -161,8 +174,9 @@ export function describeHttpError(e = {}) {
     hints = [];
   }
 
-  const title = status ? tm('AI: {0} (HTTP {1})', reason, String(status))
-                       : tm('AI: {0}', reason);
+  // [alpha.170 · บั๊ก 14] เหตุผลที่มีเลขสถานะอยู่แล้วไม่ต่อ "(HTTP n)" ซ้ำ — เดิมได้ "… (400) (HTTP 400)"
+  const title = status && !reason.includes(String(status)) ? tm('AI: {0} (HTTP {1})', reason, String(status))
+                                                           : tm('AI: {0}', reason);
   const lines = [];
   if (e.provider) lines.push(t('ui.aiError.provider') + e.provider);
   if (e.model) lines.push(t('ui.aiError.model') + e.model);
@@ -174,6 +188,18 @@ export function describeHttpError(e = {}) {
   if (e.error && e.error !== reason) lines.push(t('ui.aiError.textInner') + redactSecrets(String(e.error)));
   if (hints.length) lines.push('', t('ui.aiError.edit'), ...hints.map((h, i) => (i + 1) + '. ' + h));
   return { title, reason, hints, detail: lines.join('\n'), code, serverMessage: srvMsg, host, status };
+}
+
+/**
+ * [alpha.170 · บั๊ก 14] คำขอถูกปฏิเสธ (400/422) เพราะอะไร — ดูจากข้อความของเซิร์ฟเวอร์
+ * @returns {'header'|'protocol'|''}
+ */
+export function badRequestKind(message) {
+  const s = String(message || '');
+  if (!s) return '';
+  if (/\bmissing\b[^.]*\b(header|x-[a-z0-9-]+)\b|\b(header|x-[a-z0-9-]+)\b[^.]*\b(missing|required)\b/i.test(s)) return 'header';
+  if (/does not support (this )?(protocol|endpoint|api)|unsupported (protocol|endpoint)|not supported (on|by|for) (this|the) (endpoint|protocol|api)|use the (messages|responses|chat) api/i.test(s)) return 'protocol';
+  return '';
 }
 
 /** บรรทัดเดียวสำหรับแถบสถานะ/บันทึก (ไม่มีขึ้นบรรทัดใหม่) */

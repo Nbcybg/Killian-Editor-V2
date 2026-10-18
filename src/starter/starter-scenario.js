@@ -32,6 +32,7 @@ import { aiBtn, askAI, tokenBadge } from './starter-ai.js';
 import { renderRichView } from './starter-richtext.js';
 import { convertDialog } from './starter-export.js';
 import { bridgeDialog, canPush } from './starter-bridge.js';
+import { tagLabel } from './starter-tags.js';
 import { gi } from '../icons.js';
 
 // โทเคนตัวอย่างที่ยัดเข้า placeholder — **ห้ามเขียน `{{…}}` ตรง ๆ ในไฟล์ภาษา**
@@ -145,7 +146,7 @@ export async function renderStarterHome(host, ctx) {
     s.author ? t('ui.starter.byAuthor') + s.author : t('ui.starter.noAuthor')));
   if ((s.tags || []).length) {
     const tags = el('div', 'st-hero-tags');
-    for (const tg of s.tags) tags.append(el('span', 'st-tag on', tg));
+    for (const tg of s.tags) tags.append(el('span', 'st-tag on', tagLabel(tg)));
     heroInfo.append(tags);
   }
   // คำโปรย **บรรทัดเดียว** ตามสเปก — ยาวเกินตัดด้วย ellipsis ที่ CSS ไม่ใช่ตัดข้อความทิ้ง

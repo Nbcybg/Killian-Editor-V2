@@ -154,6 +154,8 @@ function inlineImagesAsText(content) {
 }
 // [alpha.58r บั๊ก 27] เส้นคั่น + บล็อกโค้ด (schema เดิมไม่มี node สองตัวนี้เลย)
 const RE_HR = /^\s{0,3}(-{3,}|\*{3,}|_{3,})\s*$/;
+// ดาวสามดวงขึ้นไปคั่นด้วยวรรค (`* * *`) — ใช้เฉพาะทางอ่านของไฟล์ส่งออก (mdBlocks)
+const RE_SCENE_BREAK = /^\s{0,3}\*(?:[ \t]+\*){2,}\s*$/;
 const RE_FENCE = /^\s{0,3}(`{3,}|~{3,})\s*([\w+-]*)\s*$/;
 // [alpha.61 ข้อ 3] ขึ้นหน้าใหม่ด้วยมือ (Ctrl+Enter) — เก็บเป็นคอมเมนต์มาร์กดาวน์
 // แบบเดียวกับ <!--align:…--> : v1 และเครื่องมืออื่นเห็นเป็นคอมเมนต์เฉย ๆ ไม่พัง
@@ -494,6 +496,10 @@ function mdBlocks(md, opts) {
       out.push({ kind: 'pagebreak', align: null, text: '' }); i++; continue;
     }
     if (RE_HR.test(line)) { out.push({ kind: 'hr', align, text: '' }); i++; continue; }
+    // [alpha.170 · bug hunt 5] ตัวคั่นฉาก `* * *` (ดาวเว้นวรรค) = เส้นคั่นตามมาตรฐาน CommonMark
+    // เดิมตกไปถึง RE_UL (`* ` = ข้อในรายการ) แล้วที่เหลือ `* *` ถูกอ่านเป็นตัวเอียงของวรรค
+    // → ไฟล์ที่ส่งออกได้ "จุดนำเปล่า ๆ" คั่นทุกฉาก · พา `text` ไปด้วยให้ปลายทางวาดดาวกึ่งกลางได้
+    if (RE_SCENE_BREAK.test(line)) { out.push({ kind: 'hr', align, text: line.trim() }); i++; continue; }
     if ((m = RE_IMG.exec(line))) {
       const tg = splitImgTarget(m[2]);
       out.push({ kind: 'figure', align, text: '', alt: m[1], src: tg.src,

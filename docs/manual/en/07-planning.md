@@ -184,7 +184,7 @@ Maps are context for the AI — in chat you can ask "who is near whom" and it an
 
 ![Floor plan](img/panel-floorplan.webp)
 
-A top-down set plan (in the manner of Shot Designer) — for planning a scene's blocking and cameras.
+A top-down set plan — for planning a scene's blocking and cameras.
 
 **What goes on a plan**
 

@@ -19,7 +19,7 @@ const TEXT = {
     aTitle: 'ภาคผนวก A — ผังเมนูทั้งหมด',
     aIntro: [
       'แถบเมนูอยู่บนสุดของหน้าต่าง (บน macOS อยู่บนแถบเมนูของระบบ) · แตะ `Alt` หรือ `F10` เพื่อเข้าแถบเมนูด้วยคีย์บอร์ด แล้วใช้ `←` `→` เดิน · `Enter`/`↓` เปิด · `Esc` ออก',
-      'รายการที่ลงท้ายด้วย `…` เปิดกล่องโต้ตอบ · รายการในเมนู **บท** บางรายการกดได้เฉพาะเมื่อแท็บที่เปิดอยู่เป็นบทภาพยนตร์',
+      'รายการที่ลงท้ายด้วย `…` เปิดกล่องโต้ตอบ · รายการในเมนู **บทภาพยนตร์** บางรายการกดได้เฉพาะเมื่อแท็บที่เปิดอยู่เป็นบทภาพยนตร์',
     ],
     menuHeading: (name) => 'เมนู ' + name,
     menuRename: {},
@@ -94,8 +94,9 @@ const TEXT = {
     ],
     menuHeading: (name) => name + ' menu',
     // alpha.169: แถบชื่อเรียกเมนูบทภาพยนตร์ว่า "Script" แต่ป้ายของเมนูระบบในภาษาอังกฤษเป็น "Chapter"
-    menuRename: { Chapter: 'Script' },
-    menuNote: { Script: '*(Screenplay tools. In alpha.169 the macOS system menu bar labels this menu "Chapter" in English — it is the same menu.)*' },
+    // [alpha.170 · รอบต่อ 7] เมนูระบบใช้คีย์ของตัวเอง (`ui.menu.script`) แล้ว — เดิมยืมคีย์ของคำว่า chapter ป้ายอังกฤษจึงเป็น "Chapter"
+    menuRename: {},
+    menuNote: { Script: '*(Screenplay tools.)*' },
     recentPath: ['File', 'Recent projects'],
     recentNote: '*(the project folders you opened recently — a folder that can no longer be found is marked ⚠)*',
     devToolsNote: '*(only when running from source / in developer mode)*',

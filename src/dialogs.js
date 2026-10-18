@@ -1469,7 +1469,10 @@ export function settingsDialog(openTab, opts = {}) {
       const v = navQ.value.trim().toLowerCase();
       let firstHit = null;
       box.querySelectorAll('.k-set-tab').forEach((x) => {
-        const hay = (x.textContent + ' ' + (x.dataset.find || '')).toLowerCase();
+        // [alpha.170 · bug hunt 5] รวมข้อความในหน้าของแท็บนั้นด้วย — เดิมพิมพ์ "ฟอนต์" ไม่เจอหน้า "รูปแบบบท"
+        // ทั้งที่มีแถว "ขนาดฟอนต์บทภาพยนตร์" อยู่ในหน้า (ค้นได้แค่ชื่อหน้า + คำใบ้ที่เขียนมือ)
+        const pg = box.querySelector('.k-set-page[data-p="' + x.dataset.p + '"]');
+        const hay = (x.textContent + ' ' + (x.dataset.find || '') + ' ' + (pg ? pg.textContent : '')).toLowerCase();
         const hit = !v || hay.includes(v);
         x.classList.toggle('k-set-tab-off', !hit);
         if (hit && !firstHit) firstHit = x;
@@ -1537,7 +1540,18 @@ export function settingsDialog(openTab, opts = {}) {
   const num = (id, d) => { const n = parseInt(q(id).value, 10); return Number.isFinite(n) ? Math.max(0, n) : d; };
 
   box.querySelector('.k-cancel').onclick = cancel;
-  ov.onclick = (e) => { if (e.target === ov) cancel(); };
+  // ══ [alpha.170 · บั๊ก 8] คลิกพลาดนอกกล่องต้องไม่ทิ้งค่าที่แก้ค้างไว้เงียบ ๆ ══
+  // เดิมคลิกฉากหลัง = ยกเลิกทันที: กล่องนี้มีร้อยกว่าช่อง แก้ไปหลายหน้าแล้วเมาส์หลุดขอบกล่องครั้งเดียว = หายหมด
+  // ไม่ได้แก้อะไร = ปิดได้เลยตามเดิม · แก้แล้ว = ถามก่อน (ปุ่มยกเลิก/Esc เป็นการสั่งตรง ๆ ไม่ถาม)
+  let touched = false;
+  const touch = (e) => { if (e.target && e.target.id !== 'st-nav-q') touched = true; };
+  box.addEventListener('input', touch, true);
+  box.addEventListener('change', touch, true);
+  ov.onclick = async (e) => {
+    if (e.target !== ov) return;
+    if (touched && !(await confirmBox(t('ui.common.discardChangesAsk'), t('ui.app.closeNotSave')))) return;
+    cancel();
+  };
 
   // ── [alpha.120 ข้อ 14] "คืนค่าก่อนหน้า" + "รีเซ็ตเป็นค่าโรงงาน" ──
   // ทั้งสองปุ่มเขียนค่าลง project.khn.json แล้ว **เปิดกล่องใหม่** เสมอ — ไม่พยายามยัดค่ากลับ
@@ -1754,7 +1768,12 @@ export function settingsDialog(openTab, opts = {}) {
         // [alpha.168] เริ่มใหม่ = ปิดโปรแกรม → ผ่านรายการงานค้างชุดเดียวกับตอนกดออก (กฎถาวร alpha.72/.135)
         //   เดิม location.reload() ตรง ๆ — แท็บที่ยังไม่บันทึก/กระดานวางแผนค้าง หายเงียบ
         const { confirmQuit } = await import('./app.js');
-        await confirmQuit({ quit: () => setTimeout(() => location.reload(), 150) });
+        // [alpha.170 · bug hunt 5] จำผลงานที่เปิดอยู่ไว้ข้ามการโหลดใหม่ (sessionStorage — หายเองเมื่อปิดโปรแกรม)
+        const back = state.root || '';
+        await confirmQuit({ quit: () => setTimeout(() => {
+          try { if (back) sessionStorage.setItem('k2-reopen', back); } catch {}
+          location.reload();
+        }, 150) });
       }
     }
     // [alpha.69] จำนวนครั้งที่เก็บ/สวิตช์ปิด มีผลกับ **main** (คนจดประวัติ) ไม่ใช่ renderer

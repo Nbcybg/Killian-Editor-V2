@@ -30,6 +30,7 @@ ui.ai.charADesc,"Description du personnage A (personnalité, façon de parler, o
 ui.ai.charB,Personnage B : 
 ui.ai.charBDesc,Description du personnage B
 ui.ai.chatPlaceholder,Posez une question sur votre histoire…
+ui.ai.checkedScenes,{0} {0|scène vérifiée|scènes vérifiées}
 ui.ai.collecting,Collecte des données…
 ui.ai.collectingScenes,Collecte des scènes…
 ui.ai.connectAICant,Impossible de se connecter à l'IA : 
@@ -44,8 +45,6 @@ ui.ai.dialogueLabel,Dialogue :
 ui.ai.dialogueTitle,Générer un dialogue
 ui.ai.dialogueWorking,Génération du dialogue…
 ui.ai.edit,Prose
-ui.ai.entityReadFail,Impossible de lire le fichier de l'entité
-ui.ai.entityUnnamed,Entité sans nom
 ui.ai.error,Une erreur s'est produite
 ui.ai.errorMark,Une erreur s'est produite
 ui.ai.errorRetry,"Une erreur s'est produite, veuillez réessayer"
@@ -75,10 +74,10 @@ ui.ai.needBothChars,Saisissez le nom des deux personnages
 ui.ai.needSetup,Configurez d'abord l'IA : menu IA → Paramètres IA
 ui.ai.new,Créer
 ui.ai.noAnswer,(aucune réponse)
+ui.ai.noCharacters,"Aucun personnage dans le Wiki — ajoutez-en un d'abord, puis lancez la vérification"
 ui.ai.noInconsist,Aucune incohérence trouvée
 ui.ai.noPlotHoles,Aucune incohérence d'intrigue trouvée
 ui.ai.noProject,Aucun projet ouvert
-ui.ai.noScenes,(aucune scène dans ce projet)
 ui.ai.notChangeTone,Conserver le ton
 ui.ai.notKnownProvider,Fournisseur inconnu : 
 ui.ai.notSet,(non défini)
@@ -91,23 +90,36 @@ ui.ai.opSummarize,Résumer
 ui.ai.opTone,Changer le ton
 ui.ai.orWord,ou
 ui.ai.partialKept,Texte reçu avant la coupure de la connexion conservé
-ui.ai.pickEntity,Sélectionnez d'abord une entité (personnage)
+ui.ai.pickCharacter,Personnage
 ui.ai.plotTitle,Vérification des incohérences d'intrigue
 ui.ai.plotWorking,Recherche d'incohérences d'intrigue…
 ui.ai.readAnswerAICant,Impossible de lire la réponse de l'IA (ce n'est pas du JSON)
 ui.ai.readFail,Impossible de lire le fichier : 
+ui.ai.replaceSelection,Remplacer la sélection
+ui.ai.replyCut,La réponse de l'IA a été coupée avant la fin (limite de longueur) — augmentez « Maximum Number of Tokens » et réessayez
+ui.ai.replyUnreadable,L'IA a répondu sous une forme que l'application ne peut pas lire — réessayez ou changez de modèle
 ui.ai.result,Traitement
 ui.ai.resultLabel,Résultat :
+ui.ai.runAgain,Vérifier à nouveau
 ui.ai.sample1,Qui sont les personnages de cette histoire ?
 ui.ai.sample2,Résume-moi les scènes de combat
 ui.ai.savedToWiki,Enregistré dans le wiki : 
 ui.ai.saveWiki,Enregistrer dans le wiki
 ui.ai.sceneLabel,Scène : 
+ui.ai.scopeBook,Ce livre uniquement
+ui.ai.scopeChapter,Ce chapitre uniquement
+ui.ai.scopeEmpty,Aucune scène contenant du texte dans cette portée
+ui.ai.scopeLabel,Portée
+ui.ai.scopeProject,Tout le projet
+ui.ai.scopeScene,Cette scène uniquement
+ui.ai.scopeSummary,Enverra {0} {0|scène|scènes} (environ {1} jetons) à {2}
 ui.ai.searchingProject,Recherche dans le projet…
 ui.ai.sendingToAi,Envoi à l'IA…
 ui.ai.smallLess,Mineur
 ui.ai.sources,Sources : 
 ui.ai.speakerLabel,Locuteur : 
+ui.ai.startCheck,Lancer la vérification
+ui.ai.stop,Arrêter
 ui.ai.textLabel,Texte :
 ui.ai.textNotOk,Échec du flux de texte : 
 ui.ai.toneCasual,Décontracté
@@ -124,6 +136,7 @@ ui.ai.wCity,Ville
 ui.ai.wCulture,Culture
 ui.ai.wEconomy,Économie
 ui.ai.wFaction,Faction
+ui.ai.wikiProfileUsed,Profil du Wiki utilisé : {0}
 ui.ai.wMagic,Système de magie
 ui.ai.wordAsk,Question : 
 ui.ai.working,Traitement en cours…
@@ -821,6 +834,8 @@ ui.aiError.innerUseItemOut,Les serveurs d'un réseau local utilisent souvent des
 ui.aiError.itemMaxTokensHigh,Causes fréquentes : Nombre max. de jetons supérieur à ce que le modèle accepte · un mode Effort de raisonnement / Réflexion que ce modèle ne possède pas · Format de réponse = json_object
 ui.aiError.itemTLSToUse,Le certificat de sécurité (TLS) du serveur n'est pas valide
 ui.aiError.keyBindOutlineCheck,Certains fournisseurs lient les clés à une organisation/un projet — vérifiez que cette clé fonctionne avec cette URL de base
+ui.aiError.missingHeader,Il manque à la requête un en-tête exigé par le fournisseur
+ui.aiError.missingHeaderHint,Ajoutez l'en-tête indiqué dans le message du serveur aux Custom Headers du fournisseur (une ligne « nom: valeur »)
 ui.aiError.model,Modèle : 
 ui.aiError.modelOllamaLMStudio,Pour un modèle local (Ollama / LM Studio / llama.cpp) — vérifiez d'abord que ce programme est lancé
 ui.aiError.modelThinkReasoningUse,Les modèles de raisonnement sont plus lents — réduisez l'effort de raisonnement ou raccourcissez la réponse
@@ -830,7 +845,7 @@ ui.aiError.nextNotMissingCenter,Impossible de se connecter au serveur (le résea
 ui.aiError.notAPIKeySend,Le serveur a rejeté la clé API envoyée
 ui.aiError.notTo,N'a pas atteint le serveur
 ui.aiError.provider,Fournisseur : 
-ui.aiError.providerNotParamSend,Le fournisseur a rejeté un paramètre envoyé ({0})
+ui.aiError.providerNotParamSend,Le fournisseur a refusé la requête ({0})
 ui.aiError.putKeyNewSettings,"Saisissez une nouvelle clé dans Paramètres IA → Modifier le fournisseur → Identifiants, puis cliquez sur Enregistrer les identifiants"
 ui.aiError.reply,Réponse du serveur : 
 ui.aiError.sideProviderHasProblem,Le fournisseur rencontre des problèmes ({0})
@@ -845,8 +860,10 @@ ui.aiError.toNotHas,Point de terminaison introuvable (404)
 ui.aiError.tryNewTimesAdd,Réessayez ou augmentez Nombre max. de tentatives dans Paramètres
 ui.aiError.tryOpenBaseURL,"Pour une machine à la maison, essayez d'ouvrir l'URL de base dans un navigateur pour voir si elle répond"
 ui.aiError.userPress,Arrêté par l'utilisateur
-ui.aiError.viewTextBottomName,Consultez le message du serveur ci-dessous — il désigne généralement directement le champ erroné
+ui.aiError.viewTextBottomName,Voir la ligne de réponse du serveur ci-dessus — elle nomme en général directement le champ fautif
 ui.aiError.wordUseTime,Le serveur indique que la requête a pris trop de temps
+ui.aiError.wrongProtocol,Ce modèle n'accepte pas le format de requête envoyé
+ui.aiError.wrongProtocolHint,"Changez le « Format d'API » du fournisseur (compatible OpenAI ou Anthropic Messages), ou choisissez un autre modèle"
 ui.aiField.askField,Rédigez la valeur du champ « {0} ».
 ui.aiField.hasCurrent,"Le champ indique actuellement « {0} » — peaufinez-le ou développez-le, sans en changer le sens."
 ui.aiField.headKnown,Ce que l'on sait déjà :
@@ -934,6 +951,10 @@ ui.aiProvider.addProvider,Ajouter un fournisseur
 ui.aiProvider.addProviderNew,Ajouter un nouveau fournisseur
 ui.aiProvider.allowedDomains,Domaines autorisés pour les requêtes HTTP
 ui.aiProvider.apiKey,Clé API
+ui.aiProvider.apiKind,Format d'API
+ui.aiProvider.apiKindAnthropic,Anthropic Messages (messages)
+ui.aiProvider.apiKindHint,La plupart des fournisseurs sont compatibles OpenAI · choisissez Anthropic Messages si un modèle Claude refuse le protocole
+ui.aiProvider.apiKindOpenai,Compatible OpenAI (chat/completions)
 ui.aiProvider.baseUrl,URL de base
 ui.aiProvider.baseURLModel,URL de base : {0} · Modèle : {1} · 
 ui.aiProvider.btnSendText,Bouton d'envoi dans le chat
@@ -944,6 +965,7 @@ ui.aiProvider.busyTest,Test en cours…
 ui.aiProvider.cantPickModel,Aucun modèle sélectionné pour l'instant
 ui.aiProvider.cantSettingsProviderAI,Aucun fournisseur d'IA configuré pour l'instant (menu IA → Paramètres IA)
 ui.aiProvider.connectOkFoundModel,Connecté — {0} {0|modèle trouvé|modèles trouvés}
+ui.aiProvider.credNameHint,Laisser vide = nom du fournisseur
 ui.aiProvider.defaultsFail,Impossible d'enregistrer les fournisseurs sur cet ordinateur
 ui.aiProvider.defaultsHave,{0} enregistré(s) sur cet ordinateur
 ui.aiProvider.defaultsImport,Utiliser mes fournisseurs
@@ -961,13 +983,21 @@ ui.aiProvider.domainAllow,Domaines autorisés : {0}
 ui.aiProvider.domainNotListAllowed,Ce domaine ne figure pas dans la liste des Domaines autorisés pour les requêtes HTTP : 
 ui.aiProvider.edit,Modifier
 ui.aiProvider.editProvider,Modifier le fournisseur
+ui.aiProvider.emptyDetail,Jetons de réflexion : {0} · limite max_tokens : {1}
+ui.aiProvider.emptyHintEffort,Réduisez le Reasoning Effort ou choisissez un modèle qui ne réfléchit pas avant de répondre
+ui.aiProvider.emptyHintModel,Réessayez ou changez de modèle : certains modèles ne répondent rien quand le contenu est filtré
+ui.aiProvider.emptyHintTokens,Augmentez « Maximum Number of Tokens » du fournisseur (ou -1 pour aucune limite)
+ui.aiProvider.emptyReply,L'IA a renvoyé une réponse vide
+ui.aiProvider.emptyThinking,L'IA a dépensé tout son budget de réponse à réfléchir : il n'y a pas de réponse
 ui.aiProvider.fetchListModel,⟳ Récupérer la liste des modèles
 ui.aiProvider.fileKeepKeyPart,Ce fichier contient la clé privée de chaque identifiant — ne le partagez pas et ne le mettez pas dans un zip que vous transmettez
 ui.aiProvider.foundModel,{0} {0|modèle trouvé|modèles trouvés}
+ui.aiProvider.hideKey,Masquer la clé
 ui.aiProvider.historyTokens,Budget de l'historique du chat (jetons)
 ui.aiProvider.historyTokensHint,0 = automatique (60 % de la limite du modèle ; 32 000 si inconnue)
 ui.aiProvider.keepSplitFolderProject,Stocké séparément dans {0} dans le dossier du projet — pas dans le project.khn.json partagé
 ui.aiProvider.lineNewExampleCom,Séparés par des virgules ou des retours à la ligne · accepte *.example.com · vide = aucune limite
+ui.aiProvider.modelsLoaded,{0} {0|modèle|modèles} — choisissez celui à utiliser par défaut
 ui.aiProvider.nameCredential,Nom de l'identifiant
 ui.aiProvider.nameProvider,Nom du fournisseur
 ui.aiProvider.nameSeeDropdownEg,"Le nom affiché dans la liste déroulante, p. ex. « OpenAI au travail » ou « Ollama sur cette machine »"
@@ -978,13 +1008,22 @@ ui.aiProvider.notHasProviderPress,"Aucun fournisseur pour l'instant — cliquez 
 ui.aiProvider.notPick,(non sélectionné)
 ui.aiProvider.notRemember,Illimité
 ui.aiProvider.notSendValue,(ne pas envoyer cette valeur)
+ui.aiProvider.preset,Préréglage
+ui.aiProvider.presetHint,Renseigne l'adresse de l'API pour vous — votre propre clé reste à saisir
+ui.aiProvider.presetPick,— Saisir à la main —
 ui.aiProvider.pressFetchListModel,Cliquez sur « Récupérer la liste des modèles » pour demander la liste à l'API de ce fournisseur
+ui.aiProvider.providerDeleted,Fournisseur supprimé : {0}
+ui.aiProvider.providerSaved,Fournisseur enregistré : {0}
+ui.aiProvider.saveCredential,Enregistrer la clé maintenant
 ui.aiProvider.saveCredentialDoneKey,Identifiants enregistrés (la clé est stockée séparément dans 
 ui.aiProvider.saveProvider,Enregistrer le fournisseur
 ui.aiProvider.secCredential,Identifiants
 ui.aiProvider.secModel,Modèle
 ui.aiProvider.secParams,Paramètres
+ui.aiProvider.showKey,Afficher la clé
 ui.aiProvider.skSkipEmptyNot,"sk-… (peut rester vide si le serveur n'a pas besoin de clé, p. ex. Ollama)"
+ui.aiProvider.testChatFail,"{0} {0|modèle trouvé|modèles trouvés}, mais {1} ne peut pas dialoguer : {2}"
+ui.aiProvider.testChatOk,Connecté — {0} {0|modèle trouvé|modèles trouvés} · le chat fonctionne avec {1}
 ui.aiProvider.testConnect,Tester la connexion
 ui.aiProvider.toReplyBackDone,"Le point de terminaison a répondu, mais la réponse ne contient pas de liste de modèles"
 ui.aiProvider.useDoneTokensTimes,{0} {0|jeton utilisé|jetons utilisés} · {1} {1|appel|appels} · environ {2} $
@@ -1299,7 +1338,7 @@ ui.app.aiAnalysis,Résultats de l'analyse IA
 ui.app.all,Toutes les sources
 ui.app.allLine,Identique sur chaque ligne
 ui.app.app,Valeur par défaut de l'application
-ui.app.appWriteNovelScreenplay,Application d'écriture de romans/scénarios — Electron + ProseMirror
+ui.app.appWriteNovelScreenplay,Application d'écriture de romans/scénarios
 ui.app.auto,— Automatique —
 ui.app.autoFitWidthOff,L'ajustement automatique à la largeur de page est désactivé — retour au zoom que vous aviez défini
 ui.app.autoFitWidthOn,L'ajustement automatique à la largeur de page est activé
@@ -1576,7 +1615,7 @@ ui.app.jsonUnreadable,Impossible de lire {0} (le fichier est endommagé) — l'o
 ui.app.jsonUnreadableNoBackup,Impossible de lire {0} et de conserver une copie — rien ne sera enregistré par-dessus tant qu'il ne pourra pas être lu
 ui.app.keyEnglish,clé (anglais)
 ui.app.keyPlugin,Raccourci de plugin défectueux : 
-ui.app.killianEditor,Killian Editor 
+ui.app.killianEditor,Killian 2 · v
 ui.app.kind,Type
 ui.app.label,Libellé
 ui.app.label2,Libellé (thaï)
@@ -1729,7 +1768,7 @@ ui.app.notMoveSkipDraft,Le déplacement entre brouillons n'est pas encore pris e
 ui.app.notMoveSkipDraft2,Le déplacement entre brouillons/sections n'est pas encore pris en charge
 ui.app.notMustRememberWord,Ne pas mémoriser ce mot
 ui.app.notOpen,(non ouvert)
-ui.app.notOutDone,On reste
+ui.app.notOutDone,Ne pas quitter
 ui.app.notPick,Aucun
 ui.app.notRememberEditChapter,Ne mémorise plus « {0} » (modifiez cela dans Scénario → Gérer SmartType)
 ui.app.notRememberFoundNot,Pas encore mémorisé (vu moins de {0} {0|fois|fois}) — cliquez sur « Mémoriser » pour le mémoriser maintenant
@@ -1992,7 +2031,7 @@ ui.app.user,Utilisateur
 ui.app.useReorderTimeText,Utilisé pour le tri lorsque l'heure est du texte
 ui.app.valignPlannerOnly,L'alignement vertical ne fonctionne que sur le tableau du planificateur
 ui.app.valueRememberAllWord, — valeur 1 = mémoriser chaque mot saisi (fautes de frappe comprises)
-ui.app.versionEditF,Version modifiée : {0}  ·  révision n° {1}
+ui.app.versionEditF,Modifié {1} fois
 ui.app.viewListAll, Voir la liste complète…
 ui.app.viewSample,Aperçu
 ui.app.webMoreElectron,Moteur web + runtime fournis avec Electron
@@ -2640,6 +2679,7 @@ ui.common.delMoveTrash,Supprimer (déplacer vers la corbeille)
 ui.common.desc,Description
 ui.common.detailed,Détaillé
 ui.common.dialogue,Dialogue
+ui.common.discardChangesAsk,Des modifications ne sont pas encore enregistrées. Fermer sans enregistrer ?
 ui.common.dot,Pointillée
 ui.common.dotStart,Début
 ui.common.draftTextDraft,Brouillon — texte brut (Draft)
@@ -2770,7 +2810,7 @@ ui.common.renameNew,Renommer
 ui.common.renameVersionSkipEmpty,Nom de la version (facultatif)
 ui.common.repeat,⧉ Dupliquer
 ui.common.replaceBtn,Remplacer
-ui.common.restart,Recommencer
+ui.common.restart,Redémarrer
 ui.common.revertBtn,Rétablir
 ui.common.right,Droite
 ui.common.right2,Aligner à droite
@@ -2850,6 +2890,7 @@ ui.compile.msg,<!-- page break -->
 ui.compile.nameScene,Nom de la scène
 ui.compile.nextSummaryStats,Ajouter un résumé statistique
 ui.compile.notSpecifyStatus,Aucun statut
+ui.compile.novelPdf,Roman → PDF (titres de chapitre · séparateurs de scène)
 ui.compile.onlySceneStatus,Uniquement les scènes avec le statut…
 ui.compile.pageBreakAllChapter,Nouvelle page pour chaque chapitre
 ui.compile.pageListCharacterCast,Page de la distribution des personnages
@@ -4083,12 +4124,12 @@ ui.home.close,Fermer l'accueil
 ui.home.closePageFirst,Fermer la page d'accueil
 ui.home.copyPath,Copier le chemin du dossier
 ui.home.editLatest,Dernière modification : 
-ui.home.export,Exporter
+ui.home.export,Exporter .zip
 ui.home.exportProjectOpenFile,Exporter le projet ouvert en fichier .zip
 ui.home.homeLoadProjectFail,accueil : échec du chargement des projets
 ui.home.homePanelLoadFail,home-panel : échec du chargement
 ui.home.homeReadProjectFail,accueil : échec de la lecture du projet : 
-ui.home.import,Importer
+ui.home.import,Importer .zip
 ui.home.importProjectFileZip,Importer un projet depuis un fichier .zip
 ui.home.language,Langue
 ui.home.msg, par 
@@ -4370,6 +4411,9 @@ ui.logline.saved,Logline enregistrée
 ui.logline.stakes,Enjeux
 ui.logline.title,Logline
 ui.logline.why,L'IA s'en sert comme boussole pour que l'histoire reste sur la bonne voie
+ui.main.pickFolderBtn,Choisir ce dossier
+ui.main.pickNewProjectFolder,Choisir l'emplacement du nouveau projet — son dossier sera créé à l'intérieur
+ui.main.pickProjectFolder,Choisir le dossier du projet à ouvrir
 ui.mapAi.aroundHead,Alentours (les plus proches d'abord) :
 ui.mapAi.cut,(Le reste a été coupé pour cause de longueur — utilisez la commande map.where pour interroger un nom)
 ui.mapAi.head,## Positions sur la carte (depuis le panneau Cartes de l'auteur)
@@ -4758,7 +4802,7 @@ ui.menu.fullScreen,Plein écran
 ui.menu.graphAreaFloorPlan,Plan d'étage
 ui.menu.graphDialogueNextPage,Graphique du dialogue par page (Dialogue Chart)…
 ui.menu.graphStoryBreakBranch,Graphique de ramification de l'histoire (Branch Tree)
-ui.menu.heading,Titre {0} ({1}+{2})
+ui.menu.heading,Titre H{0}
 ui.menu.headPaperAllPage,En-têtes de page…
 ui.menu.help,Aide
 ui.menu.help2,Aide
@@ -5274,6 +5318,7 @@ ui.panel.historyTitle,Historique
 ui.panel.jumpedInMain,A sauté à cet endroit dans la fenêtre principale
 ui.panel.kanbanTitle,Kanban
 ui.panel.layoutReset,Disposition des panneaux réinitialisée
+ui.panel.layoutRestored,Disposition précédente des panneaux rétablie
 ui.panel.logTitle,Journal de l'application
 ui.panel.manage,Gérer les panneaux
 ui.panel.mapsTitle,Cartes
@@ -5436,7 +5481,6 @@ ui.pdf.emptyFontChapter,Vide = la police du scénario
 ui.pdf.emptyNotPutWatermark,Vide = pas de filigrane
 ui.pdf.exportPDFItemNew,Exporter en PDF (générateur intégré)
 ui.pdf.exportPDFPdfLib,Exporter en PDF (pdf-lib)
-ui.pdf.exportPDFPrevUse,(l'ancien menu « Exporter en PDF… » utilise toujours Chromium comme d'habitude)
 ui.pdf.gapXYInch,"Les distances x/y sont des « pouces depuis le bord du papier », comme dans l'onglet papier"
 ui.pdf.headPaperAllPage,En-tête sur chaque page
 ui.pdf.headPaperAllPage2,En-têtes de page
@@ -6006,7 +6050,7 @@ ui.project.group,Groupes/factions
 ui.project.hasProject,Ce projet existe déjà
 ui.project.investigateBack,Mystère/enquête
 ui.project.investigation,L'enquête
-ui.project.newProjectTemplate,Nouveau projet à partir d'un modèle
+ui.project.newProjectPick,Nouveau projet — choisir un modèle de départ
 ui.project.newProjectTemplateDone,Projet créé à partir du modèle : 
 ui.project.novelFantasyWorldbuilding,"Roman de fantasy — construction de monde, races, magie"
 ui.project.novelInvestigateCharacterSuspect,"Roman policier — suspects, indices, chronologie"
@@ -6287,10 +6331,10 @@ ui.settings.shortcuts,Raccourcis
 ui.settings.shortcutsHint,"Cliquez sur Modifier, puis appuyez sur la nouvelle combinaison de touches"
 ui.settings.spellCheck,Correction orthographique
 ui.settings.spellCheckDict,Utiliser le dictionnaire de l'application (thaï + anglais)
-ui.settings.spellCheckDictHint,Liste de mots hors ligne en thaï + anglais · connaît les mots que vous avez ajoutés · désactivé = il ne reste que le correcteur de Chromium (anglais uniquement · télécharge d'abord son dictionnaire ; hors ligne = aucun soulignement)
+ui.settings.spellCheckDictHint,Liste de mots hors ligne en thaï + anglais · connaît les mots que vous avez ajoutés · désactivé = il ne reste que le correcteur intégré du système (anglais uniquement · télécharge d'abord son dictionnaire ; hors ligne = aucun soulignement)
 ui.settings.spellCheckHint,Souligner les mots mal orthographiés (toujours d'un seul trait
 ui.settings.spFontFamily,Police du scénario
-ui.settings.spFontFamilyHint,Police utilisée uniquement en mode scénario (par défaut : Courier New)
+ui.settings.spFontFamilyHint,Police utilisée uniquement en mode scénario (par défaut : Courier Prime)
 ui.settings.themeK2,K2 (palette maison)
 ui.settings.themeK2Light,K2 clair
 ui.settings.title,Paramètres
@@ -7018,7 +7062,7 @@ ui.starter.fIntro,Synopsis
 ui.starter.fIntroPlaceholder,"En gros, de quoi parle cette histoire — un paragraphe suffit"
 ui.starter.fName,Titre
 ui.starter.fNamePlaceholder,p. ex. L'Épée de l'Aube
-ui.starter.folderFixed,Stocké dans le dossier Starters/{0} — renommer l'histoire ne renomme pas le dossier
+ui.starter.folderFixed,Stocké dans le dossier Starters/{0} — le dossier prend le premier titre donné à l'histoire ; la renommer ensuite ne renomme pas le dossier
 ui.starter.foreignAsk,« {0} » semble provenir d'un autre projet — faire correspondre ses personnages au wiki de ce projet maintenant ?
 ui.starter.fPrompts,Prompts du personnage
 ui.starter.fPromptsHint,Règles que l'IA doit suivre chaque fois qu'elle écrit ce personnage
@@ -7304,6 +7348,37 @@ ui.starter.wWhy,Pourquoi
 ui.starter.wWhyHint,La force motrice ou la raison derrière tout cela
 ui.starter.yesterday,Hier
 ui.starter.you,Vous
+ui.starterTag.action,action
+ui.starterTag.allAges,tous publics
+ui.starterTag.bittersweet,doux-amer
+ui.starterTag.comedy,comédie
+ui.starterTag.cyberpunk,cyberpunk
+ui.starterTag.dark,sombre
+ui.starterTag.drama,drame
+ui.starterTag.epic,épique
+ui.starterTag.fantasy,fantasy
+ui.starterTag.gritty,âpre
+ui.starterTag.harem,harem
+ui.starterTag.historical,historique
+ui.starterTag.horror,horreur
+ui.starterTag.isekai,isekai
+ui.starterTag.lighthearted,léger
+ui.starterTag.mature,adultes
+ui.starterTag.medieval,médiéval
+ui.starterTag.modern,contemporain
+ui.starterTag.mystery,mystère
+ui.starterTag.postApocalyptic,post-apocalyptique
+ui.starterTag.romance,romance
+ui.starterTag.satirical,satirique
+ui.starterTag.school,école
+ui.starterTag.sciFi,science-fiction
+ui.starterTag.sliceOfLife,tranche de vie
+ui.starterTag.space,espace
+ui.starterTag.steampunk,steampunk
+ui.starterTag.teen,adolescents
+ui.starterTag.thriller,thriller
+ui.starterTag.urbanFantasy,fantasy urbaine
+ui.starterTag.wholesome,réconfortant
 ui.status.addStatus,+ Ajouter un statut
 ui.status.addStatusDone,Statut ajouté : 
 ui.status.copied,Copié
@@ -7397,32 +7472,32 @@ ui.textCase.lowerCaseItemSmall,lower case — tout en minuscules
 ui.textCase.sentenceCaseSentenceItem,Sentence case — majuscule au début des phrases
 ui.textCase.titleCaseStyleTitle,Title Case — comme un titre
 ui.textCase.uPPERCASEItemBig,UPPER CASE — tout en majuscules
-ui.themes.claude,Terre cuite (Claude Code)
+ui.themes.claude,Terre cuite
 ui.themes.cvdByDark,Daltonisme bleu-jaune (sombre) · Rouge/Sarcelle
 ui.themes.cvdByLight,Daltonisme bleu-jaune (clair) · Rouge/Sarcelle
 ui.themes.cvdRgDark,Daltonisme rouge-vert (sombre) · Bleu/Orange
 ui.themes.cvdRgLight,Daltonisme rouge-vert (clair) · Bleu/Orange
-ui.themes.dva,Rose gamer (D.Va)
-ui.themes.excel,Vert quadrillage (Excel)
+ui.themes.dva,Rose gamer
+ui.themes.excel,Vert quadrillage
 ui.themes.flower,Jardin fleuri
 ui.themes.fruit,Salade de fruits
-ui.themes.gundam,Mobile suit tricolore (Gundam)
+ui.themes.gundam,Mecha tricolore
 ui.themes.hcDark,Contraste élevé (sombre)
 ui.themes.hcLight,Contraste élevé (clair)
-ui.themes.kimi,Clair de lune (Kimi)
+ui.themes.kimi,Clair de lune
 ui.themes.lagoon,Lagon ensoleillé
-ui.themes.macintosh,Platine (Macintosh classique)
+ui.themes.macintosh,Platine
 ui.themes.monoDark,Monochrome (sombre)
 ui.themes.monoLight,Monochrome (clair)
 ui.themes.neonPop,Pop néon
-ui.themes.opencode,Pêche terminal (opencode)
+ui.themes.opencode,Pêche terminal
 ui.themes.plumWine,Vin de prune
-ui.themes.powerpoint,Brique diapo (PowerPoint)
+ui.themes.powerpoint,Brique diapo
 ui.themes.rainbow,Arc-en-ciel
 ui.themes.sakuraMist,Brume de sakura
 ui.themes.tropical,Tropical
-ui.themes.vscode,Code sombre (VS Code)
-ui.themes.word,Bleu document (Word)
+ui.themes.vscode,Code sombre
+ui.themes.word,Bleu document
 ui.thes.close,Fermer
 ui.thes.copied,Copié : 
 ui.thes.notFound,"Aucun synonyme/antonyme pour """
@@ -7783,7 +7858,7 @@ ui.tip.toggle-panel:dashboard,Vue d'ensemble de la progression — nombre de mot
 ui.tip.toggle-panel:dialogue,"Tous les dialogues du projet — filtrez, sautez, modifiez sur place"
 ui.tip.toggle-panel:dlgb,"Laissez l'IA jouer vos personnages du wiki tour à tour, puis déposez les répliques qui vous plaisent dans le scénario à l'emplacement du curseur — ouvrez-le quand un dialogue vous bloque"
 ui.tip.toggle-panel:docs,"La zone d'écriture principale — tous les onglets ouverts : scènes, scénarios et pages de wiki (ne peut pas être fermée)"
-ui.tip.toggle-panel:floorplan,Plan d'étage de plateau vu de dessus (style Shot Designer) — personnages du wiki avec orientation et lignes de regard · caméras (boîtier/objectif/support/rail) · lumières · formes · temps forts liés aux répliques de la scène
+ui.tip.toggle-panel:floorplan,Plan d'étage de plateau vu de dessus — personnages du wiki avec orientation et lignes de regard · caméras (boîtier/objectif/support/rail) · lumières · formes · temps forts liés aux répliques de la scène
 ui.tip.toggle-panel:gallery,"Toutes les images du dossier Images du projet — faites-les glisser dans un document pour les insérer, ou choisissez-en une comme couverture/portrait dans le wiki"
 ui.tip.toggle-panel:gallery-board,Un canevas pour les images de référence de chaque album — ouvrez-le à côté de la bibliothèque d'images et faites-y glisser des images · déplacez/redimensionnez/zoomez librement · retirer du tableau ne supprime pas les fichiers
 ui.tip.toggle-panel:history,"Une chronologie de ce qui a été fait sur les fichiers du projet, avec un moyen de revenir à n'importe quel point · le nombre conservé se règle dans Paramètres → Informations du projet (32 par défaut)"
@@ -8323,6 +8398,7 @@ ui.xhub.kindAuto,Suivre les fichiers source
 ui.xhub.kindProse,Roman (prose)
 ui.xhub.kindScript,Scénario
 ui.xhub.needProject,Ouvrez un projet avant d'exporter
+ui.xhub.needScriptHint,"Choisissez un autre format, ou une plage qui est un scénario"
 ui.xhub.needScriptOnly,Ce format ne fonctionne qu'avec des scénarios
 ui.xhub.noDraft,(aucun brouillon dans ce projet)
 ui.xhub.noPreview,(rien à prévisualiser)

@@ -28,6 +28,8 @@ export function escClose(ov, onEsc) {
   const h = (e) => {
     if (e.key !== 'Escape') return;
     if (!ov || !document.body.contains(ov)) { off(); return; }   // ปิดไปแล้วด้วยทางอื่น
+    // [alpha.170] ช่องที่มี Esc ของตัวเอง (ช่องค้นหาที่พับเก็บได้) ประกาศ `data-esc-own` — Esc ครั้งแรกเป็นของช่อง
+    if (e.target && e.target.dataset && e.target.dataset.escOwn) return;
     // [alpha.162 · W5 ข้อ 3] เมนูคลิกขวาเปิดทับกล่องอยู่ = Esc เป็นของเมนูก่อน (ปิดเมนู ไม่ใช่ปิดกล่อง)
     if (liveMenu()) return;
     const all = [...document.querySelectorAll('.k-overlay')];
@@ -335,7 +337,7 @@ export function installDialogA11y() {
  *                  Ctrl+Enter = ตกลง) — ใช้กับรายการสิ่งที่ต้องทำของกระดาน
  */
 export function ask(title, { placeholder = '', value = '', okLabel = tt('ui.common.msg3'), allowEmpty = false,
-                             multiline = false } = {}) {
+                             multiline = false, required = false } = {}) {
   return new Promise((resolve) => {
     const ov = document.createElement('div'); ov.className = 'k-overlay';
     const box = document.createElement('div'); box.className = 'k-dialog';
@@ -356,13 +358,20 @@ export function ask(title, { placeholder = '', value = '', okLabel = tt('ui.comm
     box.querySelector('.k-ok').textContent = okLabel;
     ov.appendChild(box); document.body.appendChild(ov);
     const done = (v) => { ov.remove(); resolve(v); };
-    box.querySelector('.k-ok').onclick = () => done(allowEmpty ? inp.value.trim() : (inp.value.trim() || null));
+    // [alpha.170 · bug hunt 5] `required` = ตกลงทั้งที่ช่องว่างแล้วกล่อง "ไม่ปิดเงียบ" — ชี้ช่องให้กรอก
+    // (เดิมตั้งชื่อผลงานใหม่ว่าง ๆ แล้ว Enter = ทั้งสายสร้างผลงานหายไปโดยไม่บอกอะไร ต้องเลือกเทมเพลต/โฟลเดอร์ใหม่)
+    const submit = () => {
+      const v = inp.value.trim();
+      if (required && !v) { inp.classList.remove('k-input-need'); void inp.offsetWidth; inp.classList.add('k-input-need'); inp.focus(); return; }
+      done(allowEmpty ? v : (v || null));
+    };
+    box.querySelector('.k-ok').onclick = submit;
     box.querySelector('.k-cancel').onclick = () => done(null);
     ov.onclick = (e) => { if (e.target === ov) done(null); };
     inp.onkeydown = (e) => {
       // หลายบรรทัด: Enter เปล่า ๆ ต้องขึ้นบรรทัดใหม่ ไม่ใช่ปิดกล่อง
       if (e.key === 'Enter' && (!multiline || e.ctrlKey || e.metaKey)) {
-        done(allowEmpty ? inp.value.trim() : (inp.value.trim() || null));
+        e.preventDefault(); submit();
       }
       if (e.key === 'Escape') done(null);
     };
@@ -502,6 +511,11 @@ function buildMenuEl(items, depth) {
 function placeMenu(m, x, y) {
   // [alpha.161 · P5] สูงไม่เกินจอ (เลื่อนในเมนูได้) — กำหนดก่อนวัด ตำแหน่งที่หนีบจะได้คิดจากความสูงจริง
   m.style.maxHeight = Math.max(120, window.innerHeight - 16) + 'px';
+  // [alpha.170 · bug hunt 5] เมนูยาว = แถวแน่นขึ้น · ยังล้นจอ = มีเงาจางที่ขอบล่างบอกว่ายังมีรายการ (หายเมื่อเลื่อนถึงสุด)
+  if (m.children.length > 22) m.classList.add('k-menu-dense');
+  const syncMore = () => m.classList.toggle('k-menu-more', m.scrollHeight - m.clientHeight - m.scrollTop > 4);
+  syncMore();
+  if (!m._k2more) { m._k2more = 1; m.addEventListener('scroll', syncMore, { passive: true }); }
   const r = m.getBoundingClientRect();
   m.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
   m.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 8)) + 'px';
@@ -679,11 +693,15 @@ export function choose(title, options) {
     const btns = document.createElement('div'); btns.className = 'k-dlg-btns';
     box.append(t, btns); ov.appendChild(box); document.body.appendChild(ov);
     const done = (v) => { ov.remove(); resolve(v); };
+    // [alpha.170] มีปุ่มหลักอยู่ในชุด = ปุ่มอันตราย **ไม่ใช่** `.k-ok` (ทั้งโปรแกรมถือว่า .k-ok ตัวแรก = ทางหลัก/ปุ่มของ Enter)
+    // — ไม่งั้นพอเรียงปุ่มหลักไว้ขวาสุดตามกฎ Enter จะไปตกที่ "ไม่บันทึก" (กติกาเดียวกับ saveAllDialog · alpha.162 W4 ข้อ 9)
+    const hasPrimary = options.some((o) => o && o.primary);
     for (const op of options) {
       const b = document.createElement('button');
       b.textContent = op.label;
+      if (op.value == null && !op.primary && !op.danger) b.className = 'k-cancel';
       if (op.primary) b.className = 'k-ok';
-      if (op.danger) b.className = 'k-ok k-danger';
+      if (op.danger) b.className = hasPrimary ? 'k-danger k-discard' : 'k-ok k-danger';
       b.onclick = () => done(op.value);
       btns.appendChild(b);
     }
@@ -702,6 +720,7 @@ export function choose(title, options) {
 export function saveAllDialog(files, {
   title = '', saveLabel = tt('ui.common.saveAll'),
   discardLabel = tt('ui.ui.notSave'), cancelLabel = tt('ui.common.cancel'),
+  noDiscard = false,
 } = {}) {
   return new Promise((resolve) => {
     const ov = document.createElement('div'); ov.className = 'k-overlay';
@@ -741,6 +760,8 @@ export function saveAllDialog(files, {
     // [alpha.162 · W4 ข้อ 9] ปุ่มหลักอยู่ขวาสุดเหมือนกล่องอื่นทั้งโปรแกรม (เดิมบันทึกอยู่ซ้ายสุด
     // — กล่องนี้เป็นกล่องเดียวที่สลับด้าน ผู้ใช้ที่เล็งปุ่มขวาโดยไม่อ่านจึง **ทิ้งงานทั้งกอง**)
     btns.append(bCancel, bDiscard, bSave);
+    // [alpha.170 · bug hunt 5] กล่องของคำสั่ง "บันทึกทั้งหมด" ไม่มีอะไรให้ทิ้ง — ปุ่ม "ไม่บันทึก" ตรงนั้นเท่ากับยกเลิก
+    if (noDiscard) bDiscard.remove();
 
     // ป้ายปุ่มบันทึกสะท้อนจำนวนที่ติ๊กไว้จริง (ติ๊กครบ = "บันทึกทั้งหมด" ตามเดิม)
     const sel = () => boxes.filter((c) => c.checked).map((c) => c.dataset.key);

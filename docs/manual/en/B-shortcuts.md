@@ -114,9 +114,9 @@
 | Split View | `Ctrl+Shift+\` |  |
 | Typewriter Mode | `Ctrl+Shift+T` |  |
 | Workspaces (panel layout sets) | `Ctrl+Shift+Y` |  |
+| Page zoom: out | `Ctrl+-` |  |
 | Page zoom: reset | `Ctrl+Shift+0` |  |
 | Page zoom: in | `Ctrl+=` |  |
-| Page zoom: out | `Ctrl+-` |  |
 | Zoom page | `Ctrl + mouse wheel` |  |
 
 ## Create

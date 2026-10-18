@@ -30,6 +30,7 @@ ui.ai.charADesc,"Beschreibung von Figur A (Persönlichkeit, Sprechweise, Ziel �
 ui.ai.charB,Figur B: 
 ui.ai.charBDesc,Beschreibung von Figur B
 ui.ai.chatPlaceholder,Fragen Sie etwas zu Ihrer Geschichte …
+ui.ai.checkedScenes,{0} {0|Szene|Szenen} geprüft
 ui.ai.collecting,Daten werden gesammelt …
 ui.ai.collectingScenes,Szenen werden gesammelt …
 ui.ai.connectAICant,Verbindung zur KI nicht möglich: 
@@ -44,8 +45,6 @@ ui.ai.dialogueLabel,Dialog:
 ui.ai.dialogueTitle,Dialog generieren
 ui.ai.dialogueWorking,Dialog wird generiert …
 ui.ai.edit,Prosa
-ui.ai.entityReadFail,Die Entitätsdatei konnte nicht gelesen werden
-ui.ai.entityUnnamed,Unbenannte Entität
 ui.ai.error,Etwas ist schiefgelaufen
 ui.ai.errorMark,Etwas ist schiefgelaufen
 ui.ai.errorRetry,"Etwas ist schiefgelaufen, bitte versuchen Sie es erneut"
@@ -75,10 +74,10 @@ ui.ai.needBothChars,Geben Sie die Namen beider Figuren ein
 ui.ai.needSetup,Richten Sie zuerst die KI ein: Menü KI → KI-Einstellungen
 ui.ai.new,Erstellen
 ui.ai.noAnswer,(keine Antwort)
+ui.ai.noCharacters,Noch keine Figuren im Wiki – legen Sie zuerst eine Figur an
 ui.ai.noInconsist,Keine Inkonsistenzen gefunden
 ui.ai.noPlotHoles,Keine Handlungslücken gefunden
 ui.ai.noProject,Kein Projekt geöffnet
-ui.ai.noScenes,(keine Szenen in diesem Projekt)
 ui.ai.notChangeTone,Ton beibehalten
 ui.ai.notKnownProvider,Unbekannter Anbieter: 
 ui.ai.notSet,(nicht festgelegt)
@@ -91,23 +90,36 @@ ui.ai.opSummarize,Zusammenfassen
 ui.ai.opTone,Ton ändern
 ui.ai.orWord,oder
 ui.ai.partialKept,Der vor dem Verbindungsabbruch empfangene Text wurde beibehalten
-ui.ai.pickEntity,Wählen Sie zuerst eine Entität (Figur) aus
+ui.ai.pickCharacter,Figur
 ui.ai.plotTitle,Prüfung auf Handlungslücken
 ui.ai.plotWorking,Handlungslücken werden geprüft …
 ui.ai.readAnswerAICant,Die Antwort der KI konnte nicht gelesen werden (kein JSON)
 ui.ai.readFail,Datei konnte nicht gelesen werden: 
+ui.ai.replaceSelection,Auswahl ersetzen
+ui.ai.replyCut,Die Antwort der KI wurde vor dem Ende abgeschnitten (Längenlimit) – erhöhen Sie „Maximum Number of Tokens“ und versuchen Sie es erneut
+ui.ai.replyUnreadable,"Die KI hat in einer Form geantwortet, die das Programm nicht lesen kann – erneut versuchen oder Modell wechseln"
 ui.ai.result,Verarbeitung
 ui.ai.resultLabel,Ergebnis:
+ui.ai.runAgain,Erneut prüfen
 ui.ai.sample1,Wer sind die Figuren in dieser Geschichte?
 ui.ai.sample2,Fasse die Kampfszenen für mich zusammen
 ui.ai.savedToWiki,Im Wiki gespeichert: 
 ui.ai.saveWiki,Im Wiki speichern
 ui.ai.sceneLabel,Szene: 
+ui.ai.scopeBook,Nur dieses Buch
+ui.ai.scopeChapter,Nur dieses Kapitel
+ui.ai.scopeEmpty,In diesem Umfang gibt es keine Szenen mit Text
+ui.ai.scopeLabel,Umfang
+ui.ai.scopeProject,Ganzes Projekt
+ui.ai.scopeScene,Nur diese Szene
+ui.ai.scopeSummary,Sendet {0} {0|Szene|Szenen} (etwa {1} Token) an {2}
 ui.ai.searchingProject,Projekt wird durchsucht …
 ui.ai.sendingToAi,Wird an die KI gesendet …
 ui.ai.smallLess,Geringfügig
 ui.ai.sources,Quellen: 
 ui.ai.speakerLabel,Sprecher: 
+ui.ai.startCheck,Prüfung starten
+ui.ai.stop,Stopp
 ui.ai.textLabel,Text:
 ui.ai.textNotOk,Text-Stream fehlgeschlagen: 
 ui.ai.toneCasual,Locker
@@ -124,6 +136,7 @@ ui.ai.wCity,Stadt
 ui.ai.wCulture,Kultur
 ui.ai.wEconomy,Wirtschaft
 ui.ai.wFaction,Fraktion
+ui.ai.wikiProfileUsed,Verwendet das Wiki-Profil: {0}
 ui.ai.wMagic,Magiesystem
 ui.ai.wordAsk,Frage: 
 ui.ai.working,Wird bearbeitet …
@@ -821,6 +834,8 @@ ui.aiError.innerUseItemOut,Server im lokalen Netzwerk verwenden oft selbstsignie
 ui.aiError.itemMaxTokensHigh,"Häufige Ursachen: Max. Tokens über dem, was das Modell akzeptiert · ein Reasoning-Aufwand-/Denkmodus, den dieses Modell nicht hat · Antwortformat = json_object"
 ui.aiError.itemTLSToUse,Das Sicherheitszertifikat (TLS) des Servers ist ungültig
 ui.aiError.keyBindOutlineCheck,"Manche Anbieter binden Schlüssel an eine Organisation/ein Projekt — prüfen Sie, ob dieser Schlüssel mit dieser Basis-URL funktioniert"
+ui.aiError.missingHeader,"In der Anfrage fehlt ein Header, den der Anbieter verlangt"
+ui.aiError.missingHeaderHint,Tragen Sie den in der Servermeldung genannten Header unter „Custom Headers“ des Anbieters ein (pro Zeile „Name: Wert“)
 ui.aiError.model,Modell: 
 ui.aiError.modelOllamaLMStudio,"Bei einem lokalen Modell (Ollama / LM Studio / llama.cpp) — stellen Sie zuerst sicher, dass dieses Programm läuft"
 ui.aiError.modelThinkReasoningUse,Reasoning-Modelle brauchen länger — senken Sie den Reasoning-Aufwand oder kürzen Sie die Antwort
@@ -830,7 +845,7 @@ ui.aiError.nextNotMissingCenter,Verbindung zum Server nicht möglich (das Netzwe
 ui.aiError.notAPIKeySend,Der Server hat den gesendeten API-Schlüssel abgelehnt
 ui.aiError.notTo,Hat den Server nicht erreicht
 ui.aiError.provider,Anbieter: 
-ui.aiError.providerNotParamSend,Der Anbieter hat einen gesendeten Parameter abgelehnt ({0})
+ui.aiError.providerNotParamSend,Der Anbieter hat die Anfrage abgelehnt ({0})
 ui.aiError.putKeyNewSettings,Geben Sie unter KI-Einstellungen → Anbieter bearbeiten → Zugangsdaten einen neuen Schlüssel ein und klicken Sie auf Zugangsdaten speichern
 ui.aiError.reply,Antwort des Servers: 
 ui.aiError.sideProviderHasProblem,Der Anbieter hat Probleme ({0})
@@ -845,8 +860,10 @@ ui.aiError.toNotHas,Endpunkt nicht gefunden (404)
 ui.aiError.tryNewTimesAdd,Versuchen Sie es erneut oder erhöhen Sie Max. Wiederholungen unter Parameter
 ui.aiError.tryOpenBaseURL,"Bei einem Rechner zu Hause: Öffnen Sie die Basis-URL in einem Browser, um zu sehen, ob sie antwortet"
 ui.aiError.userPress,Vom Nutzer gestoppt
-ui.aiError.viewTextBottomName,Sehen Sie sich die Servermeldung unten an — sie nennt meist direkt das falsche Feld
+ui.aiError.viewTextBottomName,Siehe die Zeile mit der Serverantwort oben – sie nennt das fehlerhafte Feld meist direkt
 ui.aiError.wordUseTime,"Der Server meldet, dass die Anfrage zu lange gedauert hat"
+ui.aiError.wrongProtocol,Dieses Modell akzeptiert das gesendete Anfrageformat nicht
+ui.aiError.wrongProtocolHint,Ändern Sie das „API-Format“ des Anbieters (OpenAI-kompatibel oder Anthropic Messages) oder wählen Sie ein anderes Modell
 ui.aiField.askField,Schreiben Sie den Wert für das Feld „{0}“.
 ui.aiField.hasCurrent,"Das Feld lautet derzeit „{0}“ — überarbeiten oder erweitern Sie es, ohne die Bedeutung zu ändern."
 ui.aiField.headKnown,Was bereits bekannt ist:
@@ -934,6 +951,10 @@ ui.aiProvider.addProvider,Anbieter hinzufügen
 ui.aiProvider.addProviderNew,Neuen Anbieter hinzufügen
 ui.aiProvider.allowedDomains,Erlaubte Domains für HTTP-Anfragen
 ui.aiProvider.apiKey,API-Schlüssel
+ui.aiProvider.apiKind,API-Format
+ui.aiProvider.apiKindAnthropic,Anthropic Messages (messages)
+ui.aiProvider.apiKindHint,"Die meisten Anbieter sind OpenAI-kompatibel · wählen Sie Anthropic Messages, wenn ein Claude-Modell das Protokoll ablehnt"
+ui.aiProvider.apiKindOpenai,OpenAI-kompatibel (chat/completions)
 ui.aiProvider.baseUrl,Basis-URL
 ui.aiProvider.baseURLModel,Basis-URL: {0} · Modell: {1} · 
 ui.aiProvider.btnSendText,Senden-Taste im Chat
@@ -944,6 +965,7 @@ ui.aiProvider.busyTest,Wird getestet …
 ui.aiProvider.cantPickModel,Noch kein Modell ausgewählt
 ui.aiProvider.cantSettingsProviderAI,Noch kein KI-Anbieter eingerichtet (Menü KI → KI-Einstellungen)
 ui.aiProvider.connectOkFoundModel,Verbunden — {0} {0|Modell|Modelle} gefunden
+ui.aiProvider.credNameHint,Leer lassen = Name des Anbieters
 ui.aiProvider.defaultsFail,Die Anbieter konnten auf diesem Computer nicht gespeichert werden
 ui.aiProvider.defaultsHave,{0} auf diesem Computer gespeichert
 ui.aiProvider.defaultsImport,Meine Anbieter verwenden
@@ -961,13 +983,21 @@ ui.aiProvider.domainAllow,Erlaubte Domains: {0}
 ui.aiProvider.domainNotListAllowed,Diese Domain steht nicht in der Liste der erlaubten Domains für HTTP-Anfragen: 
 ui.aiProvider.edit,Bearbeiten
 ui.aiProvider.editProvider,Anbieter bearbeiten
+ui.aiProvider.emptyDetail,Denk-Token: {0} · max_tokens-Limit: {1}
+ui.aiProvider.emptyHintEffort,"Verringern Sie den Reasoning Effort oder wählen Sie ein Modell, das vor der Antwort nicht nachdenkt"
+ui.aiProvider.emptyHintModel,"Erneut versuchen oder Modell wechseln – manche Modelle antworten leer, wenn Inhalte gefiltert werden"
+ui.aiProvider.emptyHintTokens,Erhöhen Sie „Maximum Number of Tokens“ des Anbieters (oder -1 für kein Limit)
+ui.aiProvider.emptyReply,Die KI hat eine leere Antwort geliefert
+ui.aiProvider.emptyThinking,Die KI hat ihr gesamtes Antwortbudget fürs Nachdenken verbraucht – es gibt keine Antwort
 ui.aiProvider.fetchListModel,⟳ Modellliste abrufen
 ui.aiProvider.fileKeepKeyPart,"Diese Datei enthält die privaten Schlüssel aller Zugangsdaten — geben Sie sie nicht weiter und legen Sie sie in kein ZIP, das Sie weitergeben"
 ui.aiProvider.foundModel,{0} {0|Modell|Modelle} gefunden
+ui.aiProvider.hideKey,Schlüssel verbergen
 ui.aiProvider.historyTokens,Budget für den Chat-Verlauf (Tokens)
 ui.aiProvider.historyTokensHint,"0 = automatisch (60 % des Modelllimits; 32.000, wenn unbekannt)"
 ui.aiProvider.keepSplitFolderProject,Separat in {0} im Projektordner gespeichert — nicht in der gemeinsamen project.khn.json
 ui.aiProvider.lineNewExampleCom,Durch Komma oder Zeilenumbruch getrennt · unterstützt *.example.com · leer = keine Begrenzung
+ui.aiProvider.modelsLoaded,{0} {0|Modell|Modelle} – wählen Sie das Standardmodell
 ui.aiProvider.nameCredential,Name der Zugangsdaten
 ui.aiProvider.nameProvider,Anbietername
 ui.aiProvider.nameSeeDropdownEg,"Der in der Dropdown-Liste angezeigte Name, z. B. „OpenAI bei der Arbeit“ oder „Ollama auf diesem Rechner“"
@@ -978,13 +1008,22 @@ ui.aiProvider.notHasProviderPress,"Noch keine Anbieter — klicken Sie auf „Hi
 ui.aiProvider.notPick,(nicht ausgewählt)
 ui.aiProvider.notRemember,Unbegrenzt
 ui.aiProvider.notSendValue,(diesen Wert nicht senden)
+ui.aiProvider.preset,Vorlage
+ui.aiProvider.presetHint,Trägt die API-Adresse für Sie ein – den eigenen Schlüssel geben Sie weiterhin selbst ein
+ui.aiProvider.presetPick,— Selbst ausfüllen —
 ui.aiProvider.pressFetchListModel,"Klicken Sie auf „Modellliste abrufen“, um die Liste von der API dieses Anbieters anzufordern"
+ui.aiProvider.providerDeleted,Anbieter gelöscht: {0}
+ui.aiProvider.providerSaved,Anbieter gespeichert: {0}
+ui.aiProvider.saveCredential,Schlüssel jetzt speichern
 ui.aiProvider.saveCredentialDoneKey,Zugangsdaten gespeichert (der Schlüssel wird separat gespeichert in 
 ui.aiProvider.saveProvider,Anbieter speichern
 ui.aiProvider.secCredential,Zugangsdaten
 ui.aiProvider.secModel,Modell
 ui.aiProvider.secParams,Parameter
+ui.aiProvider.showKey,Schlüssel anzeigen
 ui.aiProvider.skSkipEmptyNot,"sk-… (kann leer bleiben, wenn der Server keinen Schlüssel braucht, z. B. Ollama)"
+ui.aiProvider.testChatFail,"{0} {0|Modell|Modelle} gefunden, aber {1} kann nicht chatten: {2}"
+ui.aiProvider.testChatOk,Verbunden — {0} {0|Modell|Modelle} gefunden · Chat funktioniert mit {1}
 ui.aiProvider.testConnect,Verbindung testen
 ui.aiProvider.toReplyBackDone,"Der Endpunkt hat geantwortet, aber die Antwort enthält keine Modellliste"
 ui.aiProvider.useDoneTokensTimes,{0} {0|Token|Token} verbraucht · {1} {1|Aufruf|Aufrufe} · etwa {2} $
@@ -1299,7 +1338,7 @@ ui.app.aiAnalysis,Ergebnisse der KI-Analyse
 ui.app.all,Alle Quellen
 ui.app.allLine,Auf jeder Zeile gleich
 ui.app.app,App-Standard
-ui.app.appWriteNovelScreenplay,App zum Schreiben von Romanen/Drehbüchern — Electron + ProseMirror
+ui.app.appWriteNovelScreenplay,App zum Schreiben von Romanen/Drehbüchern
 ui.app.auto,— Automatisch —
 ui.app.autoFitWidthOff,Die automatische Anpassung an die Seitenbreite ist aus — zurück zum von Ihnen eingestellten Zoom
 ui.app.autoFitWidthOn,Die automatische Anpassung an die Seitenbreite ist an
@@ -1576,7 +1615,7 @@ ui.app.jsonUnreadable,{0} konnte nicht gelesen werden (die Datei ist beschädigt
 ui.app.jsonUnreadableNoBackup,"{0} konnte weder gelesen noch eine Kopie behalten werden — es wird nichts darüber gespeichert, bis es gelesen werden kann"
 ui.app.keyEnglish,Schlüssel (Englisch)
 ui.app.keyPlugin,Plugin-Tastenkombination defekt: 
-ui.app.killianEditor,Killian Editor 
+ui.app.killianEditor,Killian 2 · v
 ui.app.kind,Art
 ui.app.label,Bezeichnung
 ui.app.label2,Bezeichnung (Thai)
@@ -1729,7 +1768,7 @@ ui.app.notMoveSkipDraft,Das Verschieben zwischen Entwürfen wird noch nicht unte
 ui.app.notMoveSkipDraft2,Das Verschieben zwischen Entwürfen/Abschnitten wird noch nicht unterstützt
 ui.app.notMustRememberWord,Dieses Wort nicht merken
 ui.app.notOpen,(nicht geöffnet)
-ui.app.notOutDone,Bleiben
+ui.app.notOutDone,Nicht beenden
 ui.app.notPick,Keine
 ui.app.notRememberEditChapter,„{0}“ wird nicht mehr gemerkt (ändern unter Drehbuch → SmartType verwalten)
 ui.app.notRememberFoundNot,"Noch nicht gemerkt (weniger als {0} {0|Mal|Mal} gesehen) — klicken Sie auf „Merken“, um es jetzt zu merken"
@@ -1992,7 +2031,7 @@ ui.app.user,Benutzer
 ui.app.useReorderTimeText,"Wird zum Sortieren verwendet, wenn die Zeit ein Text ist"
 ui.app.valignPlannerOnly,Die vertikale Ausrichtung funktioniert nur auf der Planner-Tafel
 ui.app.valueRememberAllWord, — Wert 1 = jedes eingegebene Wort merken (einschließlich Tippfehler)
-ui.app.versionEditF,Bearbeitete Version: {0}  ·  Revision Nr. {1}
+ui.app.versionEditF,{1}-mal bearbeitet
 ui.app.viewListAll, Vollständige Liste anzeigen …
 ui.app.viewSample,Vorschau
 ui.app.webMoreElectron,"Web-Engine + Laufzeit, mit Electron gebündelt"
@@ -2640,6 +2679,7 @@ ui.common.delMoveTrash,Löschen (in den Papierkorb verschieben)
 ui.common.desc,Beschreibung
 ui.common.detailed,Ausführlich
 ui.common.dialogue,Dialog
+ui.common.discardChangesAsk,"Es gibt Änderungen, die noch nicht gespeichert sind. Ohne Speichern schließen?"
 ui.common.dot,Gepunktet
 ui.common.dotStart,Anfang
 ui.common.draftTextDraft,Entwurf — reiner Text (Draft)
@@ -2770,7 +2810,7 @@ ui.common.renameNew,Umbenennen
 ui.common.renameVersionSkipEmpty,Versionsname (optional)
 ui.common.repeat,⧉ Duplizieren
 ui.common.replaceBtn,Ersetzen
-ui.common.restart,Neu beginnen
+ui.common.restart,Neu starten
 ui.common.revertBtn,Zurücksetzen
 ui.common.right,Rechts
 ui.common.right2,Rechtsbündig
@@ -2850,6 +2890,7 @@ ui.compile.msg,<!-- page break -->
 ui.compile.nameScene,Szenenname
 ui.compile.nextSummaryStats,Statistikzusammenfassung anhängen
 ui.compile.notSpecifyStatus,Kein Status
+ui.compile.novelPdf,Roman → PDF (Kapiteltitel · Szenentrenner)
 ui.compile.onlySceneStatus,Nur Szenen mit Status …
 ui.compile.pageBreakAllChapter,Neue Seite für jedes Kapitel
 ui.compile.pageListCharacterCast,Seite mit der Figurenliste
@@ -4083,12 +4124,12 @@ ui.home.close,Startseite schließen
 ui.home.closePageFirst,Die Startseite schließen
 ui.home.copyPath,Ordnerpfad kopieren
 ui.home.editLatest,Zuletzt geändert: 
-ui.home.export,Exportieren
+ui.home.export,Exportieren .zip
 ui.home.exportProjectOpenFile,Das geöffnete Projekt als .zip-Datei exportieren
 ui.home.homeLoadProjectFail,Start: Projekte konnten nicht geladen werden
 ui.home.homePanelLoadFail,home-panel: Laden fehlgeschlagen
 ui.home.homeReadProjectFail,Start: Projekt konnte nicht gelesen werden: 
-ui.home.import,Importieren
+ui.home.import,Importieren .zip
 ui.home.importProjectFileZip,Ein Projekt aus einer .zip-Datei importieren
 ui.home.language,Sprache
 ui.home.msg, von 
@@ -4370,6 +4411,9 @@ ui.logline.saved,Logline gespeichert
 ui.logline.stakes,Einsatz
 ui.logline.title,Logline
 ui.logline.why,"Die KI nutzt dies als Kompass, damit die Geschichte auf Kurs bleibt"
+ui.main.pickFolderBtn,Diesen Ordner wählen
+ui.main.pickNewProjectFolder,Speicherort für das neue Projekt wählen — der Projektordner wird darin angelegt
+ui.main.pickProjectFolder,Projektordner zum Öffnen auswählen
 ui.mapAi.aroundHead,In der Umgebung (nächste zuerst):
 ui.mapAi.cut,(Der Rest wurde aus Längengründen gekürzt — fragen Sie mit dem Befehl map.where nach einem Namen)
 ui.mapAi.head,## Kartenpositionen (aus dem Karten-Bereich des Autors)
@@ -4758,7 +4802,7 @@ ui.menu.fullScreen,Vollbild
 ui.menu.graphAreaFloorPlan,Grundriss
 ui.menu.graphDialogueNextPage,Dialogdiagramm pro Seite (Dialogue Chart) …
 ui.menu.graphStoryBreakBranch,Verzweigungsdiagramm der Geschichte (Branch Tree)
-ui.menu.heading,Überschrift {0} ({1}+{2})
+ui.menu.heading,Überschrift H{0}
 ui.menu.headPaperAllPage,Seitenköpfe …
 ui.menu.help,Hilfe
 ui.menu.help2,Hilfe
@@ -5274,6 +5318,7 @@ ui.panel.historyTitle,Verlauf
 ui.panel.jumpedInMain,Zu dieser Stelle im Hauptfenster gesprungen
 ui.panel.kanbanTitle,Kanban
 ui.panel.layoutReset,Bereichslayout zurückgesetzt
+ui.panel.layoutRestored,Vorherige Panel-Anordnung wiederhergestellt
 ui.panel.logTitle,App-Protokoll
 ui.panel.manage,Bereiche verwalten
 ui.panel.mapsTitle,Karten
@@ -5436,7 +5481,6 @@ ui.pdf.emptyFontChapter,Leer = die Schriftart des Drehbuchs
 ui.pdf.emptyNotPutWatermark,Leer = kein Wasserzeichen
 ui.pdf.exportPDFItemNew,PDF exportieren (integrierter Generator)
 ui.pdf.exportPDFPdfLib,PDF exportieren (pdf-lib)
-ui.pdf.exportPDFPrevUse,(das alte Menü „Als PDF exportieren …“ verwendet weiterhin wie gewohnt Chromium)
 ui.pdf.gapXYInch,"Die x/y-Abstände sind „Zoll vom Papierrand“, wie im Papier-Tab"
 ui.pdf.headPaperAllPage,Kopfzeile auf jeder Seite
 ui.pdf.headPaperAllPage2,Seitenköpfe
@@ -6006,7 +6050,7 @@ ui.project.group,Gruppen/Fraktionen
 ui.project.hasProject,Dieses Projekt existiert bereits
 ui.project.investigateBack,Krimi/Detektiv
 ui.project.investigation,Die Ermittlung
-ui.project.newProjectTemplate,Neues Projekt aus Vorlage
+ui.project.newProjectPick,Neues Projekt — Vorlage wählen
 ui.project.newProjectTemplateDone,Projekt aus der Vorlage erstellt: 
 ui.project.novelFantasyWorldbuilding,"Fantasyroman — Weltenbau, Völker, Magie"
 ui.project.novelInvestigateCharacterSuspect,"Kriminalroman — Verdächtige, Hinweise, Zeitleiste"
@@ -6287,10 +6331,10 @@ ui.settings.shortcuts,Tastenkombinationen
 ui.settings.shortcutsHint,Klicken Sie auf Bearbeiten und drücken Sie dann die neue Tastenkombination
 ui.settings.spellCheck,Rechtschreibprüfung
 ui.settings.spellCheckDict,Wörterbuch der App verwenden (Thai + Englisch)
-ui.settings.spellCheckDictHint,Offline-Wortliste für Thai + Englisch · kennt Ihre hinzugefügten Wörter · aus = nur die Prüfung von Chromium bleibt (nur Englisch · lädt zuerst sein Wörterbuch herunter; offline = keinerlei Unterstreichungen)
+ui.settings.spellCheckDictHint,Offline-Wortliste für Thai + Englisch · kennt Ihre hinzugefügten Wörter · aus = nur die eingebaute Prüfung des Systems bleibt (nur Englisch · lädt zuerst sein Wörterbuch herunter; offline = keinerlei Unterstreichungen)
 ui.settings.spellCheckHint,Falsch geschriebene Wörter unterstreichen (immer mit einer einzelnen Unterstreichung
 ui.settings.spFontFamily,Drehbuchschrift
-ui.settings.spFontFamilyHint,Schriftart nur im Drehbuchmodus (Standard: Courier New)
+ui.settings.spFontFamilyHint,Schriftart nur im Drehbuchmodus (Standard: Courier Prime)
 ui.settings.themeK2,K2 (Hausfarben)
 ui.settings.themeK2Light,K2 Hell
 ui.settings.title,Einstellungen
@@ -7018,7 +7062,7 @@ ui.starter.fIntro,Zusammenfassung
 ui.starter.fIntroPlaceholder,"Grob, worum es in dieser Geschichte geht — ein Absatz genügt"
 ui.starter.fName,Titel
 ui.starter.fNamePlaceholder,z. B. Das Schwert der Morgenröte
-ui.starter.folderFixed,Gespeichert im Ordner Starters/{0} — das Umbenennen der Geschichte benennt den Ordner nicht um
+ui.starter.folderFixed,Gespeichert im Ordner Starters/{0} — der Ordner übernimmt den ersten Titel der Geschichte; späteres Umbenennen benennt den Ordner nicht um
 ui.starter.foreignAsk,„{0}“ scheint aus einem anderen Projekt zu stammen — die Figuren jetzt dem Wiki dieses Projekts zuordnen?
 ui.starter.fPrompts,Figuren-Prompts
 ui.starter.fPromptsHint,"Regeln, die die KI immer befolgen soll, wenn sie diese Figur schreibt"
@@ -7304,6 +7348,37 @@ ui.starter.wWhy,Warum
 ui.starter.wWhyHint,Die Triebkraft oder der Grund dahinter
 ui.starter.yesterday,Gestern
 ui.starter.you,Sie
+ui.starterTag.action,Action
+ui.starterTag.allAges,alle Altersgruppen
+ui.starterTag.bittersweet,bittersüß
+ui.starterTag.comedy,Komödie
+ui.starterTag.cyberpunk,Cyberpunk
+ui.starterTag.dark,düster
+ui.starterTag.drama,Drama
+ui.starterTag.epic,episch
+ui.starterTag.fantasy,Fantasy
+ui.starterTag.gritty,rau
+ui.starterTag.harem,Harem
+ui.starterTag.historical,historisch
+ui.starterTag.horror,Horror
+ui.starterTag.isekai,Isekai
+ui.starterTag.lighthearted,unbeschwert
+ui.starterTag.mature,Erwachsene
+ui.starterTag.medieval,Mittelalter
+ui.starterTag.modern,Gegenwart
+ui.starterTag.mystery,Krimi
+ui.starterTag.postApocalyptic,postapokalyptisch
+ui.starterTag.romance,Romanze
+ui.starterTag.satirical,satirisch
+ui.starterTag.school,Schule
+ui.starterTag.sciFi,Science-Fiction
+ui.starterTag.sliceOfLife,Alltagsleben
+ui.starterTag.space,Weltraum
+ui.starterTag.steampunk,Steampunk
+ui.starterTag.teen,Jugendliche
+ui.starterTag.thriller,Thriller
+ui.starterTag.urbanFantasy,Urban Fantasy
+ui.starterTag.wholesome,herzerwärmend
 ui.status.addStatus,+ Status hinzufügen
 ui.status.addStatusDone,Status hinzugefügt: 
 ui.status.copied,Kopiert
@@ -7397,32 +7472,32 @@ ui.textCase.lowerCaseItemSmall,lower case — alles kleingeschrieben
 ui.textCase.sentenceCaseSentenceItem,Sentence case — Satzanfänge großschreiben
 ui.textCase.titleCaseStyleTitle,Title Case — wie in einem Titel
 ui.textCase.uPPERCASEItemBig,UPPER CASE — alles großgeschrieben
-ui.themes.claude,Terrakotta (Claude Code)
+ui.themes.claude,Terrakotta
 ui.themes.cvdByDark,Blau-Gelb-Farbenblind (Dunkel) · Rot/Petrol
 ui.themes.cvdByLight,Blau-Gelb-Farbenblind (Hell) · Rot/Petrol
 ui.themes.cvdRgDark,Rot-Grün-Farbenblind (Dunkel) · Blau/Orange
 ui.themes.cvdRgLight,Rot-Grün-Farbenblind (Hell) · Blau/Orange
-ui.themes.dva,Gamer-Pink (D.Va)
-ui.themes.excel,Gitter-Grün (Excel)
+ui.themes.dva,Gamer-Pink
+ui.themes.excel,Gitter-Grün
 ui.themes.flower,Blumengarten
 ui.themes.fruit,Obstsalat
-ui.themes.gundam,Dreifarbiger Mobile Suit (Gundam)
+ui.themes.gundam,Dreifarbiger Mecha
 ui.themes.hcDark,Hoher Kontrast (Dunkel)
 ui.themes.hcLight,Hoher Kontrast (Hell)
-ui.themes.kimi,Mondlicht (Kimi)
+ui.themes.kimi,Mondlicht
 ui.themes.lagoon,Sonnige Lagune
-ui.themes.macintosh,Platin (klassischer Macintosh)
+ui.themes.macintosh,Platin
 ui.themes.monoDark,Monochrom (Dunkel)
 ui.themes.monoLight,Monochrom (Hell)
 ui.themes.neonPop,Neon-Pop
-ui.themes.opencode,Terminal-Pfirsich (opencode)
+ui.themes.opencode,Terminal-Pfirsich
 ui.themes.plumWine,Pflaumenwein
-ui.themes.powerpoint,Folien-Ziegelrot (PowerPoint)
+ui.themes.powerpoint,Folien-Ziegelrot
 ui.themes.rainbow,Regenbogen
 ui.themes.sakuraMist,Kirschblütennebel
 ui.themes.tropical,Tropisch
-ui.themes.vscode,Code Dunkel (VS Code)
-ui.themes.word,Dokumentblau (Word)
+ui.themes.vscode,Code Dunkel
+ui.themes.word,Dokumentblau
 ui.thes.close,Schließen
 ui.thes.copied,Kopiert: 
 ui.thes.notFound,"Keine Synonyme/Antonyme für """
@@ -7783,7 +7858,7 @@ ui.tip.toggle-panel:dashboard,Fortschrittsübersicht — Wortanzahl im Verhältn
 ui.tip.toggle-panel:dialogue,"Alle Dialoge im Projekt — filtern, springen, direkt bearbeiten"
 ui.tip.toggle-panel:dlgb,"Lassen Sie die KI Ihre Wiki-Figuren Zug um Zug spielen und übernehmen Sie die Zeilen, die Ihnen gefallen, am Cursor ins Drehbuch — öffnen Sie es, wenn Sie bei einem Dialog nicht weiterkommen"
 ui.tip.toggle-panel:docs,"Der Hauptschreibbereich — alle geöffneten Tabs: Szenen, Drehbücher und Wiki-Seiten (kann nicht geschlossen werden)"
-ui.tip.toggle-panel:floorplan,"Setplan in der Draufsicht (im Stil von Shot Designer) — Wiki-Figuren mit Blickrichtung und Sichtlinien · Kameras (Body/Objektiv/Stativ/Schiene) · Lichter · Formen · Beats, die an Zeilen der Szene geknüpft sind"
+ui.tip.toggle-panel:floorplan,"Setplan in der Draufsicht — Wiki-Figuren mit Blickrichtung und Sichtlinien · Kameras (Body/Objektiv/Stativ/Schiene) · Lichter · Formen · Beats, die an Zeilen der Szene geknüpft sind"
 ui.tip.toggle-panel:gallery,Alle Bilder im Ordner „Images“ des Projekts — in ein Dokument ziehen zum Einfügen oder im Wiki als Titelbild/Porträt auswählen
 ui.tip.toggle-panel:gallery-board,Eine Arbeitsfläche für die Referenzbilder jedes Albums — neben der Bildbibliothek öffnen und Bilder darauf ziehen · frei verschieben/skalieren/zoomen · das Entfernen von der Tafel löscht keine Dateien
 ui.tip.toggle-panel:history,"Eine Zeitleiste dessen, was mit den Dateien des Projekts geschehen ist, mit einem Weg zurück zu jedem Zeitpunkt · wie viele aufbewahrt werden, legen Sie unter Einstellungen → Projektinfo fest (Standard 32)"
@@ -8323,6 +8398,7 @@ ui.xhub.kindAuto,An die Quelldateien anpassen
 ui.xhub.kindProse,Roman (Prosa)
 ui.xhub.kindScript,Drehbuch
 ui.xhub.needProject,Öffnen Sie vor dem Export ein Projekt
+ui.xhub.needScriptHint,"Wähle ein anderes Format oder einen Bereich, der ein Drehbuch ist"
 ui.xhub.needScriptOnly,Dieses Format funktioniert nur mit Drehbüchern
 ui.xhub.noDraft,(kein Entwurf in diesem Projekt)
 ui.xhub.noPreview,(nichts zur Vorschau vorhanden)

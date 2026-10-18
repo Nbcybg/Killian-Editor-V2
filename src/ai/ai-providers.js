@@ -123,8 +123,37 @@ export function newId(prefix = 'p') {
 
 /** credential เปล่า ๆ (apiKey เก็บแยกไฟล์ — ที่นี่มีไว้ให้ UI ถือชั่วคราวเท่านั้น) */
 export function newCredential(patch = {}) {
-  return { id: patch.id || newId('cred'), name: '', apiKey: '', baseUrl: '',
-           allowedDomains: [], ...patch };
+  const c = { id: patch.id || newId('cred'), name: '', apiKey: '', baseUrl: '',
+              allowedDomains: [], ...patch };
+  c.api = apiKindOf({ credential: c });
+  return c;
+}
+
+/**
+ * [alpha.170 · บั๊ก 15] รูปแบบ API ที่ credential นี้พูด
+ *   'openai'    = POST …/chat/completions (ค่าเริ่มต้น — เจ้าส่วนใหญ่ทำตามแบบนี้)
+ *   'anthropic' = POST …/messages (Claude ของ Anthropic และเกตเวย์ที่ส่งต่อโมเดล Claude ด้วยโปรโตคอลเดิม)
+ * เดิมมีแบบเดียว → โมเดล claude-* ของเกตเวย์ที่รับสองโปรโตคอลตอบ 400 "Model does not support this protocol"
+ * ไม่ได้ตั้ง/ค่าแปลก ๆ ในไฟล์ = openai (ของเดิมทุกตัวทำงานเหมือนเดิม — api.anthropic.com ก็มีปลายทาง
+ * chat/completions แบบเข้ากันได้ ผู้ใช้เดิมที่ใช้ทางนั้นอยู่ต้องไม่ถูกย้ายเอง)
+ */
+export const API_KINDS = ['openai', 'anthropic'];
+/**
+ * [alpha.170] ชุดสำเร็จรูปของที่อยู่ API ในฟอร์มผู้ให้บริการ — เลือกแล้วเติมชื่อ/ที่อยู่/รูปแบบ API ให้
+ * (เดิมผู้ใช้ต้องรู้และพิมพ์ Base URL เองทุกตัว) · ชื่อเป็นชื่อเฉพาะของบริการ ไม่ผ่านไฟล์ภาษา
+ */
+export const PROVIDER_PRESETS = [
+  { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', api: 'openai' },
+  { id: 'anthropic', name: 'Anthropic (Claude)', baseUrl: 'https://api.anthropic.com/v1', api: 'anthropic' },
+  { id: 'openrouter', name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', api: 'openai' },
+  { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', api: 'openai' },
+  { id: 'gemini', name: 'Google Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', api: 'openai' },
+  { id: 'ollama', name: 'Ollama', baseUrl: 'http://localhost:11434/v1', api: 'openai', local: true },
+  { id: 'lmstudio', name: 'LM Studio', baseUrl: 'http://localhost:1234/v1', api: 'openai', local: true },
+];
+export function apiKindOf(provider) {
+  const c = (provider && provider.credential) || {};
+  return API_KINDS.includes(c.api) ? c.api : 'openai';
 }
 /**
  * ผู้ให้บริการเปล่า ๆ พร้อมพารามิเตอร์ค่าเริ่มต้นครบชุด
@@ -189,7 +218,7 @@ export function buildHeaders(provider) {
     h.Authorization = 'Bearer ' + key;
     // [alpha.149] หัว x-api-key/anthropic-version เฉพาะปลายทางของ Anthropic เท่านั้น
     // (เดิมส่งคีย์ซ้ำสองหัวให้ **ทุกเจ้า** — พร็อกซี/เกตเวย์ที่จดหัวคำขอลงบันทึกได้คีย์ไปสองชุด)
-    if (/anthropic/i.test(hostOf(c.baseUrl))) {
+    if (/anthropic/i.test(hostOf(c.baseUrl)) || apiKindOf(provider) === 'anthropic') {
       h['x-api-key'] = key;
       h['anthropic-version'] = '2023-06-01';
     }
@@ -246,6 +275,9 @@ export function parseModels(json) {
 export function chatRequest(provider, { messages = [], system = '', stream = false, model, temperature, maxTokens, reasoningEffort } = {}) {
   const base = trimSlash((provider && provider.credential && provider.credential.baseUrl) || '');
   const pr = normalizeParams((provider && provider.params) || {});
+  if (apiKindOf(provider) === 'anthropic') {
+    return anthropicRequest(provider, base, pr, { messages, system, stream, model, temperature, maxTokens });
+  }
   const url = /\/chat\/completions$/i.test(base) ? base
             : /\/v1$/i.test(base) ? base + '/chat/completions'
             : base + '/v1/chat/completions';
@@ -275,6 +307,75 @@ export function chatRequest(provider, { messages = [], system = '', stream = fal
   if (pr.thinkingMode === 'on') body.thinking = { type: 'enabled' };
   return { url, method: 'POST', headers: buildHeaders(provider), body,
            timeoutMs: (pr.timeout || 60) * 1000, maxRetries: pr.maxRetries ?? 2 };
+}
+
+/** [alpha.170 · บั๊ก 15] เพดานคำตอบที่ใช้เมื่อผู้ใช้ตั้ง "ไม่จำกัด" แต่โปรโตคอลบังคับให้ส่ง max_tokens (Anthropic) */
+export const ANTHROPIC_DEFAULT_MAX = 4096;
+
+/**
+ * [alpha.170 · บั๊ก 15] คำขอรูปแบบ Anthropic Messages — `system` แยกจาก messages · `max_tokens` บังคับมี
+ * ข้อความ role=system ที่ปนมาใน messages ถูกย้ายไปต่อท้าย system (โปรโตคอลนี้ไม่รับ role นั้น)
+ */
+function anthropicRequest(provider, base, pr, { messages, system, stream, model, temperature, maxTokens }) {
+  const url = /\/messages$/i.test(base) ? base
+            : /\/v1$/i.test(base) ? base + '/messages'
+            : base + '/v1/messages';
+  const sys = [system, ...(messages || []).filter((m) => m && m.role === 'system').map((m) => String(m.content || ''))]
+    .filter((s) => String(s || '').trim()).join('\n\n');
+  const body = {
+    model: model || (provider && provider.model) || '',
+    messages: (messages || []).filter((m) => m && m.role !== 'system')
+      .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content ?? '') })),
+  };
+  const mt = maxTokens !== undefined ? maxTokens : pr.maxTokens;
+  body.max_tokens = typeof mt === 'number' && isFinite(mt) && mt > 0 ? mt : ANTHROPIC_DEFAULT_MAX;
+  if (sys) body.system = sys;
+  if (stream) body.stream = true;
+  const tv = temperature !== undefined ? temperature : pr.temperature;
+  if (tv !== null && tv !== undefined && tv !== '') body.temperature = Math.min(1, Math.max(0, Number(tv)));
+  if (pr.topP !== null && pr.topP !== undefined) body.top_p = pr.topP;
+  if (pr.topK !== null && pr.topK !== undefined) body.top_k = pr.topK;
+  return { url, method: 'POST', headers: buildHeaders(provider), body,
+           timeoutMs: (pr.timeout || 60) * 1000, maxRetries: pr.maxRetries ?? 2 };
+}
+
+// ══ [alpha.170 · บั๊ก 2] ★ โมเดลที่ "คิดก่อนตอบ" กับเพดาน max_tokens ══
+//
+// `max_tokens` ของ API นับรวมโทเคนที่โมเดลใช้คิดด้วย — ฟีเจอร์ที่ตั้งเพดานเท่าความยาวคำตอบ (1500)
+// จึงได้ "คำตอบว่าง" (คิดจนโควตาหมด) หรือ JSON ถูกตัดกลางทาง แล้วตัวอ่านผลตีความว่า "ไม่พบปัญหา"
+// วัดจริงบนแอป: `out=1500 think=1500 chars=0` → กล่องตรวจ Plot Hole ขึ้น "ไม่พบจุดบกพร่องของพล็อต"
+// กติกาใหม่ (ใช้ที่ complete/completeStream จุดเดียว): เพดานที่ฟีเจอร์ขอ = ความยาว **คำตอบ**
+//   · เคยเห็นโมเดลนี้คิด → บวกที่ให้คิดล่วงหน้า (thinkingHeadroom)
+//   · คำตอบว่าง/ถูกตัดเพราะคิดกินโควตา → ลองใหม่ครั้งเดียวด้วยเพดานที่สูงขึ้น (boostedMaxTokens)
+//   · ยังว่างอีก → **เป็นความล้มเหลว** (code 'empty') ห้ามส่งข้อความว่างให้ฟีเจอร์ตีความเอง
+export const THINK_HEADROOM_MIN = 1024;
+export const THINK_HEADROOM_MAX = 8192;
+export const BOOST_MAX_TOKENS = 32000;
+
+/** คำตอบนี้ "ว่างเพราะโควตาหมดไปกับการคิด" ไหม */
+export function isStarvedReply(r) {
+  if (!r || String(r.text || '').trim()) return false;
+  const reasoning = (r.usage && r.usage.reasoning) || 0;
+  return !!(r.truncated || r.finish === 'length' || reasoning > 0 || String(r.thinking || '').trim());
+}
+/** คำตอบถูกตัดกลางทาง "เพราะการคิดกินโควตา" ไหม (มีข้อความแล้วแต่ไม่จบ) */
+export function isCutByThinking(r) {
+  if (!r || !String(r.text || '').trim()) return false;
+  const reasoning = (r.usage && r.usage.reasoning) || 0;
+  return !!((r.truncated || r.finish === 'length') && (reasoning > 0 || String(r.thinking || '').trim()));
+}
+/** ที่ให้คิดซึ่งบวกเพิ่มจากเพดานคำตอบ เมื่อรู้แล้วว่าโมเดลนี้ใช้คิดราว ๆ `seen` โทเคน */
+export function thinkingHeadroom(seen) {
+  const n = Number(seen) || 0;
+  if (n <= 0) return 0;
+  return Math.round(Math.min(THINK_HEADROOM_MAX, Math.max(THINK_HEADROOM_MIN, n * 2)));
+}
+/** เพดานของรอบลองใหม่ — ไม่จำกัดอยู่แล้ว (≤0) = คงเดิม */
+export function boostedMaxTokens(maxTokens, reasoning) {
+  const mt = Number(maxTokens) || 0;
+  if (mt <= 0) return mt;
+  const r = Math.max(0, Number(reasoning) || 0);
+  return Math.round(Math.min(BOOST_MAX_TOKENS, Math.max(mt * 3, mt + r * 2 + 1024, 4096)));
 }
 
 /** อ่านข้อความ + การใช้ token จากคำตอบ (รองรับทั้งสำนวน OpenAI และ Anthropic) */

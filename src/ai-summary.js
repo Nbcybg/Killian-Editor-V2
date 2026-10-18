@@ -111,7 +111,8 @@ export async function collectProjectText(opts = {}) {
 // ---- กล่อง "กำลังทำงาน" ที่อัปเดตข้อความได้ (เดิมไม่มีอะไรบอกเลยระหว่างรอ AI) ----
 function busyBox(title) {
   const ov = el('div', 'k-overlay k-busy');
-  const box = el('div', 'k-dialog');
+  // [alpha.170] กว้างเท่ากล่องผลลัพธ์ที่จะตามมา — เดิมกล่องรอกว้าง ~340 แล้วกล่องผลกว้าง ~1120 (กระโดดกลางจอ)
+  const box = el('div', 'k-dialog k-ai-summary');
   box.append(el('div', 'k-dlg-title', title));
   const msg = el('div', 'k-busy-msg', tt('ui.aiSum.busyStart'));
   msg.style.cssText = 'padding:8px 0;font-size:13px';

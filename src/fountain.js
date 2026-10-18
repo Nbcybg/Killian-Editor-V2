@@ -108,6 +108,15 @@ export const TIMES = ['DAY', 'NIGHT', 'MORNING', 'EVENING', 'CONTINUOUS', 'LATER
   'เช้า', 'กลางวัน', 'บ่าย', 'เย็น', 'กลางคืน', 'รุ่งสาง', 'ต่อเนื่อง'];
 export const TRANSITIONS = ['CUT TO:', 'DISSOLVE TO:', 'SMASH CUT TO:', 'MATCH CUT TO:',
   'FADE OUT.', 'FADE TO BLACK.', 'FADE IN:', 'INTERCUT WITH:'];
+/**
+ * [alpha.170] ข้อความที่ "พิมพ์ขึ้นต้นแบบหัวฉาก" — ใช้ตอนพิมพ์เท่านั้น (สลับบล็อกเป็นหัวฉากให้เอง)
+ * ไม่ใช่กฎการอ่านไฟล์: ไฟล์ที่มีอยู่ไม่ถูกตีความใหม่ (บล็อกที่ถูกสลับแล้วเขียนลงไฟล์เป็นหัวฉากแบบบังคับตามเดิม)
+ * เดิมรู้จักแค่ INT./EXT./ฉาก␠ — คนเขียนบทไทยพิมพ์ "ภายใน ห้องนั่งเล่น - กลางวัน" แล้วยังเป็นบรรยาย
+ * (และ "ฉากภายใน " ที่อยู่ใน SCENE_PREFIX เองก็ไม่ติด เพราะตัวตรวจต้องการช่องว่างต่อจากคำว่า "ฉาก")
+ */
+export function typedSceneHeading(text) {
+  return /^(int\.|ext\.|int\.?\/ext\.|i\/e\.|est\.|ฉากภายใน|ฉากภายนอก|ฉาก|ภายใน|ภายนอก)\s+\S/i.test(String(text || '').trim());
+}
 export const SCENE_PREFIX = ['INT. ', 'EXT. ', 'INT./EXT. ', 'I/E. ', 'EST. ', 'ฉาก ', 'ฉากภายใน ', 'ฉากภายนอก '];
 
 // วงเล็บบอกอารมณ์/การพูด (parenthetical) แบบ Final Draft — ไทย + อังกฤษ

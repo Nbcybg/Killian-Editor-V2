@@ -126,7 +126,7 @@ export function mdToXhtmlSections(md, { breakMarker = '', imgHref = () => '', sp
         break;
       }
       case 'quote': cur.parts.push(`<blockquote><p${al(b.align)}>${inlineXhtml(b.text, imgHref)}</p></blockquote>`); break;
-      case 'hr': cur.parts.push('<hr/>'); break;
+      case 'hr': cur.parts.push(b.text ? `<p class="scene-break" style="text-align:center;text-indent:0">${xmlEsc(b.text)}</p>` : '<hr/>'); break;
       case 'code': cur.parts.push(`<pre><code>${xmlEsc(b.text)}</code></pre>`); break;
       case 'figure': {
         const href = imgHref(b.src);
@@ -369,7 +369,8 @@ export function buildDocx(md, opts = {}) {
         break;
       }
       case 'quote': push(`<w:p>${pPr('Quote', b.align)}${runsOf(b.text)}</w:p>`); break;
-      case 'hr': push('<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="999999"/></w:pBdr></w:pPr></w:p>'); break;
+      case 'hr': if (b.text) { push(`<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t xml:space="preserve">${xmlEsc(b.text)}</w:t></w:r></w:p>`); break; }
+        push('<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="999999"/></w:pBdr></w:pPr></w:p>'); break;
       case 'code':
         for (const line of String(b.text).split('\n')) push(`<w:p>${pPr('Code', null)}${runXml(line, [], 0)}</w:p>`);
         break;

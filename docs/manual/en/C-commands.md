@@ -266,7 +266,7 @@ Everything you can trigger in the app (menu items, buttons, shortcuts, the float
 | `toggle-panel:dashboard` | `Ctrl+Alt+D` | Progress overview — word count against goals · share of scenes by status · length of each chapter |
 | `toggle-panel:dialogue` | `Ctrl+Alt+L` | All dialogue in the project — filter, jump, edit inline |
 | `toggle-panel:dlgb` | `Ctrl+Alt+V` | Let AI play your Wiki characters turn by turn, then drop the lines you like into the script at the cursor — open it when you are stuck on dialogue |
-| `toggle-panel:floorplan` | `Ctrl+Alt+F` | Top-down set plan (Shot Designer style) — Wiki characters with facing and sight lines · cameras (body/lens/support/track) · lights · shapes · beats tied to lines of the scene |
+| `toggle-panel:floorplan` | `Ctrl+Alt+F` | Top-down set plan — Wiki characters with facing and sight lines · cameras (body/lens/support/track) · lights · shapes · beats tied to lines of the scene |
 | `toggle-panel:gallery` |  | Every image in the project's Images folder — drag into a document to insert, or choose as a cover/portrait in the Wiki |
 | `toggle-panel:gallery-board` | `Ctrl+Alt+G` | A canvas for each album's reference images — open it beside the image library and drag images on · move/resize/zoom freely · removing from the board doesn't delete files |
 | `toggle-panel:history` | `Ctrl+Alt+H` | A timeline of what was done to the project's files, with a way back to any point · how many are kept is set at Settings → Project info (default 32) |

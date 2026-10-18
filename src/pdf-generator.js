@@ -15,7 +15,10 @@
 
 import { t as tt, t } from './i18n.js';
 import { throwIfCancelled } from './cancel.js';   // [alpha.162 · W5 ข้อ 2]
-import { PDFDocument, StandardFonts, PDFName, PDFHexString, degrees, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, PDFName, PDFHexString, PDFNumber, PDFOperator, PDFOperatorNames,
+         degrees, rgb, toRadians, pushGraphicsState, popGraphicsState, beginText, endText,
+         setFontAndSize, setGraphicsState, setFillingColor,
+         rotateAndSkewTextRadiansAndTranslate } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 // [alpha.82] ต้องนับความกว้างแบบเดียวกับ wrapLines() เป๊ะ ไม่งั้น PDF กับหน้าจอตัดหน้าคนละที่
 
@@ -327,7 +330,7 @@ export async function embedFonts(doc, fonts) {
     try {
       doc.registerFontkit(fontkit);
       // subset:false — subsetting ฟอนต์ไทยเคยทำวรรณยุกต์หาย (ไฟล์ใหญ่ขึ้นแต่ถูกต้องเสมอ)
-      const emb = async (b) => { const f = await doc.embedFont(b, { subset: false }); avoidAatLayout(f); return f; };
+      const emb = async (b) => { const f = await doc.embedFont(b, { subset: false }); avoidAatLayout(f); coverAllGlyphs(f); return f; };
       const one = async (b) => (toBytes(b) ? emb(toBytes(b)) : null);
       const regular = await emb(reg);
       const bold = (await one(f.bold)) || regular;
@@ -355,6 +358,150 @@ export async function embedFonts(doc, fonts) {
   };
 }
 
+/**
+ * ══ [alpha.170 · บั๊ก 1] ★ ตาราง /W กับ ToUnicode ของฟอนต์ที่ฝังต้องครอบ "ทุก glyph" ══
+ *
+ * pdf-lib สร้างตารางความกว้าง (/W) จาก glyph ที่ **มีรหัสอักขระชี้ถึง** เท่านั้น — glyph ที่ได้จากการ
+ * แทนที่ของฟอนต์ (GSUB: วรรณยุกต์ตัวยกของ Leelawadee UI/Tahoma เมื่ออยู่บนสระบน · ชิ้นของสระอำ)
+ * ไม่มีรหัสอักขระ จึงตกไปใช้ความกว้างตั้งต้นของ PDF = 1000 หน่วย (หนึ่ง em เต็ม) ทั้งที่จริงกว้าง 0
+ * → "นั่ง" กลายเป็น "นั  ง" มีช่องโหว่ตามหลังวรรณยุกต์ และข้อความช่วงถัดไปถูกวาดทับ
+ * (เจอบนแอปจริง: PDF บทภาพยนตร์ภาษาไทยเพี้ยนทั้งไฟล์ · ช่องตัวอย่างเป็น HTML จึงดูปกติ)
+ *
+ * แก้: ให้ตัวฝังเห็น glyph ครบทุกตัวของฟอนต์ · ตัวที่ไม่มีรหัสอักขระใช้รหัสที่ "เจอจริงตอนจัดรูป"
+ * (shapeRun จดไว้ใน `__k2seen`) เพื่อให้คัดลอก/ค้นหาในไฟล์ได้ครบ — ตัวที่ไม่เคยถูกใช้ไม่ลงตารางคัดลอก
+ * @returns {boolean} true = ครอบแล้ว
+ */
+export function coverAllGlyphs(pdfFont) {
+  try {
+    const emb = pdfFont && pdfFont.embedder;
+    const fk = emb && emb.font;
+    if (!fk || typeof emb.allGlyphsInFontSortedById !== 'function' || emb.__k2seen) return false;
+    const seen = new Map();
+    emb.__k2seen = seen;
+    const base = emb.allGlyphsInFontSortedById;
+    let forCmap = false;
+    const all = () => {
+      const byId = new Map();
+      for (const g of base()) if (g) byId.set(g.id, g);
+      const n = Math.max(0, fk.numGlyphs | 0);
+      const out = [];
+      for (let id = 0; id < n; id++) {
+        const g = byId.get(id);
+        if (g) { out.push(g); continue; }
+        if (forCmap) { if (seen.has(id)) out.push({ id, advanceWidth: 0, codePoints: seen.get(id) }); continue; }
+        let aw = 0;
+        try { aw = num(fk.getGlyph(id).advanceWidth, 0); } catch { aw = 0; }
+        out.push({ id, advanceWidth: aw, codePoints: seen.get(id) || [] });
+      }
+      return out;
+    };
+    emb.glyphCache = { access: all, invalidate() {} };
+    const cmap = emb.embedUnicodeCmap;
+    if (typeof cmap === 'function') {
+      emb.embedUnicodeCmap = function (ctx) {
+        forCmap = true;
+        try { return cmap.call(emb, ctx); } finally { forCmap = false; }
+      };
+    }
+    return true;
+  } catch { return false; }
+}
+
+/**
+ * [alpha.170 · บั๊ก 1] จัดรูปข้อความหนึ่งช่วงด้วยฟอนต์ที่ฝัง — คืนตำแหน่งของ glyph ทุกตัว (หน่วยของฟอนต์)
+ * `plain` = ทุกตัววางต่อกันตามความกว้างธรรมชาติ ไม่มีการเยื้อง/ยก (วาดด้วยทางเดิมของ pdf-lib ได้เลย)
+ * ไม่ใช่ฟอนต์ที่ฝังเอง (ฟอนต์มาตรฐาน) = คืน null
+ * @returns {{glyphs:Array<{id:number,aw:number,xa:number,xo:number,yo:number}>, width:number, upm:number, plain:boolean}|null}
+ */
+export function shapeRun(pdfFont, text) {
+  const emb = pdfFont && pdfFont.embedder;
+  const fk = emb && emb.font;
+  if (!fk || typeof fk.layout !== 'function' || !fk.unitsPerEm) return null;
+  let run;
+  try { run = fk.layout(String(text ?? ''), emb.fontFeatures); } catch { return null; }
+  const seen = emb.__k2seen;
+  const glyphs = [];
+  let width = 0, plain = true;
+  (run.glyphs || []).forEach((g, i) => {
+    const p = (run.positions || [])[i] || {};
+    const aw = num(g.advanceWidth, 0);
+    const xa = num(p.xAdvance, aw), xo = num(p.xOffset, 0), yo = num(p.yOffset, 0);
+    if (xo || yo || xa !== aw) plain = false;
+    if (seen && !seen.has(g.id) && g.codePoints && g.codePoints.length) seen.set(g.id, g.codePoints.slice());
+    glyphs.push({ id: g.id, aw, xa, xo, yo });
+    width += xa;
+  });
+  return { glyphs, width, upm: fk.unitsPerEm, plain };
+}
+
+const hex4 = (n) => (n & 0xffff).toString(16).toUpperCase().padStart(4, '0');
+
+/**
+ * [alpha.170 · บั๊ก 1] แปลงผลจัดรูปเป็นรายการคำสั่งวาดของ PDF — บริสุทธิ์ (unit test ได้)
+ *   {tj:[hex|number,…]} = หนึ่งคำสั่ง TJ (ตัวเลข = เลื่อนแนวนอน หน่วย 1/1000 ของขนาดตัวอักษร · ค่าบวกเลื่อนซ้าย)
+ *   {rise:n}           = ยกเส้นฐาน (หน่วย point) — วรรณยุกต์ที่ซ้อนบนสระบน
+ * ตัวอ่าน PDF เดินหัวอ่านตามความกว้างใน /W เอง จึงต้องชดเชยเฉพาะส่วนที่ "ต่างจากความกว้างธรรมชาติ"
+ */
+export function shapedSegments(shape, size) {
+  const out = [];
+  if (!shape || !shape.glyphs.length) return out;
+  const upm = shape.upm, k = size / upm;
+  let pen = 0, pdfPen = 0, rise = 0, arr = [], buf = '';
+  const flushHex = () => { if (buf) { arr.push(buf); buf = ''; } };
+  const flushArr = () => { flushHex(); if (arr.length) { out.push({ tj: arr }); arr = []; } };
+  for (const g of shape.glyphs) {
+    if (g.yo !== rise) { flushArr(); out.push({ rise: +(g.yo * k).toFixed(3) }); rise = g.yo; }
+    const want = pen + g.xo;
+    const d = want - pdfPen;
+    if (Math.abs(d) > 0.5) { flushHex(); arr.push(+(-d * 1000 / upm).toFixed(2)); }
+    buf += hex4(g.id);
+    pdfPen = want + g.aw;
+    pen += g.xa;
+  }
+  flushArr();
+  if (rise) out.push({ rise: 0 });
+  return out;
+}
+
+const _fontKeys = new WeakMap();   // หน้า → (ฟอนต์ → ชื่อใน Resources) · ไม่สร้างชื่อใหม่ทุกครั้งที่วาด
+function fontKeyOf(page, font) {
+  let m = _fontKeys.get(page);
+  if (!m) { m = new Map(); _fontKeys.set(page, m); }
+  let key = m.get(font);
+  if (!key) { key = page.node.newFontDictionary(font.name, font.ref); m.set(font, key); }
+  return key;
+}
+
+/**
+ * [alpha.170 · บั๊ก 1] วาดช่วงข้อความที่ต้องจัดตำแหน่ง glyph เอง (เยื้อง/ยกวรรณยุกต์ · kerning)
+ * @returns {boolean} false = ช่วงนี้ไม่ต้องใช้ทางนี้ (หรือทำไม่ได้) — ผู้เรียกใช้ page.drawText ตามเดิม
+ */
+function drawShapedRun(page, font, text, o) {
+  const shape = shapeRun(font, text);
+  if (!shape || shape.plain || !shape.glyphs.length) return false;
+  try {
+    const segs = shapedSegments(shape, o.size);
+    const gs = Number.isFinite(o.opacity) && typeof page.maybeEmbedGraphicsState === 'function'
+      ? page.maybeEmbedGraphicsState({ opacity: o.opacity }) : undefined;
+    const ops = [pushGraphicsState()];
+    if (gs) ops.push(setGraphicsState(gs));
+    ops.push(beginText(), setFillingColor(o.color || rgb(0, 0, 0)),
+             setFontAndSize(fontKeyOf(page, font), o.size),
+             rotateAndSkewTextRadiansAndTranslate(toRadians(o.rotate || degrees(0)), 0, 0, o.x, o.y));
+    for (const s of segs) {
+      if (s.tj) {
+        const arr = page.doc.context.obj(s.tj.map((v) => (typeof v === 'number' ? PDFNumber.of(v) : PDFHexString.of(v))));
+        ops.push(PDFOperator.of(PDFOperatorNames.ShowTextAdjusted, [arr]));
+      } else {
+        ops.push(PDFOperator.of(PDFOperatorNames.SetTextRise, [PDFNumber.of(s.rise)]));
+      }
+    }
+    ops.push(endText(), popGraphicsState());
+    page.pushOperators(...ops);
+    return true;
+  } catch { return false; }
+}
+
 const pickFont = (set, bold, italic) =>
   (bold && italic ? set.boldItalic : bold ? set.bold : italic ? set.italic : set.regular);
 
@@ -362,7 +509,12 @@ const pickFont = (set, bold, italic) =>
 function makeDrawer(set, custom) {
   const clean = (s) => (custom ? String(s ?? '') : sanitizeForStandardFont(s));
   const widthOf = (font, text, size) => {
-    try { return font.widthOfTextAtSize(clean(text), size); }
+    // [alpha.170 · บั๊ก 1] ฟอนต์ที่ฝังเอง = ความกว้างหลังจัดรูป (ตรงกับตำแหน่งที่ drawShapedRun วางจริง)
+    try {
+      const sh = custom ? shapeRun(font, clean(text)) : null;
+      if (sh) return sh.width * size / sh.upm;
+      return font.widthOfTextAtSize(clean(text), size);
+    }
     catch { return String(text ?? '').length * size * 0.6; }
   };
   /**
@@ -398,9 +550,14 @@ function makeDrawer(set, custom) {
       if (color) opts.color = color;
       if (Number.isFinite(opacity)) opts.opacity = opacity;
       if (rotate) opts.rotate = rotate;
-      try { page.drawText(r.text, opts); } catch { return; }
+      // [alpha.170 · บั๊ก 1] ช่วงที่ต้องเยื้อง/ยก glyph (ไทยเกือบทุกคำ) วาดด้วยตัววางตำแหน่งเอง
+      const put = (at) => {
+        if (custom && drawShapedRun(page, at.font, r.text, at)) return true;
+        try { page.drawText(r.text, at); return true; } catch { return false; }
+      };
+      if (!put(opts)) return;
       if (bold && opts.font === (r.latin ? set.latin.regular : set.regular)) {
-        try { page.drawText(r.text, { ...opts, x: cx + size * 0.035 }); } catch {}
+        put({ ...opts, x: cx + size * 0.035 });
       }
       const adv = ws[i] || 0;
       cx += adv * ux; cy += adv * uy;
@@ -723,12 +880,25 @@ export async function mergeAndNumber(frontParts, bodyBytes, o = {}) {
     const set = await embedFonts(out, o.fonts);
     const { draw, widthOf } = makeDrawer(set, set.custom);
     const size = numClamp(o.fontPt, 12, 4, 96);
+    // [alpha.170 · bug hunt 5] นิยาย: เลขหน้าเป็นฟอนต์มาตรฐานของ PDF (Times/Helvetica) ไม่ใช่ตัวพิมพ์ดีดของบทภาพยนตร์
+    // ใช้ได้เฉพาะป้ายที่เป็น ASCII ล้วน (ตัวเลข + จุด) — อักขระอื่นกลับไปทางเดิมที่ฝังฟอนต์จริง
+    let std = null;
+    if (o.numberFont === 'serif' || o.numberFont === 'sans') {
+      try { std = await out.embedFont(o.numberFont === 'sans' ? StandardFonts.Helvetica : StandardFonts.TimesRoman); } catch { std = null; }
+    }
     const pages = out.getPages();
     for (let i = bodyStart; i < pages.length; i++) {
       // index ของ "หน้าในเนื้อเรื่อง" เริ่มที่ 1 — หน้าปก/รายชื่อไม่ถูกนับเลย
       const label = pageNumberLabel(i - bodyStart + 1, numFmt, o.startPage);
       if (!label) continue;
       const page = pages[i];
+      if (std && /^[\x20-\x7e]+$/.test(label)) {
+        const ws = std.widthOfTextAtSize(label, size);
+        page.drawText(label, { font: std, size, color: rgb(0, 0, 0),
+          x: page.getWidth() - (fmt.pageNumbers.right || 1) * PT_PER_IN - ws,
+          y: page.getHeight() - (fmt.pageNumbers.top ?? 0.5) * PT_PER_IN - size * 0.82 });
+        continue;
+      }
       const w = widthOf(pickFont(set, false, false), label, size);
       draw(page, label, {
         x: page.getWidth() - (fmt.pageNumbers.right || 1) * PT_PER_IN - w, boxWidth: 0,

@@ -12,7 +12,7 @@ The Killian 2 window is made of four horizontal bars and, between them, a centra
 
 | From top to bottom | What it is |
 |---|---|
-| **Title bar + menu bar** | Logo · the File/Edit/Format/Script/Export/Tools/View/Help/AI menus · the project title and version number · buttons that hide the panels on one side · the system's window buttons |
+| **Title bar + menu bar** | Logo · the File/Edit/Format/Script/Export/Tools/View/AI/Help menus · the project title and version number · buttons that hide the panels on one side · the system's window buttons |
 | **Toolbar** | The project buttons (open · save all · search the whole project) and buttons that show/hide panels and modes |
 | **Panel area** | The Project panel · the writing area (document tabs) · any other panels you open — docked, floating, tabbed together, or torn off into their own windows |
 | **Status bar** | The latest message · quick switches · today's goal · word/page counts · zoom · Home · Report a bug |
@@ -132,7 +132,7 @@ Every part of the window is a "panel", and you arrange panels the way you would 
 
 ![The Manage panels dialog](img/dlg-panel-system.webp)
 
-A panel opened for the first time **floats**. You can drag it to dock it later. The app remembers each panel's size and position (separately for when it floats and when it is docked).
+A panel opened for the first time **docks** beside the writing area (narrow panels such as Properties on the right, wide ones such as the boards on the left), and joins an existing group of the same kind as a tab if there is one — it floats only when the window is too narrow to make room. You can always drag it out to float. The app remembers each panel's size and position (separately for when it floats and when it is docked), and a panel you left floating comes back floating in the same place.
 
 ### Buttons on a panel header
 

@@ -27,7 +27,7 @@ import { num } from './num.js';
 import { withThaiFallback } from './lang-fonts.js';   // [alpha.145] ตาข่ายรองอักษรไทย
 // ตรรกะล้วน (ตารางรูปแบบ · เลือกตัวสร้าง · ค่าที่จำไว้) อยู่ใน export-formats.js — ทดสอบด้วย node ได้
 import { EXPORT_FORMATS, formatDef, docKind, pdfEngine, normalizeHub, exportPageNumberFmt,
-         defaultWorkflowFor, workflowForFormat, suggestName } from './export-formats.js';
+         defaultWorkflowFor, workflowForFormat, suggestName, proseNumberFont } from './export-formats.js';
 import { escClose, toast } from './ui.js';        // toast = [alpha.162 · W5 ข้อ 1]
 import { projectImageUrl } from './file-url.js';
 import { gi } from './icons.js';
@@ -42,7 +42,7 @@ const projectImg = (src) => projectImageUrl(state.root, src);
 import { exportNameRow } from './export-name-ui.js';
 import { errText, failText } from './err-text.js';        // [alpha.162 · W4] ข้อความผิดพลาดที่ผู้ใช้อ่านรู้เรื่อง
 export { EXPORT_FORMATS, formatDef, docKind, pdfEngine, defaultHubSettings, normalizeHub,
-         exportPageNumberFmt, defaultWorkflowFor, workflowForFormat, suggestName } from './export-formats.js';
+         exportPageNumberFmt, defaultWorkflowFor, workflowForFormat, suggestName, proseNumberFont } from './export-formats.js';
 
 // ═══════════════════════ ส่วน UI ═══════════════════════
 
@@ -166,7 +166,9 @@ async function frontMatterHtml(A, cfg, model, coverUrl) {
     `@page{size:${spf.paper.width}in ${spf.paper.height}in;` +
       `margin:${m.top}in ${m.right}in ${m.bottom}in ${m.left}in}`,
     'html,body{margin:0;padding:0}',
-    `body{font-family:${withThaiFallback(proseFontStack(pf))};` +
+    // [alpha.170 · bug hunt 5] ฟอนต์ของหน้าปก = ฟอนต์ที่เนื้อเรื่องใช้อยู่จริง (กฎ alpha.132r3) — เดิมคิดจาก
+    // `proseFormat.fontFamily` ที่ว่างอยู่ จึงได้ฟอนต์พิมพ์ดีดบนหน้าปกของนิยาย ทั้งที่เนื้อในเป็นฟอนต์หนังสือ
+    `body{font-family:${withThaiFallback(liveProseFonts().fontStack || proseFontStack(pf))};` +
       `font-size:${pf.fontPt}pt;line-height:1.5;color:#111}`,
     // ความสูงหนึ่งหน้าเต็ม (หักระยะขอบบน-ล่าง) → แต่ละ section = หนึ่งแผ่นเป๊ะ
     `.k-front{height:${+(spf.paper.height - m.top - m.bottom).toFixed(3)}in;` +
@@ -247,6 +249,7 @@ async function writeOut(A, cfg, built, nameOpts) {
       fmt: exportPageNumberFmt(A.spFormat()), fonts: await pdfFontBytes(),
       pageNumbers: o.pageNumbers !== false, startPage: built.startPage || 1,   // [alpha.159 · M9]
       fontPt: num(A.proseFormat().fontPt, 12), meta: { title: built.title },
+      numberFont: proseNumberFont(liveProseFonts().fontStack),
     });
     await kapi.writeBytes(dest, r.bytes);
     return { dest, note: ttf('ui.xhub.donePdfPages', r.pageCount, r.frontCount) };
@@ -459,7 +462,7 @@ function renderScriptTitlePreview(box, titles, fmtS, scale, innerHtml) {
   return titles.length;
 }
 
-function renderFrontPreview(box, built, cfg, paper, scale) {
+function renderFrontPreview(box, built, cfg, paper, scale, look = {}) {
   const wantCover = cfg.pdf.titlePages !== false;
   const roster = cfg.pdf.roster !== false ? String(built.roster || '').trim() : '';
   if (!wantCover && !roster) return 0;
@@ -474,6 +477,10 @@ function renderFrontPreview(box, built, cfg, paper, scale) {
     page.style.width = paper.width + 'in';
     page.style.height = paper.height + 'in';
     page.style.transform = 'scale(' + scale + ')';
+    // [alpha.170 · บั๊ก 13] ฟอนต์/ขนาดเดียวกับที่ frontMatterHtml() ใส่ให้ไฟล์จริง — เดิมหน้าปกในตัวอย่างสืบทอด
+    // ฟอนต์พิมพ์ดีดของ .sp-page (มุมมองบทภาพยนตร์) ทั้งที่ไฟล์จริงใช้ฟอนต์ของเนื้อเรื่อง = ตัวอย่างไม่ตรงไฟล์
+    if (look.stack) page.style.fontFamily = look.stack;
+    if (look.pt) page.style.fontSize = look.pt + 'pt';
     slot.append(page); frag.append(slot);
     return page;
   };
@@ -482,6 +489,7 @@ function renderFrontPreview(box, built, cfg, paper, scale) {
     const p = mkPage('xhub-front-cover');
     if (built.coverUrl) { const img = el('img', 'xhub-front-img'); img.src = built.coverUrl; p.append(img); }
     p.append(el('div', 'xhub-front-title', built.title || ''));
+    if (built.author) p.append(el('div', 'xhub-front-author', built.author));
     n++;
   }
   if (roster) { mkPage('xhub-front-cast').append(el('pre', 'xhub-front-cast-body', roster)); n++; }
@@ -616,7 +624,12 @@ async function renderPreview(host, A, cfg, built) {
     // หน้าปก/หน้ารายชื่อ ต้องเห็นในตัวอย่างด้วย — ติ๊กแล้วต้องมีอะไรเปลี่ยนบนจอเสมอ
     // [alpha.134 · X-1] ฝั่งบทภาพยนตร์มีหน้าปกของตัวเอง (วาดไปแล้วข้างบน) — ปกแบบนิยาย
     // เป็นของ **นิยาย** เท่านั้น (รูปปกจาก "จัดการเล่ม") ไม่ใช่ของทุกชนิดเอกสาร
-    if (built.engine !== 'pdflib') renderFrontPreview(box, built, cfg, fmt.paper, fs.scale);
+    if (built.engine !== 'pdflib') {
+      const pf2 = A.proseFormat();
+      const { proseFontStack } = await import('./prose-format.js');
+      renderFrontPreview(box, built, cfg, fmt.paper, fs.scale,
+                         { stack: withThaiFallback(liveProseFonts().fontStack || proseFontStack(pf2)), pt: num(pf2.fontPt, 12) });
+    }
     return 'page';
   }
   if (cfg.format === 'html') {
@@ -687,6 +700,20 @@ export async function openExportHub() {
   const close = () => ov.remove();
   escClose(ov, close);                        // [alpha.124 ข้อ 15]
   bClose.onclick = close;
+  // ══ [alpha.170 · บั๊ก 12] ผลของปุ่ม "ส่งออก" ต้องเห็นได้ **ในกล่อง** ══
+  // แถบสถานะอยู่ใต้ฉากหลังของกล่อง: ส่ง .fdx ของนิยาย/ส่งออกล้ม แล้วขึ้นข้อความที่นั่น = ผู้ใช้เห็นว่า "กดแล้วเงียบ"
+  const sayIn = (text, bad = false) => {
+    warnLbl.replaceChildren(document.createTextNode(text));
+    warnLbl.classList.remove('xhub-done'); warnLbl.removeAttribute('title');
+    warnLbl.classList.toggle('xhub-bad', !!bad);
+  };
+  /** ปลายทางนี้รับเฉพาะบทภาพยนตร์ แต่เอกสารที่ประกอบได้ไม่ใช่ */
+  const wrongKind = () => { const d = formatDef(cfg.format); return !!(d.needScript && built && built.kind !== 'screenplay'); };
+  const syncGo = () => {
+    const bad = wrongKind();
+    bGo.disabled = bad;
+    if (bad) sayIn(tt('ui.xhub.needScriptOnly') + ' — ' + tt('ui.xhub.needScriptHint'), true);
+  };
   ov.onclick = (e) => { if (e.target === ov) close(); };
 
   // ---- ซ้าย: รายการรูปแบบ ----
@@ -695,6 +722,8 @@ export async function openExportHub() {
     for (const f of EXPORT_FORMATS) {
       const row = el('div', 'xhub-fmt' + (f.key === cfg.format ? ' on' : ''));
       row.dataset.fmt = f.key;
+      // [alpha.170] รายการย่อ: คำอธิบายโชว์เฉพาะตัวที่เลือก (ที่เหลืออยู่ในทูลทิป) — เดิม 12 รูปแบบเห็นได้ทีละ 4–6 ตัว ต้องเลื่อนหา
+      row.title = tt(f.descKey);
       row.append(el('span', 'xhub-fmt-ic', f.icon));
       const txt = el('div', 'xhub-fmt-txt');
       txt.append(el('div', 'xhub-fmt-name', tt(f.labelKey)),
@@ -717,6 +746,7 @@ export async function openExportHub() {
 
   // [alpha.164 ข้อ A5] ชนิดที่ "ตามไฟล์ต้นทาง" ตัดสินได้จริง (รู้หลังสร้างตัวอย่างรอบแรก) — ตัวเลือกเฉพาะบทต้องดูค่านี้
   let autoKind = null;
+  let hasRoster = false;       // เล่มที่กำลังส่งออกมีหน้ารายชื่อตัวละครไหม (รู้หลังประกอบรอบแรก)
   function renderOptions() {
     colOpt.replaceChildren();
     const def = formatDef(cfg.format);
@@ -781,8 +811,11 @@ export async function openExportHub() {
       };
       mk('toc', 'ui.xhub.pdfToc');
       mk('titlePages', 'ui.xhub.pdfCover');
-      mk('roster', 'ui.xhub.pdfRoster');
-      mk('headers', 'ui.xhub.pdfHeaders');
+      // [alpha.170 · bug hunt 5] หน้ารายชื่อตัวละครเป็นธรรมเนียมของบท — นิยายเห็นตัวเลือกนี้เฉพาะเมื่อเล่มมีรายชื่อจริง
+      // (ไม่มีรายชื่อ = ติ๊กไปก็ไม่มีอะไรเปลี่ยน) · หัวกระดาษทุกหน้าก็เป็นของบทเท่านั้น
+      const kind0 = cfg.kind === 'auto' ? autoKind : cfg.kind;
+      if (kind0 !== 'prose' || hasRoster) mk('roster', 'ui.xhub.pdfRoster');
+      if (kind0 !== 'prose') mk('headers', 'ui.xhub.pdfHeaders');
       mk('pageNumbers', 'ui.xhub.pdfNums');
       // [alpha.132 ข้อ 3] เลขฉากเป็นของบทภาพยนตร์เท่านั้น — บังคับชนิดเป็นนิยายแล้วซ่อนไป
       // [alpha.164 ข้อ A5] "ตามไฟล์ต้นทาง" ที่ตัดสินได้เป็นนิยาย ก็ต้องซ่อนด้วย (เดิมเช็คแค่ค่าที่บังคับ)
@@ -797,7 +830,7 @@ export async function openExportHub() {
       selCol.value = cfg.pdf.colorMode === 'color' ? 'color' : 'mono';
       selCol.onchange = () => { cfg.pdf.colorMode = selCol.value; saveCfg(); refresh(); };
       colOpt.append(el('div', 'xhub-row-lbl', tt('ui.pdf.colorMode')), selCol);
-      colOpt.append(el('div', 'k-hint', tt('ui.pdf.colorModeHint')));
+      if (kindNow !== 'prose') colOpt.append(el('div', 'k-hint', tt('ui.pdf.colorModeHint')));
       const wm = el('input', 'k-dlg-input'); wm.id = 'xhub-wm';
       wm.value = cfg.pdf.watermark; wm.placeholder = tt('ui.xhub.pdfWmHint');
       wm.onchange = () => { cfg.pdf.watermark = wm.value.trim(); saveCfg(); refresh(); };
@@ -828,15 +861,20 @@ export async function openExportHub() {
   let busy = false;
   async function refresh() {
     const def = formatDef(cfg.format);
-    if (def.handoff) { built = null; warnLbl.textContent = ''; await renderPreview(colPrev, A, cfg, null); return; }
+    if (def.handoff) { built = null; warnLbl.textContent = ''; warnLbl.classList.remove('xhub-bad'); bGo.disabled = false; await renderPreview(colPrev, A, cfg, null); return; }
     const gen = ++job;
+    warnLbl.classList.remove('xhub-done', 'xhub-bad'); warnLbl.removeAttribute('title');
     colPrev.replaceChildren(el('div', 'dim', tt('ui.xhub.building')));
     busy = true;
     try {
       const r = await buildAll(A, cfg, drafts);
       if (gen !== job) return;                       // มีรอบใหม่แซงแล้ว — ทิ้งผลรอบนี้
       built = r;
-      if (cfg.kind === 'auto' && r && r.kind !== autoKind) { autoKind = r.kind; renderOptions(); }
+      const hr = !!(r && String(r.roster || '').trim());
+      if ((cfg.kind === 'auto' && r && r.kind !== autoKind) || hr !== hasRoster) {
+        if (cfg.kind === 'auto' && r) autoKind = r.kind;
+        hasRoster = hr; renderOptions();
+      }
       warnLbl.textContent = r && r.warnings.length ? r.warnings.join(' · ') : '';
       await renderPreview(colPrev, A, cfg, r);
     } catch (e) {
@@ -844,7 +882,7 @@ export async function openExportHub() {
       built = null;
       log('error', tt('ui.xhub.buildFail'), e);
       colPrev.replaceChildren(el('div', 'k-hint', tt('ui.xhub.buildFail') + ' — ' + errText(e)));
-    } finally { if (gen === job) busy = false; }
+    } finally { if (gen === job) { busy = false; syncGo(); } }
   }
 
   /**
@@ -872,7 +910,7 @@ export async function openExportHub() {
     bGo.disabled = true;
     try {
       const r = built && !busy ? built : await withBusy(tt('ui.xhub.building'), () => buildAll(A, cfg, drafts));
-      if (!r) { setStatus(tt('ui.xhub.nothingToExport')); return; }
+      if (!r) { setStatus(tt('ui.xhub.nothingToExport')); sayIn(tt('ui.xhub.nothingToExport'), true); return; }
       // [alpha.124 ข้อ 26] ★ บังคับ `needScript` จริง ๆ เสียที
       // ตารางรูปแบบประกาศ `needScript: true` ให้ .fdx และ PDF ลายน้ำ มาตั้งแต่ alpha.88
       // แต่ **ไม่มีโค้ดบรรทัดไหนอ่านค่านี้เลย** → ส่งนิยายออกเป็น .fdx ได้ไฟล์ขยะเงียบ ๆ
@@ -880,6 +918,7 @@ export async function openExportHub() {
       // เช็คหลังประกอบเสร็จ เพราะตอนนั้นถึงจะรู้ `kind` จริง (ผู้ใช้บังคับชนิดเองได้ด้วย)
       if (def.needScript && r.kind !== 'screenplay') {
         setStatus(tt('ui.xhub.needScriptOnly'));
+        sayIn(tt('ui.xhub.needScriptOnly') + ' — ' + tt('ui.xhub.needScriptHint'), true);
         return;
       }
       const done = await writeOut(A, cfg, r, { name: nameRow.name() });
@@ -890,7 +929,17 @@ export async function openExportHub() {
         catch (e) { log('warn', tt('ui.xname.openFail'), e); }
       }
       await saveCfg();
-      close();
+      // [alpha.170 · bug hunt 5] กล่องไม่ปิดตัวเองหลังส่งออก — ส่งออกหลายรูปแบบต่อกันได้โดยไม่ต้องเปิดกล่องใหม่ทุกครั้ง
+      // บอกผลไว้ในกล่อง (แถบสถานะอยู่ใต้กล่อง มองไม่เห็น) พร้อมลิงก์ไปที่ไฟล์
+      {
+        const more = el('button', 'cmp-mini', tt('ui.xhub.revealFile'));
+        more.onclick = () => kapi.revealInOS(done.dest);
+        const nm = el('bdi', null, String(done.dest).split(/[\\/]/).pop());
+        nm.dir = 'ltr';
+        warnLbl.replaceChildren(document.createTextNode(tt('ui.common.exportDone')), nm, more);
+        warnLbl.classList.add('xhub-done');
+        warnLbl.title = done.dest + (done.note ? ' · ' + done.note : '');
+      }
       setStatus(tt('ui.common.exportDone') + done.dest + (done.note ? ' · ' + done.note : ''));
       // [alpha.162 · W5 ข้อ 1] งานยาวที่ผู้ใช้อาจสลับไปทำอย่างอื่นระหว่างรอ → toast พร้อมทางไปหาไฟล์
       toast(tt('ui.common.exportDone') + done.dest, { level: 'ok',
@@ -899,7 +948,8 @@ export async function openExportHub() {
     } catch (e) {
       log('error', tt('ui.xhub.exportFail'), e);
       setStatusError(tt('ui.xhub.exportFail') + ' — ' + errText(e));
-    } finally { bGo.disabled = false; }
+      sayIn(tt('ui.xhub.exportFail') + ' — ' + errText(e), true);
+    } finally { bGo.disabled = wrongKind(); }
   };
 
   renderFormats(); renderOptions();

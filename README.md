@@ -27,6 +27,8 @@
 - **A proper macOS build** — the app has its own icon, its requirements are measured on a real Mac (see [System requirements](#system-requirements)), and dialogs no longer "bounce" after you drag them.
 - **Story Starter is cleaner** — the setup-wizard-style artwork placeholders are gone, so each step uses the full width of the panel.
 - **About and credits tidied up** — credits list only what the app actually ships, plus a *Support the Project* link under **Help** and in the About dialog.
+- **A hands-on pre-release pass fixed what real use turned up** — pressing Enter in the find box no longer replaces the match, novel PDFs keep their chapter titles and scene breaks (`* * *` is no longer exported as an empty bullet), project-wide search finds Thai names wherever they appear, new Wiki entries link up in open scenes straight away, and theme names no longer reference other products.
+- **Panels dock instead of floating over your text.** A panel you open for the first time docks beside the writing area (or joins the tab group of a similar panel); it only floats when there is no room for it. The Export Hub also stays open after an export and shows the file it wrote, and novel PDFs use the book’s own typeface on the cover, with page numbers in a matching serif or sans-serif face instead of a typewriter one.
 
 ---
 

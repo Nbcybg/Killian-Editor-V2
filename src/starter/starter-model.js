@@ -19,6 +19,7 @@ import { normalizePrompts, expandMentions, migrateMentions } from '../entity-men
 import { htmlToPlain } from './starter-html.js';
 import { gi } from '../icons.js';
 import { cmpText } from '../locale.js';
+import { tagLabel } from './starter-tags.js';
 
 // v1 → v2 = [alpha.122] โหมดพื้นฐาน/ขั้นสูง + ช่องขั้นสูงของตัวละครและของตอน
 // ไฟล์ v1 เปิดได้ทุกตัว: ช่องใหม่ทุกช่องมีค่าเริ่มต้นว่าง และโหมดตกกลับเป็น "พื้นฐาน"
@@ -99,6 +100,30 @@ export function uniqueSlug(name, taken = []) {
     if (!used.has(s)) return s;
   }
   return base + '-' + Date.now().toString(36);
+}
+
+/**
+ * [alpha.170] โฟลเดอร์ยังเป็น **ชื่อชั่วคราว** ที่ได้ตอนสร้างเรื่องโดยยังไม่ตั้งชื่อไหม
+ * @param {string} slug
+ * @param {string[]} placeholders  ชื่อชั่วคราวที่เป็นไปได้ (ข้อความ "ยังไม่ได้ตั้งชื่อ" ของภาษาที่ใช้อยู่)
+ */
+export function isPlaceholderSlug(slug, placeholders = []) {
+  const bases = new Set(['starter', ...placeholders.map(slugify)]);
+  const s = String(slug || '');
+  if (bases.has(s)) return true;
+  const m = /^(.*)-(\d+)$/.exec(s);
+  return !!m && bases.has(m[1]);
+}
+/**
+ * [alpha.170] ควรย้ายโฟลเดอร์ตามชื่อเรื่องไหม — เฉพาะ **ครั้งแรกที่ตั้งชื่อ** ของเรื่องที่ยังทำ wizard ไม่เสร็จ
+ * (เสร็จแล้ว = มีของที่อ้างชื่อโฟลเดอร์อยู่ข้างนอก เช่น เส้นเวลา/แผนที่ที่ส่งไปจาก starter — ห้ามย้าย)
+ */
+export function shouldAdoptName(s, placeholders = []) {
+  if (!s || s.done) return false;
+  const name = String(s.name || '').trim();
+  if (!name || !isPlaceholderSlug(s.slug, placeholders)) return false;
+  const want = slugify(name);
+  return want !== s.slug && !isPlaceholderSlug(want, placeholders);
 }
 
 // ───────────────────────── ตัวละคร ─────────────────────────
@@ -275,7 +300,7 @@ export function searchStarters(rows, query) {
 export function starterSummary(s) {
   const parts = [];
   if ((s.cast || []).length) parts.push(t('ui.starter.sumCast') + (s.cast || []).length);
-  if ((s.tags || []).length) parts.push((s.tags || []).slice(0, 3).join(' · '));
+  if ((s.tags || []).length) parts.push((s.tags || []).slice(0, 3).map(tagLabel).join(' · '));
   return parts.join(' — ');
 }
 

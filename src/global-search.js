@@ -127,6 +127,7 @@ export async function runProjectSearch(q, opts = {}) {
     const walk = async (dir, depth = 0) => {
       for (const name of await kapi.listDirs(dir).catch(() => [])) {
         if (depth === 0 && skipTop.has(String(name).toLowerCase())) continue;
+        if (String(name).startsWith('.')) continue;                     // [alpha.170] โฟลเดอร์จุดนำ = ไม่ใช่งานเขียน
         await walk(await kapi.join(dir, name), depth + 1);
       }
       for (const f of await kapi.listFiles(dir, '').catch(() => [])) {
@@ -268,9 +269,9 @@ export function buildSearchUI(host, { onOpen } = {}) {
       const head = el('div', 'k-gsearch-hit-head');
       // กฎข้อ 11: ชื่อไฟล์/ชื่อฉากเป็นข้อความของผู้ใช้ → text node เท่านั้น
       head.append(el('span', 'k-gsearch-hit-name', (h.type === 'md' ? gi('file') + ' ' : gi('clipboard') + ' ') + h.name));
-      let rel = h.file;
-      try { rel = kapi.relative ? kapi.relative(state.root, h.file) : h.file; } catch {}
-      head.append(el('span', 'k-gsearch-hit-path', String(rel)));
+      // [alpha.170 · bug hunt 5] ทางสัมพัทธ์คิดเองแบบ sync — `kapi.relative` เป็น IPC (คืน Promise)
+      // เดิมทุกแถวจึงขึ้นข้อความ "[object Promise]" แทนที่อยู่ของไฟล์
+      head.append(el('span', 'k-gsearch-hit-path', relToProject(state.root, h.file)));
       card.append(head);
       for (const m of (h.matches || []).slice(0, 3)) {
         const line = snippetNode('k-gsearch-line', m.text || '', terms);
@@ -358,6 +359,19 @@ export function buildSearchUI(host, { onOpen } = {}) {
 }
 
 /** แผงค้นหา (มุมมอง → แผง → ค้นหา) — ทางเข้าเดียวของการค้นหาทั้งโปรเจกต์ (Ctrl+Shift+F) */
+/** ที่อยู่ของไฟล์แบบสัมพัทธ์กับรากผลงาน (คั่นด้วย /) — ไม่ได้อยู่ใต้ราก = คืนทางเดิม */
+export function relToProject(root, file) {
+  const f = String(file || '').replace(/\\/g, '/');
+  const r = String(root || '').replace(/\\/g, '/').replace(/\/+$/, '');
+  return r && f.toLowerCase().startsWith(r.toLowerCase() + '/') ? f.slice(r.length + 1) : f;
+}
+/** ยืนที่ช่องคำค้นของแผงค้นหา (ถ้าแผงถูกวาดแล้ว) — เรียกหลังสั่งเปิดแผงด้วยคำสั่ง/คีย์ลัด */
+export function focusSearchPanel() {
+  const q = document.querySelector('#search-body .k-gsearch-input, .k-gsearch-body .k-gsearch-input');
+  if (!q || !q.getBoundingClientRect().width) return false;
+  q.focus(); q.select();
+  return true;
+}
 export async function renderSearchPanel(host) {
   if (!host) return null;
   if (!state.root) {

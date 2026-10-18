@@ -721,6 +721,8 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 /* [alpha.81 ข้อ 5] ไฮไลต์ผลค้นหา — ธีมมืดใช้เหลืองเข้ม ธีมสว่างใช้เหลืองอ่อน
    (เดิมเป็นเหลืองเข้มตายตัว → ธีมสว่างได้หมึกดำบนพื้นเขียวขี้ม้า อ่านแทบไม่ออก) */
 .find-hit { background:var(--find-hit, #6b5518); border-radius:var(--r-xs); }
+/* [alpha.170 · bug hunt 5] ผลที่กำลังยืนอยู่ — เห็นได้แม้โฟกัสค้างอยู่ในช่องค้นหา */
+.find-cur { outline:2px solid var(--accent); outline-offset:1px; border-radius:var(--r-xs); }
 
 /* ---------- index/outline ---------- */
 /* เนื้อแผงถูก Panel System วางลง .k-panel-body → ต้องยืดเต็มช่องที่ได้รับ */
@@ -1344,7 +1346,10 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .home-head { position:relative; }
 .home-corner { position:absolute; top:0; right:0; display:flex; gap:6px; }
 .home-corner .home-btn-icon { padding:7px 11px; min-width:0; line-height:1; }   /* [alpha.164 ข้อ H2] เดิมเล็กจนแทบกดไม่โดน */
-.k-ok.k-danger { background:#a03d34; color:#fff; } .k-ok.k-danger:hover { background:#c1493e; color:#fff; }
+/* [alpha.170 · bug hunt 5] `.k-danger{color:… !important}` เคยย้อมตัวหนังสือของปุ่มลบเป็นแดงบนพื้นแดง (อ่านไม่ออก) */
+.k-ok.k-danger { background:#a03d34; color:#fff !important; } .k-ok.k-danger:hover { background:#c1493e; color:#fff !important; }
+/* ปุ่ม × ที่มุมกล่อง (addDialogCloseX) เคยทับท้ายข้อความของหัวกล่องบรรทัดยาว */
+.k-dialog.k-dlg-has-x > .k-dlg-title:first-child { padding-right:30px; }
 .k-menu { position:fixed; z-index:90; background:var(--side);
   border:1px solid var(--border); border-radius:10px; padding:5px;
   min-width:190px; box-shadow:0 10px 32px rgba(0,0,0,.55);
@@ -1353,6 +1358,13 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
   max-height:calc(100vh - 16px); overflow-y:auto; overscroll-behavior:contain;
   scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
 .k-menu-item { padding:6px 12px; border-radius:7px; cursor:default; }
+/* [alpha.170 · bug hunt 5] เมนูที่สูงชนขอบบนทับแถบชื่อหน้าต่าง (เขตลากของระบบ — กฎ alpha.141r) ต้องเจาะ no-drag เอง
+   ไม่งั้นรายการบนสุดถูกกลืนคลิกไปเป็น "ลากหน้าต่าง" */
+.k-menu, .k-menu * { -webkit-app-region:no-drag; }
+/* เมนูยาว (เมนูคลิกขวาของฉากมีสามสิบกว่ารายการ) = แถวแน่นขึ้น · เลื่อนได้ต้องเห็นว่าเลื่อนได้ */
+.k-menu.k-menu-dense .k-menu-item { padding-top:3px; padding-bottom:3px; }
+.k-menu.k-menu-more::after { content:''; position:sticky; bottom:-6px; display:block; height:22px; margin-top:-22px;
+  pointer-events:none; background:linear-gradient(transparent, var(--side)); }
 .k-menu-item:hover { background:var(--sel); color:var(--bright); }
 .k-menu-item.k-danger { color:var(--st-danger); }
 /* แถวหัวข้อในเมนู (ไม่คลิก) */
@@ -2669,6 +2681,21 @@ body.paper-mode .k-paper .sp-raw { color:#888; }
 .home-actions .home-view-mode.on { background:var(--sel); color:var(--bright); border-color:var(--accent); }
 .home-actions .home-btn-find { min-width:0; padding:8px 14px; }
 .home-actions .home-btn-find.on { background:var(--sel); color:var(--bright); }
+.home-actions .k-btn-idle { opacity:.5; }
+/* ศูนย์ส่งออก: ผลของการส่งออกรอบล่าสุด (กล่องไม่ปิดเองแล้ว) */
+.xhub-warn.xhub-done { opacity:1; color:var(--fg); display:flex; align-items:center; gap:8px; min-width:0; }
+.xhub-warn.xhub-done bdi { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; font-weight:600; }
+.k-input-need { border-color:var(--st-danger) !important; animation:k-input-need .28s ease-out 1; }
+@keyframes k-input-need { 0%,100% { translate:0 0; } 25% { translate:-4px 0; } 75% { translate:4px 0; } }
+/* [alpha.170 · bug hunt 5] หน้าต่างแคบ: ปุ่มหดตามข้อความ แถวจะได้ไม่พับ ("ออกจากโปรแกรม" เคยตกไปบรรทัดที่สอง) */
+@media (max-width: 1240px) {
+  .home-actions button { min-width:0; padding:8px 12px; }
+  .home-actions .home-view-mode { padding:8px 10px; }
+}
+/* หน้าต่างเตี้ย: รูปหัวการ์ดเตี้ยลง ปุ่ม "เปิดโปรเจกต์" ของการ์ดจะได้ไม่ตกขอบล่าง */
+@media (max-height: 780px) {
+  .home-card .home-card-cover { height:84px; }
+}
 .home-find-input { flex:0 1 220px; min-width:120px; padding:7px 10px;
   background:var(--bar); border:1px solid var(--accent); border-radius:6px;
   color:var(--fg); font-size:calc(13px * var(--ui-scale, 1)); }
@@ -5597,6 +5624,10 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
 .tb-na { opacity:.34 !important; pointer-events:none !important; cursor:not-allowed; }
 .tb-na.on { background:transparent !important; color:inherit !important; }
 /* ปุ่ม "เรียกแถบมาหาเคอร์เซอร์" — ของแถบเอง ไม่ใช่ปุ่มจัดรูปแบบ จึงอยู่ติดที่จับ */
+/* [alpha.170 · bug hunt 5] ตัวคั่นขึ้นแถวของกลุ่มปุ่มจัดหน้า (keepAlignGroupWhole) — กว้างเต็มแถว สูง 0 */
+.pane.wiki-pane::after { content:''; display:block; height:120px; }   /* ที่ว่างท้ายฟอร์ม — ช่องสุดท้ายเลื่อนพ้นแถบรูปแบบลอยได้ */
+.k-fmtbar > .k-fmt-br { flex:0 0 100%; height:0; min-width:0; margin:0; padding:0; border:0; pointer-events:none; }
+.k-fmtbar.k-fmtbar-narrow > .k-fmt-br { display:none; }
 .k-fmtbar-here { min-width:26px !important; opacity:.72; }
 .k-fmtbar-here:hover { opacity:1; }
 .k-fmtbar.k-fmt-flying { transition:none; box-shadow:0 12px 30px rgba(0,0,0,.5); }
@@ -8355,7 +8386,7 @@ body.k-menubar-on .tb-menu:focus { background:var(--hover); color:var(--bright);
   .ProseMirror .ed-page-break, .ProseMirror .sp-page-break, .ProseMirror .sp-cont-edge,
   .ProseMirror .sp-cont-mark { display:none !important; }
   #panes .pane.on .ProseMirror *:not([style*="color"]) { color:inherit !important; }
-  .ProseMirror .k-mention, .ProseMirror .k-spell-bad, .ProseMirror .find-hit, .ProseMirror .k-cm-anchor,
+  .ProseMirror .k-mention, .ProseMirror .k-spell-bad, .ProseMirror .find-hit, .ProseMirror .find-cur, .ProseMirror .k-cm-anchor,
   .ProseMirror .sp-fmt-guide {
     background:none !important; border:0 !important; box-shadow:none !important; text-decoration:none !important;
     padding:0 !important; margin:0 !important; border-radius:0 !important; }
@@ -8543,3 +8574,80 @@ body.k-menubar-on .tb-menu:focus { background:var(--hover); color:var(--bright);
 .k-about-left > .k-about-foot { padding-top:12px; }
 .k-about-pill.k-about-support { display:inline-flex; align-items:center; gap:5px; }
 .k-about-copy { margin-top:12px; font-size:calc(11px * var(--ui-scale, 1)); color:var(--brand-navy); opacity:.62; }
+
+/* ══ [alpha.170 · ai-dlg] กล่อง AI (ai-ui.js) — กว้างคงที่ · แถบกำลังทำงาน · ช่องผลเลื่อนเอง ══
+   เดิมกล่องกว้างตามเนื้อหา: ผลยาวหนึ่งบรรทัดทำกล่องกระโดดจาก 640 เป็น 1120px · แถวช่องกรอกใช้สไตล์อินไลน์คนละแบบ */
+.k-dialog.k-ai-dlg { width:min(calc(720px * var(--uis)), 92vw); min-width:0; max-width:92vw; }
+.k-ai-dlg [hidden] { display:none !important; }
+.k-ai-dlg .k-ai-cols { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:calc(12px * var(--uis)); }
+.k-ai-dlg .k-ai-col { min-width:0; display:flex; flex-direction:column; gap:calc(6px * var(--uis)); }
+.k-ai-dlg .k-ai-field { display:flex; flex-direction:column; gap:calc(4px * var(--uis)); margin-top:calc(8px * var(--uis)); min-width:0; }
+.k-ai-dlg .k-ai-field > label { font-size:calc(12px * var(--uis)); color:var(--dim); }
+.k-ai-dlg .k-ai-field > .wiki-input,
+.k-ai-dlg .k-ai-ta { width:100%; flex:none; box-sizing:border-box; }
+.k-ai-dlg .k-ai-ta { resize:vertical; margin-top:calc(8px * var(--uis)); font:inherit; }
+.k-ai-dlg .k-ai-field > .k-ai-ta,
+.k-ai-dlg .k-ai-col > .k-ai-ta { margin-top:0; }
+.k-ai-dlg .k-ai-result { max-height:38vh; min-height:calc(64px * var(--uis)); overflow:auto; white-space:pre-wrap;
+  overflow-wrap:anywhere; padding:calc(8px * var(--uis)) calc(10px * var(--uis)); background:var(--sunken, var(--bg));
+  border:1px solid var(--border); border-radius:var(--r-md, 6px); font-size:calc(14px * var(--uis)); line-height:1.8; }
+.k-ai-dlg .k-ai-result[data-state="busy"] { color:var(--dim); }
+.k-ai-dlg .k-ai-result[data-state="err"] { color:var(--st-danger); }
+.k-ai-dlg .k-ai-result-list { margin-top:calc(10px * var(--uis)); max-height:50vh; }
+.k-ai-dlg .k-ai-item { margin:calc(8px * var(--uis)) 0; padding:calc(8px * var(--uis)) calc(10px * var(--uis));
+  background:var(--side); border-radius:var(--r-md, 6px); border-inline-start:3px solid var(--accent); }
+.k-ai-dlg .k-ai-note { min-height:1.3em; font-size:calc(12px * var(--uis)); }
+.k-ai-dlg .k-ai-scope-info { margin-top:calc(8px * var(--uis)); }
+.k-ai-progress { position:relative; height:2px; margin:calc(-6px * var(--uis)) 0 calc(8px * var(--uis)); overflow:hidden;
+  background:var(--border); border-radius:2px; }
+.k-ai-progress::after { content:''; position:absolute; inset-block:0; inset-inline-start:0; width:35%;
+  background:var(--accent-hi, var(--accent)); animation:k-ai-slide 1.1s linear infinite; }
+@keyframes k-ai-slide { from { transform:translateX(-100%); } to { transform:translateX(300%); } }
+@media (prefers-reduced-motion: reduce) { .k-ai-progress::after { animation:none; width:100%; opacity:.5; } }
+/* ปุ่มที่กดไม่ได้ต้องดูออกว่ากดไม่ได้ (เดิมมีเฉพาะกล่องรายงานบั๊ก — "แก้ไข" ในตั้งค่า AI ดูเหมือนกดได้ทั้งที่ยังไม่มีผู้ให้บริการ) */
+.k-dialog button:disabled { opacity:.45; }
+/* ช่องคีย์ + ปุ่มแสดง/ซ่อน */
+.ai-cred-keywrap { display:flex; gap:calc(6px * var(--uis)); align-items:center; }
+.ai-cred-keywrap > .ai-cred-key { flex:1 1 auto; min-width:0; }
+
+/* ══ [alpha.170 · trial-fix] ของที่เจอตอนลองใช้โปรแกรมจริง ══ */
+/* ศูนย์ส่งออก: ข้อความที่เป็น "ทำไม่ได้/ล้ม" ต้องเห็นชัดในกล่อง + ขึ้นบรรทัดได้ (เดิมไปขึ้นแถบสถานะหลังฉากหลังของกล่อง) */
+.xhub-warn.xhub-bad { opacity:1; color:var(--st-danger); white-space:normal; overflow:visible; }
+.xhub-front-author { margin-top:.5in; font-size:1.15em; color:var(--paper-ink); }
+/* แถวชื่อไฟล์ของศูนย์ส่งออก: ป้าย + ช่องอยู่บรรทัดเดียว · ตัวอย่างชื่อ + "เปิดไฟล์เมื่อเสร็จ" อีกบรรทัด
+   (เดิมห้าบรรทัดซ้อนกัน = กินเกือบครึ่งกล่องที่หน้าต่าง 1024×700 · คำอธิบายยังอยู่ในทูลทิปของช่อง) */
+.k-dialog.k-xhub > .k-xname { display:grid; grid-template-columns:auto minmax(0, 1fr) auto;
+  column-gap:calc(10px * var(--uis)); row-gap:calc(5px * var(--uis)); align-items:center;
+  margin-top:calc(8px * var(--uis)); padding-top:calc(8px * var(--uis)); }
+.k-dialog.k-xhub > .k-xname > .k-xname-lbl { margin:0; white-space:nowrap; }
+.k-dialog.k-xhub > .k-xname > .k-xname-ctrls { grid-column:2 / 4; min-width:0; }
+.k-dialog.k-xhub > .k-xname > .k-xname-preview { grid-column:1 / 3; margin:0; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; word-break:normal; }
+.k-dialog.k-xhub > .k-xname > .k-xname-hint { display:none; }
+.k-dialog.k-xhub > .k-xname > .k-xname-open { grid-column:3; margin:0; }
+/* คำอธิบายของปลายทาง: โชว์เฉพาะตัวที่เลือกอยู่ (ตัวอื่นอยู่ในทูลทิปของแถว) — รายการ 9 ปลายทางพอดีคอลัมน์ไม่ต้องเลื่อน */
+.xhub-fmt:not(.on) .xhub-fmt-desc { display:none; }
+.xhub-fmt { align-items:center; }
+.xhub-fmt.on { align-items:flex-start; }
+/* ไฮไลต์คำค้นบน "กระดาษ": สีกระดาษไม่ตามธีม (ธีมมืด = กระดาษขาว หมึกดำ) — ผสมจากสีกระดาษเอง
+   เดิมใช้สีของธีมมืด (น้ำตาลเข้ม) ทับตัวหนังสือดำ อ่านไม่ออก */
+body.paper-mode .pane.k-paper:not(.wiki-pane) .ProseMirror .find-hit {
+  background:color-mix(in srgb, var(--st-warn) 42%, var(--paper)); }
+
+/* ══ [alpha.170 · trial-fix 2] ══ */
+/* ห้องซ้อมบท → กล่อง "เซสชันใหม่": ป้ายอยู่บน ช่องอยู่ล่าง (เดิมป้ายถัดไปไปต่อท้ายปุ่มบนบรรทัดเดียวกัน) */
+.dlgb-newsess .dlgb-field { display:flex; flex-direction:column; gap:calc(4px * var(--uis)); margin-top:calc(10px * var(--uis)); min-width:0; }
+.dlgb-newsess .dlgb-field > label { font-size:calc(12px * var(--uis)); color:var(--dim); }
+.dlgb-newsess .dlgb-preset-pick { display:flex; gap:calc(8px * var(--uis)); align-items:center; }
+.dlgb-newsess .dlgb-preset-pick > select { flex:1 1 auto; min-width:0; width:auto; margin:0; }
+.dlgb-newsess .dlgb-preset-pick > button { flex:none; white-space:nowrap; }
+.dlgb-newsess .dlgb-newsess-note { min-height:1.3em; margin-top:calc(8px * var(--uis)); font-size:calc(12px * var(--uis)); }
+/* กล่องสรุปเนื้อหาด้วย AI: กล่องรอกับกล่องผลกว้างเท่ากัน (เดิม ~340 → ~1120 กระโดดกลางจอ) */
+.k-dialog.k-ai-summary { width:min(calc(720px * var(--uis)), 92vw); min-width:0; max-width:92vw; box-sizing:border-box; }
+/* ตั้งค่า → แถวตัวเลือกฟอนต์: ป้าย+คำอธิบายอยู่บน ช่องเลือกเต็มความกว้างอยู่ล่าง
+   (ในหน้าสองคอลัมน์ ป้ายเคยถูกบีบเหลือ ~100px ตัดเป็นหกบรรทัด และช่องเลือกถูกตัดขอบขวา) */
+.k-set-page .k-row:has(> .k-font-field) { flex-wrap:wrap; }
+.k-set-page .k-row:has(> .k-font-field) > label { flex:1 1 100%; min-width:0; }
+.k-set-page .k-row:has(> .k-font-field) > .k-font-field { flex:1 1 100%; min-width:0; }
+/* แชท AI: แถวปุ่ม "ลองใหม่" ใต้ข้อความผิดพลาด */
+.ai-msg-retry { margin-top:calc(4px * var(--uis)); padding-inline:calc(10px * var(--uis)); }

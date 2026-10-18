@@ -103,14 +103,23 @@ export function buildHomeActions(opts = {}) {
     grid.classList.toggle('home-grid-filtered', !!key);
     return shown;
   }
+  // [alpha.170 · bug hunt 5] ช่องค้นหา "ยืมที่" ของปุ่มส่งออก/นำเข้า — เดิมช่องแทรกเพิ่มเข้าแถว แถวจึงพับ
+  // แล้วปุ่ม "ออกจากโปรแกรม" เลื่อนมาอยู่ใต้เคอร์เซอร์ตรงที่เพิ่งกด "ค้นหา" พอดี (ดับเบิลคลิก = ปิดโปรแกรม)
   findBtn.onclick = () => {
     const on = findInp.style.display === 'none';
+    if (on) {
+      const w = exportBtn.getBoundingClientRect().width + importBtn.getBoundingClientRect().width;
+      if (w > 0) findInp.style.flex = '0 0 ' + Math.round(w + 8) + 'px';
+    }
     findInp.style.display = on ? '' : 'none';
+    exportBtn.style.display = importBtn.style.display = on ? 'none' : '';
     findBtn.classList.toggle('on', on);
     if (on) findInp.focus(); else { findInp.value = ''; applyFind(''); }
   };
   findInp.oninput = () => applyFind(findInp.value);
-  findInp.onkeydown = (e) => { if (e.key === 'Escape') { e.stopPropagation(); findBtn.onclick(); } };
+  // Esc ในช่องค้นหา = ปิดช่องค้นหา ไม่ใช่ปิดหน้าแรกทั้งหน้า (`data-esc-own` — ดู escClose / installDialogA11y)
+  findInp.dataset.escOwn = '1';
+  findInp.onkeydown = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); findBtn.onclick(); findBtn.focus(); } };
 
   exportBtn.onclick = async () => {
     // [alpha.168 · bug hunt] หน้าแรกบังแถบสถานะอยู่ — แจ้งด้วยข้อความลอยด้วย (เดิมกดแล้วเงียบ)
@@ -121,13 +130,21 @@ export function buildHomeActions(opts = {}) {
     const dest = await importProjectZip();
     if (dest) opts.onClose?.();          // เปิดโปรเจกต์ใหม่แล้ว → ปิดหน้าแรกให้เห็นงาน
   };
-  newBtn.onclick = () => { opts.onClose?.(); newProject(); };
+  // [alpha.170 · bug hunt 5] หน้าแรกปิดเมื่อ "เปิดผลงานได้จริง" เท่านั้น — เดิมปิดก่อนถาม ยกเลิกกล่องเทมเพลต
+  // หรือเลือกโฟลเดอร์ที่ไม่ใช่ผลงาน แล้วผู้ใช้ค้างอยู่ในโปรแกรมเปล่า
+  newBtn.onclick = async () => {
+    const before = state.root;
+    await newProject();
+    if (state.root && state.root !== before) opts.onClose?.();
+  };
   openBtn.onclick = async () => {
     const projectPath = await kapi.openProjectDialog?.();
     if (!projectPath) return;
-    opts.onClose?.();
     await openProjectFromUi(projectPath);          // [alpha.168 · bug hunt 2] ทางเดียวที่รายงานเมื่อเปิดไม่ได้ (กฎ W1-6)
+    if (state.root === projectPath) opts.onClose?.();
   };
+  // ไม่มีผลงานเปิดอยู่ = ส่งออกไม่ได้ — หรี่ปุ่มให้เห็น (ยังกดได้ เพื่อให้ข้อความบอกเหตุผลขึ้น)
+  exportBtn.classList.toggle('k-btn-idle', !state.root);
   closeBtn.onclick = () => opts.onClose?.();
 
   actions.append(viewWrap, findBtn, findInp, exportBtn, importBtn, spacer, newBtn, openBtn);
@@ -369,7 +386,13 @@ export function homeEmptyBox(onClose) {
   ic.append(icon('book-content', 64));
   const btn = el('button', 'k-ok home-empty-new', t('ui.home.newProject'));
   btn.type = 'button';
-  btn.onclick = () => { if (onClose) onClose(); newProject(); };
+  // [alpha.170 · บั๊ก 9] ปิดหน้าแรกเมื่อ "สร้างผลงานได้จริง" เท่านั้น (กติกาเดียวกับปุ่มสร้างบนแถวล่าง — bug hunt 5)
+  // เดิมปุ่มกลางจอนี้ยังปิดก่อนถาม: ผู้ใช้ใหม่กดแล้วเปลี่ยนใจยกเลิก = ค้างอยู่ในเปลือกโปรแกรมเปล่า
+  btn.onclick = async () => {
+    const before = state.root;
+    await newProject();
+    if (onClose && state.root && state.root !== before) onClose();
+  };
   box.append(ic, el('h2', null, t('ui.home.notHasProject')), el('p', null, t('ui.home.newProjectFirstYours')), btn);
   return box;
 }

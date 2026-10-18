@@ -1,11 +1,12 @@
 // wiki-ui.js — Wiki: หมวด (สร้าง/แก้/ลบ) + เอนทิตี้ (เพิ่ม/เปิด/ทำสำเนา)
 import { tx, txf, hx } from './i18n-html.js';   // [alpha.154] ข้อความจากไฟล์ภาษาลง HTML
 import { t as tt, tf as ttf, t, tf } from './i18n.js';
-import { INV_C, activate, allCatKeys, applyTemplate, buildTree, catEditDialog, catIcon, catKeyFrom, catLabel, closeTab, entityCreateDialog, fieldLabels, templateOf, findEntityInScenes, guid, invertRole, markDirty, openOnce, pickFromList, relationDialog, revealFile, safeName, saveProjectMeta, spellChecker, wikiRoot, refreshNetwork } from './app.js';
+import { INV_C, reloadWikiNames, activate, allCatKeys, applyTemplate, buildTree, catEditDialog, catIcon, catKeyFrom, catLabel, closeTab, entityCreateDialog, fieldLabels, templateOf, findEntityInScenes, guid, invertRole, markDirty, openOnce, pickFromList, relationDialog, revealFile, safeName, saveProjectMeta, spellChecker, wikiRoot, refreshNetwork } from './app.js';
 // บทเรียน 68: ไฟล์นี้มี `for (const t of state.tabs.values())` อยู่แล้ว → import เป็น `tr` เสมอ
 import { $, BUILTIN_CATS, el, setStatus, smart, state, log, t as tr } from './core.js';
 import { pickImage } from './gallery.js';
 import { confirmBox, ask } from './ui.js';
+import { TB_FMT_HOST } from './toolbar/toolbar-ui.js';
 import { iconHtml, gi } from './icons.js';
 import { CAT_TH, WikiEditor } from './wiki.js';
 import { ensureAutoLink, renderBacklinksTab, rebuildAutoLink } from './world-story/auto-link-ui.js';
@@ -77,9 +78,27 @@ export async function addEntity(catDir, cat) {
   if (!(e.sections || []).length) e.sections = [{ title: tt('ui.common.desc'), content: '' }];
   const file = await kapi.join(catDir, safeName(res.name) + '-' + Date.now().toString(36) + '.json');
   await kapi.writeFile(file, JSON.stringify(e, null, 2));
-  await buildTree(); await smart.loadNames(state.root);
+  await buildTree(); await reloadWikiNames();
   refreshNetwork();
   openEntity(file);
+}
+
+/**
+ * เลื่อน pane ให้ช่องที่ได้โฟกัสพ้นจากแถบรูปแบบลอย (แถบอยู่ครึ่งล่าง = เลื่อนขึ้น · ครึ่งบน = เลื่อนลง)
+ * ไม่ทับกันอยู่แล้ว = ไม่แตะตำแหน่งเลื่อน
+ */
+function clearOfFmtbar(pane, target) {
+  const bar = document.querySelector(TB_FMT_HOST);
+  if (!bar || !target || !target.getBoundingClientRect || !pane.contains(target)) return false;
+  const b = bar.getBoundingClientRect();
+  if (!b.width || !b.height) return false;
+  const r = target.getBoundingClientRect();
+  if (!(r.right > b.left && r.left < b.right && r.bottom > b.top - 6 && r.top < b.bottom + 6)) return false;
+  const p = pane.getBoundingClientRect();
+  const barLow = (b.top + b.height / 2) > (p.top + p.height / 2);
+  const before = pane.scrollTop;
+  pane.scrollTop = before + (barLow ? (r.bottom - b.top + 14) : -(b.bottom - r.top + 14));
+  return pane.scrollTop !== before;
 }
 
 export function openEntity(file) {
@@ -95,6 +114,8 @@ async function openEntityNow(file) {
   const entity = await kapi.readJson(file);
   ensureSensory(entity);                       // สถานที่ → เตรียมช่อง "บรรยากาศรับรู้"
   const pane = el('div', 'pane wiki-pane');    // wiki-pane = กัน paper-mode ทับ field เนื้อหา
+  // [alpha.170 · bug hunt 5] แถบรูปแบบลอยทับช่องกรอกของฟอร์ม — ช่องที่ได้โฟกัส (คลิก/Tab) ต้องเลื่อนพ้นแถบเสมอ
+  pane.addEventListener('focusin', (e) => { try { clearOfFmtbar(pane, e.target); } catch {} });
   $('#panes').append(pane);
   const tabBtn = el('div', 'tab');
   tabBtn.append(el('span', 'tab-title', entity.name || 'entity'));
@@ -190,7 +211,7 @@ async function openEntityNow(file) {
       if (tab.title && e2.name && tab.title !== e2.name) handleEntityRenamed(file, tab.title, e2.name);
       tab.title = e2.name;
       tab.tabBtn.querySelector('.tab-title').textContent = e2.name;
-      smart.loadNames(state.root); buildTree();
+      reloadWikiNames(); buildTree();
       // [alpha.62 บั๊ก 16] Story Network เป็นแผงแล้ว ไม่ใช่แท็บ
       import('./app.js').then((m) => m.netInst?.refresh()).catch(() => {});
       // [alpha.71 ข้อ 2] เปลี่ยนรูปประจำตัวแล้ว หมุดเอนทิตี้บนแผนที่ต้องเปลี่ยนตามด้วย
@@ -332,7 +353,7 @@ export async function duplicateEntity(file) {
   const copy = { ...e, id: guid(), name: (e.name || 'entity') + tt('ui.common.msg'), created: new Date().toISOString() };
   const nf = await kapi.join(dir, safeName(copy.name) + '-' + Date.now().toString(36) + '.json');
   await kapi.writeFile(nf, JSON.stringify(copy, null, 2));
-  await buildTree(); await smart.loadNames(state.root);
+  await buildTree(); await reloadWikiNames();
   refreshNetwork();
   openEntity(nf);
 }

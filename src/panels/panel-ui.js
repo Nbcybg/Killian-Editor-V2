@@ -12,7 +12,7 @@ import { commandIcon, isRegisteredCommand, gi, icon } from '../icons.js';
 import { tipText } from '../tooltip.js';
 import { $, el, setStatus, t, onLanguageChanged, log, state, PANEL_WIN,
          keepScroll, restoreScrollSnap, elByPath, scrollSnapshot } from '../core.js';
-import { popupMenu, ask, confirmBox } from '../ui.js';
+import { popupMenu, ask, confirmBox, toast } from '../ui.js';
 import * as PL from './panel-layout.js';
 import { PanelManager } from './panel-store.js';
 import { renderPanelLayout, panelWindowHead } from './panel-renderer.js';
@@ -78,7 +78,7 @@ export const PANEL_DEFS = [
   { id: 'dialogue', i18n: 'panel.dialogueTitle', adopt: '#dialogue-panel', defaultSide: 'left', minW: 460, dockW: 620, tearoff: true },
   // [alpha.82] ห้องซ้อมบท — คนละตัวกับ "บทพูดทั้งผลงาน" ข้างบน (ตัวนั้นรวบรวมของที่เขียนไปแล้ว
   // ตัวนี้ให้ AI สวมบทตัวละครจาก Wiki คุยกันสด ๆ แล้วหยิบบรรทัดที่ชอบไปใส่บท)
-  { id: 'dlgb',     i18n: 'panel.dlgbTitle',     adopt: '#dlgb-panel',     defaultSide: 'right', minW: 420, dockW: 620 },
+  { id: 'dlgb',     i18n: 'panel.dlgbTitle',     adopt: '#dlgb-panel',     defaultSide: 'right', minW: 420, dockW: 460 },   // [alpha.170 · บั๊ก 11] เหตุผลเดียวกับ ai-chat
 
   // ── วางแผน (บั๊ก #18: ฟีเจอร์ที่ไม่ใช่เอกสาร เป็นแผง ไม่ใช่แท็บ) ──
   { id: 'dashboard', i18n: 'panel.dashboardTitle', adopt: '#dash-panel',     defaultSide: 'left', minW: 620, dockW: 640, tearoff: true },
@@ -120,7 +120,8 @@ export const PANEL_DEFS = [
   // [alpha.60r3 ข้อ 5] แผงวิเคราะห์ด้วย AI
   { id: 'ai-analyzer', i18n: 'panel.aiAnalyzerTitle', adopt: '#ai-analyzer-panel', defaultSide: 'right', minW: 400, dockW: 640, tearoff: true },
   // [alpha.61 ข้อ 2] แชทกับ AI — เซสชันเก็บใน Sessions/ ของโปรเจกต์
-  { id: 'ai-chat',     i18n: 'panel.aiChatTitle',     adopt: '#ai-chat-panel',     defaultSide: 'right', minW: 320, dockW: 640, tearoff: true },
+  // [alpha.170 · บั๊ก 11] แชทเป็น "เพื่อนข้างเอกสาร" — กว้าง 640 กินที่มากกว่าพื้นที่เขียนบนจอ 1440 จนข้อความในเอกสารถูกตัด
+  { id: 'ai-chat',     i18n: 'panel.aiChatTitle',     adopt: '#ai-chat-panel',     defaultSide: 'right', minW: 320, dockW: 440, tearoff: true },
 ];
 
 // ───────── [alpha.67] Tear-off — แผงที่ฉีกออกเป็นหน้าต่าง OS จริงได้ ─────────
@@ -1265,6 +1266,8 @@ export function showPanel(id, opts = {}) {
   if (tornOff.has(pid)) { focusTearOff(pid); return true; }
   const def = m.registry.get(pid) || {};
   let ok;
+  // [alpha.170 · bug hunt 5] ทางเข้าฝั่งผู้ใช้ (togglePanel) ผนึกเป็นค่าเริ่มต้นแล้ว — สาขานี้เหลือไว้ให้ผู้เรียกที่ "ขอลอย" ตรง ๆ
+  // (แผงที่เคยลอย · ไม่มีที่ผนึก · เทสของแผงลอย) · เหตุผลเดิมของกติกา alpha.66r7 ยังอยู่ข้างล่าง:
   // [alpha.66r7 กฎข้อ 2 ของผู้ใช้] **เปิดแผงครั้งแรก (หรือหลังรีเซ็ต) = ลอยกลางจอ ไม่ใช่ผนึก**
   // เหตุผล: การผนึกอัตโนมัติไปเบียดพื้นที่ของแผงที่ผู้ใช้จัดไว้แล้วเสมอ
   // (เปิดแผง C แล้วแผง A ที่ตั้งไว้ 450px หดลง — ผู้ใช้รายงานเข้ามา)
@@ -1334,8 +1337,96 @@ export function togglePanel(id, opts) {
   // [alpha.67] อยู่ในหน้าต่างแยก = เปิดอยู่ → กดสวิตช์ซ้ำ แปลว่า "เอากลับมา/ปิดหน้าต่างนั้น"
   if (tornOff.has(pid)) { recallPanel(pid); return true; }
   if (m.isOpen(pid)) return hidePanel(pid);
-  // ทางเข้าฝั่งผู้ใช้ (เมนู · ปุ่มบนแถบเครื่องมือ · ถาดแผงที่ปิดไว้) = เปิดเป็นแผงลอยกลางจอ
-  return showPanel(pid, { prefer: 'float', ...(opts || {}) });
+  // ══ [alpha.170 · bug hunt 5] ★ ผู้ใช้เปลี่ยนกติกา: "แผงที่เปิดครั้งแรก ให้เป็น dock" ══
+  // กติกาเดิม (alpha.66r7 · ของผู้ใช้เอง) = เปิดครั้งแรกลอยกลางจอ เพราะการผนึกอัตโนมัติเคยไปบีบแผงที่จัดขนาดไว้
+  // ลองใช้จริงแล้วแผงลอยทับเนื้อเรื่องที่กำลังเขียนทุกครั้งที่กดปุ่ม — จึงกลับมาผนึก โดยยังรักษาเหตุผลเดิมไว้:
+  //   · ผนึกแล้ว **ห้ามบีบแผงที่ผู้ใช้จัดไว้** → ที่มาจากพื้นที่เขียนเท่านั้น (firstDockPlan) · ไม่มีที่ = ลอยตามเดิม
+  //   · แผงที่ผู้ใช้เคยทำให้ลอยไว้เอง (homes จำ float) → กลับไปลอยที่เดิม
+  //   · แผงที่มีสล็อต/มีบ้านที่จดไว้แล้ว → ทางเดิมของ showPanel
+  const home = homes.get(pid);
+  if (home && (home.float || home.floatWith)) return showPanel(pid, { prefer: 'float', ...(opts || {}) });
+  // แผงที่มีสล็อตของตัวเองแต่ถูกปิดไว้ (เช่น แดชบอร์ดที่โปรแกรมเปิดให้ตอนเข้าผลงาน) — เปิดกลับตรงสล็อตเดิมจะกินที่
+  // เพิ่มทั้งคอลัมน์ ถ้าพื้นที่เขียนให้ไม่พอ ตัวจัดวางจะบีบแผงอื่นทั้งแถว → ย้ายไปเป็นแท็บในกลุ่มของแผงชั้นเดียวกันที่เปิดอยู่แทน
+  if (m.isDocked(pid) && m.isHidden(pid) && !(opts && (opts.side || opts.targetId))) {
+    const mate = sameClassMate(m, pid);
+    const grp = PL.tabGroupOf(m.root, pid);
+    const alone = !grp || !grp.children.some((c) => c.id !== pid && !m.isHidden(c.id));
+    const node = PL.findPanel(m.root, pid);
+    const need = (node && node.pxW) || (PANEL_DEFS.find((d) => d.id === pid) || {}).dockW || 300;
+    const room = docsRoom();
+    if (alone && room < need) {
+      if (mate) return showPanel(pid, { ...(opts || {}), targetId: mate, side: 'center', forceMove: true });
+      // ไม่มีกลุ่มให้เข้า: ที่พอขั้นต่ำของแผง → เปิดในสล็อตเดิมแต่แคบลงเท่าที่พื้นที่เขียนให้ได้ · ไม่พอ → ลอย (ไม่บีบใคร)
+      const d0 = PANEL_DEFS.find((d) => d.id === pid) || {};
+      if (room >= Math.min(need, Math.max(240, d0.minW || 0))) capDockWidth(m, pid, room);
+      else {
+        const okF = reopenFloat(m, pid, home);
+        if (okF && onShowHook) { try { onShowHook(pid); } catch {} }
+        return okF;
+      }
+    }
+  }
+  if (m.isDocked(pid) || m.isCollapsed(pid) || home || (opts && (opts.side || opts.targetId))) return showPanel(pid, opts || {});
+  const plan = firstDockPlan(m, pid);
+  if (!plan) return showPanel(pid, { prefer: 'float', ...(opts || {}) });
+  const ok = showPanel(pid, { ...(opts || {}), targetId: plan.targetId, side: plan.side });
+  if (ok && plan.w > 0) capDockWidth(m, pid, plan.w);
+  return ok;
+}
+
+/** แผง "กว้าง" (กระดาน · ผัง · ตาราง — ค่าอ้างอิงตอนผนึก ≥ 600px) กับแผง "แคบ" (คุณสมบัติ · โน้ต · AI) อยู่คนละกลุ่มแท็บ */
+const isWidePanel = (d) => ((d && d.dockW) || 300) >= 600;
+/** โครงหน้าต่าง + กลุ่ม Explorer — แผงอื่นไม่ไปรวมเป็นแท็บกับพวกนี้เอง (บัง Explorer / พื้นที่เขียน) */
+const FIRST_DOCK_SKIP = new Set(['toolbar', 'docs', 'statusbar', 'tree', 'outline', 'planner-props']);
+/**
+ * ที่ผนึกของแผงที่ถูกเปิดครั้งแรก — คืน `null` = ไม่มีที่ (ผู้เรียกให้ลอยแทน)
+ *   1. มีแผงชั้นเดียวกัน (กว้าง/แคบ) ผนึกและเห็นอยู่ → เป็นแท็บในกลุ่มนั้น — ไม่มีอะไรเปลี่ยนขนาดเลย
+ *   2. ไม่มี → คอลัมน์ใหม่ข้างพื้นที่เขียนตาม `defaultSide` · กว้างไม่เกินที่พื้นที่เขียนให้ได้
+ *      (พื้นที่เขียนต้องเหลือ ≥ MIN_CANVAS_PX) — แผงที่ผู้ใช้จัดขนาดไว้จึงไม่ถูกแตะ
+ */
+/** แผงชั้นเดียวกัน (กว้าง/แคบ) ที่ผนึกและเห็นอยู่ — ไม่มี = '' */
+function sameClassMate(m, pid) {
+  // ค่าอ้างอิง (dockW · defaultSide) อ่านจากทะเบียนแผงตัวจริง — ระเบียนของตัวจัดการไม่ได้พกทุกช่องมาด้วย
+  const def = PANEL_DEFS.find((d) => d.id === pid) || m.registry.get(pid) || {};
+  for (const d of PANEL_DEFS) {
+    if (d.id === pid || FIRST_DOCK_SKIP.has(d.id) || isWidePanel(d) !== isWidePanel(def)) continue;
+    if (m.isDocked(d.id) && !m.isHidden(d.id) && !m.isCollapsed(d.id)) return d.id;
+  }
+  return '';
+}
+/** พื้นที่เขียนให้ที่ได้อีกกี่พิกเซล โดยตัวเองยังเหลือ ≥ MIN_CANVAS_PX */
+function docsRoom() {
+  try {
+    const docsEl = host().querySelector('.k-panel[data-panel-id="docs"]');
+    return docsEl ? Math.floor(docsEl.getBoundingClientRect().width) - PL.MIN_CANVAS_PX : 0;
+  } catch { return 0; }
+}
+function firstDockPlan(m, pid) {
+  const def = PANEL_DEFS.find((d) => d.id === pid) || m.registry.get(pid) || {};
+  if (def.floatable === false && def.closable === false) return null;
+  const mate = sameClassMate(m, pid);
+  if (mate) return { targetId: mate, side: 'center', w: 0 };
+  if (!m.isDocked('docs')) return null;
+  const room = docsRoom();
+  const want = def.dockW || 300;
+  const w = Math.min(want, room);
+  // เหลือที่ให้ไม่ถึงขั้นต่ำที่แผงใช้งานได้ (`minW`) = ไม่ผนึก — ผนึกไปก็ได้แถบแคบที่ใช้งานไม่ได้และขยายไม่ได้
+  // (พื้นที่เขียนชนขั้นต่ำแล้ว) หรือไม่ก็ต้องบีบแผงอื่น ซึ่งเป็นเหตุผลของกติกาเดิม · กระดาน/ผังบนจอเล็กจึงยังลอย
+  if (w < Math.min(want, Math.max(240, def.minW || 0))) return null;
+  return { targetId: 'docs', side: def.defaultSide || 'right', w };
+}
+/** ตั้งความกว้างของแผงที่เพิ่งผนึกเป็นคอลัมน์ใหม่ (ไม่เกินที่พื้นที่เขียนให้ได้) */
+function capDockWidth(m, pid, w) {
+  try {
+    const node = PL.findPanel(m.root, pid);
+    if (!node || !(w > 0) || !(node.pxW > w)) return false;
+    const next = JSON.parse(JSON.stringify(m.root));
+    const n2 = PL.findPanel(next, pid);
+    if (!n2) return false;
+    n2.pxW = w;
+    m.store.update(next);
+    return true;
+  } catch { return false; }
 }
 /**
  * [alpha.66r8] ประทับ "ค่าอ้างอิงตั้งต้น" ของแต่ละแผงลงในต้นไม้
@@ -1449,6 +1540,35 @@ export function resetPanels() {
   renderPanels(true);
   setStatus(t('ui.panel.layoutReset'));
   return true;
+}
+/**
+ * [alpha.170] รีเซ็ตเลย์เอาต์จาก **คำสั่งของผู้ใช้** (เมนู มุมมอง) — ทำทันทีเหมือนเดิม แต่มีปุ่ม "ย้อนกลับ"
+ * เดิมกดพลาดครั้งเดียว = เลย์เอาต์ที่จัดไว้ทั้งชุดหายโดยไม่มีทางคืน (ไม่ถามก่อน ไม่มีย้อนกลับ)
+ * เลือกย้อนกลับแทนกล่องถาม: ไม่ขวางคนที่ตั้งใจรีเซ็ต และคนที่กดพลาดกดคืนได้ในคลิกเดียว
+ */
+export function resetPanelsWithUndo() {
+  const m = getPanelManager();
+  let snap = null;
+  try {
+    snap = JSON.parse(JSON.stringify({ version: 2, root: m.store.root ?? null, floats: m.store.floats ?? [],
+                                       splitRatios: m.store.splitRatios || {}, homes: Object.fromEntries(homes) }));
+  } catch { snap = null; }
+  const done = resetPanels();
+  if (!snap || !snap.root) return done;
+  toast(t('ui.panel.layoutReset'), {
+    ttl: 12000,
+    action: { label: t('ui.common.undoBtn'), onClick: () => {
+      const hm = m.applySnapshot(snap);
+      resetSideStash();
+      homes.clear();
+      if (hm) for (const k of Object.keys(hm)) homes.set(k, hm[k]);
+      saveHomes();
+      renderPanels(true);
+      if (onShowHook) for (const id of m.openIds()) { try { onShowHook(id); } catch {} }
+      setStatus(t('ui.panel.layoutRestored'));
+    } },
+  });
+  return done;
 }
 /** รายการแผงสำหรับเมนู "มุมมอง → แผง" */
 export function panelMenuItems() {

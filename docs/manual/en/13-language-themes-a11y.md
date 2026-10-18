@@ -79,7 +79,7 @@ A theme changes **the app shell** (bars · panels · tabs · dialogs · the syst
 |---|---|
 | House themes | **K2** (the default · dark) · **K2 Light** |
 | Palettes | Sakura Mist · Plum Wine · Sunny Lagoon · Neon Pop · Tropical · Fruit Salad · Flower Garden · Rainbow |
-| In the style of familiar programs | Terracotta (Claude Code) · Terminal Peach (opencode) · Moonlight (Kimi) · Code Dark (VS Code) · Document Blue (Word) · Grid Green (Excel) · Slide Brick (PowerPoint) · Platinum (Classic Macintosh) · Tricolor Mobile Suit (Gundam) · Gamer Pink (D.Va) |
+| More palettes | Terracotta · Terminal Peach · Moonlight · Code Dark · Document Blue · Grid Green · Slide Brick · Platinum · Tricolor Mecha · Gamer Pink |
 | Vision themes | High Contrast (Dark/Light) · Red–Green Colour-blind (Dark/Light) · Blue–Yellow Colour-blind (Dark/Light) · Monochrome (Dark/Light) |
 
 In the Settings dialog, choosing a theme previews it at once — press **Cancel** to return to your previous theme.

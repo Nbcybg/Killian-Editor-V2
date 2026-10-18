@@ -13,6 +13,7 @@ import { el, state, setStatus, log } from '../core.js';
 import { gi } from '../icons.js';
 import { TextSelection } from 'prosemirror-state';
 import { listAgents, buildRewritePrompt, cleanRewriteOutput, resolveRange, AROUND_CHARS } from './ai-agents.js';
+import { aiProseText } from './ai-prose.js';   // [alpha.170 · บั๊ก 6]
 import { profileText } from './ai-doctor.js';
 
 const LAST_AGENT_KEY = 'k2-rewrite-agent';
@@ -255,7 +256,7 @@ export function openRewriteBar(tab) {
       view.dispatch(view.state.tr.insertText(text, rg.from, rg.to).scrollIntoView());
     } else {
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, rg.from, rg.to)));
-      const ok = isSp ? tab.sp.insertScript(text) : tab.editor.insertLines(text);
+      const ok = isSp ? tab.sp.insertScript(text) : tab.editor.insertLines(aiProseText(text));
       if (!ok) return false;
     }
     const after = view.state.doc.content.size;

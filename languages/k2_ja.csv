@@ -30,6 +30,7 @@ ui.ai.charADesc,キャラクターAの説明（性格、話し方、目標など
 ui.ai.charB,キャラクターB： 
 ui.ai.charBDesc,キャラクターBの説明
 ui.ai.chatPlaceholder,物語について質問してください…
+ui.ai.checkedScenes,{0} シーンをチェック
 ui.ai.collecting,データを収集しています…
 ui.ai.collectingScenes,シーンを収集しています…
 ui.ai.connectAICant,AI に接続できません： 
@@ -44,8 +45,6 @@ ui.ai.dialogueLabel,セリフ：
 ui.ai.dialogueTitle,セリフを生成
 ui.ai.dialogueWorking,セリフを生成しています…
 ui.ai.edit,散文
-ui.ai.entityReadFail,エンティティのファイルを読み込めませんでした
-ui.ai.entityUnnamed,名前のないエンティティ
 ui.ai.error,問題が発生しました
 ui.ai.errorMark,問題が発生しました
 ui.ai.errorRetry,問題が発生しました。もう一度お試しください
@@ -75,10 +74,10 @@ ui.ai.needBothChars,両方のキャラクター名を入力してください
 ui.ai.needSetup,先に AI を設定してください：メニュー AI → AI 設定
 ui.ai.new,作成
 ui.ai.noAnswer,（回答なし）
+ui.ai.noCharacters,Wiki にキャラクターがありません。先にキャラクターを追加してください
 ui.ai.noInconsist,矛盾は見つかりませんでした
 ui.ai.noPlotHoles,プロットホールは見つかりませんでした
 ui.ai.noProject,プロジェクトが開かれていません
-ui.ai.noScenes,（このプロジェクトにシーンはありません）
 ui.ai.notChangeTone,トーンを維持
 ui.ai.notKnownProvider,不明なプロバイダー： 
 ui.ai.notSet,（未設定）
@@ -91,23 +90,36 @@ ui.ai.opSummarize,要約する
 ui.ai.opTone,トーンを変更
 ui.ai.orWord,または
 ui.ai.partialKept,接続が切れる前に受信したテキストを保持しました
-ui.ai.pickEntity,先にエンティティ（キャラクター）を選択してください
+ui.ai.pickCharacter,キャラクター
 ui.ai.plotTitle,プロットホールのチェック
 ui.ai.plotWorking,プロットホールを確認しています…
 ui.ai.readAnswerAICant,AI の回答を読み取れませんでした（JSON ではありません）
 ui.ai.readFail,ファイルを読み込めませんでした： 
+ui.ai.replaceSelection,選択範囲を置き換える
+ui.ai.replyCut,AI の回答が途中で切れました（長さの上限）。プロバイダーの Maximum Number of Tokens を増やして再試行してください
+ui.ai.replyUnreadable,AI の回答がアプリで読み取れない形式でした。再試行するか、モデルを変更してください
 ui.ai.result,処理中
 ui.ai.resultLabel,結果：
+ui.ai.runAgain,もう一度チェック
 ui.ai.sample1,この物語の登場人物は誰ですか？
 ui.ai.sample2,戦闘シーンを要約してください
 ui.ai.savedToWiki,Wiki に保存しました： 
 ui.ai.saveWiki,Wiki に保存
 ui.ai.sceneLabel,シーン： 
+ui.ai.scopeBook,この巻のみ
+ui.ai.scopeChapter,この章のみ
+ui.ai.scopeEmpty,この範囲には本文のあるシーンがありません
+ui.ai.scopeLabel,範囲
+ui.ai.scopeProject,プロジェクト全体
+ui.ai.scopeScene,このシーンのみ
+ui.ai.scopeSummary,{0} シーン（約 {1} トークン）を {2} に送信します
 ui.ai.searchingProject,プロジェクトを検索しています…
 ui.ai.sendingToAi,AI に送信しています…
 ui.ai.smallLess,軽微
 ui.ai.sources,出典： 
 ui.ai.speakerLabel,話者： 
+ui.ai.startCheck,チェック開始
+ui.ai.stop,停止
 ui.ai.textLabel,テキスト：
 ui.ai.textNotOk,テキストストリームに失敗しました： 
 ui.ai.toneCasual,カジュアル
@@ -124,6 +136,7 @@ ui.ai.wCity,都市
 ui.ai.wCulture,文化
 ui.ai.wEconomy,経済
 ui.ai.wFaction,勢力
+ui.ai.wikiProfileUsed,Wiki のプロフィールを使用: {0}
 ui.ai.wMagic,魔法体系
 ui.ai.wordAsk,質問： 
 ui.ai.working,処理中…
@@ -821,6 +834,8 @@ ui.aiError.innerUseItemOut,ローカルネットワーク上のサーバーは�
 ui.aiError.itemMaxTokensHigh,よくある原因：モデルが受け付ける値を超える最大トークン数 · このモデルにない推論の強度 / 思考モード · レスポンス形式 = json_object
 ui.aiError.itemTLSToUse,サーバーのセキュリティ証明書（TLS）が無効です
 ui.aiError.keyBindOutlineCheck,プロバイダーによっては、キーが組織/プロジェクトに紐づいています — このキーがこのベース URL で使えるか確認してください
+ui.aiError.missingHeader,プロバイダーが必要とするヘッダーがリクエストにありません
+ui.aiError.missingHeaderHint,サーバーのメッセージにあるヘッダーを、プロバイダーの Custom Headers に追加してください（1 行に「名前: 値」）
 ui.aiError.model,モデル： 
 ui.aiError.modelOllamaLMStudio,ローカルモデル（Ollama / LM Studio / llama.cpp）の場合は、まずそのプログラムが起動していることを確認してください
 ui.aiError.modelThinkReasoningUse,推論モデルは時間がかかります — 推論の強度を下げるか、返答を短くしてください
@@ -830,7 +845,7 @@ ui.aiError.nextNotMissingCenter,サーバーに接続できませんでした（
 ui.aiError.notAPIKeySend,サーバーが送信された API キーを拒否しました
 ui.aiError.notTo,サーバーに届きませんでした
 ui.aiError.provider,プロバイダー： 
-ui.aiError.providerNotParamSend,プロバイダーが送信されたパラメーターを拒否しました（{0}）
+ui.aiError.providerNotParamSend,プロバイダーがリクエストを拒否しました ({0})
 ui.aiError.putKeyNewSettings,AI 設定 → プロバイダーを編集 → 認証情報 に新しいキーを入力し、「認証情報を保存」をクリックしてください
 ui.aiError.reply,サーバーの応答： 
 ui.aiError.sideProviderHasProblem,プロバイダー側で問題が発生しています（{0}）
@@ -845,8 +860,10 @@ ui.aiError.toNotHas,エンドポイントが見つかりません（404）
 ui.aiError.tryNewTimesAdd,もう一度試すか、パラメーターの最大リトライ回数を増やしてください
 ui.aiError.tryOpenBaseURL,自宅のマシンの場合は、ブラウザーでベース URL を開いて応答があるか確認してください
 ui.aiError.userPress,ユーザーが停止しました
-ui.aiError.viewTextBottomName,下のサーバーメッセージを確認してください — 多くの場合、誤っているフィールドが直接示されています
+ui.aiError.viewTextBottomName,上の「サーバーの応答」行を確認してください。誤っているフィールド名が示されていることがほとんどです
 ui.aiError.wordUseTime,サーバーによると、リクエストに時間がかかりすぎました
+ui.aiError.wrongProtocol,このモデルは送信されたリクエスト形式を受け付けません
+ui.aiError.wrongProtocolHint,プロバイダーの「API 形式」（OpenAI 互換 / Anthropic Messages）を切り替えるか、別のモデルを選んでください
 ui.aiField.askField,フィールド「{0}」の値を書いてください。
 ui.aiField.hasCurrent,このフィールドには現在「{0}」と入っています — 意味を変えずに、磨き上げるか膨らませてください。
 ui.aiField.headKnown,すでに分かっていること：
@@ -934,6 +951,10 @@ ui.aiProvider.addProvider,プロバイダーを追加
 ui.aiProvider.addProviderNew,新しいプロバイダーを追加
 ui.aiProvider.allowedDomains,HTTP リクエストを許可するドメイン
 ui.aiProvider.apiKey,API キー
+ui.aiProvider.apiKind,API 形式
+ui.aiProvider.apiKindAnthropic,Anthropic Messages (messages)
+ui.aiProvider.apiKindHint,ほとんどのプロバイダーは OpenAI 互換です · Claude モデルが「プロトコル非対応」と返す場合は Anthropic Messages を選択
+ui.aiProvider.apiKindOpenai,OpenAI 互換 (chat/completions)
 ui.aiProvider.baseUrl,ベース URL
 ui.aiProvider.baseURLModel,ベース URL：{0} · モデル：{1} · 
 ui.aiProvider.btnSendText,チャットの送信ボタン
@@ -944,6 +965,7 @@ ui.aiProvider.busyTest,テスト中…
 ui.aiProvider.cantPickModel,モデルがまだ選択されていません
 ui.aiProvider.cantSettingsProviderAI,AI プロバイダーがまだ設定されていません（メニュー AI → AI 設定）
 ui.aiProvider.connectOkFoundModel,接続しました — {0} 個のモデルが見つかりました
+ui.aiProvider.credNameHint,空欄 = プロバイダー名を使用
 ui.aiProvider.defaultsFail,このコンピューターにプロバイダーを保存できませんでした
 ui.aiProvider.defaultsHave,このコンピューターに {0} 件保存済み
 ui.aiProvider.defaultsImport,自分のプロバイダーを使う
@@ -961,13 +983,21 @@ ui.aiProvider.domainAllow,許可されたドメイン：{0}
 ui.aiProvider.domainNotListAllowed,このドメインは「HTTP リクエストを許可するドメイン」の一覧にありません： 
 ui.aiProvider.edit,編集
 ui.aiProvider.editProvider,プロバイダーを編集
+ui.aiProvider.emptyDetail,思考トークン: {0} · max_tokens 上限: {1}
+ui.aiProvider.emptyHintEffort,Reasoning Effort を下げるか、回答前に思考しないモデルを選ぶ
+ui.aiProvider.emptyHintModel,もう一度送信するか、モデルを変更してください。内容がフィルタされると空で返すモデルがあります
+ui.aiProvider.emptyHintTokens,プロバイダーの Maximum Number of Tokens を増やす（-1 で無制限）
+ui.aiProvider.emptyReply,AI から空の応答が返されました
+ui.aiProvider.emptyThinking,AI が回答用の上限を思考で使い切ったため、回答がありません
 ui.aiProvider.fetchListModel,⟳ モデル一覧を取得
 ui.aiProvider.fileKeepKeyPart,このファイルには各認証情報の秘密鍵が含まれています — 共有したり、渡す zip に入れたりしないでください
 ui.aiProvider.foundModel,{0} 個のモデルが見つかりました
+ui.aiProvider.hideKey,キーを隠す
 ui.aiProvider.historyTokens,チャット履歴の予算（トークン）
 ui.aiProvider.historyTokensHint,"0 = 自動（モデル上限の 60%。不明な場合は 32,000）"
 ui.aiProvider.keepSplitFolderProject,プロジェクトフォルダー内の {0} に別途保存されます — 共有の project.khn.json には保存されません
 ui.aiProvider.lineNewExampleCom,カンマまたは改行区切り · *.example.com に対応 · 空欄 = 制限なし
+ui.aiProvider.modelsLoaded,{0} 個のモデル — 既定で使うものを選択
 ui.aiProvider.nameCredential,認証情報の名前
 ui.aiProvider.nameProvider,プロバイダー名
 ui.aiProvider.nameSeeDropdownEg,ドロップダウンに表示される名前。例：「職場の OpenAI」「このマシンの Ollama」
@@ -978,13 +1008,22 @@ ui.aiProvider.notHasProviderPress,プロバイダーはまだありません —
 ui.aiProvider.notPick,（未選択）
 ui.aiProvider.notRemember,無制限
 ui.aiProvider.notSendValue,（この値を送信しない）
+ui.aiProvider.preset,プリセット
+ui.aiProvider.presetHint,API アドレスを自動入力します。キーはご自身で入力してください
+ui.aiProvider.presetPick,— 手入力 —
 ui.aiProvider.pressFetchListModel,「モデル一覧を取得」を押すと、このプロバイダーの API から一覧を取得します
+ui.aiProvider.providerDeleted,プロバイダーを削除しました: {0}
+ui.aiProvider.providerSaved,プロバイダーを保存しました: {0}
+ui.aiProvider.saveCredential,キーを先に保存
 ui.aiProvider.saveCredentialDoneKey,認証情報を保存しました（キーは別途次の場所に保存されます： 
 ui.aiProvider.saveProvider,プロバイダーを保存
 ui.aiProvider.secCredential,認証情報
 ui.aiProvider.secModel,モデル
 ui.aiProvider.secParams,パラメーター
+ui.aiProvider.showKey,キーを表示
 ui.aiProvider.skSkipEmptyNot,sk-…（サーバーがキーを必要としない場合は空欄で構いません。例：Ollama）
+ui.aiProvider.testChatFail,{0} 個のモデルが見つかりましたが、{1} はチャットできません: {2}
+ui.aiProvider.testChatOk,接続成功 — {0} 個のモデル · {1} はチャットに応答します
 ui.aiProvider.testConnect,接続をテスト
 ui.aiProvider.toReplyBackDone,エンドポイントは応答しましたが、応答にモデル一覧が含まれていません
 ui.aiProvider.useDoneTokensTimes,{0} トークン使用 · {1} 回呼び出し · 約 ${2}
@@ -1299,7 +1338,7 @@ ui.app.aiAnalysis,AI 分析の結果
 ui.app.all,すべてのソース
 ui.app.allLine,すべての行で同じ
 ui.app.app,アプリの既定値
-ui.app.appWriteNovelScreenplay,小説/脚本の執筆アプリ — Electron + ProseMirror
+ui.app.appWriteNovelScreenplay,小説/脚本の執筆アプリ
 ui.app.auto,— 自動 —
 ui.app.autoFitWidthOff,ページ幅の自動フィットをオフにしました — 設定したズームに戻ります
 ui.app.autoFitWidthOn,ページ幅の自動フィットをオンにしました
@@ -1576,7 +1615,7 @@ ui.app.jsonUnreadable,{0} を読み取れませんでした（ファイルが破
 ui.app.jsonUnreadableNoBackup,{0} を読み取れず、コピーも保持できませんでした — 読み取れるようになるまで、上書き保存は行いません
 ui.app.keyEnglish,キー（英語）
 ui.app.keyPlugin,プラグインのショートカットが壊れています： 
-ui.app.killianEditor,Killian Editor 
+ui.app.killianEditor,Killian 2 · v
 ui.app.kind,種類
 ui.app.label,ラベル
 ui.app.label2,ラベル（タイ語）
@@ -1729,7 +1768,7 @@ ui.app.notMoveSkipDraft,下書き間の移動はまだサポートされてい�
 ui.app.notMoveSkipDraft2,下書き/セクション間の移動はまだサポートされていません
 ui.app.notMustRememberWord,この単語を記憶しない
 ui.app.notOpen,（未開封）
-ui.app.notOutDone,とどまりました
+ui.app.notOutDone,終了しない
 ui.app.notPick,なし
 ui.app.notRememberEditChapter,「{0}」を記憶しないようにしました（脚本 → SmartType を管理 で変更できます）
 ui.app.notRememberFoundNot,まだ記憶されていません（出現回数が {0} 回未満）— 「記憶する」を押すと今すぐ記憶します
@@ -1992,7 +2031,7 @@ ui.app.user,ユーザー
 ui.app.useReorderTimeText,時間がテキストの場合の並べ替えに使われます
 ui.app.valignPlannerOnly,縦方向の配置はプランナーボードでのみ使えます
 ui.app.valueRememberAllWord, — 値 1 = 入力したすべての単語を記憶（誤字も含む）
-ui.app.versionEditF,編集済みバージョン：{0}  ·  リビジョン #{1}
+ui.app.versionEditF,編集回数：{1}
 ui.app.viewListAll, 全リストを表示…
 ui.app.viewSample,プレビュー
 ui.app.webMoreElectron,Electron に同梱されている Web エンジンとランタイム
@@ -2640,6 +2679,7 @@ ui.common.delMoveTrash,削除（ごみ箱に移動）
 ui.common.desc,説明
 ui.common.detailed,詳細
 ui.common.dialogue,セリフ
+ui.common.discardChangesAsk,まだ保存していない変更があります。保存せずに閉じますか？
 ui.common.dot,点線
 ui.common.dotStart,開始
 ui.common.draftTextDraft,下書き — プレーンテキスト（Draft）
@@ -2770,7 +2810,7 @@ ui.common.renameNew,名前を変更
 ui.common.renameVersionSkipEmpty,バージョン名（任意）
 ui.common.repeat,⧉ 複製
 ui.common.replaceBtn,置換
-ui.common.restart,最初からやり直す
+ui.common.restart,再起動
 ui.common.revertBtn,元に戻す
 ui.common.right,右
 ui.common.right2,右揃え
@@ -2850,6 +2890,7 @@ ui.compile.msg,<!-- page break -->
 ui.compile.nameScene,シーン名
 ui.compile.nextSummaryStats,統計の要約を末尾に追加
 ui.compile.notSpecifyStatus,ステータスなし
+ui.compile.novelPdf,小説 → PDF（章タイトル · シーン区切り）
 ui.compile.onlySceneStatus,次のステータスのシーンのみ…
 ui.compile.pageBreakAllChapter,章ごとに改ページ
 ui.compile.pageListCharacterCast,登場人物一覧ページ
@@ -4083,12 +4124,12 @@ ui.home.close,ホームを閉じる
 ui.home.closePageFirst,ホームページを閉じる
 ui.home.copyPath,フォルダーのパスをコピー
 ui.home.editLatest,最終更新： 
-ui.home.export,エクスポート
+ui.home.export,エクスポート .zip
 ui.home.exportProjectOpenFile,開いているプロジェクトを .zip ファイルとしてエクスポート
 ui.home.homeLoadProjectFail,home：プロジェクトの読み込みに失敗しました
 ui.home.homePanelLoadFail,home-panel：読み込みに失敗しました
 ui.home.homeReadProjectFail,home：プロジェクトの読み取りに失敗しました： 
-ui.home.import,インポート
+ui.home.import,インポート .zip
 ui.home.importProjectFileZip,.zip ファイルからプロジェクトをインポート
 ui.home.language,言語
 ui.home.msg, 作： 
@@ -4370,6 +4411,9 @@ ui.logline.saved,ログラインを保存しました
 ui.logline.stakes,賭けられているもの
 ui.logline.title,ログライン
 ui.logline.why,AI はこれをコンパスとして使い、物語が軌道から外れないようにします
+ui.main.pickFolderBtn,このフォルダーを選択
+ui.main.pickNewProjectFolder,新しいプロジェクトの保存場所を選択 — プロジェクトのフォルダーはその中に作成されます
+ui.main.pickProjectFolder,開くプロジェクトのフォルダーを選択
 ui.mapAi.aroundHead,周辺（近い順）：
 ui.mapAi.cut,（長さの都合で残りは省略しました — 特定の名前についてはコマンド map.where で問い合わせてください）
 ui.mapAi.head,## マップ上の位置（作者のマップパネルより）
@@ -4758,7 +4802,7 @@ ui.menu.fullScreen,全画面
 ui.menu.graphAreaFloorPlan,間取り図
 ui.menu.graphDialogueNextPage,ページごとのセリフのグラフ（Dialogue Chart）…
 ui.menu.graphStoryBreakBranch,分岐する物語の図（Branch Tree）
-ui.menu.heading,見出し {0}（{1}+{2}）
+ui.menu.heading,見出し H{0}
 ui.menu.headPaperAllPage,ページヘッダー…
 ui.menu.help,ヘルプ
 ui.menu.help2,ヘルプ
@@ -5274,6 +5318,7 @@ ui.panel.historyTitle,履歴
 ui.panel.jumpedInMain,メインウィンドウでその位置に移動しました
 ui.panel.kanbanTitle,かんばん
 ui.panel.layoutReset,パネルのレイアウトをリセットしました
+ui.panel.layoutRestored,以前のパネル配置に戻しました
 ui.panel.logTitle,アプリケーションログ
 ui.panel.manage,パネルを管理
 ui.panel.mapsTitle,マップ
@@ -5436,7 +5481,6 @@ ui.pdf.emptyFontChapter,空欄 = 脚本のフォント
 ui.pdf.emptyNotPutWatermark,空欄 = 透かしなし
 ui.pdf.exportPDFItemNew,PDF をエクスポート（内蔵ビルダー）
 ui.pdf.exportPDFPdfLib,PDF をエクスポート（pdf-lib）
-ui.pdf.exportPDFPrevUse,（従来の「PDF としてエクスポート…」メニューは、これまで通り Chromium を使います）
 ui.pdf.gapXYInch,x/y の距離は、用紙タブと同じく「用紙の端からのインチ数」です
 ui.pdf.headPaperAllPage,すべてのページにヘッダー
 ui.pdf.headPaperAllPage2,ページヘッダー
@@ -6006,7 +6050,7 @@ ui.project.group,集団/勢力
 ui.project.hasProject,このプロジェクトはすでに存在します
 ui.project.investigateBack,ミステリー/探偵
 ui.project.investigation,捜査
-ui.project.newProjectTemplate,テンプレートから新規プロジェクト
+ui.project.newProjectPick,新しいプロジェクト — テンプレートを選択
 ui.project.newProjectTemplateDone,テンプレートからプロジェクトを作成しました： 
 ui.project.novelFantasyWorldbuilding,ファンタジー小説 — 世界観、種族、魔法
 ui.project.novelInvestigateCharacterSuspect,ミステリー小説 — 容疑者、手がかり、タイムライン
@@ -6287,10 +6331,10 @@ ui.settings.shortcuts,ショートカット
 ui.settings.shortcutsHint,「編集」を押してから、新しいキーの組み合わせを押してください
 ui.settings.spellCheck,スペルチェック
 ui.settings.spellCheckDict,アプリの辞書を使用（タイ語 + 英語）
-ui.settings.spellCheckDictHint,オフラインのタイ語 + 英語の単語リスト · 追加した単語を認識します · オフ = Chromium のチェッカーだけが残ります（英語のみ · 先に辞書をダウンロードします。オフラインでは下線が一切表示されません）
+ui.settings.spellCheckDictHint,オフラインのタイ語 + 英語の単語リスト · 追加した単語を認識します · オフ = システム内蔵のチェッカーだけが残ります（英語のみ · 先に辞書をダウンロードします。オフラインでは下線が一切表示されません）
 ui.settings.spellCheckHint,スペルミスの単語に下線を引く（常に 1 本の下線
 ui.settings.spFontFamily,脚本用フォント
-ui.settings.spFontFamilyHint,脚本モードでのみ使うフォント（既定：Courier New）
+ui.settings.spFontFamilyHint,脚本モードでのみ使うフォント（既定：Courier Prime）
 ui.settings.themeK2,K2（標準パレット）
 ui.settings.themeK2Light,K2 ライト
 ui.settings.title,設定
@@ -7018,7 +7062,7 @@ ui.starter.fIntro,あらすじ
 ui.starter.fIntroPlaceholder,この物語がだいたいどんな話か — 1 段落で十分です
 ui.starter.fName,タイトル
 ui.starter.fNamePlaceholder,例：暁の剣
-ui.starter.folderFixed,フォルダー Starters/{0} に保存されます — 物語の名前を変えてもフォルダー名は変わりません
+ui.starter.folderFixed,フォルダー Starters/{0} に保存されます — フォルダー名は最初に付けた物語の名前になり、あとで名前を変えてもフォルダー名は変わりません
 ui.starter.foreignAsk,「{0}」は別のプロジェクトのもののようです — そのキャラクターをこのプロジェクトの Wiki と今すぐ対応づけますか？
 ui.starter.fPrompts,キャラクターのプロンプト
 ui.starter.fPromptsHint,この AI がこのキャラクターを書くときは常に従うべきルール
@@ -7304,6 +7348,37 @@ ui.starter.wWhy,なぜ
 ui.starter.wWhyHint,その背後にある原動力や理由
 ui.starter.yesterday,昨日
 ui.starter.you,あなた
+ui.starterTag.action,アクション
+ui.starterTag.allAges,全年齢
+ui.starterTag.bittersweet,ほろ苦い
+ui.starterTag.comedy,コメディ
+ui.starterTag.cyberpunk,サイバーパンク
+ui.starterTag.dark,ダーク
+ui.starterTag.drama,ドラマ
+ui.starterTag.epic,壮大
+ui.starterTag.fantasy,ファンタジー
+ui.starterTag.gritty,硬派
+ui.starterTag.harem,ハーレム
+ui.starterTag.historical,歴史
+ui.starterTag.horror,ホラー
+ui.starterTag.isekai,異世界
+ui.starterTag.lighthearted,軽快
+ui.starterTag.mature,成人向け
+ui.starterTag.medieval,中世
+ui.starterTag.modern,現代
+ui.starterTag.mystery,ミステリー
+ui.starterTag.postApocalyptic,終末後
+ui.starterTag.romance,恋愛
+ui.starterTag.satirical,風刺
+ui.starterTag.school,学園
+ui.starterTag.sciFi,SF
+ui.starterTag.sliceOfLife,日常
+ui.starterTag.space,宇宙
+ui.starterTag.steampunk,スチームパンク
+ui.starterTag.teen,ティーン
+ui.starterTag.thriller,スリラー
+ui.starterTag.urbanFantasy,アーバンファンタジー
+ui.starterTag.wholesome,ほのぼの
 ui.status.addStatus,+ ステータスを追加
 ui.status.addStatusDone,ステータスを追加しました： 
 ui.status.copied,コピーしました
@@ -7397,32 +7472,32 @@ ui.textCase.lowerCaseItemSmall,lower case — すべて小文字
 ui.textCase.sentenceCaseSentenceItem,Sentence case — 文頭を大文字に
 ui.textCase.titleCaseStyleTitle,Title Case — タイトルのように
 ui.textCase.uPPERCASEItemBig,UPPER CASE — すべて大文字
-ui.themes.claude,テラコッタ（Claude Code）
+ui.themes.claude,テラコッタ
 ui.themes.cvdByDark,青黄色覚対応（ダーク）· 赤/ティール
 ui.themes.cvdByLight,青黄色覚対応（ライト）· 赤/ティール
 ui.themes.cvdRgDark,赤緑色覚対応（ダーク）· 青/オレンジ
 ui.themes.cvdRgLight,赤緑色覚対応（ライト）· 青/オレンジ
-ui.themes.dva,ゲーマーピンク（D.Va）
-ui.themes.excel,グリッドグリーン（Excel）
+ui.themes.dva,ゲーマーピンク
+ui.themes.excel,グリッドグリーン
 ui.themes.flower,花園
 ui.themes.fruit,フルーツサラダ
-ui.themes.gundam,トリコロールのモビルスーツ（ガンダム）
+ui.themes.gundam,トリコロールメカ
 ui.themes.hcDark,ハイコントラスト（ダーク）
 ui.themes.hcLight,ハイコントラスト（ライト）
-ui.themes.kimi,月光（Kimi）
+ui.themes.kimi,月光
 ui.themes.lagoon,陽だまりのラグーン
-ui.themes.macintosh,プラチナ（クラシック Macintosh）
+ui.themes.macintosh,プラチナ
 ui.themes.monoDark,モノクローム（ダーク）
 ui.themes.monoLight,モノクローム（ライト）
 ui.themes.neonPop,ネオンポップ
-ui.themes.opencode,ターミナルピーチ（opencode）
+ui.themes.opencode,ターミナルピーチ
 ui.themes.plumWine,梅酒
-ui.themes.powerpoint,スライドレンガ（PowerPoint）
+ui.themes.powerpoint,スライドレンガ
 ui.themes.rainbow,虹
 ui.themes.sakuraMist,桜霞
 ui.themes.tropical,トロピカル
-ui.themes.vscode,コードダーク（VS Code）
-ui.themes.word,ドキュメントブルー（Word）
+ui.themes.vscode,コードダーク
+ui.themes.word,ドキュメントブルー
 ui.thes.close,閉じる
 ui.thes.copied,コピーしました： 
 ui.thes.notFound,"類義語/対義語が見つかりません: """
@@ -7783,7 +7858,7 @@ ui.tip.toggle-panel:dashboard,進捗の概要 — 目標に対する語数 · �
 ui.tip.toggle-panel:dialogue,プロジェクト内のすべてのセリフ — 絞り込み、移動、その場で編集
 ui.tip.toggle-panel:dlgb,Wiki のキャラクターを AI にターン制で演じさせ、気に入ったセリフをカーソル位置の脚本に取り込みます — セリフに行き詰まったときに開きます
 ui.tip.toggle-panel:docs,メインの執筆エリア — 開いているすべてのタブ（シーン、脚本、Wiki ページ）が入ります（閉じることはできません）
-ui.tip.toggle-panel:floorplan,真上から見たセットの間取り図（Shot Designer 風）— 向きと視線を持つ Wiki のキャラクター · カメラ（ボディ/レンズ/支持具/トラック）· ライト · 図形 · シーンのセリフに紐づく動きの段取り
+ui.tip.toggle-panel:floorplan,真上から見たセットの間取り図 — 向きと視線を持つ Wiki のキャラクター · カメラ（ボディ/レンズ/支持具/トラック）· ライト · 図形 · シーンのセリフに紐づく動きの段取り
 ui.tip.toggle-panel:gallery,プロジェクトの Images フォルダー内のすべての画像 — ドキュメントにドラッグして挿入するか、Wiki で表紙/肖像として選びます
 ui.tip.toggle-panel:gallery-board,アルバムごとの参考画像を置くキャンバス — 画像ライブラリの横に開いて画像をドラッグします · 自由に移動/サイズ変更/ズーム · ボードから外してもファイルは削除されません
 ui.tip.toggle-panel:history,プロジェクトのファイルに対して行われた操作のタイムラインで、任意の時点に戻れます · 保持する件数は 設定 → プロジェクト情報 で設定します（初期値 32）
@@ -8323,6 +8398,7 @@ ui.xhub.kindAuto,元のファイルに合わせる
 ui.xhub.kindProse,小説（散文）
 ui.xhub.kindScript,脚本
 ui.xhub.needProject,エクスポートする前にプロジェクトを開いてください
+ui.xhub.needScriptHint,別の形式を選ぶか、脚本になっている範囲を選んでください
 ui.xhub.needScriptOnly,この形式は脚本でのみ使えます
 ui.xhub.noDraft,（このプロジェクトに下書きはありません）
 ui.xhub.noPreview,（プレビューするものがありません）

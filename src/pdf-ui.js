@@ -502,8 +502,7 @@ export async function pdfExportDialog() {
   box.append(el('div', 'k-dlg-title', tt('ui.pdf.exportPDFItemNew')));
   box.append(el('div', 'k-hint',
     ttf('ui.pdf.chapterPage', src.title, pagesOf(src.blocks, fmt).count) +
-    tt('ui.pdf.routeWritePDFPdf') +
-    tt('ui.pdf.exportPDFPrevUse')));
+    tt('ui.pdf.routeWritePDFPdf')));
 
   const cToc = checkbox(saved.toc);
   box.append(row(tt('ui.pdf.tocBookmarkNextHead'), cToc, tt('ui.pdf.sceneAppReadPDF')));

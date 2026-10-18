@@ -16,7 +16,7 @@ import { t, tf } from '../i18n.js';
 import {
   STARTER_DIR, SCENARIO_DIR, STARTER_FILE, IMAGE_DIR,
   migrateStarter, migrateScenario, newStarter, newScenario,
-  scenarioFileName, uniqueSlug,
+  scenarioFileName, uniqueSlug, shouldAdoptName,
 } from './starter-model.js';
 
 // ───────────────────────── ที่อยู่ ─────────────────────────
@@ -159,6 +159,30 @@ export async function createStarter(name) {
   await kapi.mkdir(await kapi.join(dir, SCENARIO_DIR));
   await writeStarter(s);
   return s;
+}
+
+/**
+ * [alpha.170] ตั้งชื่อเรื่องครั้งแรก → โฟลเดอร์ได้ชื่อนั้น
+ *
+ * ปุ่ม "สร้างเรื่อง" สร้างโฟลเดอร์ก่อนผู้ใช้ตั้งชื่อ (ชื่อเรื่องอยู่ขั้นที่ 2 ของ wizard) โฟลเดอร์จึงชื่อ
+ * "ยังไม่ได้ตั้งชื่อ" ไปตลอด — สร้างสามเรื่องได้ ยังไม่ได้ตั้งชื่อ · -2 · -3 แยกไม่ออกในตัวจัดการไฟล์
+ * ย้ายครั้งเดียวตอนชื่อแรกถูกตั้ง (กติกาเดิม "เปลี่ยนชื่อทีหลังไม่ย้ายโฟลเดอร์" ยังอยู่ครบ)
+ * @returns {Promise<string>} ชื่อโฟลเดอร์ใหม่ ('' = ไม่ได้ย้าย)
+ */
+export async function adoptStarterName(s) {
+  if (!state.root || !shouldAdoptName(s, [t('ui.starter.untitled')])) return '';
+  await flushStarterSaves();                       // ของที่รอเขียนต้องลงโฟลเดอร์เดิมให้ครบก่อนย้าย
+  const taken = (await listStarters()).map((x) => x.slug).filter((x) => x !== s.slug);
+  const next = uniqueSlug(s.name, taken);
+  if (!next || next === s.slug) return '';
+  const from = await starterDir(s.slug);
+  const to = await starterDir(next);
+  if (!from || !(await kapi.exists(from)) || (await kapi.exists(to))) return '';
+  try { await kapi.move(from, to); }
+  catch (e) { log('warn', 'starter: adopt name', e); return ''; }
+  s.slug = next;
+  await writeStarter(s);
+  return next;
 }
 
 /**

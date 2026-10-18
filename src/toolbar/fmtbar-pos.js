@@ -361,6 +361,26 @@ export function bottomAnchorTop(top, barH, prevBarH, hostH, prevHostH, slack = 4
  * @param {{left:number,top:number,right:number,bottom:number}} fab  กรอบของปุ่ม ณ ตำแหน่งตั้งต้น
  * @param {{left:number,top:number,right:number,bottom:number}|null} bar  กรอบของแถบรูปแบบ (null = ไม่แสดง)
  */
+/**
+ * [alpha.170 · บั๊ก 3] ระยะ `right` ของปุ่มลอยที่อยู่ตำแหน่งตั้งต้น — เกาะมุมขวาล่างของ **พื้นที่เอกสาร**
+ * เดิมเกาะมุมหน้าต่าง: มีแผงผนึกฝั่งขวาเมื่อไหร่ ปุ่มไปลอยทับมุมขวาล่างของแผงนั้น
+ * (เจอบนแอปจริง: บังปุ่ม "ส่ง" ของแชท AI ทั้งปุ่ม — กดส่งด้วยเมาส์ไม่ได้)
+ * คืน `null` = ใช้ค่าตั้งต้นของ CSS (พื้นที่เอกสารชิดขอบขวาของหน้าต่างอยู่แล้ว · วัดไม่ได้ · แคบเกินจะวางปุ่ม)
+ * @param {{left:number,right:number}|null} host  กรอบของพื้นที่เอกสาร (#content)
+ * @param {number} winW  ความกว้างหน้าต่าง
+ * @param {number} fabW  ความกว้างของปุ่ม
+ */
+export function fabHomeRight(host, winW, fabW = 52, margin = 28) {
+  if (!host || !(winW > 0)) return null;
+  const w = host.right - host.left;
+  if (!(w > 0)) return null;
+  const off = Math.round(winW - host.right);
+  if (off <= 4) return null;                                   // ไม่มีอะไรอยู่ทางขวาของพื้นที่เอกสาร
+  // พื้นที่เอกสารแคบกว่าปุ่ม + ระยะขอบสองฝั่ง = ไม่มีที่ให้วางข้างใน → ชิดขอบในของมันเท่าที่ได้
+  const m = w >= fabW + margin * 2 ? margin : Math.max(4, Math.floor((w - fabW) / 2));
+  return off + m;
+}
+
 export function fabDodgeBottom(fab, bar, winH, gap = 10) {
   if (!fab || !bar || !(winH > 0)) return null;
   const w = bar.right - bar.left, h = bar.bottom - bar.top;

@@ -207,6 +207,11 @@ export async function checkConsistency(characterId, options = {}) {
     maxTokens: options.maxTokens || 1500,
   });
   if (!res.ok) return { ok: !!local.length, issues: local, error: res.error, code: res.code, appearances: appearances.length };
+  // [alpha.170 · บั๊ก 2] ไม่มี JSON ให้อ่าน = ล้ม (ไม่ใช่ "ไม่พบความไม่สม่ำเสมอ")
+  if (extractJson(res.text) == null) {
+    return { ok: !!local.length, issues: local, code: 'unreadable', appearances: appearances.length,
+             error: t(res.truncated ? 'ui.ai.replyCut' : 'ui.ai.replyUnreadable') };
+  }
   const titles = Object.fromEntries(appearances.map((a) => [a.sceneId, a.title]));
   const issues = sortIssues(dedupe([...local, ...parseConsistency(res.text, { sceneIds: built.sceneIds, titles })]));
   return { ok: true, issues, usage: res.usage, cost: res.cost, appearances: appearances.length, prompt: built.prompt };

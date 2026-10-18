@@ -14,6 +14,7 @@ import {
   newProvider, validateProvider, validateProviderIssues, stripSecrets, withSecrets,
   modelsRequests, parseModels, chatRequest, parseChat, parseStreamChunk,
   listProviders, activeProvider, upsertProvider, removeProvider, mergeDefaults, packDefaults,
+  isStarvedReply, isCutByThinking, thinkingHeadroom, boostedMaxTokens, apiKindOf, API_KINDS, PROVIDER_PRESETS,
 } from './ai-providers.js';
 import { SEND_KEYS, DEFAULT_SEND_KEY, estimateTokens } from './ai-session.js';
 // [alpha.145] คำอธิบายความล้มเหลวที่ผู้ใช้ทำอะไรต่อได้ (โมดูลบริสุทธิ์ · unit test แยก)
@@ -211,11 +212,63 @@ export async function fetchModels(provider) {
   return { ok: false, models: [], error: lastErr };
 }
 
-/** ทดสอบการเชื่อมต่อของ Credential (ใช้รายชื่อโมเดลเป็นตัววัด — ถูกและไม่เสียเงิน) */
-export async function testCredential(provider) {
+/**
+ * ทดสอบการเชื่อมต่อของ Credential
+ * [alpha.170 · บั๊ก 15] เดิมวัดแค่ "ขอรายชื่อโมเดลได้" — เกตเวย์ที่ต้องมี header เพิ่ม/โมเดลที่ไม่รับโปรโตคอล
+ * ผ่านด่านนี้ทั้งที่แชทจริงได้ 400 · ตอนนี้ลองคุยจริงหนึ่งคำด้วยโมเดลที่เลือกอยู่ (ไม่กี่โทเคน)
+ * `opts.model` = โมเดลที่ผู้ใช้เลือกในฟอร์ม · ไม่มี = ตัวแรกของรายชื่อ · `opts.chat === false` = ข้ามขั้นแชท
+ * @returns {Promise<{ok, msg, models:string[], chat?:{ok,model,error?}}>}
+ */
+export async function testCredential(provider, opts = {}) {
   const r = await fetchModels(provider);
-  return r.ok ? { ok: true, msg: tf('ui.aiProvider.connectOkFoundModel', r.models.length), models: r.models }
-              : { ok: false, msg: r.error, models: [] };
+  if (!r.ok) return { ok: false, msg: r.error, models: [] };
+  const model = (opts.model && r.models.includes(opts.model) ? opts.model : '') || provider.model || r.models[0] || '';
+  if (opts.chat === false || !model) {
+    return { ok: true, msg: tf('ui.aiProvider.connectOkFoundModel', r.models.length), models: r.models };
+  }
+  const c = await complete({ ...provider, model }, {
+    messages: [{ role: 'user', content: 'ping' }], maxTokens: 16, temperature: 0,
+    noCompass: true, noUserSystem: true, noEmptyRetry: true, maxRetries: 0,
+  });
+  // คำตอบว่างเพราะโมเดลใช้ 16 โทเคนไปกับการคิด = ปลายทางรับคำขอแล้ว นับว่าเชื่อมต่อได้
+  const chatOk = c.ok || c.code === 'empty';
+  return chatOk
+    ? { ok: true, msg: tf('ui.aiProvider.testChatOk', r.models.length, model), models: r.models, chat: { ok: true, model } }
+    : { ok: false, msg: tf('ui.aiProvider.testChatFail', r.models.length, model, c.error || ''), models: r.models,
+        chat: { ok: false, model, error: c.error || '', code: c.code || '', hints: c.hints || [] } };
+}
+
+// ══ [alpha.170 · บั๊ก 2] โมเดลที่คิดก่อนตอบ: จำว่าเคยใช้คิดเท่าไร แล้วเผื่อที่ให้ล่วงหน้า ══
+const _thinkSeen = new Map();   // "<รหัสผู้ให้บริการ>|<โมเดล>" → โทเคนที่ใช้คิดมากสุดที่เคยเห็น
+const thinkKey = (provider, model) => String((provider && (provider.id || provider.name)) || '') + '|' + String(model || '');
+function noteThinking(provider, model, usage, thinking) {
+  const n = Math.max(Number(usage && usage.reasoning) || 0, thinking ? estimateTokens(thinking) : 0);
+  if (n <= 0) return;
+  const k = thinkKey(provider, model);
+  _thinkSeen.set(k, Math.max(_thinkSeen.get(k) || 0, n));
+}
+function addHeadroom(provider, req) {
+  const seen = _thinkSeen.get(thinkKey(provider, req.body && req.body.model));
+  if (seen && req.body.max_tokens > 0) req.body.max_tokens += thinkingHeadroom(seen);
+}
+/** (เทส) ลืมสิ่งที่จำไว้เรื่องการคิดของโมเดล */
+export function resetThinkingMemory() { _thinkSeen.clear(); }
+
+/** [alpha.170 · บั๊ก 2] คำตอบว่าง = ความล้มเหลวที่มีคำอธิบาย — ห้ามคืน ok พร้อมข้อความว่างให้ฟีเจอร์ตีความเอง */
+function emptyFailure(provider, req, out) {
+  const starved = isStarvedReply(out);
+  const title = t(starved ? 'ui.aiProvider.emptyThinking' : 'ui.aiProvider.emptyReply');
+  const hints = starved ? [t('ui.aiProvider.emptyHintTokens'), t('ui.aiProvider.emptyHintEffort')]
+                        : [t('ui.aiProvider.emptyHintModel')];
+  const u = (out && out.usage) || {};
+  const lines = [t('ui.aiError.provider') + ((provider && provider.name) || ''),
+                 t('ui.aiError.model') + ((req.body && req.body.model) || ''),
+                 tf('ui.aiProvider.emptyDetail', String(u.reasoning || 0),
+                    req.body && req.body.max_tokens !== undefined ? String(req.body.max_tokens) : '—'),
+                 '', t('ui.aiError.edit'), ...hints.map((h, i) => (i + 1) + '. ' + h)];
+  log('warn', 'ai: ' + title, lines.join('\n'));
+  return { ok: false, text: '', thinking: (out && out.thinking) || '', usage: u, error: title,
+           detail: lines.join('\n'), hints, code: 'empty', status: 200, starved };
 }
 
 /**
@@ -252,18 +305,35 @@ export async function complete(provider, opts = {}) {
   opts = await compassOpts(opts);
   if (!provider.model && !opts.model) return { ok: false, text: '', error: t('ui.aiProvider.cantPickModel') };
   const req = chatRequest(provider, opts);
+  addHeadroom(provider, req);
   // [alpha.96] ส่งต่อชื่อคำขอ + เพดานเวลา เพื่อให้กด "หยุด" ได้จริง
   if (opts.reqId) req.reqId = opts.reqId;
   if (opts.timeoutMs) req.timeoutMs = opts.timeoutMs;
-  const t0 = Date.now();
-  const res = await sendRequest(provider, req);
-  if (!res.ok) {
-    return { ok: false, text: '', error: res.error, detail: res.detail, hints: res.hints,
-             code: res.code, status: res.status,
-             aborted: !!res.aborted, timedOut: !!res.timedOut };
+  if (opts.maxRetries !== undefined) req.maxRetries = opts.maxRetries;
+  const bad = (res) => ({ ok: false, text: '', error: res.error, detail: res.detail, hints: res.hints,
+                          code: res.code, status: res.status,
+                          aborted: !!res.aborted, timedOut: !!res.timedOut });
+  let t0 = Date.now();
+  let res = await sendRequest(provider, req);
+  if (!res.ok) return bad(res);
+  let out = parseChat(res.json);
+  logCall(provider, req, { ms: Date.now() - t0, usage: out.usage, chars: (out.text || '').length, stream: false });
+  noteThinking(provider, req.body.model, out.usage, out.thinking);
+  // [alpha.170 · บั๊ก 2] คิดจนโควตาหมด (ว่าง) หรือคำตอบถูกตัดเพราะการคิดกินโควตา → ลองใหม่ครั้งเดียวด้วยเพดานที่สูงขึ้น
+  if (!opts.noEmptyRetry && req.body.max_tokens > 0 && (isStarvedReply(out) || isCutByThinking(out))) {
+    const bigger = boostedMaxTokens(req.body.max_tokens, out.usage.reasoning || estimateTokens(out.thinking || ''));
+    if (bigger > req.body.max_tokens) {
+      req.body = { ...req.body, max_tokens: bigger };
+      t0 = Date.now();
+      res = await sendRequest(provider, req);
+      if (!res.ok) return bad(res);
+      out = parseChat(res.json);
+      logCall(provider, req, { ms: Date.now() - t0, usage: out.usage, chars: (out.text || '').length, stream: false });
+      noteThinking(provider, req.body.model, out.usage, out.thinking);
+    }
   }
-  const { text, thinking, usage, finish, truncated } = parseChat(res.json);
-  logCall(provider, req, { ms: Date.now() - t0, usage, chars: (text || '').length, stream: false });
+  if (!String(out.text || '').trim()) return emptyFailure(provider, req, out);
+  const { text, thinking, usage, finish, truncated } = out;
   return { ok: true, text, thinking, usage, model: req.body.model, provider: provider.name, finish, truncated };
 }
 
@@ -287,6 +357,7 @@ export async function completeStream(provider, opts = {}, onChunk = () => {}) {
     return r;
   }
   const req = chatRequest(provider, { ...opts, stream: true });
+  addHeadroom(provider, req);
   if (opts.reqId) req.reqId = opts.reqId;
   if (opts.timeoutMs) req.timeoutMs = opts.timeoutMs;
   if (!isDomainAllowed(req.url, (provider.credential || {}).allowedDomains || [])) {
@@ -306,6 +377,8 @@ export async function completeStream(provider, opts = {}, onChunk = () => {}) {
   const retries = Math.max(0, req.maxRetries ?? 0);
   const backoff = retryBackoff;   // [alpha.162 · W6 ข้อ 7] timing.js
   try {
+   // [alpha.170 · บั๊ก 2] รอบที่สอง = ลองใหม่ครั้งเดียวเมื่อ "คิดจนโควตาหมด ไม่มีคำตอบไหลมาเลย"
+   for (let round = 0; round < 2; round++) {
     for (let attempt = 0; ; attempt++) {
       setBusy(attempt ? tf('ui.aiProvider.busyNextTryNew', who, attempt) : tf('ui.aiProvider.busyNext', who));
       const res = await kapi.httpStream(req.url, httpOpts, (line) => {
@@ -336,6 +409,23 @@ export async function completeStream(provider, opts = {}, onChunk = () => {}) {
         return { ...f, text, thinking, partial: !!text.trim() };
       }
       break;
+    }
+    noteThinking(provider, req.body.model, null, thinking);
+    const starved = !streamError && !text.trim() && (finish === 'length' || !!thinking.trim());
+    if (round === 0 && starved && !opts.noEmptyRetry && req.body.max_tokens > 0) {
+      const bigger = boostedMaxTokens(req.body.max_tokens, estimateTokens(thinking));
+      if (bigger > req.body.max_tokens) {
+        req.body = { ...req.body, max_tokens: bigger };
+        httpOpts.body = JSON.stringify(req.body);
+        thinking = ''; finish = '';
+        continue;
+      }
+    }
+    break;
+   }
+    if (!streamError && !text.trim()) {
+      return emptyFailure(provider, req, { text, thinking, finish, truncated: finish === 'length',
+                                           usage: { reasoning: estimateTokens(thinking) } });
     }
     if (streamError) {
       const f = failure(provider, req, { status: 0, streamError: true, body: streamError });
@@ -516,13 +606,29 @@ export async function showAISettingsDialog() {
         tf('ui.aiProvider.domainAllow', (cur.credential.allowedDomains || []).join(', ') || t('ui.aiProvider.notRemember'))
       : '';
   }
-  provSel.onchange = () => { activeId = provSel.value; refresh(); };
+  // ══ [alpha.170 · บั๊ก 7] ★ รายการผู้ให้บริการบันทึกลงไฟล์ทันทีที่เพิ่ม/แก้/ลบ ══
+  // เดิมรอปุ่ม "บันทึก" ของกล่องนี้ — ผู้ใช้กด "บันทึกผู้ให้บริการ" ในป๊อปอัป (เห็นขึ้นในรายการแล้ว)
+  // แล้วกด "ปิด" = ผู้ให้บริการหายเงียบ ไม่มีคำเตือน (เจอบนแอปจริง) · คีย์ลงไฟล์ทันทีอยู่แล้ว รายการต้องไปด้วยกัน
+  const keepKeysOf = async (list) => {
+    try {
+      const keys = await loadKeys();
+      const used = new Set(list.map((p) => (p.credential || {}).id).filter(Boolean));
+      const stale = Object.keys(keys).filter((k) => !used.has(k));
+      if (stale.length) { for (const k of stale) delete keys[k]; await saveKeys(keys); }
+    } catch (e) { log('warn', 'ai: key cleanup', e); }
+  };
+  const saveRows = async (msg) => {
+    try { await persist(rows, activeId); await keepKeysOf(rows); if (msg) setStatus(msg); return true; }
+    catch (e) { log('error', 'ai: save providers failed', e); setStatusError(t('ui.aiProvider.defaultsFail')); return false; }
+  };
+  provSel.onchange = async () => { activeId = provSel.value; refresh(); await saveRows(); };
   addBtn.onclick = async () => {
     const p = await providerDialog(null);
     if (!p) return;
     rows = upsertProvider(rows, p);
     activeId = p.id;
     refresh(); paintDefaults();
+    await saveRows(tf('ui.aiProvider.providerSaved', p.name));
   };
   editBtn.onclick = async () => {
     const cur = rows.find((p) => p.id === provSel.value);
@@ -531,6 +637,7 @@ export async function showAISettingsDialog() {
     if (!p) return;
     rows = upsertProvider(rows, p);
     refresh();
+    await saveRows(tf('ui.aiProvider.providerSaved', p.name));
   };
   delBtn.onclick = async () => {
     const cur = rows.find((p) => p.id === provSel.value);
@@ -540,6 +647,7 @@ export async function showAISettingsDialog() {
     rows = removeProvider(rows, cur.id);
     if (activeId === cur.id) activeId = (rows[0] && rows[0].id) || '';
     refresh(); paintDefaults();
+    await saveRows(tf('ui.aiProvider.providerDeleted', cur.name));
   };
   refresh();
 
@@ -562,6 +670,7 @@ export async function showAISettingsDialog() {
     // คีย์ลงไฟล์คีย์ของโปรเจกต์ทันที (รายการผู้ให้บริการยังรอปุ่มบันทึกของกล่อง — ยกเลิก = คีย์ถูกเก็บกวาดตอนบันทึกครั้งถัดไป)
     if (Object.keys(m.keys).length) { const keys = await loadKeys(); Object.assign(keys, m.keys); await saveKeys(keys); }
     refresh(); paintDefaults();
+    await saveRows();
     setStatus(tf('ui.aiProvider.defaultsImported', m.added));
     log('info', 'ai: defaults imported', { added: m.added, withKeys: Object.keys(m.keys).length });
   };
@@ -575,9 +684,20 @@ export async function showAISettingsDialog() {
     } catch (e) { log('warn', 'ai: defaults save failed', e); setStatusError(t('ui.aiProvider.defaultsFail')); }
   };
 
+  // ค่าที่ยังรอปุ่ม "บันทึก" ของกล่องนี้ (ปุ่มส่ง · งบประวัติ · System prompt · Agents) — ปิดทิ้งต้องถามก่อน
+  const snap = () => JSON.stringify([sendSel.value, String(Math.max(0, Math.round(Number(histInp.value) || 0))),
+                                     spTa.value.trim(), !!spOn.checked, agents]);
+  const snap0 = snap();
   const close = () => ov.remove();
-  cB.onclick = close;
-  ov.onclick = (e) => { if (e.target === ov) close(); };
+  const tryClose = async () => {
+    if (snap() !== snap0) {
+      const { confirmBox } = await import('../ui.js');
+      if (!(await confirmBox(t('ui.common.discardChangesAsk'), t('ui.app.closeNotSave')))) return;
+    }
+    close();
+  };
+  cB.onclick = tryClose;
+  ov.onclick = (e) => { if (e.target === ov) tryClose(); };
   okB.onclick = async () => {
     aiMeta().sendKey = sendSel.value;
     aiMeta().historyTokens = Math.max(0, Math.round(Number(histInp.value) || 0));
@@ -586,15 +706,7 @@ export async function showAISettingsDialog() {
     aiMeta().agents = agents;
     await persist(rows, activeId);
     // [alpha.149] ลบผู้ให้บริการแล้ว คีย์ของมันต้องไม่ค้างอยู่ใน ai-key.json ต่อไป
-    try {
-      const keys = await loadKeys();
-      const used = new Set(rows.map((p) => (p.credential || {}).id).filter(Boolean));
-      const stale = Object.keys(keys).filter((k) => !used.has(k));
-      if (stale.length) {
-        for (const k of stale) delete keys[k];
-        await saveKeys(keys);
-      }
-    } catch (e) { log('warn', 'ai: key cleanup', e); }
+    await keepKeysOf(rows);
     close();
     setStatus(t('ui.common.saveSettingsAIDone'));
   };
@@ -634,6 +746,11 @@ export function providerDialog(existing) {
 
     // ── 1. ชื่อ ──
     const s1 = sec(1, t('ui.aiProvider.nameProvider'));
+    // [alpha.170] ชุดสำเร็จรูป — เลือกแล้วเติมชื่อ · ที่อยู่ API · รูปแบบ API (เดิมต้องรู้และพิมพ์ Base URL เอง)
+    const presetSel = el('select', 'wiki-input k-dlg-select ai-prov-preset');
+    { const o = el('option', null, t('ui.aiProvider.presetPick')); o.value = ''; presetSel.append(o); }
+    for (const ps of PROVIDER_PRESETS) { const o = el('option', null, ps.name); o.value = ps.id; presetSel.append(o); }
+    if (!existing) field(s1, t('ui.aiProvider.preset'), presetSel, t('ui.aiProvider.presetHint'));
     const nameInp = field(s1, t('ui.aiProvider.nameSet'), el('input', 'wiki-input ai-prov-name'),
                           t('ui.aiProvider.nameSeeDropdownEg'));
     nameInp.value = P.name || '';
@@ -641,16 +758,42 @@ export function providerDialog(existing) {
     // ── 2. Credential ──
     // [alpha.160 · P3] หัวข้อ/ป้ายเคยเป็นอังกฤษฝังโค้ด — ย้ายเข้า CSV (กฎถาวรข้อ 0)
     const s2 = sec(2, t('ui.aiProvider.secCredential'));
-    const credName = field(s2, t('ui.aiProvider.nameCredential'), el('input', 'wiki-input ai-cred-name'));
+    // [alpha.170] ชื่อ Credential เว้นว่างได้ = ใช้ชื่อผู้ให้บริการ (เดิมบังคับตั้งสองชื่อ)
+    const credName = field(s2, t('ui.aiProvider.nameCredential'), el('input', 'wiki-input ai-cred-name'),
+                           t('ui.aiProvider.credNameHint'));
     credName.value = P.credential.name || '';
-    const apiInp = field(s2, t('ui.aiProvider.apiKey'), el('input', 'wiki-input ai-cred-key'),
-                         tf('ui.aiProvider.keepSplitFolderProject', KEY_FILE));
+    const keyWrap = el('div', 'ai-cred-keywrap');
+    const apiInp = el('input', 'wiki-input ai-cred-key');
     apiInp.type = 'password';
     apiInp.value = P.credential.apiKey || '';
     apiInp.placeholder = t('ui.aiProvider.skSkipEmptyNot');
+    const eyeBtn = el('button', 'cmp-mini ai-cred-eye', gi('eye'));
+    eyeBtn.type = 'button';
+    eyeBtn.title = t('ui.aiProvider.showKey');
+    eyeBtn.onclick = () => {
+      const show = apiInp.type === 'password';
+      apiInp.type = show ? 'text' : 'password';
+      eyeBtn.textContent = gi(show ? 'eye-off' : 'eye');
+      eyeBtn.title = t(show ? 'ui.aiProvider.hideKey' : 'ui.aiProvider.showKey');
+    };
+    keyWrap.append(apiInp, eyeBtn);
+    field(s2, t('ui.aiProvider.apiKey'), keyWrap, tf('ui.aiProvider.keepSplitFolderProject', KEY_FILE));
     const baseInp = field(s2, t('ui.aiProvider.baseUrl'), el('input', 'wiki-input ai-cred-base'));
     baseInp.value = P.credential.baseUrl || '';
     baseInp.placeholder = 'https://api.openai.com/v1';
+    // [alpha.170 · บั๊ก 15] รูปแบบ API — เดิมมีแบบเดียว (chat/completions) โมเดล Claude ของเกตเวย์ที่รับสองแบบใช้ไม่ได้
+    const apiSel = el('select', 'wiki-input k-dlg-select ai-cred-api');
+    const API_LABELS = { openai: 'ui.aiProvider.apiKindOpenai', anthropic: 'ui.aiProvider.apiKindAnthropic' };
+    for (const kind of API_KINDS) { const o = el('option', null, t(API_LABELS[kind])); o.value = kind; apiSel.append(o); }
+    apiSel.value = apiKindOf(P);
+    field(s2, t('ui.aiProvider.apiKind'), apiSel, t('ui.aiProvider.apiKindHint'));
+    presetSel.onchange = () => {
+      const ps = PROVIDER_PRESETS.find((x) => x.id === presetSel.value);
+      if (!ps) return;
+      if (!nameInp.value.trim() || PROVIDER_PRESETS.some((x) => x.name === nameInp.value.trim())) nameInp.value = ps.name;
+      baseInp.value = ps.baseUrl;
+      apiSel.value = ps.api;
+    };
     const domInp = field(s2, t('ui.aiProvider.allowedDomains'),
                          el('textarea', 'wiki-input ai-cred-domains'),
                          t('ui.aiProvider.lineNewExampleCom'));
@@ -660,7 +803,8 @@ export function providerDialog(existing) {
 
     const credBtns = el('div', 'ai-cred-btns');
     const testBtn = el('button', 'ai-cred-test', t('ui.aiProvider.testConnect'));
-    const saveCredBtn = el('button', 'k-ok ai-cred-save', gi('save') + ' Save Credential');
+    // [alpha.170] ปุ่มรอง + ข้อความจากไฟล์ภาษา (เดิมเป็นปุ่มหลักสีเดียวกับ "บันทึกผู้ให้บริการ" และเป็นอังกฤษฝังโค้ด)
+    const saveCredBtn = el('button', 'ai-cred-save', gi('save') + ' ' + t('ui.aiProvider.saveCredential'));
     const credMsg = el('span', 'ai-cred-msg dim');
     credBtns.append(testBtn, saveCredBtn, credMsg);
     s2.append(credBtns);
@@ -669,6 +813,7 @@ export function providerDialog(existing) {
     const s3 = sec(3, t('ui.aiProvider.secModel'));
     const modelSel = field(s3, t('ui.common.model'), el('select', 'wiki-input k-dlg-select ai-model-sel'),
                            t('ui.aiProvider.pressFetchListModel'));
+    const modelHint = modelSel.parentElement.querySelector('.ai-hint');
     const modelBtns = el('div', 'ai-model-btns');
     const loadModelsBtn = el('button', 'ai-model-load', t('ui.aiProvider.fetchListModel'));
     const modelMsg = el('span', 'ai-model-msg dim');
@@ -678,6 +823,9 @@ export function providerDialog(existing) {
     function fillModels(list, keep) {
       modelSel.innerHTML = '';
       const models = list && list.length ? list : (P.model ? [P.model] : []);
+      // [alpha.170] คำใบ้ตามสภาพจริง — เดิมยังบอกให้ "กดดึงรายชื่อ" ทั้งที่รายชื่อมาแล้ว
+      if (modelHint) modelHint.textContent = list && list.length > 1 ? tf('ui.aiProvider.modelsLoaded', list.length)
+                                                                     : t('ui.aiProvider.pressFetchListModel');
       if (!models.length) {
         const o = el('option', null, t('ui.aiProvider.notHasListPress'));
         o.value = '';
@@ -752,9 +900,10 @@ export function providerDialog(existing) {
         models: [...modelSel.options].map((o) => o.value).filter(Boolean),
         credential: {
           ...P.credential,
-          name: credName.value.trim(),
+          name: credName.value.trim() || nameInp.value.trim(),
           apiKey: apiInp.value.trim(),
           baseUrl: baseInp.value.trim(),
+          api: apiSel.value,
           allowedDomains: parseDomains(domInp.value),
         },
         params: readParams(),
@@ -778,13 +927,14 @@ export function providerDialog(existing) {
       // [alpha.128] เดิมกรองด้วยตัวอักษรไทย `e.includes('ชื่อผู้ให้บริการ')` ทั้งที่ข้อความนี้
       // มาจาก `t('ui.aiProviders.cantRenameProvider')` ซึ่งแปลตามภาษา → หน้าจออังกฤษกรองไม่ติด
       // แล้วปุ่ม "ทดสอบ" ถูกบล็อกด้วยข้อผิดพลาดที่ตั้งใจจะข้าม · เทียบกับข้อความตัวเดียวกันแทน
-      const errs = validateProviderIssues(p).filter((e) => e.code !== 'name').map((e) => e.msg);
+      const errs = validateProviderIssues(p).filter((e) => e.code !== 'name' && e.code !== 'credName').map((e) => e.msg);
       if (errs.length) { say(credMsg, false, errs[0]); return; }
       setBusy(true, credMsg, t('ui.aiProvider.busyTest'));
-      const r = await testCredential(p);
+      const r = await testCredential(p, { model: modelSel.value });
       setBusy(false);
-      say(credMsg, r.ok, (r.ok ? gi('check-circle') + ' ' : gi('fail') + ' ') + r.msg);
-      if (r.ok && r.models.length) fillModels(r.models, modelSel.value);
+      say(credMsg, r.ok, (r.ok ? gi('check-circle') + ' ' : gi('fail') + ' ') + r.msg
+        + (r.chat && !r.ok && r.chat.hints && r.chat.hints[0] ? ' — ' + r.chat.hints[0] : ''));
+      if (r.models.length) fillModels(r.models, modelSel.value);
     };
     loadModelsBtn.onclick = async () => {
       if (busy) return;
@@ -797,7 +947,7 @@ export function providerDialog(existing) {
     };
     saveCredBtn.onclick = async () => {
       const p = collect();
-      const errs = validateProviderIssues(p).filter((e) => e.code !== 'name').map((e) => e.msg);
+      const errs = validateProviderIssues(p).filter((e) => e.code !== 'name' && e.code !== 'credName').map((e) => e.msg);
       if (errs.length) { say(credMsg, false, errs[0]); return; }
       const keys = await loadKeys();
       keys[p.credential.id] = p.credential.apiKey;

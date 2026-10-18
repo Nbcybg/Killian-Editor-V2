@@ -69,7 +69,9 @@ function streamsText(bytes) {
   }
   return out.join('\n');
 }
-const drawOps = (bytes) => (streamsText(bytes).match(/\bTj\b/g) || []).length;
+// [alpha.170 · บั๊ก 1] นับ "รอบวาดข้อความ" จากจำนวนบล็อก BT…ET — ช่วงไทยที่ต้องจัดตำแหน่ง glyph เอง
+// ใช้คำสั่ง TJ/Ts หลายตัวในบล็อกเดียว (เดิมนับ Tj ซึ่งมีหนึ่งตัวต่อบล็อกพอดี — ความหมายเท่าเดิม)
+const drawOps = (bytes) => (streamsText(bytes).match(/\bBT\b/g) || []).length;
 
 // pdf-lib เขียนข้อความเป็น hex string (<48656C6C6F> Tj) ทั้งฟอนต์มาตรฐานและฟอนต์ที่ฝัง
 // → ค้นข้อความในไฟล์ตรง ๆ ไม่เจอ ต้องถอด hex ก่อน (ฟอนต์มาตรฐาน = ได้ตัวอักษรอ่านออก)
