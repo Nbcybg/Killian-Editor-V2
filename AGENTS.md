@@ -20,8 +20,8 @@ export KILLIAN_TEST=1 KILLIAN_TEST_PROJECT=/tmp/k2proj
 xvfb-run -a --server-args="-screen 0 1500x950x24" ./node_modules/.bin/electron . --no-sandbox --disable-gpu
 # ผลอยู่ /tmp/k2result.txt — บรรทัดสุดท้ายต้องเป็น "ALL OK"
 ```
-ปัจจุบัน **6,533 checks · ALL OK** (2.0.0-alpha.release.1 · Windows 11 · dev · alpha.170 รอบต่อ 8 [ลองใช้โปรแกรมจริง + AI จริง] · Windows 11 · dev · รอบต่อ 7 [แผงเปิดครั้งแรก = ผนึก · เมนู "บทภาพยนตร์"] · Windows 11 · dev · รอบเต็ม ~17 นาที · รอบต่อ 6 [bug hunt 5] = 6,514 · alpha.170 รอบต่อ 1–5 [ขยับเลขรุ่น] macOS 15.7 Intel = 6,497 · รอบเต็ม ~55 นาทีบน MacBook Pro 2019 · รอบต่อ 2 [รายงานบั๊ก] Windows = 6,456 · รอบต่อ [ภาษา] = 6,379 · alpha.169 = 6,370 · alpha.168 รอบต่อ 4 = 6,342 · รอบต่อ 3 = 6,291 · รอบต่อ 2 a11y = 6,257 · รอบต่อ native = 6,194 · alpha.168 = 6,142 · alpha.167 รอบต่อ 7 = 6,131 · รอบต่อ 6 = 6,113 · รอบต่อ 5 = 6,074 · รอบต่อ 2 = 6,012 · Linux/xvfb รอบต่อ = 5,984 · alpha.166 macOS = 5,902 · Windows alpha.165 = 5,841 · บางรอบ ±2 = เทสเดิมที่มีเงื่อนไขตามจังหวะ) — ห้ามทำให้จำนวนลดลง
-(unit `npm run test:unit` = **13,007 ข้อ · 177 ไฟล์** · ~60–125 วินาที · 2.0.0-alpha.release.1 · alpha.170 รอบต่อ 8 · ก่อนหน้า 12,503 ข้อ · 174 ไฟล์ — ลดจาก 12,470 เพราะถอดฟีเจอร์ภาพของ Story Starter ตามที่ผู้ใช้สั่ง)
+ปัจจุบัน **6,534 checks · ALL OK** (2.0.0-alpha.release.2 · macOS · รอบต่อ 9 [แผงลอย/กลุ่มลอยรวมเป็นแท็บกับแผงที่ผนึก · e2e `[170-G9]`] · Windows 11 · dev · alpha.170 รอบต่อ 8 [ลองใช้โปรแกรมจริง + AI จริง] · Windows 11 · dev · รอบต่อ 7 [แผงเปิดครั้งแรก = ผนึก · เมนู "บทภาพยนตร์"] · Windows 11 · dev · รอบเต็ม ~17 นาที · รอบต่อ 6 [bug hunt 5] = 6,514 · alpha.170 รอบต่อ 1–5 [ขยับเลขรุ่น] macOS 15.7 Intel = 6,497 · รอบเต็ม ~55 นาทีบน MacBook Pro 2019 · รอบต่อ 2 [รายงานบั๊ก] Windows = 6,456 · รอบต่อ [ภาษา] = 6,379 · alpha.169 = 6,370 · alpha.168 รอบต่อ 4 = 6,342 · รอบต่อ 3 = 6,291 · รอบต่อ 2 a11y = 6,257 · รอบต่อ native = 6,194 · alpha.168 = 6,142 · alpha.167 รอบต่อ 7 = 6,131 · รอบต่อ 6 = 6,113 · รอบต่อ 5 = 6,074 · รอบต่อ 2 = 6,012 · Linux/xvfb รอบต่อ = 5,984 · alpha.166 macOS = 5,902 · Windows alpha.165 = 5,841 · บางรอบ ±2 = เทสเดิมที่มีเงื่อนไขตามจังหวะ) — ห้ามทำให้จำนวนลดลง
+(unit `npm run test:unit` = **13,003 ข้อ · 177 ไฟล์** บน macOS รอบต่อ 9 (ชุด panel +7 · ยอดรวมต่างจาก Windows ตามเทสที่มีเงื่อนไขของระบบ) · ~60–125 วินาที · 2.0.0-alpha.release.1 · alpha.170 รอบต่อ 8 · ก่อนหน้า 12,503 ข้อ · 174 ไฟล์ — ลดจาก 12,470 เพราะถอดฟีเจอร์ภาพของ Story Starter ตามที่ผู้ใช้สั่ง)
 **[alpha.169 รอบต่อ 4 · macOS]** โฟลเดอร์งานที่ยังไม่มี `node_modules`: `npm ci` แล้ว `node node_modules/electron/install.js` (สคริปต์ postinstall ของ electron ไม่อยู่ใน `allowScripts` — ไม่รันเอง) ·
 `KILLIAN_TEST_KEEPGOING=1` = ไม่หยุดที่ข้อแดงข้อแรก (เก็บทั้งรอบในครั้งเดียว · ใช้ไล่ของ ไม่ใช่ผลรับรอง)
 **[alpha.167 · Linux/คอนเทนเนอร์]** ใช้ `--use-angle=swiftshader --enable-unsafe-swiftshader` แทน `--disable-gpu` (เทส `[166-M]` ต้องมี WebGL) ·
@@ -404,6 +404,18 @@ icons/glyphs.csv       name,glyph — ตัวสำรองของชื่
 | ปล่อยรุ่นใหม่ | ขยับ `version` (package.json + package-lock) → เขียน "มีอะไรใหม่" + ปุ่มดาวน์โหลดของ README สองภาษาใหม่ (unit `docs-view` ตรวจเลขรุ่น) → หัวข้อรุ่นใน CHANGELOG → e2e ALL OK → push `main` แล้ว push tag `v<version>` = `.github/workflows/release.yml` สร้าง Release + ตัวโปรแกรมสามระบบให้เอง | สร้าง `.dmg` บน Windows (ทำไม่ได้) · แนบไฟล์ที่สร้างในเครื่องตัวเองปนกับของ Actions |
 | ชื่อไฟล์ของตัวโปรแกรม | `build.*.artifactName` ใน package.json: `Killian2-${version}-win-x64-portable.exe` · `-mac-${arch}.dmg` · `-linux-x64.AppImage` — ปุ่มใน README ชี้ชื่อนี้ตรง ๆ และ `pickAsset` เลือกจากชื่อนี้ | เปลี่ยนรูปชื่อไฟล์โดยไม่แก้ README + `ASSET_RULES`/`ARCH_NAME` (update-check.js) + unit `update-check` |
 | ตัวอัปเดตบน macOS | `decideUpdate({ …, arch })` — main ส่ง `process.arch` ผ่าน `update:source` | หยิบ `.dmg` ตัวแรก (มีสองสถาปัตยกรรม) |
+
+### ⚠️ กฎถาวร (alpha.170 · รอบต่อ 9) — ลากแผงลอยไปรวมกลุ่มกับแผงที่ผนึก
+
+ที่มา: ผู้ใช้ *"group panel ไม่ทำงาน ถ้า panel ที่ undock แล้ว ไป group กับ panel ที่ dock แล้ว แต่ undock กับ undock ได้"* · ประตูกันพลาด: unit `panel` `[170-G9]` + e2e `[170-G9]` (ลากด้วยเมาส์จริง · `[167-X]` ตรวจ `kind === 'merge'` แล้ว)
+
+| เรื่อง | ทำแบบนี้ | ห้าม |
+|---|---|---|
+| โหมด strict ของ `detectSnapTarget` (ลากแผงลอย) | หัวของแผงที่ผนึก = `merge` ตรวจ **ก่อน** ขอบพื้นที่ทำงานและโซนขอบของแผง (ข้อ 1b) — หัวแผง 28px อยู่ในแถบขอบ `STRICT_EDGE_PX` (36px) เสมอ | ปล่อยให้ `snapZone` ตัดสินหัวแผง (ได้ `top` = แทรกช่องทุกครั้ง) · เทสที่เช็คแค่ `targetId` ไม่เช็ค `kind` |
+| ตัวลากของกล่องลอย | ส่ง `excludeFloat: ctx.floatId` — กล่องวิ่งตามเมาส์ แถบของกลุ่มลอยจึงอยู่ใต้เมาส์ตลอด | กันตัวเองด้วย `data-panel-id` อย่างเดียว (กลุ่มลอยไม่มี) |
+| กลุ่มลอยปล่อยบนแท็บ/หัวแผงที่ผนึก | `pm.groupFloatIntoDock(floatId, targetId, index?)` — สมาชิกทุกใบเข้ากลุ่มตามลำดับ · แท็บที่เปิดอยู่ตามกลุ่มลอย | คืน false ("กลุ่มซ้อนกลุ่ม") = ปล่อยแล้วไม่มีอะไรเกิดขึ้น |
+
+`window.__k2dev.getPanelManager` (โหมด `KILLIAN_TEST_NORUN`) มีให้ probe แล้ว
 
 ### ⚠️ กฎถาวร (alpha.170 · รอบต่อ 8) — PDF ไทย · คำตอบว่างของ AI · ร้อยแก้วจาก AI · ลำดับปุ่ม · ของที่ลองใช้จริงแล้วเจอ
 

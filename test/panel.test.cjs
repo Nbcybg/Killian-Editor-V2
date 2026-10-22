@@ -1340,6 +1340,50 @@ check('[60r2] LAYOUT_VERSION = 2', PS.LAYOUT_VERSION === 2, PS.LAYOUT_VERSION);
   check('[165-P3] ตัวหนีบของ UI ใช้กับตำแหน่งที่จำไว้ (หน้าต่างเล็กลง = ไม่หลุดจอ)', fc && fc.x === 20 && fc.y === 20, fc && [fc.x, fc.y].join());
 }
 
+// ── [alpha.170 · รอบต่อ 9] แผงลอย/กลุ่มลอย → รวมเป็นแท็บกับแผงที่ผนึกอยู่ ──
+{
+  const mem = new Map();
+  const st = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, v), removeItem: (k) => mem.delete(k) };
+  const mk = () => {
+    const m = new PS.PanelManager({ storage: st, key: 'g9-' + Math.random() });
+    for (const id of ['docs', 'tree', 'notes', 'comments', 'dashboard']) m.registerPanel(id, { closable: id !== 'docs' });
+    m.store.update(PL.dock('row', [PL.panel('tree'), PL.panel('docs')]));
+    return m;
+  };
+  const grpOf = (m, id) => PL.tabGroupOf(m.root, id);
+  // (1) แผงลอยเดี่ยว → หัวแผงที่ผนึก (ทางที่ตัวลากใช้: dockPanel 'center')
+  const a = mk();
+  a.floatPanel('notes', { x: 300, y: 200, w: 300, h: 300 });
+  a.dockPanel('notes', 'center', 'tree');
+  const ga = grpOf(a, 'tree');
+  check('[170-G9] แผงลอยเดี่ยว → รวมเป็นแท็บกับแผงที่ผนึก', !!ga && ga.children.map((c) => c.id).join() === 'tree,notes'
+        && !a.isFloating('notes') && a.floats.length === 0, ga && ga.children.map((c) => c.id).join());
+  // (2) กลุ่มลอย → แผงที่ผนึก (ต่อท้าย · แท็บที่เปิดอยู่ตามกลุ่มลอย)
+  const b = mk();
+  b.floatPanel('notes', { x: 300, y: 200, w: 300, h: 300 });
+  b.floatPanel('comments', { x: 700, y: 200, w: 300, h: 300 });
+  b.groupIntoFloat('comments', b.floatIdOf('notes'));
+  const fid = b.floatIdOf('notes');
+  check('[170-G9] ★ กลุ่มลอยทั้งกลุ่ม → รวมเป็นแท็บกับแผงที่ผนึก', b.groupFloatIntoDock(fid, 'tree') === true);
+  const gb = grpOf(b, 'tree');
+  check('[170-G9] สมาชิกครบตามลำดับ + กล่องลอยหายไป', !!gb && gb.children.map((c) => c.id).join() === 'tree,notes,comments'
+        && b.floats.length === 0, gb && gb.children.map((c) => c.id).join());
+  check('[170-G9] แท็บที่เปิดอยู่ = แท็บที่กลุ่มลอยเปิดอยู่ (comments)', gb && gb.children[gb.active].id === 'comments');
+  // (3) กลุ่มลอย → ปล่อยบนหัวแท็บตำแหน่ง 0 ของกลุ่มที่ผนึก
+  b.floatPanel('dashboard', { x: 300, y: 200, w: 300, h: 300 });
+  b.floatPanel('notes', { x: 600, y: 200, w: 300, h: 300 });
+  b.groupIntoFloat('notes', b.floatIdOf('dashboard'));
+  b.groupFloatIntoDock(b.floatIdOf('dashboard'), 'tree', 0);
+  const gc = grpOf(b, 'tree');
+  check('[170-G9] ปล่อยบนแท็บตำแหน่ง 0 = แทรกหน้าแท็บนั้น เรียงตามกลุ่มลอย', gc && gc.children.map((c) => c.id).join() === 'dashboard,notes,tree,comments',
+        gc && gc.children.map((c) => c.id).join());
+  // (4) เป้าไม่ได้ผนึก / ไม่มีกล่อง = ไม่ทำอะไร (คืน false · ไม่มีแผงหาย)
+  const c = mk();
+  c.floatPanel('notes', { x: 300, y: 200, w: 300, h: 300 });
+  check('[170-G9] เป้าที่ไม่ได้ผนึก = คืน false และกล่องลอยยังอยู่',
+        c.groupFloatIntoDock(c.floatIdOf('notes'), 'comments') === false && c.isFloating('notes'));
+}
+
 console.log(`\npanel: ${pass} ผ่าน, ${fail} ล้มเหลว`);
 console.log(fail === 0 ? 'ALL OK' : 'HAS FAILURES');
 process.exit(fail === 0 ? 0 : 1);

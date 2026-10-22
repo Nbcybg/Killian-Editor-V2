@@ -2,7 +2,7 @@
 
 **Language:** English · [ภาษาไทย](../th/B-shortcuts.md)
 
-> Generated from the app itself, version **2.0.0-alpha.release.1** (English · default settings). Menu names and shortcuts on your machine may differ with the language you chose and the shortcuts you rebound.
+> Generated from the app itself, version **2.0.0-alpha.release.2** (English · default settings). Menu names and shortcuts on your machine may differ with the language you chose and the shortcuts you rebound.
 > On macOS: `Ctrl` = `⌘` · `Alt` = `⌥`
 
 [← Back to the manual contents](README.md)

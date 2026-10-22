@@ -509,6 +509,24 @@ export class PanelManager {
     this.store.update(next);
     return true;
   }
+  /**
+   * [alpha.170 · รอบต่อ 9] เอา "ทั้งกล่องลอย" (เดี่ยวหรือกลุ่ม) ไปรวมเป็นแท็บกับแผงที่ผนึกอยู่
+   * สมาชิกเรียงตามเดิมต่อกันที่ตำแหน่ง `index` (ไม่ระบุ = ต่อท้าย) · แท็บที่เปิดอยู่ = แท็บที่กล่องลอยเปิดอยู่
+   */
+  groupFloatIntoDock(floatId, targetId, index) {
+    const f = this.floats.find((x) => x.id === floatId);
+    if (!f || !this.root || !this.isDocked(targetId)) return false;
+    const kids = f.panel.type === 'tabs' ? (f.panel.children || []) : [f.panel];
+    if (!kids.length || kids.some((k) => k.id === targetId)) return false;
+    const actId = (kids[Math.max(0, Math.min(f.panel.active | 0, kids.length - 1))] || kids[0]).id;
+    this.store.setFloats(this.floats.filter((x) => x.id !== floatId));
+    let next = this.root;
+    kids.forEach((k, i) => {
+      next = Number.isInteger(index) ? PL.addAsTabAt(next, targetId, k, index + i) : PL.addAsTab(next, targetId, k);
+    });
+    this.store.update(PL.activatePanel(next, actId));
+    return true;
+  }
   /** ย้าย/ปรับขนาด "กล่องลอย" ตาม id ของกล่อง (ใช้กับกลุ่มลอยที่ไม่มี panel id เดียว) */
   moveFloatBox(floatId, box = {}) {
     const next = this.floats.map((f) => {

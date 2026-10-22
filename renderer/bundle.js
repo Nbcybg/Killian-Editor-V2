@@ -24344,6 +24344,24 @@ ${BLOCK_END}
           this.store.update(next);
           return true;
         }
+        /**
+         * [alpha.170 · รอบต่อ 9] เอา "ทั้งกล่องลอย" (เดี่ยวหรือกลุ่ม) ไปรวมเป็นแท็บกับแผงที่ผนึกอยู่
+         * สมาชิกเรียงตามเดิมต่อกันที่ตำแหน่ง `index` (ไม่ระบุ = ต่อท้าย) · แท็บที่เปิดอยู่ = แท็บที่กล่องลอยเปิดอยู่
+         */
+        groupFloatIntoDock(floatId, targetId, index) {
+          const f = this.floats.find((x) => x.id === floatId);
+          if (!f || !this.root || !this.isDocked(targetId)) return false;
+          const kids = f.panel.type === "tabs" ? f.panel.children || [] : [f.panel];
+          if (!kids.length || kids.some((k) => k.id === targetId)) return false;
+          const actId = (kids[Math.max(0, Math.min(f.panel.active | 0, kids.length - 1))] || kids[0]).id;
+          this.store.setFloats(this.floats.filter((x) => x.id !== floatId));
+          let next = this.root;
+          kids.forEach((k, i5) => {
+            next = Number.isInteger(index) ? addAsTabAt(next, targetId, k, index + i5) : addAsTab(next, targetId, k);
+          });
+          this.store.update(activatePanel(next, actId));
+          return true;
+        }
         /** ย้าย/ปรับขนาด "กล่องลอย" ตาม id ของกล่อง (ใช้กับกลุ่มลอยที่ไม่มี panel id เดียว) */
         moveFloatBox(floatId, box2 = {}) {
           const next = this.floats.map((f) => {
@@ -31643,6 +31661,7 @@ ${BLOCK_END}
     const strict = !!opts.strict;
     for (const fp of document.querySelectorAll(".k-float-panel[data-float-id]")) {
       if (fp.dataset.panelId === excludeId) continue;
+      if (opts.excludeFloat && fp.dataset.floatId === opts.excludeFloat) continue;
       const head2 = fp.querySelector(":scope > .k-panel-head, :scope > .k-float-tabbar");
       if (!head2) continue;
       const r = head2.getBoundingClientRect();
@@ -31655,6 +31674,17 @@ ${BLOCK_END}
       const r = tab.getBoundingClientRect();
       if (!r.width || mx < r.left || mx > r.right || my < r.top || my > r.bottom) continue;
       return { kind: "tab", zone: "center", targetId: pid, rect: box(r), tabIndex: +tab.dataset.index || 0 };
+    }
+    if (strict) {
+      for (const e of host2.querySelectorAll(".k-panel[data-panel-id]")) {
+        const pid = e.dataset.panelId;
+        if (pid === excludeId || pid === "docs") continue;
+        if (e.closest(".k-float-panel") || e.offsetParent === null) continue;
+        const hd = e.querySelector(":scope > .k-panel-head");
+        const hr = hd && hd.getBoundingClientRect();
+        if (!hr || !hr.width || mx < hr.left || mx > hr.right || my < hr.top || my > hr.bottom) continue;
+        return { kind: "merge", zone: "center", targetId: pid, rect: box(e.getBoundingClientRect()) };
+      }
     }
     const wsEl = host2.querySelector(".k-workspace") || host2;
     const wsR = wsEl.getBoundingClientRect();
@@ -31690,7 +31720,9 @@ ${BLOCK_END}
     if (!hit) return false;
     const draggingGroup = !!(ctx2.floatId && (pm2.floats || []).some((f) => f.id === ctx2.floatId && f.panel && f.panel.type === "tabs"));
     if (draggingGroup && hit.kind !== "floatgroup") {
-      if (hit.kind === "tab" || hit.kind === "merge") return false;
+      if (hit.kind === "tab" || hit.kind === "merge") {
+        return pm2.groupFloatIntoDock(ctx2.floatId, hit.targetId, hit.kind === "tab" ? hit.tabIndex : void 0);
+      }
       return pm2.dockFloatGroup(
         ctx2.floatId,
         hit.zone,
@@ -31887,7 +31919,7 @@ ${BLOCK_END}
         popup.style.left = s.x + "px";
         popup.style.top = s.y + "px";
         popup.classList.toggle("k-float-snapped", s.snapped);
-        hit = canDock && !(ev.ctrlKey || ev.metaKey) ? detectSnapTarget(ev.clientX, ev.clientY, host2, panelId2, { strict: true }) : null;
+        hit = canDock && !(ev.ctrlKey || ev.metaKey) ? detectSnapTarget(ev.clientX, ev.clientY, host2, panelId2, { strict: true, excludeFloat: ctx2.floatId }) : null;
         if (hit) ov.show(zoneRect(hit.rect, hit.zone, hit.kind), hit.zone, hit.kind);
         else ov.hide();
       };
@@ -243327,13 +243359,62 @@ ${css}
             check2("[167-X] strict: \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E01\u0E25\u0E32\u0E07\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E1C\u0E07\u0E1C\u0E19\u0E36\u0E01 = \u0E44\u0E21\u0E48\u0E1C\u0E19\u0E36\u0E01", !mid || mid.kind === "edge", JSON.stringify(mid && { k: mid.kind, z: mid.zone }));
             const hr = dockedPanel.querySelector(":scope > .k-panel-head").getBoundingClientRect();
             const onHead = detectSnapTarget(hr.left + hr.width / 2, hr.top + hr.height / 2, host2, "tree", { strict: true });
-            check2(
-              "[167-X] strict: \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E1A\u0E19\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07 = \u0E22\u0E31\u0E07\u0E1C\u0E19\u0E36\u0E01/\u0E23\u0E27\u0E21\u0E44\u0E14\u0E49",
-              !!onHead && onHead.targetId === dockedPanel.dataset.panelId,
-              JSON.stringify(onHead && { k: onHead.kind, t: onHead.targetId })
-            );
+            check2("[167-X] strict: \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E1A\u0E19\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07 = \u0E22\u0E31\u0E07\u0E1C\u0E19\u0E36\u0E01/\u0E23\u0E27\u0E21\u0E44\u0E14\u0E49", !!onHead && onHead.targetId === dockedPanel.dataset.panelId && onHead.kind === "merge", JSON.stringify(onHead && { k: onHead.kind, t: onHead.targetId }));
             const loose = detectSnapTarget(r.left + r.width / 2, r.top + r.height / 2, host2, "tree");
             check2("[167-X] \u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E19\u0E36\u0E01\u0E2D\u0E22\u0E39\u0E48 (\u0E44\u0E21\u0E48 strict) \u0E22\u0E31\u0E07\u0E43\u0E0A\u0E49\u0E42\u0E0B\u0E19\u0E40\u0E14\u0E34\u0E21", !!loose);
+            const tgtId = dockedPanel.dataset.panelId;
+            const dragTo = (el2, sx3, sy3, tx2, ty) => {
+              el2.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0, clientX: sx3, clientY: sy3 }));
+              document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: sx3 + 20, clientY: sy3 + 20 }));
+              document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: tx2, clientY: ty }));
+              document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: tx2, clientY: ty }));
+            };
+            const sameGroup = (a, b) => [...document.querySelectorAll(".k-tab-bar")].some((bar) => !bar.closest(".k-float-panel") && bar.querySelector(`.k-tab[data-panel-id="${a}"]`) && bar.querySelector(`.k-tab[data-panel-id="${b}"]`));
+            const nt = notesPop() && notesPop().querySelector(".k-panel-head-title");
+            if (nt) {
+              const nr = nt.getBoundingClientRect();
+              const hr2 = dockedPanel.querySelector(":scope > .k-panel-head").getBoundingClientRect();
+              dragTo(nt, nr.left + Math.min(12, nr.width / 2), nr.top + nr.height / 2, hr2.left + hr2.width / 2, hr2.top + hr2.height / 2);
+              await w7(380);
+              check2(
+                "[170-G9] \u2605\u2605 \u0E25\u0E32\u0E01\u0E41\u0E1C\u0E07\u0E25\u0E2D\u0E22\u0E44\u0E1B\u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E1A\u0E19\u0E2B\u0E31\u0E27\u0E41\u0E1C\u0E07\u0E17\u0E35\u0E48\u0E1C\u0E19\u0E36\u0E01 = \u0E23\u0E27\u0E21\u0E40\u0E1B\u0E47\u0E19\u0E41\u0E17\u0E47\u0E1A\u0E01\u0E25\u0E38\u0E48\u0E21\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19",
+                pm7.isDocked("notes") && !pm7.isFloating("notes") && sameGroup("notes", tgtId),
+                "docked=" + pm7.isDocked("notes") + " group=" + sameGroup("notes", tgtId)
+              );
+            }
+            pm7.floatPanel("comments", { x: 560, y: 160, w: 320, h: 240 });
+            await w7(300);
+            pm7.floatPanel("dashboard", { x: 600, y: 200, w: 320, h: 240 });
+            await w7(300);
+            pm7.groupIntoFloat("dashboard", pm7.floatIdOf("comments"));
+            await w7(380);
+            const gPop = document.querySelector(".k-float-panel.k-float-group");
+            const gBar = gPop && gPop.querySelector(":scope > .k-float-tabbar");
+            const dTab = document.querySelector(`.k-tab-bar:not(.k-float-tabbar) .k-tab[data-panel-id="${tgtId}"]`);
+            check2("[170-G9] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21: \u0E21\u0E35\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22 + \u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E02\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E1C\u0E19\u0E36\u0E01", !!gBar && !!dTab);
+            if (gBar && dTab) {
+              const br = gBar.getBoundingClientRect(), dr = dTab.getBoundingClientRect();
+              const btnL = gBar.querySelector(".k-panel-btns").getBoundingClientRect().left;
+              let gx = null;
+              for (let x = btnL - 2; x > br.left; x -= 2) {
+                if (document.elementFromPoint(x, br.top + br.height / 2) === gBar) {
+                  gx = x;
+                  break;
+                }
+              }
+              check2("[170-G9] \u0E40\u0E15\u0E23\u0E35\u0E22\u0E21: \u0E41\u0E16\u0E1A\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E21\u0E35\u0E17\u0E35\u0E48\u0E27\u0E48\u0E32\u0E07\u0E43\u0E2B\u0E49\u0E08\u0E31\u0E1A", gx !== null);
+              dragTo(gBar, gx ?? br.left + 2, br.top + br.height / 2, dr.left + dr.width / 2, dr.top + dr.height / 2);
+              await w7(380);
+              check2(
+                "[170-G9] \u2605\u2605 \u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E17\u0E31\u0E49\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21 \u2192 \u0E40\u0E02\u0E49\u0E32\u0E01\u0E25\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E1C\u0E19\u0E36\u0E01 (\u0E40\u0E14\u0E34\u0E21\u0E0A\u0E19\u0E41\u0E16\u0E1A\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07/\u0E04\u0E37\u0E19 false = \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E01\u0E34\u0E14\u0E02\u0E36\u0E49\u0E19)",
+                sameGroup("comments", tgtId) && sameGroup("dashboard", tgtId) && !document.querySelector(".k-float-panel.k-float-group"),
+                `c=${sameGroup("comments", tgtId)} d=${sameGroup("dashboard", tgtId)}`
+              );
+            }
+            pm7.hidePanel("comments");
+            pm7.hidePanel("dashboard");
+            pm7.floatPanel("notes", { x: 520, y: 140, w: 300, h: 240 });
+            await w7(380);
           }
         }
         check2("[167-D] Explorer \u0E44\u0E21\u0E48\u0E23\u0E31\u0E1A\u0E1C\u0E48\u0E32\u0E19\u0E15\u0E31\u0E27\u0E01\u0E25\u0E32\u0E07 (\u0E21\u0E35\u0E01\u0E32\u0E23\u0E25\u0E32\u0E01\u0E20\u0E32\u0E22\u0E43\u0E19\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07)", dropIntent("tree", ["scene"], document.body) === null);
@@ -265432,7 +265513,7 @@ ${css}
         globalThis.__k2testing = true;
         return runTest(p);
       };
-      if (location.search.includes("k2test")) window.__k2dev = { loadProject, handleCommand, state, resetPanels, sceneCtx, syncPropsToActive, pluginList, reloadPlugins };
+      if (location.search.includes("k2test")) window.__k2dev = { loadProject, handleCommand, state, resetPanels, sceneCtx, syncPropsToActive, pluginList, reloadPlugins, getPanelManager };
       window.k2PageDoctor = k2PageDoctor;
       window.k2Net = () => netInst;
       window.__k2menu = null;

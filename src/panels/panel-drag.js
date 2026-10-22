@@ -101,12 +101,18 @@ const box = (r) => ({ x: r.left, y: r.top, w: r.width, h: r.height });
  *   ผ่านพื้นที่ทำงานแล้วปล่อยตรงไหนก็ผนึกกลับเข้า dock ทั้งที่ผู้ใช้แค่อยากย้ายที่
  */
 export const STRICT_EDGE_PX = 36;
+/**
+ * @param opts.excludeFloat [alpha.170 · รอบต่อ 9] id ของกล่องลอยที่กำลังถูกลากเอง — กล่องวิ่งตามเมาส์
+ *   แถบแท็บของ "กลุ่มลอย" จึงอยู่ใต้เมาส์ตลอดการลาก (กลุ่มไม่มี data-panel-id ให้ excludeId กันได้)
+ *   ไม่กันด้วย id กล่อง = ข้อ (0) ชนตัวเองทุกครั้ง แล้วกลุ่มลอยไม่เคยไปถึงเป้าที่ผนึกอยู่เลย
+ */
 export function detectSnapTarget(mx, my, host, excludeId, opts = {}) {
   if (!host) return null;
   const strict = !!opts.strict;
   // (0) [alpha.66r7] หัว/แถบแท็บของ "กล่องลอย" — ปล่อยตรงนี้ = รวมเข้ากลุ่มลอยนั้น
   for (const fp of document.querySelectorAll('.k-float-panel[data-float-id]')) {
     if (fp.dataset.panelId === excludeId) continue;
+    if (opts.excludeFloat && fp.dataset.floatId === opts.excludeFloat) continue;
     const head = fp.querySelector(':scope > .k-panel-head, :scope > .k-float-tabbar');
     if (!head) continue;
     const r = head.getBoundingClientRect();
@@ -120,6 +126,21 @@ export function detectSnapTarget(mx, my, host, excludeId, opts = {}) {
     const r = tab.getBoundingClientRect();
     if (!r.width || mx < r.left || mx > r.right || my < r.top || my > r.bottom) continue;
     return { kind: 'tab', zone: 'center', targetId: pid, rect: box(r), tabIndex: +tab.dataset.index || 0 };
+  }
+  // (1b) [alpha.170 · รอบต่อ 9 · บั๊ก "แผงลอยรวมกลุ่มกับแผงที่ผนึกไม่ได้"] โหมด strict: หัวของแผงที่ผนึก
+  //   = รวมเป็นแท็บ · ต้องมาก่อนขอบพื้นที่ทำงานและก่อนโซนขอบของแผง ด้วยเหตุผลเดียวกับหัวแท็บ —
+  //   หัวแผงสูง 28px อยู่ในแถบขอบบน STRICT_EDGE_PX (36px) ของแผงเสมอ เดิมจึงได้ 'top' (แทรกช่องข้างบน)
+  //   ทุกครั้ง ไม่เคยได้ 'merge' เลย (แผงลอย↔แผงลอยรวมได้เพราะไปทางข้อ 0)
+  if (strict) {
+    for (const e of host.querySelectorAll('.k-panel[data-panel-id]')) {
+      const pid = e.dataset.panelId;
+      if (pid === excludeId || pid === 'docs') continue;
+      if (e.closest('.k-float-panel') || e.offsetParent === null) continue;
+      const hd = e.querySelector(':scope > .k-panel-head');
+      const hr = hd && hd.getBoundingClientRect();
+      if (!hr || !hr.width || mx < hr.left || mx > hr.right || my < hr.top || my > hr.bottom) continue;
+      return { kind: 'merge', zone: 'center', targetId: pid, rect: box(e.getBoundingClientRect()) };
+    }
   }
   // (2) ขอบของ "พื้นที่ทำงาน" (ไม่รวมแถบเครื่องมือ/แถบสถานะ — สองตัวนั้นต้องอยู่บน/ล่างสุดเสมอ)
   const wsEl = host.querySelector('.k-workspace') || host;
@@ -163,7 +184,11 @@ export function applyDrop(pm, panelId, hit, ctx = {}) {
   const draggingGroup = !!(ctx.floatId
     && (pm.floats || []).some((f) => f.id === ctx.floatId && f.panel && f.panel.type === 'tabs'));
   if (draggingGroup && hit.kind !== 'floatgroup') {
-    if (hit.kind === 'tab' || hit.kind === 'merge') return false;      // กลุ่มซ้อนกลุ่ม — ไม่รองรับ
+    // [alpha.170 · รอบต่อ 9] ปล่อยกลุ่มลอยบนแท็บ/หัวแผงที่ผนึก = สมาชิกทุกใบเข้าเป็นแท็บของกลุ่มนั้น
+    // (เดิมคืน false "กลุ่มซ้อนกลุ่ม — ไม่รองรับ" = ปล่อยแล้วไม่มีอะไรเกิดขึ้น)
+    if (hit.kind === 'tab' || hit.kind === 'merge') {
+      return pm.groupFloatIntoDock(ctx.floatId, hit.targetId, hit.kind === 'tab' ? hit.tabIndex : undefined);
+    }
     // [alpha.66r11] ปล่อยทั้งกลุ่มที่ "ขอบพื้นที่ทำงาน" = ผนึกเต็มด้านนั้น (เหมือนแผงเดี่ยว)
     return pm.dockFloatGroup(ctx.floatId, hit.zone, hit.targetId,
       { edge: hit.kind === 'edge', isFixedPanel: ctx.isFixedPanel });
@@ -374,7 +399,7 @@ export function makeFloatDraggable(header, popup, panelId, pm, ctx = {}) {
       popup.style.top = s.y + 'px';
       popup.classList.toggle('k-float-snapped', s.snapped);
       // [alpha.167] Ctrl/⌘ ค้าง = ย้ายอย่างเดียว ไม่ผนึก · ไม่กด = ผนึกเฉพาะเป้าที่เล็งชัด (strict)
-      hit = canDock && !(ev.ctrlKey || ev.metaKey) ? detectSnapTarget(ev.clientX, ev.clientY, host, panelId, { strict: true }) : null;
+      hit = canDock && !(ev.ctrlKey || ev.metaKey) ? detectSnapTarget(ev.clientX, ev.clientY, host, panelId, { strict: true, excludeFloat: ctx.floatId }) : null;
       if (hit) ov.show(zoneRect(hit.rect, hit.zone, hit.kind), hit.zone, hit.kind);
       else ov.hide();
     };

@@ -9,7 +9,7 @@
 
 These builds are not signed yet. Windows SmartScreen: **More info → Run anyway**. macOS: open once with **right-click → Open** (macOS 15: **System Settings → Privacy & Security → Open Anyway**).
 
-What's new in this release: see the [README](https://github.com/Nbcybg/Killian-Editor-V2#whats-new-in-200-alpharelease1) · full history in [CHANGELOG.md](https://github.com/Nbcybg/Killian-Editor-V2/blob/main/CHANGELOG.md).
+What's new in this release: see the [README](https://github.com/Nbcybg/Killian-Editor-V2#whats-new-in-200-alpharelease2) · full history in [CHANGELOG.md](https://github.com/Nbcybg/Killian-Editor-V2/blob/main/CHANGELOG.md).
 
 ---
 

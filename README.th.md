@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0--alpha.release.1-ff6640"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0--alpha.release.2-ff6640"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-452f5e">
   <img alt="Electron" src="https://img.shields.io/badge/Electron-43-1e1250">
   <img alt="Languages" src="https://img.shields.io/badge/UI%20languages-7-ffc55c">
@@ -19,47 +19,33 @@
 ## ดาวน์โหลด
 
 <p align="center">
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.1/Killian2-2.0.0-alpha.release.1-win-x64-portable.exe"><img alt="ดาวน์โหลดสำหรับ Windows" src="https://img.shields.io/badge/Windows-x64%20%C2%B7%20portable%20.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.1/Killian2-2.0.0-alpha.release.1-mac-arm64.dmg"><img alt="ดาวน์โหลดสำหรับ macOS (Apple Silicon)" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%C2%B7%20.dmg-1e1250?style=for-the-badge&logo=apple&logoColor=white"></a>
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.1/Killian2-2.0.0-alpha.release.1-mac-x64.dmg"><img alt="ดาวน์โหลดสำหรับ macOS (Intel)" src="https://img.shields.io/badge/macOS-Intel%20%C2%B7%20.dmg-452f5e?style=for-the-badge&logo=apple&logoColor=white"></a>
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.1/Killian2-2.0.0-alpha.release.1-linux-x64.AppImage"><img alt="ดาวน์โหลดสำหรับ Linux" src="https://img.shields.io/badge/Linux-x64%20%C2%B7%20AppImage-ff6640?style=for-the-badge&logo=linux&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.2/Killian2-2.0.0-alpha.release.2-win-x64-portable.exe"><img alt="ดาวน์โหลดสำหรับ Windows" src="https://img.shields.io/badge/Windows-x64%20%C2%B7%20portable%20.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.2/Killian2-2.0.0-alpha.release.2-mac-arm64.dmg"><img alt="ดาวน์โหลดสำหรับ macOS (Apple Silicon)" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%C2%B7%20.dmg-1e1250?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.2/Killian2-2.0.0-alpha.release.2-mac-x64.dmg"><img alt="ดาวน์โหลดสำหรับ macOS (Intel)" src="https://img.shields.io/badge/macOS-Intel%20%C2%B7%20.dmg-452f5e?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.2/Killian2-2.0.0-alpha.release.2-linux-x64.AppImage"><img alt="ดาวน์โหลดสำหรับ Linux" src="https://img.shields.io/badge/Linux-x64%20%C2%B7%20AppImage-ff6640?style=for-the-badge&logo=linux&logoColor=white"></a>
 </p>
 
-<p align="center"><b>รุ่น 2.0.0-alpha.release.1</b> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/tag/v2.0.0-alpha.release.1">หน้ารุ่นนี้</a> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases">ทุกรุ่น</a></p>
+<p align="center"><b>รุ่น 2.0.0-alpha.release.2</b> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/tag/v2.0.0-alpha.release.2">หน้ารุ่นนี้</a> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases">ทุกรุ่น</a></p>
 
 | ระบบ | ไฟล์ | เปิดครั้งแรก |
 |---|---|---|
-| **Windows 10/11** (x64) | `Killian2-2.0.0-alpha.release.1-win-x64-portable.exe` | ไม่ต้องติดตั้ง ดับเบิลคลิกเปิดได้เลย · ถ้า SmartScreen เตือนว่าไม่รู้จักผู้เผยแพร่ ให้กด **More info → Run anyway** |
-| **macOS 12 ขึ้นไป** — Apple Silicon (M1–M4) | `Killian2-2.0.0-alpha.release.1-mac-arm64.dmg` | ลาก *Killian 2* ไปไว้ใน Applications · ตัวโปรแกรมยังไม่ผ่านการรับรองของ Apple: เปิดครั้งแรกด้วย **คลิกขวา → Open** หรือบน macOS 15 ไปที่ **System Settings → Privacy & Security → Open Anyway** |
-| **macOS 12 ขึ้นไป** — Intel | `Killian2-2.0.0-alpha.release.1-mac-x64.dmg` | เหมือนข้างบน · ไม่แน่ใจว่าเครื่องเป็นแบบไหน: **เมนู Apple → About This Mac** ถ้าเขียนว่า "Chip: Apple M…" คือ Apple Silicon |
-| **Linux** (x64) | `Killian2-2.0.0-alpha.release.1-linux-x64.AppImage` | `chmod +x Killian2-2.0.0-alpha.release.1-linux-x64.AppImage` แล้วเปิดได้เลย · บางดิสโทรต้องติดตั้ง `libfuse2` ก่อน |
+| **Windows 10/11** (x64) | `Killian2-2.0.0-alpha.release.2-win-x64-portable.exe` | ไม่ต้องติดตั้ง ดับเบิลคลิกเปิดได้เลย · ถ้า SmartScreen เตือนว่าไม่รู้จักผู้เผยแพร่ ให้กด **More info → Run anyway** |
+| **macOS 12 ขึ้นไป** — Apple Silicon (M1–M4) | `Killian2-2.0.0-alpha.release.2-mac-arm64.dmg` | ลาก *Killian 2* ไปไว้ใน Applications · ตัวโปรแกรมยังไม่ผ่านการรับรองของ Apple: เปิดครั้งแรกด้วย **คลิกขวา → Open** หรือบน macOS 15 ไปที่ **System Settings → Privacy & Security → Open Anyway** |
+| **macOS 12 ขึ้นไป** — Intel | `Killian2-2.0.0-alpha.release.2-mac-x64.dmg` | เหมือนข้างบน · ไม่แน่ใจว่าเครื่องเป็นแบบไหน: **เมนู Apple → About This Mac** ถ้าเขียนว่า "Chip: Apple M…" คือ Apple Silicon |
+| **Linux** (x64) | `Killian2-2.0.0-alpha.release.2-linux-x64.AppImage` | `chmod +x Killian2-2.0.0-alpha.release.2-linux-x64.AppImage` แล้วเปิดได้เลย · บางดิสโทรต้องติดตั้ง `libfuse2` ก่อน |
 
 งานเขียนเก็บเป็นไฟล์ Markdown + JSON ธรรมดาในโฟลเดอร์ที่คุณเลือกเอง ย้ายเครื่องหรือเปลี่ยนรุ่นคือก๊อปโฟลเดอร์ไปเท่านั้น · โปรแกรมเช็กรุ่นใหม่จากหน้านี้ (**ช่วยเหลือ → ตรวจหาอัปเดต**) และต่อเน็ตเฉพาะตอนที่คุณสั่งหรือเปิดการตรวจอัตโนมัติไว้
 
 ---
 
-## มีอะไรใหม่ใน 2.0.0-alpha.release.1
+## มีอะไรใหม่ใน 2.0.0-alpha.release.2
 
-> รุ่นแรกที่มีตัวโปรแกรมให้ดาวน์โหลดครบ **Windows · macOS (Intel และ Apple Silicon) · Linux** · ที่นี่แสดงเฉพาะรุ่นนี้รุ่นเดียว ประวัติทั้งหมดอยู่ใน [CHANGELOG.md](CHANGELOG.md) และในโปรแกรมที่ **ช่วยเหลือ → บันทึกการเปลี่ยนแปลง (Changelog)** · สรุปรายรุ่นของ README ฉบับเดิมอยู่ที่ [docs/release-notes-archive.th.md](docs/release-notes-archive.th.md)
+> รุ่นแก้บั๊ก · ที่นี่แสดงเฉพาะรุ่นนี้รุ่นเดียว ประวัติทั้งหมดอยู่ใน [CHANGELOG.md](CHANGELOG.md) และในโปรแกรมที่ **ช่วยเหลือ → บันทึกการเปลี่ยนแปลง (Changelog)** · สรุปรายรุ่นของ README ฉบับเดิมอยู่ที่ [docs/release-notes-archive.th.md](docs/release-notes-archive.th.md)
 
-**แก้จากการลองใช้จริง (รวม AI กับผู้ให้บริการจริง)**
+- **แผงลอยรวมกลุ่มกับแผงที่ผนึกได้แล้ว** — ลากแผงลอยโดยจับที่ชื่อแผง ไปปล่อยบนหัวแผงหรือแถบแท็บของแผงที่ผนึก = เข้าเป็นแท็บของแผงนั้น · เดิมปล่อยบนหัวแผงแล้วกลายเป็นแยกช่องด้านบน แผงลอยจึงรวมกลุ่มได้แค่กับแผงลอยด้วยกัน
+- **กลุ่มลอยทั้งกลุ่มเข้ากลุ่มแท็บที่ผนึกได้** — ลากกลุ่มลอยโดยจับที่ว่างของแถบแท็บ ไปปล่อยบนหัวแผงหรือแท็บของแผงที่ผนึก = ทุกแผงในกลุ่มเข้าเป็นแท็บ เรียงตามเดิม และเปิดแท็บเดิมไว้ · เดิมปล่อยแล้วไม่มีอะไรเกิดขึ้น
 
-- **PDF บทภาพยนตร์ภาษาไทยออกถูกต้อง** — วรรณยุกต์ไม่หาย คำไม่ทับกัน (วัดและวางทุกกลีฟตามที่ฟอนต์จัดให้จริง)
-- **เครื่องมือ AI ไม่บอก "ไม่พบปัญหา" ทั้งที่ AI ไม่ได้ตอบ** — โมเดลที่ใช้ความคิดจนโควตาหมดเคยคืนคำตอบว่าง แล้วตัวตรวจ Plot Hole อ่านเป็น "ไม่พบจุดบกพร่อง" · ตอนนี้คำตอบว่างคือความล้มเหลวที่มีคำอธิบาย โปรแกรมจำว่าโมเดลไหนคิดก่อนตอบ เผื่อโควตาให้ และลองใหม่เองหนึ่งครั้ง
-- **กล่องเครื่องมือ AI ออกแบบใหม่** — กว้างคงที่ · มีแถบความคืบหน้าและปุ่มหยุด · ตรวจ Plot Hole เลือกขอบเขตได้ (ทั้งโปรเจกต์ / เล่ม / บท / ฉาก) และบอกก่อนว่าจะส่งกี่ฉาก ประมาณกี่โทเคน · ปุ่มเขียนว่า *แทนที่ข้อความที่เลือก* เมื่อมันแทนที่จริง
-- **ตั้งค่า AI พลาดยากขึ้น** — ผู้ให้บริการถูกบันทึกทันทีที่เพิ่มหรือแก้ · ปิดกล่องตอนมีค่าค้างจะถามก่อน · ชุดสำเร็จรูปของผู้ให้บริการ 7 เจ้า · เลือกรูปแบบ API ได้ (OpenAI / Anthropic Messages) · *ทดสอบการเชื่อมต่อ* ส่งคำขอแชทจริง · error 400 บอกว่าขาด header หรือโมเดลใช้ API แบบอื่น
-- **ร้อยแก้วที่ AI เขียนเว้นย่อหน้าเหมือนที่คุณพิมพ์เอง** (ไม่มีย่อหน้าว่างคั่นทุกย่อหน้า) และฉากที่ AI สร้างนับคำถูกต้อง
-- **แชท AI** — โปรเจกต์ที่ยังไม่มีเซสชันเปิดมามีช่องพิมพ์ทันที · คำตอบที่ล้มไม่ค้างเป็นฟองว่าง และมีปุ่ม *ลองใหม่*
-- **ปุ่มลอย + อยู่ในพื้นที่เขียน** ไม่ทับปุ่ม "ส่ง" ของแผงที่ผนึกขวาอีก
-- **เมนูยาวเลื่อนด้วยลูกศร** แบบเมนูของระบบ — เมนูคลิกขวาของฉาก 34 รายการใช้ได้ทุกขนาดหน้าต่าง ลำดับเท่าเดิม
-- **เรื่องเล็ก ๆ**: แท็บหน้า Wiki กลับมาหลังเปิดโปรแกรมใหม่ · จำนวนฉากบนแถบสถานะลดตามเมื่อลบ · พิมพ์ "ภายใน …" / "ภายนอก …" แล้วเป็นหัวฉาก · ห้องซ้อมบทไม่ทิ้งสิ่งที่พิมพ์ไว้เมื่อแวะสร้างคณะนักแสดง · *รีเซ็ตการจัดวางแผง* ย้อนกลับได้ · เมนู AI อยู่ก่อนช่วยเหลือ · โฟลเดอร์ของ Story Starter ได้ชื่อจากชื่อเรื่องที่ตั้งครั้งแรก · ตัวอัปเดตในโปรแกรมเลือกไฟล์ macOS ให้ตรงกับเครื่อง Intel / Apple Silicon
-
-**รวมมาด้วยในรุ่นนี้** (จาก 2.0.0-alpha.170)
-
-- **รายงานบั๊กและขอฟีเจอร์จากในโปรแกรม** และติดตามสถานะที่ **ช่วยเหลือ → สถานะบั๊กและคำขอ**
-- **คู่มืออยู่ในโปรแกรม** — *ช่วยเหลือ → คู่มือผู้ใช้* และ *คู่มือส่วนขยาย* อ่านได้โดยไม่ต่อเน็ต ทั้งไทยและอังกฤษ
-- **เปลี่ยนภาษาแล้วไม่ปน** หลังเปิดโปรแกรมใหม่ · ปุ่มที่พาไปหน้าตั้งค่าไปถูกหน้า
-- **แผงผนึกเข้าข้างพื้นที่เขียน** ไม่ลอยทับงาน · ศูนย์รวมการส่งออกไม่ปิดตัวเองและบอกชื่อไฟล์ที่ได้
+รวมทุกอย่างของ 2.0.0-alpha.release.1 ไว้แล้ว
 
 ---
 

@@ -35104,10 +35104,54 @@ export async function runTest(projectPath) {
             check('[167-X] strict: ปล่อยกลางเนื้อแผงผนึก = ไม่ผนึก', !mid || mid.kind === 'edge', JSON.stringify(mid && { k: mid.kind, z: mid.zone }));
             const hr = dockedPanel.querySelector(':scope > .k-panel-head').getBoundingClientRect();
             const onHead = detectSnapTarget(hr.left + hr.width / 2, hr.top + hr.height / 2, host, 'tree', { strict: true });
-            check('[167-X] strict: ปล่อยบนหัวแผง = ยังผนึก/รวมได้', !!onHead && onHead.targetId === dockedPanel.dataset.panelId,
-                  JSON.stringify(onHead && { k: onHead.kind, t: onHead.targetId }));
+            // [alpha.170 · รอบต่อ 9] ★ ต้องเป็น "รวมเป็นแท็บ" จริง — เดิมเช็คแค่ targetId จึงไม่เห็นว่าได้ 'top' (แทรกช่อง) ทุกครั้ง
+            check('[167-X] strict: ปล่อยบนหัวแผง = ยังผนึก/รวมได้', !!onHead && onHead.targetId === dockedPanel.dataset.panelId
+                  && onHead.kind === 'merge', JSON.stringify(onHead && { k: onHead.kind, t: onHead.targetId }));
             const loose = detectSnapTarget(r.left + r.width / 2, r.top + r.height / 2, host, 'tree');
             check('[167-X] แผงที่ผนึกอยู่ (ไม่ strict) ยังใช้โซนเดิม', !!loose);
+            // ── [170-G9] ★★ ลากจริง: แผงลอย (โน้ตด่วน) จับที่ชื่อ → ปล่อยบนหัวแผงที่ผนึก = รวมเป็นแท็บ ──
+            const tgtId = dockedPanel.dataset.panelId;
+            const dragTo = (el, sx, sy, tx, ty) => {
+              el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, clientX: sx, clientY: sy }));
+              document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: sx + 20, clientY: sy + 20 }));
+              document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: tx, clientY: ty }));
+              document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: tx, clientY: ty }));
+            };
+            const sameGroup = (a, b) => [...document.querySelectorAll('.k-tab-bar')].some((bar) => !bar.closest('.k-float-panel')
+              && bar.querySelector(`.k-tab[data-panel-id="${a}"]`) && bar.querySelector(`.k-tab[data-panel-id="${b}"]`));
+            const nt = notesPop() && notesPop().querySelector('.k-panel-head-title');
+            if (nt) {
+              const nr = nt.getBoundingClientRect();
+              const hr2 = dockedPanel.querySelector(':scope > .k-panel-head').getBoundingClientRect();
+              dragTo(nt, nr.left + Math.min(12, nr.width / 2), nr.top + nr.height / 2, hr2.left + hr2.width / 2, hr2.top + hr2.height / 2);
+              await w7(380);
+              check('[170-G9] ★★ ลากแผงลอยไปปล่อยบนหัวแผงที่ผนึก = รวมเป็นแท็บกลุ่มเดียวกัน',
+                    pm7.isDocked('notes') && !pm7.isFloating('notes') && sameGroup('notes', tgtId),
+                    'docked=' + pm7.isDocked('notes') + ' group=' + sameGroup('notes', tgtId));
+            }
+            // ── [170-G9] ★★ ลากจริง: กลุ่มลอย (แถบแท็บ) → ปล่อยบนหัวแท็บของกลุ่มที่ผนึก = สมาชิกทุกใบเข้ากลุ่มนั้น ──
+            pm7.floatPanel('comments', { x: 560, y: 160, w: 320, h: 240 }); await w7(300);
+            pm7.floatPanel('dashboard', { x: 600, y: 200, w: 320, h: 240 }); await w7(300);
+            pm7.groupIntoFloat('dashboard', pm7.floatIdOf('comments')); await w7(380);
+            const gPop = document.querySelector('.k-float-panel.k-float-group');
+            const gBar = gPop && gPop.querySelector(':scope > .k-float-tabbar');
+            const dTab = document.querySelector(`.k-tab-bar:not(.k-float-tabbar) .k-tab[data-panel-id="${tgtId}"]`);
+            check('[170-G9] เตรียม: มีกลุ่มลอย + หัวแท็บของกลุ่มที่ผนึก', !!gBar && !!dTab);
+            if (gBar && dTab) {
+              // จับ "ที่ว่างของแถบ" (ไม่ใช่แท็บ ไม่ใช่ปุ่ม) — ตรงนั้นเท่านั้นที่ลากทั้งกลุ่ม
+              const br = gBar.getBoundingClientRect(), dr = dTab.getBoundingClientRect();
+              const btnL = gBar.querySelector('.k-panel-btns').getBoundingClientRect().left;
+              let gx = null;
+              for (let x = btnL - 2; x > br.left; x -= 2) { if (document.elementFromPoint(x, br.top + br.height / 2) === gBar) { gx = x; break; } }
+              check('[170-G9] เตรียม: แถบกลุ่มลอยมีที่ว่างให้จับ', gx !== null);
+              dragTo(gBar, gx ?? br.left + 2, br.top + br.height / 2, dr.left + dr.width / 2, dr.top + dr.height / 2);
+              await w7(380);
+              check('[170-G9] ★★ กลุ่มลอยทั้งกลุ่ม → เข้ากลุ่มที่ผนึก (เดิมชนแถบของตัวเอง/คืน false = ไม่มีอะไรเกิดขึ้น)',
+                    sameGroup('comments', tgtId) && sameGroup('dashboard', tgtId) && !document.querySelector('.k-float-panel.k-float-group'),
+                    `c=${sameGroup('comments', tgtId)} d=${sameGroup('dashboard', tgtId)}`);
+            }
+            pm7.hidePanel('comments'); pm7.hidePanel('dashboard');
+            pm7.floatPanel('notes', { x: 520, y: 140, w: 300, h: 240 }); await w7(380);     // คืนสภาพให้เทสถัดไป
           }
         }
         // ── หยิบใส่ระดับแผง: ตัวกลางตัดสินว่าแผงไหนรับอะไร ──
