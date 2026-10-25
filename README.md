@@ -65,6 +65,49 @@ Everything from 2.0.0-alpha.release.2 is included.
 
 ---
 
+## Roadmap
+
+Killian 2 is in **public test**. Here is what we plan to build next, in priority order (planned, not built yet; dates can move). The full plan is in [ROADMAP.md](ROADMAP.md) ([ภาษาไทย](ROADMAP.th.md)).
+
+```mermaid
+gantt
+    title Killian 2 — Oct 2026 to Jan 2028
+    dateFormat YYYY-MM-DD
+    axisFormat %b %y
+    todayMarker off
+
+    section 1 Trust
+    Safety of your work made visible    :tr1, 2026-10-26, 2026-11-15
+
+    section 2 Drag and drop
+    Drop from desktop and other apps    :dd1, 2026-11-16, 2026-12-31
+
+    section 3 Modern UI
+    New look, panel by panel            :ui1, 2026-11-01, 2027-03-31
+
+    section 4 Passion system
+    Goals and a reason to come back     :ps1, 2027-01-01, 2027-02-28
+
+    section 5 Planner v2
+    Story-flow planner                  :pl1, 2027-03-01, 2027-05-31
+
+    section 6 Mobile app
+    Companion app                       :mb1, 2027-04-01, 2027-07-31
+
+    section 7 Ren'Py
+    Screenplay to Ren'Py, live link     :rp1, 2027-08-01, 2027-10-31
+
+    section 8 Call sheet
+    Call sheet editor                   :cs1, 2027-08-01, 2027-09-30
+
+    section 9 Image editor
+    Node-based image editor             :im1, 2027-11-01, 2028-01-31
+```
+
+Later, with no date yet: signed installers, and Beta once the basics are dependable.
+
+---
+
 ## Disclaimer
 
 - **Killian 2 is never-finished software.** It is in continuous development and there is no "final version": features are added, reshaped and occasionally removed, and bugs are expected. Keep your own backups of anything you can't afford to lose — the built-in version history, recycle bin and backup tools help, but they are not a replacement.
