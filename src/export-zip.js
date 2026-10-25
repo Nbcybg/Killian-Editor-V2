@@ -8,7 +8,8 @@ import JSZip from 'jszip';
 const SKIP_DIRS = ['Snapshots', '.k2history', 'Backups', 'Recycle'];
 // [alpha.148] ไฟล์ที่ห้ามติดไปกับซิปเด็ดขาด — ZIP นี้มีไว้ "ส่งให้คนอื่น"
 // `ai-key.json` = API key ของเจ้าของเครื่อง (เก็บแยกจาก project.khn.json ก็เพราะเหตุนี้ แต่ซิปเคยพาไปด้วย)
-export const ZIP_SKIP_ROOT_FILES = ['ai-key.json'];
+// [alpha.170] `.k2lock.json` = ตัวล็อก "เปิดอยู่ที่เครื่องไหน" (project-lock.js) — เป็นของเครื่องนี้ ห้ามติดไปกับไฟล์ที่ส่งต่อ
+export const ZIP_SKIP_ROOT_FILES = ['ai-key.json', '.k2lock.json'];
 // นามสกุลที่ต้องอ่านเป็นไบต์ (ถ้าอ่านเป็น utf-8 ไฟล์จะเสีย)
 const BIN_EXT = /\.(png|jpe?g|gif|webp|bmp|ico|pdf|zip|mp3|mp4|wav|ttf|otf|woff2?)$/i;
 

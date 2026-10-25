@@ -18,6 +18,7 @@ import * as TC from './toolbar-config.js';
 import * as FB from './fab-config.js';
 import { gi, icon } from '../icons.js';
 import { popupMenu } from '../ui.js';
+import { simpleMainVisible, simpleFmtbar } from '../simple-mode.js';   // [alpha.170 · ข้อ 8] โหมดเรียบง่าย
 
 /** ปุ่มจริงบนแถบ (หรือ null ถ้าไม่มี) */
 const btn = (id) => document.getElementById(id);
@@ -76,9 +77,35 @@ function barSeq(bar) {
  * ตัวนี้จึงคุมเฉพาะ `#toolbar` แต่ยังเรียก `applyFmtbarConfig()` ต่อให้ เพื่อให้จุดเรียกเดิม
  * ทั่วโปรแกรม (ท้าย refreshToolbar ฯลฯ) ได้ผลครบทั้งสองแถบเหมือนเดิมโดยไม่ต้องไล่แก้ทีละแห่ง
  */
+/** [alpha.170 · ข้อ 8] โหมดเรียบง่ายเปิดอยู่ไหม (ค่าระดับผู้ใช้ `simpleMode`) */
+export function isSimpleMode() { return !!(state.settings && state.settings.simpleMode); }
+
+/**
+ * [alpha.170 · ข้อ 8] ปุ่ม "เครื่องมือทั้งหมด" บนแถบหลัก — ทางออกของโหมดเรียบง่ายที่ **มองเห็นได้** (ไม่ต้องรู้ว่ามีเมนู)
+ * โปรแกรมคุมเอง (LOCKED_BUTTONS) · มีข้อความกำกับ ไม่ใช่ไอคอนล้วน · โผล่เฉพาะในโหมดเรียบง่าย
+ */
+function ensureSimpleExit(bar, simple) {
+  let b = bar.querySelector(':scope > #tb-simple-exit');
+  if (!b && !simple) return;
+  if (!b) {
+    b = el('button', 'tb k-simple-exit');
+    b.id = 'tb-simple-exit';
+    b.type = 'button';
+    b.append(icon('view-grid', 16), el('span', 'k-simple-exit-lbl', tt('ui.simple.exitLabel')));
+    b.title = tt('ui.simple.exitTip');
+    b.onclick = async () => { const { handleCommand } = await import('../app.js'); handleCommand('toggle-simple-mode'); };
+    const ovf = bar.querySelector(':scope > #tb-overflow');
+    if (ovf) bar.insertBefore(b, ovf); else bar.append(b);
+  }
+  b.hidden = !simple;
+}
+
 export function applyToolbarConfig(cfg) {
   const conf = TC.normalizeToolbar(cfg ?? (state.settings && state.settings.toolbar));
-  const vis = (id) => !conf.hidden[id];
+  // [alpha.170 · ข้อ 8] โหมดเรียบง่าย = ตัวกรองซ้อนบนค่าของผู้ใช้ (ค่าที่ผู้ใช้ตั้งไม่ถูกแก้ — ปิดโหมดแล้วกลับมาครบ)
+  const simple = isSimpleMode();
+  document.body.classList.toggle('k-simple', simple);
+  const vis = (id) => !conf.hidden[id] && simpleMainVisible(simple, id);
   let found = false;
 
   for (const sel of TB_MAIN_HOSTS) {
@@ -95,6 +122,7 @@ export function applyToolbarConfig(cfg) {
       if (!seq[i]) return;                     // ปุ่มที่ตั้งค่าไม่ได้ — ปล่อยตามเดิม
       k.classList.toggle('tb-hidden', !vis(seq[i]));
     });
+    if (bar.id === 'toolbar') ensureSimpleExit(bar, simple);
   }
   applyFmtbarConfig();
   scheduleToolbarOverflow();                   // [alpha.161 · K3] จำนวนปุ่มที่เห็นเปลี่ยน = คิดที่ล้นใหม่
@@ -125,7 +153,12 @@ export function toolbarOverflowIds() { return OVF.list.slice(); }
 export function scheduleToolbarOverflow() {
   if (typeof requestAnimationFrame !== 'function') return;
   cancelAnimationFrame(OVF.job);
-  OVF.job = requestAnimationFrame(() => { OVF.job = 0; layoutToolbarOverflow(); });
+  clearTimeout(OVF.tmo);
+  const run = () => { cancelAnimationFrame(OVF.job); clearTimeout(OVF.tmo); OVF.job = 0; layoutToolbarOverflow(); };
+  OVF.job = requestAnimationFrame(run);
+  // [alpha.170 · ข้อ 8] หน้าต่างที่อยู่เบื้องหลัง/ถูกบัง = rAF ไม่ทำงาน → ปุ่มค้างสถานะ "ล้น" ของรอบก่อน
+  // (เปิดโหมดเรียบง่ายแล้วปุ่มตั้งค่ายังอยู่ในเมนู » ทั้งที่แถบว่าง) · ตัวจับเวลาสำรองคิดใหม่ให้แน่
+  OVF.tmo = setTimeout(run, 120);
 }
 /** คิดใหม่ว่าปุ่มไหนล้น (เรียกซ้ำได้ · เรียกเองได้จากเทส) */
 export function layoutToolbarOverflow() {
@@ -145,8 +178,12 @@ export function layoutToolbarOverflow() {
     const m = getComputedStyle(k);
     return k.getBoundingClientRect().width + (parseFloat(m.marginLeft) || 0) + (parseFloat(m.marginRight) || 0);
   };
+  // [alpha.170 · ข้อ 8] ปุ่ม "»" ชิดขวาด้วย `margin-left:auto` = ระยะขอบซ้ายของมันคือ "ที่ว่างทั้งหมดของแถบ"
+  // นับรวมเข้าไปแล้วปุ่มท้ายแถบถูกย้ายเข้าเมนู » ทุกครั้งที่แถบมีที่ว่าง (เห็นชัดในโหมดเรียบง่าย — ปุ่มตั้งค่าหาย)
+  // → นับแค่กล่อง + ขอบขวาของ "»"
+  const obW = ob.getBoundingClientRect().width + (parseFloat(getComputedStyle(ob).marginRight) || 0);
   const avail = bar.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0)
-              - outerW(ob) - gap;
+              - obW - gap;
   const kids = [...bar.children].filter((k) => k !== ob && k.getClientRects().length > 0);
   const items = kids.map((k) => ({ id: k.id || '', w: outerW(k) + gap,
                                    locked: !k.id || !TC.isConfigurable(k.id) }));
@@ -174,7 +211,9 @@ export function toolbarOverflowItems() {
     for (const b of ovf) items.push(mk(b));
   }
   const conf = TC.normalizeToolbar(state.settings && state.settings.toolbar);
-  const hid = TC.allButtonIds().filter((id) => conf.hidden[id] && byId(id) && !OVF.list.includes(id)
+  // [alpha.170 · ข้อ 8] ปุ่มที่โหมดเรียบง่ายซ่อนไว้ก็กดใช้จากเมนูนี้ได้ (ไม่ต้องออกจากโหมดก่อน)
+  const simple = isSimpleMode();
+  const hid = TC.allButtonIds().filter((id) => (conf.hidden[id] || !simpleMainVisible(simple, id)) && byId(id) && !OVF.list.includes(id)
     && (byId(id).closest('#toolbar')));
   if (hid.length) {
     if (items.length) items.push('-');
@@ -249,7 +288,9 @@ export function applyToolbarGroupSeps() {
 export function applyFmtbarConfig(cfg, mode) {
   const bar = document.querySelector(TB_FMT_HOST);
   if (!bar) return false;
-  const conf = cfg ?? (state.settings && state.settings.fmtbar);
+  let conf = cfg ?? (state.settings && state.settings.fmtbar);
+  // [alpha.170 · ข้อ 8] โหมดเรียบง่าย: เหลือปุ่มเขียนพื้นฐาน (ค่าของผู้ใช้ไม่ถูกแก้)
+  if (isSimpleMode()) conf = simpleFmtbar(TC.normalizeFmtbar(conf, state.settings && state.settings.toolbar), TC.fmtbarConfigurableIds());
   const m = TC.fmtMode(mode ?? currentFmtMode());
   const kids = [...bar.children];
   const { show, grey } = TC.layoutFmtbar(barSeq(bar), conf, m);

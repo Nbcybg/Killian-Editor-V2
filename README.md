@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0--alpha.release.2-ff6640"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0--alpha.release.3-ff6640"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-452f5e">
   <img alt="Electron" src="https://img.shields.io/badge/Electron-43-1e1250">
   <img alt="Languages" src="https://img.shields.io/badge/UI%20languages-7-ffc55c">
@@ -19,33 +19,49 @@
 ## Download
 
 <p align="center">
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.2/Killian2-2.0.0-alpha.release.2-win-x64-portable.exe"><img alt="Download for Windows" src="https://img.shields.io/badge/Windows-x64%20%C2%B7%20portable%20.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.2/Killian2-2.0.0-alpha.release.2-mac-arm64.dmg"><img alt="Download for macOS (Apple Silicon)" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%C2%B7%20.dmg-1e1250?style=for-the-badge&logo=apple&logoColor=white"></a>
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.2/Killian2-2.0.0-alpha.release.2-mac-x64.dmg"><img alt="Download for macOS (Intel)" src="https://img.shields.io/badge/macOS-Intel%20%C2%B7%20.dmg-452f5e?style=for-the-badge&logo=apple&logoColor=white"></a>
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.2/Killian2-2.0.0-alpha.release.2-linux-x64.AppImage"><img alt="Download for Linux" src="https://img.shields.io/badge/Linux-x64%20%C2%B7%20AppImage-ff6640?style=for-the-badge&logo=linux&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.3/Killian2-2.0.0-alpha.release.3-win-x64-portable.exe"><img alt="Download for Windows" src="https://img.shields.io/badge/Windows-x64%20%C2%B7%20portable%20.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.3/Killian2-2.0.0-alpha.release.3-mac-arm64.dmg"><img alt="Download for macOS (Apple Silicon)" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%C2%B7%20.dmg-1e1250?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.3/Killian2-2.0.0-alpha.release.3-mac-x64.dmg"><img alt="Download for macOS (Intel)" src="https://img.shields.io/badge/macOS-Intel%20%C2%B7%20.dmg-452f5e?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.3/Killian2-2.0.0-alpha.release.3-linux-x64.AppImage"><img alt="Download for Linux" src="https://img.shields.io/badge/Linux-x64%20%C2%B7%20AppImage-ff6640?style=for-the-badge&logo=linux&logoColor=white"></a>
 </p>
 
-<p align="center"><b>Version 2.0.0-alpha.release.2</b> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/tag/v2.0.0-alpha.release.2">release page</a> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases">all releases</a></p>
+<p align="center"><b>Version 2.0.0-alpha.release.3</b> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/tag/v2.0.0-alpha.release.3">release page</a> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases">all releases</a></p>
 
 | System | File | First launch |
 |---|---|---|
-| **Windows 10/11** (x64) | `Killian2-2.0.0-alpha.release.2-win-x64-portable.exe` | No installer — double-click to run. SmartScreen may warn about an unknown publisher: **More info → Run anyway**. |
-| **macOS 12+** — Apple Silicon (M1–M4) | `Killian2-2.0.0-alpha.release.2-mac-arm64.dmg` | Drag *Killian 2* to Applications. The app is not notarized yet: open it once with **right-click → Open**, or on macOS 15 use **System Settings → Privacy & Security → Open Anyway**. |
-| **macOS 12+** — Intel | `Killian2-2.0.0-alpha.release.2-mac-x64.dmg` | Same as above. Not sure which Mac you have? **Apple menu → About This Mac** — "Chip: Apple M…" means Apple Silicon. |
-| **Linux** (x64) | `Killian2-2.0.0-alpha.release.2-linux-x64.AppImage` | `chmod +x Killian2-2.0.0-alpha.release.2-linux-x64.AppImage` then run it. Some distributions need `libfuse2` for AppImages. |
+| **Windows 10/11** (x64) | `Killian2-2.0.0-alpha.release.3-win-x64-portable.exe` | No installer — double-click to run. SmartScreen may warn about an unknown publisher: **More info → Run anyway**. |
+| **macOS 12+** — Apple Silicon (M1–M4) | `Killian2-2.0.0-alpha.release.3-mac-arm64.dmg` | Drag *Killian 2* to Applications. The app is not notarized yet: open it once with **right-click → Open**, or on macOS 15 use **System Settings → Privacy & Security → Open Anyway**. |
+| **macOS 12+** — Intel | `Killian2-2.0.0-alpha.release.3-mac-x64.dmg` | Same as above. Not sure which Mac you have? **Apple menu → About This Mac** — "Chip: Apple M…" means Apple Silicon. |
+| **Linux** (x64) | `Killian2-2.0.0-alpha.release.3-linux-x64.AppImage` | `chmod +x Killian2-2.0.0-alpha.release.3-linux-x64.AppImage` then run it. Some distributions need `libfuse2` for AppImages. |
+
+The builds are **not code-signed yet**, so Windows and macOS warn the first time you open them. Signing is set up in the release pipeline and switches on once the certificates are in place. Meanwhile, see [why the warning appears and how to check your download against the published SHA-256 checksums](docs/manual/en/01-getting-started.md#why-windows-or-macos-warns-you--and-how-to-check-the-file).
 
 Your writing stays in plain Markdown + JSON files in a folder you choose — moving between machines or versions is just copying the folder. The app checks this page for new versions (**Help → Check for updates**) and only contacts the internet when you ask it to or turn on automatic checks.
 
 ---
 
-## What's new in 2.0.0-alpha.release.2
+## What's new in 2.0.0-alpha.release.3
 
-> A bug-fix release. Only this release is listed here; the full history is in [CHANGELOG.md](CHANGELOG.md) and in the app under **Help → Changelog**.
+> Only this release is listed here; the full history is in [CHANGELOG.md](CHANGELOG.md) and in the app under **Help → Changelog**.
 
-- **Floating panels can be grouped with docked panels again.** Drag a floating panel by its title onto the header or tab bar of a docked panel and it joins that panel as a tab. Before, dropping it on a docked panel's header split the column instead, so a floating panel could only be grouped with other floating panels.
-- **A whole floating group can join a docked tab group.** Drag a floating group by the empty part of its tab bar onto a docked panel's header or tabs: every panel in the group becomes a tab there, in the same order, with the same tab open. Before, the drop did nothing.
+**New**
+- **Import a manuscript** (**File → Import manuscript…**) — bring in Word (.docx), Markdown or plain-text files, a whole folder, or pasted text. Preview the chapters it found, then it becomes a new book; Word headings become chapters.
+- **Comments round-trip with Word** — export to DOCX with "attach open comments", let your editor reply in Word, then **Receive comments from a Word file** to bring the replies and new comments back onto the right scenes.
+- **Working on several computers** — a project opened on another computer is flagged before you edit it, and sync-tool duplicate files are reported by the project health check.
+- **Simple mode** (**View → Simple mode**) — a calmer toolbar for new users (on by default for brand-new installs only), plus new project templates for web novels and visual novels.
 
-Everything from 2.0.0-alpha.release.1 is included.
+**Fixed after a real-world trial (writing two novels and a screenplay from scratch)**
+- The template chooser and name prompt opened *behind* the Home page — "Create new project" looked like it did nothing. They now appear on top.
+- **Screenplay projects:** new scenes are screenplays, not prose. **DOCX export of a screenplay** is now real screenplay format (Courier, character/dialogue indents, page numbers, title page) instead of a novel-style document.
+- **Novel covers:** the PDF cover names the book in multi-book projects, uses your custom title page, and honours "use full-page image"; novel DOCX now has the cover, title page and cast page too. Novel PDFs default to color (screenplays stay black & white), and chapter headings no longer get stranded at the bottom of a page.
+- **"Number the first page"** is now an option right in the export dialog (PDF, and screenplay DOCX) — off gives the Hollywood convention of no number on page 1.
+- Cast-of-characters names are drawn on the page again; the Codex no longer overlaps in a narrow panel and shows Thai field labels; Wiki names highlight as whole words ("Lalita", not just the alias "Lali").
+- New projects keep your own settings (and start on A4 for Thai novels); new users get "zoom to fit width".
+- Renaming a book or chapter keeps open tabs in place; switching projects leaves nothing from the old one on screen.
+- AI: a new project picks up your saved providers automatically; the chat says so in the chat when nothing is set up; the connection test names the missing header and shows the server's message.
+- Smaller fixes: the find bar floats instead of pushing the page down, the image picker takes several files and won't duplicate an image you already have, Thai spellcheck underlines whole syllables, the screenplay checker stops flagging normal action paragraphs, export file names follow what you export, and Word uses a real Thai font for Thai text.
+
+Everything from 2.0.0-alpha.release.2 is included.
 
 ---
 
@@ -81,15 +97,15 @@ It puts the manuscript, the story bible, the planning boards and the production 
 
 | | Minimum | Recommended |
 |---|---|---|
-| **OS** | Windows 10 64-bit · macOS 12 (Monterey) on an Intel Mac, or on Apple Silicon through Rosetta 2 · Linux x64 | Windows 10 / 11 64-bit · macOS 14 or later · a current Linux desktop |
+| **OS** | Windows 10 64-bit · macOS 12 (Monterey), Intel or Apple Silicon · Linux x64 | Windows 10 / 11 64-bit · macOS 14 or later · a current Linux desktop |
 | **CPU** | 2 cores, ~2 GHz | 4 cores or more |
 | **RAM** | 4 GB | 8 GB (large projects, many panels open) |
 | **Disk** | ~500 MB free on Windows, ~600 MB on macOS, + space for your work | SSD, 2 GB+ free |
 | **Display** | 1366 × 768 | 1920 × 1080 or higher |
 | **GPU** | Not required | WebGL-capable (3D Story Network and 3D models) |
 
-- **Prebuilt downloads:** Windows x64 (portable `.exe`, ~92 MB, no installer) and macOS **Intel x64** (`.dmg`, ~143 MB; ~330 MB once copied to Applications). There are no ARM or 32-bit builds — Apple Silicon Macs run it through Rosetta 2.
-- **Linux:** there is no prebuilt package yet — run it from source (see [Building](#building)).
+- **Prebuilt downloads:** Windows x64 (portable `.exe`, ~92 MB, no installer) · macOS **Intel x64** and **Apple Silicon arm64** (separate `.dmg` files; the Intel one is ~143 MB, ~330 MB once copied to Applications) · Linux **x64** (`.AppImage`). There are no 32-bit builds.
+- **Linux:** the AppImage needs `libfuse2` on some distributions. You can also run it from source (see [Building](#building)).
 - The portable build unpacks itself into a temporary folder on every launch (~380 MB), so keep some headroom on the drive that holds `%TEMP%`.
 - Windows 7 / 8 / 8.1 are **not** supported (Electron 43 dropped them).
 - Internet is only needed for AI requests, update checks and bug reports — writing works fully offline.
@@ -100,8 +116,8 @@ It puts the manuscript, the story bible, the planning boards and the production 
 | | |
 |---|---|
 | **macOS version** | macOS 12 Monterey or later (the minimum Electron 43 supports). Tested on macOS 15.7 (Sequoia). |
-| **Processor** | Intel (x64) build. Apple Silicon (M-series) Macs run the same build through Rosetta 2; a native ARM build is not available yet. |
-| **Download / installed size** | `.dmg` ~143 MB · `Killian 2.app` ~330 MB in Applications |
+| **Processor** | Separate builds for Intel (`mac-x64.dmg`) and Apple Silicon M-series (`mac-arm64.dmg`) — pick the one that matches your Mac. The figures below were measured with the Intel build. |
+| **Download / installed size** | Intel build: `.dmg` ~143 MB · `Killian 2.app` ~330 MB in Applications |
 | **Memory in use** | ~400 MB with a small project open (4 processes, measured with `footprint` after 25 seconds idle) |
 | **Launch time** | About 2 s from launch to an open project (about 5 s the very first time), on the test machine |
 | **Your data** | Settings and logs live in `~/Library/Application Support/Killian 2/`; your writing lives in the project folder you choose. |

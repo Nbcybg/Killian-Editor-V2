@@ -41,7 +41,7 @@ function rememberLang(l) { try { localStorage.setItem(LANG_KEY, l); } catch {} }
 /**
  * เปิดตัวอ่านคู่มือ
  * @param {'manual'|'extension'} [book]
- * @param {{path?:string, hash?:string}} [opts] path = เปิดที่หน้านี้ (ทางจากรากของตัวโปรแกรม) แทนหน้าแรกของเล่ม
+ * @param {{path?:string, file?:string, hash?:string}} [opts] path = เปิดที่หน้านี้ (ทางจากรากของตัวโปรแกรม) แทนหน้าแรกของเล่ม · file = ชื่อไฟล์บทในภาษาของตัวอ่าน
  * @returns {HTMLElement} ตัว overlay (มี `.k2ready` = Promise ที่จบเมื่อหน้าแรกวาดเสร็จ — เทสใช้รอ)
  */
 export function openDocs(book = 'manual', opts = {}) {
@@ -234,7 +234,9 @@ export function openDocs(book = 'manual', opts = {}) {
   ov.addEventListener('mousedown', (e) => { if (e.target === ov) close(); });
   escClose(ov, close);
   document.body.append(ov);
-  ov.k2ready = go(opts.path && docInfo(opts.path) ? opts.path : docHome(S.book, S.lang), { hash: opts.hash || '' });
+  // [alpha.170] `opts.file` = บทหนึ่งของเล่มในภาษาที่ตัวอ่านเลือก (ทางเข้าจากเมนูที่ชี้บทเฉพาะ — ไม่ต้องรู้ภาษาของคู่มือ)
+  const want = opts.file ? DOC_BOOKS[S.book].dir + '/' + S.lang + '/' + opts.file : opts.path;
+  ov.k2ready = go(want && docInfo(want) ? want : docHome(S.book, S.lang), { hash: opts.hash || '' });
   setTimeout(() => { try { body.focus(); } catch {} }, 0);
   return ov;
 }

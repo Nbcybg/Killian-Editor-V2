@@ -616,26 +616,26 @@
     return true;
   }
   function removeRange(content, from2, to) {
-    let { index, offset } = content.findIndex(from2), child = content.maybeChild(index);
+    let { index, offset } = content.findIndex(from2), child2 = content.maybeChild(index);
     let { index: indexTo, offset: offsetTo } = content.findIndex(to);
-    if (offset == from2 || child.isText) {
+    if (offset == from2 || child2.isText) {
       if (offsetTo != to && !content.child(indexTo).isText)
         throw new RangeError("Removing non-flat range");
       return content.cut(0, from2).append(content.cut(to));
     }
     if (index != indexTo)
       throw new RangeError("Removing non-flat range");
-    return content.replaceChild(index, child.copy(removeRange(child.content, from2 - offset - 1, to - offset - 1)));
+    return content.replaceChild(index, child2.copy(removeRange(child2.content, from2 - offset - 1, to - offset - 1)));
   }
   function insertInto(content, dist, insert, openStart, openEnd, parent) {
-    let { index, offset } = content.findIndex(dist), child = content.maybeChild(index);
-    if (offset == dist || child.isText) {
+    let { index, offset } = content.findIndex(dist), child2 = content.maybeChild(index);
+    if (offset == dist || child2.isText) {
       if (parent && openStart <= 0 && openEnd <= 0 && !parent.canReplace(index, index, insert))
         return null;
       return content.cut(0, dist).append(insert).append(content.cut(dist));
     }
-    let inner = insertInto(child.content, dist - offset - 1, insert, index == 0 ? openStart - 1 : 0, index == content.childCount - 1 ? openEnd - 1 : 0, child);
-    return inner && content.replaceChild(index, child.copy(inner));
+    let inner = insertInto(child2.content, dist - offset - 1, insert, index == 0 ? openStart - 1 : 0, index == content.childCount - 1 ? openEnd - 1 : 0, child2);
+    return inner && content.replaceChild(index, child2.copy(inner));
   }
   function replace($from, $to, slice3) {
     if (slice3.openStart > $from.depth)
@@ -668,12 +668,12 @@
     checkJoin(node, $after.node(depth));
     return node;
   }
-  function addNode(child, target) {
+  function addNode(child2, target) {
     let last2 = target.length - 1;
-    if (last2 >= 0 && child.isText && child.sameMarkup(target[last2]))
-      target[last2] = child.withText(target[last2].text + child.text);
+    if (last2 >= 0 && child2.isText && child2.sameMarkup(target[last2]))
+      target[last2] = child2.withText(target[last2].text + child2.text);
     else
-      target.push(child);
+      target.push(child2);
   }
   function addRange($start, $end, depth, target) {
     let node = ($end || $start).node(depth);
@@ -951,10 +951,10 @@
   function defaultAttrs(attrs) {
     let defaults = /* @__PURE__ */ Object.create(null);
     for (let attrName in attrs) {
-      let attr = attrs[attrName];
-      if (!attr.hasDefault)
+      let attr3 = attrs[attrName];
+      if (!attr3.hasDefault)
         return null;
-      defaults[attrName] = attr.default;
+      defaults[attrName] = attr3.default;
     }
     return defaults;
   }
@@ -963,9 +963,9 @@
     for (let name5 in attrs) {
       let given = value && value[name5];
       if (given === void 0) {
-        let attr = attrs[name5];
-        if (attr.hasDefault)
-          given = attr.default;
+        let attr3 = attrs[name5];
+        if (attr3.hasDefault)
+          given = attr3.default;
         else
           throw new RangeError("No value supplied for attribute " + name5);
       }
@@ -974,12 +974,12 @@
     return built;
   }
   function checkAttrs(attrs, values2, type, name5) {
-    for (let attr in values2)
-      if (!(attr in attrs))
-        throw new RangeError(`Unsupported attribute ${attr} for ${type} of type ${name5}`);
-    for (let attr in attrs) {
-      if (attrs[attr].validate)
-        attrs[attr].validate(values2[attr]);
+    for (let attr3 in values2)
+      if (!(attr3 in attrs))
+        throw new RangeError(`Unsupported attribute ${attr3} for ${type} of type ${name5}`);
+    for (let attr3 in attrs) {
+      if (attrs[attr3].validate)
+        attrs[attr3].validate(values2[attr3]);
     }
   }
   function initAttrs(typeName, attrs) {
@@ -1027,13 +1027,13 @@
     return type && type.whitespace == "pre" ? OPT_PRESERVE_WS | OPT_PRESERVE_WS_FULL : base4 & ~OPT_OPEN_LEFT;
   }
   function normalizeList(dom) {
-    for (let child = dom.firstChild, prevItem = null; child; child = child.nextSibling) {
-      let name5 = child.nodeType == 1 ? child.nodeName.toLowerCase() : null;
+    for (let child2 = dom.firstChild, prevItem = null; child2; child2 = child2.nextSibling) {
+      let name5 = child2.nodeType == 1 ? child2.nodeName.toLowerCase() : null;
       if (name5 && listTags.hasOwnProperty(name5) && prevItem) {
-        prevItem.appendChild(child);
-        child = prevItem;
+        prevItem.appendChild(child2);
+        child2 = prevItem;
       } else if (name5 == "li") {
-        prevItem = child;
+        prevItem = child2;
       } else if (name5) {
         prevItem = null;
       }
@@ -1140,15 +1140,15 @@
         }
     }
     for (let i5 = start; i5 < structure.length; i5++) {
-      let child = structure[i5];
-      if (child === 0) {
+      let child2 = structure[i5];
+      if (child2 === 0) {
         if (i5 < structure.length - 1 || i5 > start)
           throw new RangeError("Content hole must be the only child of its parent node");
         return { dom, contentDOM: dom };
-      } else if (typeof child == "string") {
-        dom.appendChild(doc3.createTextNode(child));
+      } else if (typeof child2 == "string") {
+        dom.appendChild(doc3.createTextNode(child2));
       } else {
-        let { dom: inner, contentDOM: innerContent } = renderSpec(doc3, child, xmlNS, blockArraysIn);
+        let { dom: inner, contentDOM: innerContent } = renderSpec(doc3, child2, xmlNS, blockArraysIn);
         dom.appendChild(inner);
         if (innerContent) {
           if (contentDOM)
@@ -1181,10 +1181,10 @@
         */
         nodesBetween(from2, to, f, nodeStart = 0, parent) {
           for (let i5 = 0, pos = 0; pos < to; i5++) {
-            let child = this.content[i5], end = pos + child.nodeSize;
-            if (end > from2 && f(child, nodeStart + pos, parent || null, i5) !== false && child.content.size) {
+            let child2 = this.content[i5], end = pos + child2.nodeSize;
+            if (end > from2 && f(child2, nodeStart + pos, parent || null, i5) !== false && child2.content.size) {
               let start = pos + 1;
-              child.nodesBetween(Math.max(0, from2 - start), Math.min(child.content.size, to - start), f, nodeStart + start);
+              child2.nodesBetween(Math.max(0, from2 - start), Math.min(child2.content.size, to - start), f, nodeStart + start);
             }
             pos = end;
           }
@@ -1242,16 +1242,16 @@
           let result = [], size = 0;
           if (to > from2)
             for (let i5 = 0, pos = 0; pos < to; i5++) {
-              let child = this.content[i5], end = pos + child.nodeSize;
+              let child2 = this.content[i5], end = pos + child2.nodeSize;
               if (end > from2) {
                 if (pos < from2 || end > to) {
-                  if (child.isText)
-                    child = child.cut(Math.max(0, from2 - pos), Math.min(child.text.length, to - pos));
+                  if (child2.isText)
+                    child2 = child2.cut(Math.max(0, from2 - pos), Math.min(child2.text.length, to - pos));
                   else
-                    child = child.cut(Math.max(0, from2 - pos - 1), Math.min(child.content.size, to - pos - 1));
+                    child2 = child2.cut(Math.max(0, from2 - pos - 1), Math.min(child2.content.size, to - pos - 1));
                 }
-                result.push(child);
-                size += child.nodeSize;
+                result.push(child2);
+                size += child2.nodeSize;
               }
               pos = end;
             }
@@ -1345,9 +1345,9 @@
         */
         forEach(f) {
           for (let i5 = 0, p = 0; i5 < this.content.length; i5++) {
-            let child = this.content[i5];
-            f(child, p, i5);
-            p += child.nodeSize;
+            let child2 = this.content[i5];
+            f(child2, p, i5);
+            p += child2.nodeSize;
           }
         }
         /**
@@ -1778,8 +1778,8 @@
           let parent = this.parent, index = this.index(this.depth);
           if (index == parent.childCount)
             return null;
-          let dOff = this.pos - this.path[this.path.length - 1], child = parent.child(index);
-          return dOff ? parent.child(index).cut(dOff) : child;
+          let dOff = this.pos - this.path[this.path.length - 1], child2 = parent.child(index);
+          return dOff ? parent.child(index).cut(dOff) : child2;
         }
         /**
         Get the node directly before the position, if any. If the
@@ -3753,12 +3753,12 @@
   function mapFragment(fragment, f, parent) {
     let mapped = [];
     for (let i5 = 0; i5 < fragment.childCount; i5++) {
-      let child = fragment.child(i5);
-      if (child.content.size)
-        child = child.copy(mapFragment(child.content, f, child));
-      if (child.isInline)
-        child = f(child, parent, i5);
-      mapped.push(child);
+      let child2 = fragment.child(i5);
+      if (child2.content.size)
+        child2 = child2.copy(mapFragment(child2.content, f, child2));
+      if (child2.isInline)
+        child2 = f(child2, parent, i5);
+      mapped.push(child2);
     }
     return Fragment.fromArray(mapped);
   }
@@ -3849,20 +3849,20 @@
     let node = tr4.doc.nodeAt(pos);
     let replSteps = [], cur = pos + 1;
     for (let i5 = 0; i5 < node.childCount; i5++) {
-      let child = node.child(i5), end = cur + child.nodeSize;
-      let allowed = match.matchType(child.type);
+      let child2 = node.child(i5), end = cur + child2.nodeSize;
+      let allowed = match.matchType(child2.type);
       if (!allowed) {
         replSteps.push(new ReplaceStep(cur, end, Slice.empty));
       } else {
         match = allowed;
-        for (let j = 0; j < child.marks.length; j++)
-          if (!parentType.allowsMarkType(child.marks[j].type))
-            tr4.step(new RemoveMarkStep(cur, end, child.marks[j]));
-        if (clearNewlines && child.isText && parentType.whitespace != "pre") {
+        for (let j = 0; j < child2.marks.length; j++)
+          if (!parentType.allowsMarkType(child2.marks[j].type))
+            tr4.step(new RemoveMarkStep(cur, end, child2.marks[j]));
+        if (clearNewlines && child2.isText && parentType.whitespace != "pre") {
           let m, newline = /\r?\n|\r/g, slice3;
-          while (m = newline.exec(child.text)) {
+          while (m = newline.exec(child2.text)) {
             if (!slice3)
-              slice3 = new Slice(Fragment.from(parentType.schema.text(" ", parentType.allowedMarks(child.marks))), 0, 0);
+              slice3 = new Slice(Fragment.from(parentType.schema.text(" ", parentType.allowedMarks(child2.marks))), 0, 0);
             replSteps.push(new ReplaceStep(cur + m.index, cur + m.index + m[0].length, slice3));
           }
         }
@@ -3993,10 +3993,10 @@
     });
   }
   function replaceNewlines(tr4, node, pos, mapFrom) {
-    node.forEach((child, offset) => {
-      if (child.isText) {
+    node.forEach((child2, offset) => {
+      if (child2.isText) {
         let m, newline = /\r?\n|\r/g;
-        while (m = newline.exec(child.text)) {
+        while (m = newline.exec(child2.text)) {
           let start = tr4.mapping.slice(mapFrom).map(pos + 1 + offset + m.index);
           tr4.replaceWith(start, start + 1, node.type.schema.linebreakReplacement.create());
         }
@@ -4004,8 +4004,8 @@
     });
   }
   function replaceLinebreaks(tr4, node, pos, mapFrom) {
-    node.forEach((child, offset) => {
-      if (child.type == child.type.schema.linebreakReplacement) {
+    node.forEach((child2, offset) => {
+      if (child2.type == child2.type.schema.linebreakReplacement) {
         let start = tr4.mapping.slice(mapFrom).map(pos + 1 + offset);
         tr4.replaceWith(start, start + 1, node.type.schema.text("\n"));
       }
@@ -4068,12 +4068,12 @@
     let match = a.contentMatchAt(a.childCount);
     let { linebreakReplacement } = a.type.schema;
     for (let i5 = 0; i5 < b.childCount; i5++) {
-      let child = b.child(i5);
-      let type = child.type == linebreakReplacement ? a.type.schema.nodes.text : child.type;
+      let child2 = b.child(i5);
+      let type = child2.type == linebreakReplacement ? a.type.schema.nodes.text : child2.type;
       match = match.matchType(type);
       if (!match)
         return false;
-      if (!a.type.allowsMarks(child.marks))
+      if (!a.type.allowsMarks(child2.marks))
         return false;
     }
     return match.validEnd;
@@ -5223,10 +5223,10 @@
         /**
         Construct an attribute step.
         */
-        constructor(pos, attr, value) {
+        constructor(pos, attr3, value) {
           super();
           this.pos = pos;
-          this.attr = attr;
+          this.attr = attr3;
           this.value = value;
         }
         apply(doc3) {
@@ -5264,9 +5264,9 @@
         /**
         Construct an attribute step.
         */
-        constructor(attr, value) {
+        constructor(attr3, value) {
           super();
-          this.attr = attr;
+          this.attr = attr3;
           this.value = value;
         }
         apply(doc3) {
@@ -5501,15 +5501,15 @@
         The `pos` addresses the document content. Use `setDocAttribute`
         to set attributes on the document itself.
         */
-        setNodeAttribute(pos, attr, value) {
-          this.step(new AttrStep(pos, attr, value));
+        setNodeAttribute(pos, attr3, value) {
+          this.step(new AttrStep(pos, attr3, value));
           return this;
         }
         /**
         Set a single attribute on the document to a new value.
         */
-        setDocAttribute(attr, value) {
-          this.step(new DocAttrStep(attr, value));
+        setDocAttribute(attr3, value) {
+          this.step(new DocAttrStep(attr3, value));
           return this;
         }
         /**
@@ -5606,15 +5606,15 @@
     if (node.inlineContent)
       return TextSelection.create(doc3, pos);
     for (let i5 = index - (dir2 > 0 ? 0 : 1); dir2 > 0 ? i5 < node.childCount : i5 >= 0; i5 += dir2) {
-      let child = node.child(i5);
-      if (!child.isAtom) {
-        let inner = findSelectionIn(doc3, child, pos + dir2, dir2 < 0 ? child.childCount : 0, dir2, text);
+      let child2 = node.child(i5);
+      if (!child2.isAtom) {
+        let inner = findSelectionIn(doc3, child2, pos + dir2, dir2 < 0 ? child2.childCount : 0, dir2, text);
         if (inner)
           return inner;
-      } else if (!text && NodeSelection.isSelectable(child)) {
-        return NodeSelection.create(doc3, pos - (dir2 < 0 ? child.nodeSize : 0));
+      } else if (!text && NodeSelection.isSelectable(child2)) {
+        return NodeSelection.create(doc3, pos - (dir2 < 0 ? child2.nodeSize : 0));
       }
-      pos += child.nodeSize * dir2;
+      pos += child2.nodeSize * dir2;
     }
     return null;
   }
@@ -6541,14 +6541,14 @@
         off3 = domIndex(node) + (dir2 < 0 ? 0 : 1);
         node = parent;
       } else if (node.nodeType == 1) {
-        let child = node.childNodes[off3 + (dir2 < 0 ? -1 : 0)];
-        if (child.nodeType == 1 && child.contentEditable == "false") {
-          if ((_a = child.pmViewDesc) === null || _a === void 0 ? void 0 : _a.ignoreForSelection)
+        let child2 = node.childNodes[off3 + (dir2 < 0 ? -1 : 0)];
+        if (child2.nodeType == 1 && child2.contentEditable == "false") {
+          if ((_a = child2.pmViewDesc) === null || _a === void 0 ? void 0 : _a.ignoreForSelection)
             off3 += dir2;
           else
             return false;
         } else {
-          node = child;
+          node = child2;
           off3 = dir2 < 0 ? nodeSize(node) : 0;
         }
       } else {
@@ -6772,12 +6772,12 @@
     let closest, dxClosest = 2e8, coordsClosest, offset = 0;
     let rowBot = coords.top, rowTop = coords.top;
     let firstBelow, coordsBelow;
-    for (let child = node.firstChild, childIndex = 0; child; child = child.nextSibling, childIndex++) {
+    for (let child2 = node.firstChild, childIndex = 0; child2; child2 = child2.nextSibling, childIndex++) {
       let rects;
-      if (child.nodeType == 1)
-        rects = child.getClientRects();
-      else if (child.nodeType == 3)
-        rects = textRange(child).getClientRects();
+      if (child2.nodeType == 1)
+        rects = child2.getClientRects();
+      else if (child2.nodeType == 3)
+        rects = textRange(child2).getClientRects();
       else
         continue;
       for (let i5 = 0; i5 < rects.length; i5++) {
@@ -6787,18 +6787,18 @@
           rowTop = Math.min(rect.top, rowTop);
           let dx = rect.left > coords.left ? rect.left - coords.left : rect.right < coords.left ? coords.left - rect.right : 0;
           if (dx < dxClosest) {
-            closest = child;
+            closest = child2;
             dxClosest = dx;
             coordsClosest = dx && closest.nodeType == 3 ? {
               left: rect.right < coords.left ? rect.right : rect.left,
               top: coords.top
             } : coords;
-            if (child.nodeType == 1 && dx)
+            if (child2.nodeType == 1 && dx)
               offset = childIndex + (coords.left >= (rect.left + rect.right) / 2 ? 1 : 0);
             continue;
           }
         } else if (rect.top > coords.top && !firstBelow && rect.left <= coords.left && rect.right >= coords.left) {
-          firstBelow = child;
+          firstBelow = child2;
           coordsBelow = { left: Math.max(rect.left, Math.min(rect.right, coords.left)), top: rect.top };
         }
         if (!closest && (coords.left >= rect.right && coords.top >= rect.top || coords.left >= rect.left && coords.top >= rect.bottom))
@@ -6880,13 +6880,13 @@
     let len5 = element.childNodes.length;
     if (len5 && box2.top < box2.bottom) {
       for (let startI = Math.max(0, Math.min(len5 - 1, Math.floor(len5 * (coords.top - box2.top) / (box2.bottom - box2.top)) - 2)), i5 = startI; ; ) {
-        let child = element.childNodes[i5];
-        if (child.nodeType == 1) {
-          let rects = child.getClientRects();
+        let child2 = element.childNodes[i5];
+        if (child2.nodeType == 1) {
+          let rects = child2.getClientRects();
           for (let j = 0; j < rects.length; j++) {
             let rect = rects[j];
             if (inRect(coords, rect))
-              return elementFromPoint(child, coords, rect);
+              return elementFromPoint(child2, coords, rect);
           }
         }
         if ((i5 = (i5 + 1) % len5) == startI)
@@ -7054,12 +7054,12 @@
         dom = nearest.dom.parentNode;
       }
       let coords = coordsAtPos(view2, $pos.pos, 1);
-      for (let child = dom.firstChild; child; child = child.nextSibling) {
+      for (let child2 = dom.firstChild; child2; child2 = child2.nextSibling) {
         let boxes;
-        if (child.nodeType == 1)
-          boxes = child.getClientRects();
-        else if (child.nodeType == 3)
-          boxes = textRange(child, 0, child.nodeValue.length).getClientRects();
+        if (child2.nodeType == 1)
+          boxes = child2.getClientRects();
+        else if (child2.nodeType == 3)
+          boxes = textRange(child2, 0, child2.nodeValue.length).getClientRects();
         else
           continue;
         for (let i5 = 0; i5 < boxes.length; i5++) {
@@ -7274,9 +7274,9 @@
     let locals = deco.locals(parent), offset = 0;
     if (locals.length == 0) {
       for (let i5 = 0; i5 < parent.childCount; i5++) {
-        let child = parent.child(i5);
-        onNode(child, locals, deco.forChild(offset, child), i5);
-        offset += child.nodeSize;
+        let child2 = parent.child(i5);
+        onNode(child2, locals, deco.forChild(offset, child2), i5);
+        offset += child2.nodeSize;
       }
       return;
     }
@@ -7301,14 +7301,14 @@
           onWidget(widget, parentIndex, !!restNode);
         }
       }
-      let child, index;
+      let child2, index;
       if (restNode) {
         index = -1;
-        child = restNode;
+        child2 = restNode;
         restNode = null;
       } else if (parentIndex < parent.childCount) {
         index = parentIndex;
-        child = parent.child(parentIndex++);
+        child2 = parent.child(parentIndex++);
       } else {
         break;
       }
@@ -7317,8 +7317,8 @@
           active.splice(i5--, 1);
       while (decoIndex < locals.length && locals[decoIndex].from <= offset && locals[decoIndex].to > offset)
         active.push(locals[decoIndex++]);
-      let end = offset + child.nodeSize;
-      if (child.isText) {
+      let end = offset + child2.nodeSize;
+      if (child2.isText) {
         let cutAt = end;
         if (decoIndex < locals.length && locals[decoIndex].from < cutAt)
           cutAt = locals[decoIndex].from;
@@ -7326,8 +7326,8 @@
           if (active[i5].to < cutAt)
             cutAt = active[i5].to;
         if (cutAt < end) {
-          restNode = child.cut(cutAt - offset);
-          child = child.cut(0, cutAt - offset);
+          restNode = child2.cut(cutAt - offset);
+          child2 = child2.cut(0, cutAt - offset);
           end = cutAt;
           index = -1;
         }
@@ -7335,8 +7335,8 @@
         while (decoIndex < locals.length && locals[decoIndex].to < end)
           decoIndex++;
       }
-      let outerDeco = child.isInline && !child.isLeaf ? active.filter((d) => !d.inline) : active.slice();
-      onNode(child, outerDeco, deco.forChild(offset, child), index);
+      let outerDeco = child2.isInline && !child2.isLeaf ? active.filter((d) => !d.inline) : active.slice();
+      onNode(child2, outerDeco, deco.forChild(offset, child2), index);
       offset = end;
     }
   }
@@ -7350,11 +7350,11 @@
   }
   function findTextInFragment(frag, text, from2, to) {
     for (let i5 = 0, pos = 0; i5 < frag.childCount && pos <= to; ) {
-      let child = frag.child(i5++), childStart = pos;
-      pos += child.nodeSize;
-      if (!child.isText)
+      let child2 = frag.child(i5++), childStart = pos;
+      pos += child2.nodeSize;
+      if (!child2.isText)
         continue;
-      let str3 = child.text;
+      let str3 = child2.text;
       while (i5 < frag.childCount) {
         let next = frag.child(i5++);
         pos += next.nodeSize;
@@ -7377,18 +7377,18 @@
   function replaceNodes(nodes, from2, to, view2, replacement) {
     let result = [];
     for (let i5 = 0, off3 = 0; i5 < nodes.length; i5++) {
-      let child = nodes[i5], start = off3, end = off3 += child.size;
+      let child2 = nodes[i5], start = off3, end = off3 += child2.size;
       if (start >= to || end <= from2) {
-        result.push(child);
+        result.push(child2);
       } else {
         if (start < from2)
-          result.push(child.slice(0, from2 - start, view2));
+          result.push(child2.slice(0, from2 - start, view2));
         if (replacement) {
           result.push(replacement);
           replacement = void 0;
         }
         if (end > to)
-          result.push(child.slice(to - start, child.size, view2));
+          result.push(child2.slice(to - start, child2.size, view2));
       }
     }
     return result;
@@ -7865,9 +7865,9 @@
       return false;
     let { focusNode, focusOffset } = view2.domSelectionRange();
     if (focusNode && focusNode.nodeType == 1 && focusOffset == 0 && focusNode.firstChild && focusNode.firstChild.contentEditable == "false") {
-      let child = focusNode.firstChild;
-      switchEditable(view2, child, "true");
-      setTimeout(() => switchEditable(view2, child, "false"), 20);
+      let child2 = focusNode.firstChild;
+      switchEditable(view2, child2, "true");
+      setTimeout(() => switchEditable(view2, child2, "false"), 20);
     }
     return false;
   }
@@ -7937,15 +7937,15 @@
     let text = view2.someProp("clipboardTextSerializer", (f) => f(slice3, view2)) || slice3.content.textBetween(0, slice3.content.size, "\n\n");
     return { dom: wrap2, text, slice: slice3 };
   }
-  function parseFromClipboard(view2, text, html, plainText4, $context) {
+  function parseFromClipboard(view2, text, html, plainText5, $context) {
     let inCode = $context.parent.type.spec.code;
     let dom, slice3;
     if (!html && !text)
       return null;
-    let asText = !!text && (plainText4 || inCode || !html);
+    let asText = !!text && (plainText5 || inCode || !html);
     if (asText) {
       view2.someProp("transformPastedText", (f) => {
-        text = f(text, inCode || plainText4, view2);
+        text = f(text, inCode || plainText5, view2);
       });
       if (inCode) {
         slice3 = new Slice(Fragment.from(view2.state.schema.text(text.replace(/\r\n?/g, "\n"))), 0, 0);
@@ -7954,7 +7954,7 @@
         });
         return slice3;
       }
-      let parsed = view2.someProp("clipboardTextParser", (f) => f(text, $context, plainText4, view2));
+      let parsed = view2.someProp("clipboardTextParser", (f) => f(text, $context, plainText5, view2));
       if (parsed) {
         slice3 = parsed;
       } else {
@@ -7979,12 +7979,12 @@
     let sliceData = contextNode && /^(\d+) (\d+)(?: -(\d+))? (.*)/.exec(contextNode.getAttribute("data-pm-slice") || "");
     if (sliceData && sliceData[3])
       for (let i5 = +sliceData[3]; i5 > 0; i5--) {
-        let child = dom.firstChild;
-        while (child && child.nodeType != 1)
-          child = child.nextSibling;
-        if (!child)
+        let child2 = dom.firstChild;
+        while (child2 && child2.nodeType != 1)
+          child2 = child2.nextSibling;
+        if (!child2)
           break;
-        dom = child;
+        dom = child2;
       }
     if (!slice3) {
       let parser = view2.someProp("clipboardParser") || view2.someProp("domParser") || DOMParser2.fromSchema(view2.state.schema);
@@ -8388,9 +8388,9 @@
   function capturePaste(view2, event) {
     if (!view2.dom.parentNode)
       return;
-    let plainText4 = view2.input.shiftKey || view2.state.selection.$from.parent.type.spec.code;
-    let target = view2.dom.parentNode.appendChild(document.createElement(plainText4 ? "textarea" : "div"));
-    if (!plainText4)
+    let plainText5 = view2.input.shiftKey || view2.state.selection.$from.parent.type.spec.code;
+    let target = view2.dom.parentNode.appendChild(document.createElement(plainText5 ? "textarea" : "div"));
+    if (!plainText5)
       target.contentEditable = "true";
     target.style.cssText = "position: fixed; left: -10000px; top: 10px";
     target.focus();
@@ -8399,7 +8399,7 @@
       view2.focus();
       if (target.parentNode)
         target.parentNode.removeChild(target);
-      if (plainText4)
+      if (plainText5)
         doPaste(view2, target.value, null, plain, event);
       else
         doPaste(view2, target.textContent, target.innerHTML, plain, event);
@@ -9044,13 +9044,13 @@
       if (typeof value == "function")
         value = value(view2.state);
       if (value)
-        for (let attr in value) {
-          if (attr == "class")
-            attrs.class += " " + value[attr];
-          else if (attr == "style")
-            attrs.style = (attrs.style ? attrs.style + ";" : "") + value[attr];
-          else if (!attrs[attr] && attr != "contenteditable" && attr != "nodeName")
-            attrs[attr] = String(value[attr]);
+        for (let attr3 in value) {
+          if (attr3 == "class")
+            attrs.class += " " + value[attr3];
+          else if (attr3 == "style")
+            attrs.style = (attrs.style ? attrs.style + ";" : "") + value[attr3];
+          else if (!attrs[attr3] && attr3 != "contenteditable" && attr3 != "nodeName")
+            attrs[attr3] = String(value[attr3]);
         }
     });
     if (!attrs.translate)
@@ -9218,10 +9218,10 @@
           for (let i5 = 0; i5 < this.children.length; i5++)
             this.children[i5].destroy();
         }
-        posBeforeChild(child) {
+        posBeforeChild(child2) {
           for (let i5 = 0, pos = this.posAtStart; ; i5++) {
             let cur = this.children[i5];
-            if (cur == child)
+            if (cur == child2)
               return pos;
             pos += cur.size;
           }
@@ -9322,21 +9322,21 @@
         // parent node overrode rendering, there might not be one.)
         descAt(pos) {
           for (let i5 = 0, offset = 0; i5 < this.children.length; i5++) {
-            let child = this.children[i5], end = offset + child.size;
+            let child2 = this.children[i5], end = offset + child2.size;
             if (offset == pos && end != offset) {
-              while (!child.border && child.children.length) {
-                for (let i6 = 0; i6 < child.children.length; i6++) {
-                  let inner = child.children[i6];
+              while (!child2.border && child2.children.length) {
+                for (let i6 = 0; i6 < child2.children.length; i6++) {
+                  let inner = child2.children[i6];
                   if (inner.size) {
-                    child = inner;
+                    child2 = inner;
                     break;
                   }
                 }
               }
-              return child;
+              return child2;
             }
             if (pos < end)
-              return child.descAt(pos - offset - child.border);
+              return child2.descAt(pos - offset - child2.border);
             offset = end;
           }
         }
@@ -9345,8 +9345,8 @@
             return { node: this.dom, offset: 0, atom: pos + 1 };
           let i5 = 0, offset = 0;
           for (let curPos = 0; i5 < this.children.length; i5++) {
-            let child = this.children[i5], end = curPos + child.size;
-            if (end > pos || child instanceof TrailingHackViewDesc) {
+            let child2 = this.children[i5], end = curPos + child2.size;
+            if (end > pos || child2 instanceof TrailingHackViewDesc) {
               offset = pos - curPos;
               break;
             }
@@ -9385,11 +9385,11 @@
             return { node: this.contentDOM, from: from2, to, fromOffset: 0, toOffset: this.contentDOM.childNodes.length };
           let fromOffset = -1, toOffset = -1;
           for (let offset = base4, i5 = 0; ; i5++) {
-            let child = this.children[i5], end = offset + child.size;
+            let child2 = this.children[i5], end = offset + child2.size;
             if (fromOffset == -1 && from2 <= end) {
-              let childBase = offset + child.border;
-              if (from2 >= childBase && to <= end - child.border && child.node && child.contentDOM && this.contentDOM.contains(child.contentDOM))
-                return child.parseRange(from2, to, childBase);
+              let childBase = offset + child2.border;
+              if (from2 >= childBase && to <= end - child2.border && child2.node && child2.contentDOM && this.contentDOM.contains(child2.contentDOM))
+                return child2.parseRange(from2, to, childBase);
               from2 = offset;
               for (let j = i5; j > 0; j--) {
                 let prev = this.children[j - 1];
@@ -9423,8 +9423,8 @@
         emptyChildAt(side) {
           if (this.border || !this.contentDOM || !this.children.length)
             return false;
-          let child = this.children[side < 0 ? 0 : this.children.length - 1];
-          return child.size == 0 || child.emptyChildAt(side);
+          let child2 = this.children[side < 0 ? 0 : this.children.length - 1];
+          return child2.size == 0 || child2.emptyChildAt(side);
         }
         domAfterPos(pos) {
           let { node, offset } = this.domFromPos(pos, 0);
@@ -9440,9 +9440,9 @@
         setSelection(anchor, head2, view2, force = false) {
           let from2 = Math.min(anchor, head2), to = Math.max(anchor, head2);
           for (let i5 = 0, offset = 0; i5 < this.children.length; i5++) {
-            let child = this.children[i5], end = offset + child.size;
+            let child2 = this.children[i5], end = offset + child2.size;
             if (from2 > offset && to < end)
-              return child.setSelection(anchor - offset - child.border, head2 - offset - child.border, view2, force);
+              return child2.setSelection(anchor - offset - child2.border, head2 - offset - child2.border, view2, force);
             offset = end;
           }
           let anchorDOM = this.domFromPos(anchor, anchor ? -1 : 1);
@@ -9511,18 +9511,18 @@
         // by a DOM change, so that the next update will redraw it.
         markDirty(from2, to) {
           for (let offset = 0, i5 = 0; i5 < this.children.length; i5++) {
-            let child = this.children[i5], end = offset + child.size;
+            let child2 = this.children[i5], end = offset + child2.size;
             if (offset == end ? from2 <= end && to >= offset : from2 < end && to > offset) {
-              let startInside = offset + child.border, endInside = end - child.border;
+              let startInside = offset + child2.border, endInside = end - child2.border;
               if (from2 >= startInside && to <= endInside) {
                 this.dirty = from2 == offset || to == end ? CONTENT_DIRTY : CHILD_DIRTY;
-                if (from2 == startInside && to == endInside && (child.contentLost || child.dom.parentNode != this.contentDOM))
-                  child.dirty = NODE_DIRTY;
+                if (from2 == startInside && to == endInside && (child2.contentLost || child2.dom.parentNode != this.contentDOM))
+                  child2.dirty = NODE_DIRTY;
                 else
-                  child.markDirty(from2 - startInside, to - startInside);
+                  child2.markDirty(from2 - startInside, to - startInside);
                 return;
               } else {
-                child.dirty = child.dom == child.contentDOM && child.dom.parentNode == this.contentDOM && !child.children.length ? CONTENT_DIRTY : NODE_DIRTY;
+                child2.dirty = child2.dom == child2.contentDOM && child2.dom.parentNode == this.contentDOM && !child2.children.length ? CONTENT_DIRTY : NODE_DIRTY;
               }
             }
             offset = end;
@@ -9737,9 +9737,9 @@
             rule.contentElement = this.contentDOM;
           } else {
             for (let i5 = this.children.length - 1; i5 >= 0; i5--) {
-              let child = this.children[i5];
-              if (this.dom.contains(child.dom.parentNode)) {
-                rule.contentElement = child.dom.parentNode;
+              let child2 = this.children[i5];
+              if (this.dom.contains(child2.dom.parentNode)) {
+                rule.contentElement = child2.dom.parentNode;
                 break;
               }
             }
@@ -9773,16 +9773,16 @@
             else if (widget.type.side >= 0 && !insideNode)
               updater.syncToMarks(i5 == this.node.childCount ? Mark.none : this.node.child(i5).marks, inline, view2, i5);
             updater.placeWidget(widget, view2, off3);
-          }, (child, outerDeco, innerDeco, i5) => {
-            updater.syncToMarks(child.marks, inline, view2, i5);
+          }, (child2, outerDeco, innerDeco, i5) => {
+            updater.syncToMarks(child2.marks, inline, view2, i5);
             let compIndex;
-            if (updater.findNodeMatch(child, outerDeco, innerDeco, i5)) ;
-            else if (compositionInChild && view2.state.selection.from > off3 && view2.state.selection.to < off3 + child.nodeSize && (compIndex = updater.findIndexWithChild(composition.node)) > -1 && updater.updateNodeAt(child, outerDeco, innerDeco, compIndex, view2)) ;
-            else if (updater.updateNextNode(child, outerDeco, innerDeco, view2, i5, off3)) ;
+            if (updater.findNodeMatch(child2, outerDeco, innerDeco, i5)) ;
+            else if (compositionInChild && view2.state.selection.from > off3 && view2.state.selection.to < off3 + child2.nodeSize && (compIndex = updater.findIndexWithChild(composition.node)) > -1 && updater.updateNodeAt(child2, outerDeco, innerDeco, compIndex, view2)) ;
+            else if (updater.updateNextNode(child2, outerDeco, innerDeco, view2, i5, off3)) ;
             else {
-              updater.addNode(child, outerDeco, innerDeco, view2, off3);
+              updater.addNode(child2, outerDeco, innerDeco, view2, off3);
             }
-            off3 += child.nodeSize;
+            off3 += child2.nodeSize;
           });
           updater.syncToMarks([], inline, view2, 0);
           if (this.node.isTextblock)
@@ -10079,8 +10079,8 @@
             found2 = this.top.children.indexOf(targetDesc, this.index);
           } else {
             for (let i5 = this.index, e = Math.min(this.top.children.length, i5 + 5); i5 < e; i5++) {
-              let child = this.top.children[i5];
-              if (child.matchesNode(node, outerDeco, innerDeco) && !this.preMatch.matched.has(child)) {
+              let child2 = this.top.children[i5];
+              if (child2.matchesNode(node, outerDeco, innerDeco) && !this.preMatch.matched.has(child2)) {
                 found2 = i5;
                 break;
               }
@@ -10093,10 +10093,10 @@
           return true;
         }
         updateNodeAt(node, outerDeco, innerDeco, index, view2) {
-          let child = this.top.children[index];
-          if (child.dirty == NODE_DIRTY && child.dom == child.contentDOM)
-            child.dirty = CONTENT_DIRTY;
-          if (!child.update(node, outerDeco, innerDeco, view2))
+          let child2 = this.top.children[index];
+          if (child2.dirty == NODE_DIRTY && child2.dom == child2.contentDOM)
+            child2.dirty = CONTENT_DIRTY;
+          if (!child2.update(node, outerDeco, innerDeco, view2))
             return false;
           this.destroyBetween(this.index, index);
           this.index++;
@@ -10729,8 +10729,8 @@
           return new Decoration(from2.pos - offset, to.pos - offset, this);
         }
         valid(node, span) {
-          let { index, offset } = node.content.findIndex(span.from), child;
-          return offset == span.from && !(child = node.child(index)).isText && offset + child.nodeSize == span.to;
+          let { index, offset } = node.content.findIndex(span.from), child2;
+          return offset == span.from && !(child2 = node.child(index)).isText && offset + child2.nodeSize == span.to;
         }
         eq(other) {
           return this == other || other instanceof _NodeType && compareObjs(this.attrs, other.attrs) && compareObjs(this.spec, other.spec);
@@ -10817,8 +10817,8 @@
         /**
         @internal
         */
-        constructor(local, children) {
-          this.local = local.length ? local : none;
+        constructor(local3, children) {
+          this.local = local3.length ? local3 : none;
           this.children = children.length ? children : none;
         }
         /**
@@ -10910,11 +10910,11 @@
               children.splice(childIndex, 0, childOffset, childOffset + childNode.nodeSize, buildTree(found2, childNode, baseOffset + 1, noSpec));
             childIndex += 3;
           });
-          let local = moveSpans(childIndex ? withoutNulls(decorations) : decorations, -offset);
-          for (let i5 = 0; i5 < local.length; i5++)
-            if (!local[i5].type.valid(doc3, local[i5]))
-              local.splice(i5--, 1);
-          return new _DecorationSet(local.length ? this.local.concat(local).sort(byPos) : this.local, children || this.children);
+          let local3 = moveSpans(childIndex ? withoutNulls(decorations) : decorations, -offset);
+          for (let i5 = 0; i5 < local3.length; i5++)
+            if (!local3[i5].type.valid(doc3, local3[i5]))
+              local3.splice(i5--, 1);
+          return new _DecorationSet(local3.length ? this.local.concat(local3).sort(byPos) : this.local, children || this.children);
         }
         /**
         Create a new set that contains the decorations in this set, minus
@@ -10926,7 +10926,7 @@
           return this.removeInner(decorations, 0);
         }
         removeInner(decorations, offset) {
-          let children = this.children, local = this.local;
+          let children = this.children, local3 = this.local;
           for (let i5 = 0; i5 < children.length; i5 += 3) {
             let found2;
             let from2 = children[i5] + offset, to = children[i5 + 1] + offset;
@@ -10949,31 +10949,31 @@
               i5 -= 3;
             }
           }
-          if (local.length) {
+          if (local3.length) {
             for (let i5 = 0, span; i5 < decorations.length; i5++)
               if (span = decorations[i5]) {
-                for (let j = 0; j < local.length; j++)
-                  if (local[j].eq(span, offset)) {
-                    if (local == this.local)
-                      local = this.local.slice();
-                    local.splice(j--, 1);
+                for (let j = 0; j < local3.length; j++)
+                  if (local3[j].eq(span, offset)) {
+                    if (local3 == this.local)
+                      local3 = this.local.slice();
+                    local3.splice(j--, 1);
                   }
               }
           }
-          if (children == this.children && local == this.local)
+          if (children == this.children && local3 == this.local)
             return this;
-          return local.length || children.length ? new _DecorationSet(local, children) : empty;
+          return local3.length || children.length ? new _DecorationSet(local3, children) : empty;
         }
         forChild(offset, node) {
           if (this == empty)
             return this;
           if (node.isLeaf)
             return _DecorationSet.empty;
-          let child, local;
+          let child2, local3;
           for (let i5 = 0; i5 < this.children.length; i5 += 3)
             if (this.children[i5] >= offset) {
               if (this.children[i5] == offset)
-                child = this.children[i5 + 2];
+                child2 = this.children[i5 + 2];
               break;
             }
           let start = offset + 1, end = start + node.content.size;
@@ -10982,14 +10982,14 @@
             if (dec.from < end && dec.to > start && dec.type instanceof InlineType) {
               let from2 = Math.max(start, dec.from) - start, to = Math.min(end, dec.to) - start;
               if (from2 < to)
-                (local || (local = [])).push(dec.copy(from2, to));
+                (local3 || (local3 = [])).push(dec.copy(from2, to));
             }
           }
-          if (local) {
-            let localSet = new _DecorationSet(local.sort(byPos), none);
-            return child ? new DecorationGroup([localSet, child]) : localSet;
+          if (local3) {
+            let localSet = new _DecorationSet(local3.sort(byPos), none);
+            return child2 ? new DecorationGroup([localSet, child2]) : localSet;
           }
-          return child || empty;
+          return child2 || empty;
         }
         /**
         @internal
@@ -11043,12 +11043,12 @@
           const mappedDecos = this.members.map((member) => member.map(mapping, doc3, noSpec));
           return _DecorationGroup.from(mappedDecos);
         }
-        forChild(offset, child) {
-          if (child.isLeaf)
+        forChild(offset, child2) {
+          if (child2.isLeaf)
             return DecorationSet.empty;
           let found2 = [];
           for (let i5 = 0; i5 < this.members.length; i5++) {
-            let result = this.members[i5].forChild(offset, child);
+            let result = this.members[i5].forChild(offset, child2);
             if (result == empty)
               continue;
             if (result instanceof _DecorationGroup)
@@ -12541,7 +12541,7 @@
   function keydownHandler(bindings) {
     let map2 = normalize(bindings);
     return function(view2, event) {
-      let name5 = keyName(event), baseName4, direct = map2[modifiers(name5, event)];
+      let name5 = keyName(event), baseName5, direct = map2[modifiers(name5, event)];
       if (direct && direct(view2.state, view2.dispatch, view2))
         return true;
       if (name5.length == 1 && name5 != " ") {
@@ -12551,8 +12551,8 @@
             return true;
         }
         if ((event.altKey || event.metaKey || event.ctrlKey) && // Ctrl-Alt may be used for AltGr on Windows
-        !(windows2 && event.ctrlKey && event.altKey) && (baseName4 = base[event.keyCode]) && baseName4 != name5) {
-          let fromCode = map2[modifiers(baseName4, event)];
+        !(windows2 && event.ctrlKey && event.altKey) && (baseName5 = base[event.keyCode]) && baseName5 != name5) {
+          let fromCode = map2[modifiers(baseName5, event)];
           if (fromCode && fromCode(view2.state, view2.dispatch, view2))
             return true;
         }
@@ -14048,18 +14048,18 @@
             segs.push({ text: s, marks: base4 });
             break;
           }
-          const { m, marks: marks2, attr, color } = best;
+          const { m, marks: marks2, attr: attr3, color } = best;
           if (m.index) segs.push({ text: s.slice(0, m.index), marks: base4 });
-          if (attr === "image") {
+          if (attr3 === "image") {
             segs.push({ text: m[0], marks: base4, image: inlineImgOf(m) });
             s = s.slice(m.index + m[0].length);
             continue;
           }
-          const next = attr ? [
-            ...base4.filter((x) => typeof x === "string" || x.type !== attr),
-            { type: attr, attrs: { color } }
+          const next = attr3 ? [
+            ...base4.filter((x) => typeof x === "string" || x.type !== attr3),
+            { type: attr3, attrs: { color } }
           ] : [.../* @__PURE__ */ new Set([...base4, ...marks2])];
-          segs.push(...parseInline3(attr ? m[2] : m[1], next));
+          segs.push(...parseInline3(attr3 ? m[2] : m[1], next));
           s = s.slice(m.index + m[0].length);
         }
         return segs;
@@ -14067,7 +14067,7 @@
       function stripMentions4(s) {
         return String(s == null ? "" : s).replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2").replace(/\[\[([^\]]+)\]\]/g, "$1");
       }
-      function inlinePlainText5(text) {
+      function inlinePlainText6(text) {
         return stripMentions4(parseInline3(String(text == null ? "" : text)).map((seg) => seg.text).join("")).replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
       }
       function inlineDisplayText2(text) {
@@ -14118,7 +14118,7 @@
           return hhex && !mono ? `<mark style="background:${hhex}">${s}</mark>` : s;
         }).join("");
       }
-      function inlineNodes(text) {
+      function inlineNodes2(text) {
         return parseInline3(text).filter((x) => x.text).map((x) => {
           const mk2 = x.marks.length ? { marks: x.marks.map((t3) => typeof t3 === "string" ? { type: t3 } : t3) } : {};
           if (x.image) {
@@ -14129,14 +14129,14 @@
         });
       }
       function para2(text) {
-        const content = inlineNodes(text);
+        const content = inlineNodes2(text);
         return { type: "paragraph", ...content.length ? { content } : {} };
       }
       function inlineNodesMulti(rawLines) {
         const out = [];
         rawLines.forEach((l, i5) => {
           if (i5) out.push({ type: "hard_break" });
-          out.push(...inlineNodes(i5 < rawLines.length - 1 ? stripHardBreak(l) : l));
+          out.push(...inlineNodes2(i5 < rawLines.length - 1 ? stripHardBreak(l) : l));
         });
         return out;
       }
@@ -14181,9 +14181,9 @@
       function nodeAtAlignPath(doc3, key2) {
         let n2 = doc3;
         for (const part of String(key2).split(".")) {
-          const kids = n2 && n2.content;
-          if (!Array.isArray(kids)) return null;
-          n2 = kids[+part];
+          const kids3 = n2 && n2.content;
+          if (!Array.isArray(kids3)) return null;
+          n2 = kids3[+part];
           if (!n2) return null;
         }
         return n2;
@@ -14285,7 +14285,7 @@
         }
         return out;
       }
-      function mdToDoc5(md, alignMap) {
+      function mdToDoc6(md, alignMap) {
         const lines = md.split("\n");
         const out = [];
         let i5 = 0;
@@ -14331,7 +14331,7 @@
             i5++;
           } else if (m = RE_H.exec(line)) {
             const rest = line.slice(m[0].length);
-            const content = rest.trim() ? inlineNodes(rest) : [];
+            const content = rest.trim() ? inlineNodes2(rest) : [];
             out.push(content.length ? { type: "heading", attrs: { level: m[1].length, align }, ...{ content } } : { type: "paragraph", attrs: { align } });
             i5++;
           } else if (line.startsWith("> ")) {
@@ -14374,7 +14374,7 @@
               i5++;
               raw.push(lines[i5]);
             }
-            const content = raw.length > 1 ? inlineNodesMulti(raw) : inlineNodes(line);
+            const content = raw.length > 1 ? inlineNodesMulti(raw) : inlineNodes2(line);
             out.push({
               type: "paragraph",
               attrs: { align },
@@ -14547,7 +14547,7 @@
         }
         return { lines, counts };
       }
-      function docToMd5(doc3, opts) {
+      function docToMd6(doc3, opts) {
         return docToMdParts(doc3, opts).lines.join("\n");
       }
       function mdLineCounts2(doc3, opts) {
@@ -14571,7 +14571,7 @@
         }
         return v2.startsWith("[") && v2.endsWith("]") ? v2.slice(1, -1).split(",").map((x) => x.trim()).filter(Boolean) : v2;
       }
-      function parseMdFile25(text) {
+      function parseMdFile27(text) {
         let meta2 = {}, body = String(text || "").replace(K2_COMMENTS_RE, "");
         text = body;
         if (text.startsWith("---")) {
@@ -14621,12 +14621,12 @@
       ]);
       function repairFrontmatter3(text) {
         const src2 = String(text == null ? "" : text);
-        const same = { text: src2, changed: false, recovered: [] };
+        const same2 = { text: src2, changed: false, recovered: [] };
         const cm = K2_COMMENTS_RE.exec(src2);
         const main = cm ? src2.slice(0, cm.index) : src2;
         const tail = cm ? src2.slice(cm.index) : "";
         const lines = main.replace(/\r\n/g, "\n").split("\n");
-        if (!lines.length || lines[0].trim() !== "---") return same;
+        if (!lines.length || lines[0].trim() !== "---") return same2;
         const KEY4 = /^(\w[\w-]*):\s*(.*)$/;
         let firstEnd = -1, end = -1;
         for (let j = 1; j < lines.length; j++) {
@@ -14640,7 +14640,7 @@
           end = j;
           break;
         }
-        if (end < 0) return same;
+        if (end < 0) return same2;
         const meta2 = {};
         const recovered = /* @__PURE__ */ new Set();
         let lastKey = null, cont = 0;
@@ -14658,19 +14658,19 @@
             recovered.add(lastKey);
           }
         }
-        if (!cont && end === firstEnd) return same;
+        if (!cont && end === firstEnd) return same2;
         let body = lines.slice(end + 1).join("\n");
         body = body.replace(/^\n/, "");
-        return { text: dumpMdFile11(meta2, body) + (tail ? "\n" + tail.replace(/^\n+/, "") : ""), changed: true, recovered: [...recovered] };
+        return { text: dumpMdFile12(meta2, body) + (tail ? "\n" + tail.replace(/^\n+/, "") : ""), changed: true, recovered: [...recovered] };
       }
-      function dumpMdFile11(meta2, body) {
+      function dumpMdFile12(meta2, body) {
         const out = ["---"];
         for (const [k, v2] of Object.entries(meta2))
           out.push(Array.isArray(v2) ? `${k}: [${v2.map((x) => String(x).replace(/[\r\n]+/g, " ")).join(", ")}]` : `${k}: ${fmEncode(v2)}`);
         out.push("---\n");
         return out.join("\n") + (/^\r?\n/.test(body) ? "\n" : "") + body;
       }
-      function countWords12(body) {
+      function countWords13(body) {
         const t3 = body.replace(/[#>*_~\-!\[\]()]/g, " ");
         let n2 = 0;
         for (const chunk of t3.split(/\s+/)) {
@@ -14680,12 +14680,12 @@
         return n2;
       }
       module.exports = {
-        mdToDoc: mdToDoc5,
-        docToMd: docToMd5,
+        mdToDoc: mdToDoc6,
+        docToMd: docToMd6,
         mdLineCounts: mdLineCounts2,
-        parseMdFile: parseMdFile25,
-        dumpMdFile: dumpMdFile11,
-        countWords: countWords12,
+        parseMdFile: parseMdFile27,
+        dumpMdFile: dumpMdFile12,
+        countWords: countWords13,
         collectAlign: collectAlign2,
         alignToString: alignToString3,
         alignFromString: alignFromString2,
@@ -14695,7 +14695,7 @@
         // [alpha.132r2] ข้อความสำหรับแสดงผล (ช่องตัวอย่าง PDF) + ตัวถอดลิงก์เอนทิตี้
         RE_IMG: RE_IMG2,
         inlineDisplayText: inlineDisplayText2,
-        inlinePlainText: inlinePlainText5,
+        inlinePlainText: inlinePlainText6,
         stripMentions: stripMentions4,
         // [alpha.142 ข้อ 6] ตัวเลือกของรูป (เต็มหน้า/ความกว้าง %/ขอบมน) — ไวยากรณ์อยู่ที่นี่ที่เดียว
         splitImgTarget,
@@ -15627,12 +15627,12 @@
       "overflow-wrap:break-word",
       "word-break:break-word"
     ].join(";");
-    const tw = textWidth(f.paper, f.margins);
+    const tw2 = textWidth(f.paper, f.margins);
     for (const k of SP_ELEMENT_KEYS) {
       const c = f.elements[k];
       const s = f.styles[k];
       const ml = Math.max(0, +(num(c.indent, left) - left).toFixed(4));
-      const w = Math.max(0.3, Math.min(num(c.width, 6), +(tw - ml).toFixed(4)));
+      const w = Math.max(0.3, Math.min(num(c.width, 6), +(tw2 - ml).toFixed(4)));
       const mt = Math.round(num(c.linesBefore, 10) / 10);
       const mb = Math.round(num(c.linesBetween, 10) / 10) - 1;
       const cls = k === "page-break" ? "page-break-el" : k;
@@ -15649,8 +15649,8 @@
     const ct = { ...CONTINUED_DEFAULTS, ...f.continued || {} };
     const moreML = Math.max(0, +(num(ct.indent, 3.7) - left).toFixed(4));
     out.push(`.sp.sp-more{margin-left:calc(${moreML}in + var(--k-ct-off, 0in));width:auto;max-width:none;margin-top:0;margin-bottom:0;text-transform:none}`);
-    out.push(`.sp-continued-top,.sp-cont-top{margin-left:var(--k-ct-off, 0in);width:${+tw.toFixed(4)}in;text-align:left}`);
-    out.push(`.sp-continued-bottom,.sp-cont-bottom{margin-left:var(--k-ct-off, 0in);width:${+tw.toFixed(4)}in;text-align:right}`);
+    out.push(`.sp-continued-top,.sp-cont-top{margin-left:var(--k-ct-off, 0in);width:${+tw2.toFixed(4)}in;text-align:left}`);
+    out.push(`.sp-continued-bottom,.sp-cont-bottom{margin-left:var(--k-ct-off, 0in);width:${+tw2.toFixed(4)}in;text-align:right}`);
     const contdML = Math.max(0, +(num(f.elements.character?.indent, 3.7) - left).toFixed(4));
     out.push(`.sp.sp-contd,.sp-cont-mark.sp-contd{margin-left:calc(${contdML}in + var(--k-ct-off, 0in));width:auto;max-width:none;margin-top:0;margin-bottom:0}`);
     const m = f.margins;
@@ -15907,9 +15907,9 @@
   function elementWidthIn(fmt2, el2) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
     const c = f.elements[el2] || f.elements.action;
-    const tw = textWidth(f.paper, f.margins);
+    const tw2 = textWidth(f.paper, f.margins);
     const ml = Math.max(0, +(num(c.indent, f.margins.left) - f.margins.left).toFixed(4));
-    return Math.max(0.3, Math.min(num(c.width, 6), +(tw - ml).toFixed(4)));
+    return Math.max(0.3, Math.min(num(c.width, 6), +(tw2 - ml).toFixed(4)));
   }
   function elementIndentIn(fmt2, el2) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
@@ -16096,9 +16096,17 @@
         dialogueMore: "(MORE)",
         dialogueContd: "(cont'd)",
         sceneContinued: t("ui.spFormat.next"),
-        castTitle: "Cast of Characters",
-        sceneTitle: "Scene",
-        timeTitle: "Time"
+        // [trial 2026-10-25 ข้อ 18] หัวข้อหน้ารายชื่อตัวละครมาจากไฟล์ภาษา (getter = อ่านตอนใช้ ไม่ค้างภาษาตอน import)
+        // (เดิมอังกฤษตายตัวทั้งในแอปและ PDF · CONTINUED/MORE ยังเป็นอังกฤษตามธรรมเนียมบทถ่ายทำ)
+        get castTitle() {
+          return t("ui.spFormat.castTitle");
+        },
+        get sceneTitle() {
+          return t("ui.spFormat.rosterScene");
+        },
+        get timeTitle() {
+          return t("ui.spFormat.rosterTime");
+        }
       };
       SCENE_NUMBER_DEFAULTS = { show: false, left: 0.75, right: 1, suffix: "" };
       PAGE_NUMBER_DEFAULTS = { show: false, firstPage: true, right: 1, top: 0.5, suffix: "." };
@@ -16230,8 +16238,8 @@
   }
   function upgradeThaiChain(family) {
     const cur = String(family || "").split(",").map((s) => s.trim()).filter(Boolean);
-    const same = cur.length === SP_THAI_FALLBACKS_LEGACY.length && cur.every((f, i5) => f.toLowerCase() === SP_THAI_FALLBACKS_LEGACY[i5].toLowerCase());
-    return same ? SP_THAI_FALLBACKS.join(", ") : String(family || "");
+    const same2 = cur.length === SP_THAI_FALLBACKS_LEGACY.length && cur.every((f, i5) => f.toLowerCase() === SP_THAI_FALLBACKS_LEGACY[i5].toLowerCase());
+    return same2 ? SP_THAI_FALLBACKS.join(", ") : String(family || "");
   }
   function normalizeLangFonts(list3) {
     if (!Array.isArray(list3)) return defaultLangFonts();
@@ -16489,14 +16497,14 @@
     const f = fmt2 && fmt2.headings ? fmt2 : mergeProseFormat(fmt2);
     const p = paper || PAPER_SIZES.letter;
     const m = { ...MARGIN_DEFAULTS, ...margins || {} };
-    const tw = textWidth(p, m);
+    const tw2 = textWidth(p, m);
     const bodyFont = withThaiFallback(String(opts && opts.fontStack || "").trim() || proseFontStack(f));
     const headFont = withThaiFallback(String(opts && opts.headingStack || "").trim() || proseHeadingStack(f));
     const body = [
       `font-family:${bodyFont}`,
       `font-size:${f.fontPt}pt`,
       `line-height:${f.lineHeight}`,
-      `max-width:${+tw.toFixed(3)}in`,
+      `max-width:${+tw2.toFixed(3)}in`,
       "margin:3em auto",
       "padding:0 1.2em",
       `text-align:${f.align}`,
@@ -16521,6 +16529,7 @@
     ];
     if (!f.indentAfterHeading) out.push("h1+p,h2+p,h3+p,h4+p,h5+p,h6+p{text-indent:0}");
     out.push("mark{color:#1a1815;border-radius:2px;padding:0 .06em}");
+    out.push("h1,h2,h3,h4,h5,h6{break-after:avoid;page-break-after:avoid;break-inside:avoid;page-break-inside:avoid}");
     f.headings.forEach((h, i5) => {
       out.push(`h${i5 + 1}{font-size:${+h.size.toFixed(3)}em;font-weight:${h.bold ? 700 : 400};` + (h.italic ? "font-style:italic;" : "") + `margin:${h.before}em 0 ${h.after}em;line-height:${HEADING_LINE_HEIGHT};font-family:${headFont}` + (h.align ? ";text-align:" + h.align : "") + (f.headingColor ? ";color:" + f.headingColor : "") + "}");
     });
@@ -16552,7 +16561,7 @@
     {
       const bh = Math.max(0.5, (+p.height || 11) - (+m.top || 0) - (+m.bottom || 0));
       const pw = +p.width || 8.5, ph = +p.height || 11;
-      out.push(`figure.k-img-page{margin:0;position:relative;width:100%;aspect-ratio:${+tw.toFixed(4)} / ${+bh.toFixed(4)}}`);
+      out.push(`figure.k-img-page{margin:0;position:relative;width:100%;aspect-ratio:${+tw2.toFixed(4)} / ${+bh.toFixed(4)}}`);
       out.push("figure.k-img-page img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;max-width:none;max-height:none}");
       out.push("@page k-bleed{size:" + pw + "in " + ph + "in;margin:0}");
       out.push("@media print{figure.k-img-page{page:k-bleed;break-before:page;break-after:page;position:static;aspect-ratio:auto;width:" + pw + "in;height:" + ph + "in}figure.k-img-page img{position:static;width:" + pw + "in;height:" + ph + "in;object-fit:cover;border-radius:0}}");
@@ -16662,7 +16671,7 @@
     if (!doc3 || typeof doc3.forEach !== "function") return out;
     let i5 = 0;
     const textOf2 = (n2) => typeof n2.textBetween === "function" && n2.content ? n2.textBetween(0, n2.content.size, "\n", (leaf2) => leaf2.type && leaf2.type.name === "hard_break" ? "\n" : "") : n2.textContent || "";
-    const kids = (n2) => {
+    const kids3 = (n2) => {
       const arr = [];
       if (n2 && n2.childCount > 0 && typeof n2.forEach === "function") n2.forEach((c, off3) => arr.push([c, off3]));
       return arr;
@@ -16670,7 +16679,7 @@
     const walk3 = (node, pos, ctx2) => {
       const name5 = node.type && node.type.name;
       if (name5 === "bullet_list" || name5 === "ordered_list" || name5 === "blockquote" || name5 === "list_item") {
-        const inner = kids(node);
+        const inner = kids3(node);
         if (inner.length) {
           const next = name5 === "blockquote" ? "blockquote" : name5 === "list_item" ? ctx2 : "li";
           for (const [c, off3] of inner) walk3(c, pos + 1 + off3, next || "li");
@@ -18164,9 +18173,9 @@
         "split-view": "dock-right",
         "typewriter": "edit",
         "workspace-menu": "collection",
-        "zoom:-1": "zoom-out",
         "zoom:0": "reset",
         "zoom:1": "zoom-in",
+        "zoom:-1": "zoom-out",
         "scratchpad": "note",
         "a11y-settings": "cog",
         "ai-analyzer": "brain",
@@ -18188,8 +18197,8 @@
         "auto-sync:false": "",
         "auto-sync:true": "",
         "books": "",
-        "branch-sync": "",
         "branching": "branch",
+        "branch-sync": "",
         "bug-report": "bug",
         "bug-status": "bug-check",
         "changelog": "",
@@ -18223,11 +18232,13 @@
         "gallery-export-used": "export",
         "gallery-new-album": "",
         "gallery-unused": "broom",
-        "goto-page:1": "skip-previous",
         "goto:page": "",
+        "goto-page:1": "skip-previous",
         "goto:scene": "",
         "home": "home",
+        "import-docx-comments": "chat",
         "import-language-csv": "globe",
+        "import-manuscript": "import",
         "import-script": "",
         "insert-shortcode": "",
         "key-echo": "keyboard",
@@ -18243,11 +18254,11 @@
         "page-headers": "page-header",
         "page-numbers": "",
         "page-setup": "ruler",
-        "panel-system": "frame",
         "panels-side-bottom": "panel-bottom",
         "panels-side-left": "panel-left",
         "panels-side-right": "panel-right",
         "panels-side-top": "panel-top",
+        "panel-system": "frame",
         "planner": "",
         "planner-align": "",
         "planner-valign": "",
@@ -18279,6 +18290,10 @@
         "sp-element-caps": "",
         "sp-extension": "character-extension",
         "sp-force-case": "",
+        "split-add": "",
+        "split-close": "",
+        "split-view:down": "",
+        "split-view:right": "",
         "sp-report": "",
         "sp-report:character": "group",
         "sp-report:chart": "chart",
@@ -18292,13 +18307,10 @@
         "sp-view:overview1": "",
         "sp-view:overview4": "",
         "sp-view:side": "",
-        "split-add": "",
-        "split-close": "",
-        "split-view:down": "",
-        "split-view:right": "",
         "story-starter": "",
         "story-starter-toggle": "book-open",
         "support": "heart",
+        "sync-guide": "cloud",
         "sync-scene-meta": "refresh",
         "test-run": "",
         "text-case": "",
@@ -18315,19 +18327,20 @@
         "toggle-home-always": "",
         "toggle-open-last": "",
         "toggle-panel": "",
+        "toggle-simple-mode": "view-grid",
         "toggle-theme": "",
         "toolbar-config": "",
         "type-sound": "volume",
-        "ui-scale": "",
-        "ui-scale:-1": "",
-        "ui-scale:0": "",
-        "ui-scale:1": "",
         "ui:filter-archive-toggle": "archive",
         "ui:find-close": "",
         "ui:find-next": "",
         "ui:find-prev": "",
         "ui:find-rep1": "",
         "ui:find-repall": "",
+        "ui-scale": "",
+        "ui-scale:0": "",
+        "ui-scale:1": "",
+        "ui-scale:-1": "",
         "ui:tb-case": "text-case",
         "ui:tb-color": "",
         "ui:tb-highlight": "highlight",
@@ -18468,9 +18481,9 @@
         ["Backslash", true, true, "split-view"],
         ["KeyT", true, true, "typewriter"],
         ["KeyY", true, true, "workspace-menu"],
-        ["Minus", true, false, "zoom", -1],
         ["Digit0", true, true, "zoom", 0],
-        ["Equal", true, false, "zoom", 1]
+        ["Equal", true, false, "zoom", 1],
+        ["Minus", true, false, "zoom", -1]
       ];
     }
   });
@@ -19357,10 +19370,10 @@
     if (!la || !lb) return match;
     if (la * lb <= DP_LIMIT) {
       const W = lb + 1;
-      const L2 = new Int32Array((la + 1) * W);
+      const L3 = new Int32Array((la + 1) * W);
       for (let i6 = la - 1; i6 >= 0; i6--) {
         for (let j2 = lb - 1; j2 >= 0; j2--) {
-          L2[i6 * W + j2] = A[i6] === B[j2] ? L2[(i6 + 1) * W + j2 + 1] + 1 : Math.max(L2[(i6 + 1) * W + j2], L2[i6 * W + j2 + 1]);
+          L3[i6 * W + j2] = A[i6] === B[j2] ? L3[(i6 + 1) * W + j2 + 1] + 1 : Math.max(L3[(i6 + 1) * W + j2], L3[i6 * W + j2 + 1]);
         }
       }
       let i5 = 0, j = 0;
@@ -19369,7 +19382,7 @@
           match[pre + i5] = pre + j;
           i5++;
           j++;
-        } else if (L2[(i5 + 1) * W + j] >= L2[i5 * W + j + 1]) i5++;
+        } else if (L3[(i5 + 1) * W + j] >= L3[i5 * W + j + 1]) i5++;
         else j++;
       }
     } else {
@@ -21610,9 +21623,9 @@
       if (!el2 || el2.nodeType !== 1) continue;
       const tag3 = (el2.tagName || "").toLowerCase();
       if (tag3 === "ul" || tag3 === "ol") {
-        const kids = Array.from(el2.children).filter((k) => k && k.nodeType === 1 && ((k.tagName || "").toLowerCase() === "li" || k.classList && k.classList.contains(GAP_CLASS)));
-        if (kids.length) {
-          out.push(...kids);
+        const kids3 = Array.from(el2.children).filter((k) => k && k.nodeType === 1 && ((k.tagName || "").toLowerCase() === "li" || k.classList && k.classList.contains(GAP_CLASS)));
+        if (kids3.length) {
+          out.push(...kids3);
           continue;
         }
       }
@@ -21624,9 +21637,9 @@
     const z = zoomFactor > 0 ? zoomFactor : 1;
     const blocks = [];
     let gapAccum = 0, totalHeight = 0;
-    const kids = measurableChildren(pm2);
-    const gapMap = innerGapMap(pm2, new Set(kids));
-    for (const el2 of kids) {
+    const kids3 = measurableChildren(pm2);
+    const gapMap = innerGapMap(pm2, new Set(kids3));
+    for (const el2 of kids3) {
       if (!el2 || el2.nodeType !== 1) continue;
       const rect = el2.getBoundingClientRect();
       if (el2.classList && el2.classList.contains(GAP_CLASS)) {
@@ -22085,10 +22098,14 @@ ${BLOCK_END}
   }
   async function writeMdKeepingComments(io4, path, fullText, fromPath = null) {
     let raw = "";
-    try {
-      raw = await io4.readFile(fromPath || path) || "";
-    } catch {
-      raw = "";
+    const src2 = fromPath || path;
+    const there = typeof io4.exists === "function" ? await Promise.resolve().then(() => io4.exists(src2)).catch(() => true) : true;
+    if (there) {
+      try {
+        raw = await io4.readFile(src2) || "";
+      } catch {
+        raw = "";
+      }
     }
     const comments = parseComments(raw);
     if (!comments.length) {
@@ -23088,8 +23105,8 @@ ${BLOCK_END}
   function tabPathParts(root, file) {
     const f = String(file || "");
     if (!f || f.startsWith("::")) return { rel: "", book: "", chapter: "" };
-    const norm5 = (p2) => String(p2 || "").replace(/\\/g, "/").replace(/\/+$/, "");
-    const r = norm5(root), p = norm5(f);
+    const norm6 = (p2) => String(p2 || "").replace(/\\/g, "/").replace(/\/+$/, "");
+    const r = norm6(root), p = norm6(f);
     const rel = r && p.toLowerCase().startsWith(r.toLowerCase() + "/") ? p.slice(r.length + 1) : p;
     const segs = rel.split("/");
     const di = segs.indexOf("Draft"), ci = segs.indexOf("Chapters");
@@ -23309,8 +23326,8 @@ ${BLOCK_END}
     const loc = locate(root, targetId);
     const targetNode = loc ? loc.parent.children[loc.index] : root;
     const makeDock = (existing) => {
-      const kids = before ? [panelize(newPanel), existing] : [existing, panelize(newPanel)];
-      const d = dock(wantRow ? "row" : "col", kids);
+      const kids3 = before ? [panelize(newPanel), existing] : [existing, panelize(newPanel)];
+      const d = dock(wantRow ? "row" : "col", kids3);
       if (existing && existing.pxW > 0) d.pxW = existing.pxW;
       if (existing && existing.pxH > 0) d.pxH = existing.pxH;
       return d;
@@ -23482,16 +23499,16 @@ ${BLOCK_END}
       return !!node.collapsed;
     }
     if (node.type === "dock") {
-      const kids = (node.children || []).filter((c) => !nodeHidden(c));
-      return kids.length > 0 && kids.every((c) => nodeRigid(c, isFixedPanel));
+      const kids3 = (node.children || []).filter((c) => !nodeHidden(c));
+      return kids3.length > 0 && kids3.every((c) => nodeRigid(c, isFixedPanel));
     }
     return false;
   }
   function flexChildIndex(node, docsId = "docs") {
-    const kids = node && node.children || [];
-    for (let i5 = 0; i5 < kids.length; i5++) {
-      if (nodeHidden(kids[i5])) continue;
-      if (kids[i5].type === "panel" ? kids[i5].id === docsId : hasPanel(kids[i5], docsId)) return i5;
+    const kids3 = node && node.children || [];
+    for (let i5 = 0; i5 < kids3.length; i5++) {
+      if (nodeHidden(kids3[i5])) continue;
+      if (kids3[i5].type === "panel" ? kids3[i5].id === docsId : hasPanel(kids3[i5], docsId)) return i5;
     }
     return -1;
   }
@@ -23550,9 +23567,9 @@ ${BLOCK_END}
   function nodePxDeep(node, row4) {
     const own = nodePx(node, row4);
     if (own > 0 || !node) return own;
-    const kids = (node.children || []).filter((c) => !nodeHidden(c));
-    if (!kids.length) return 0;
-    const vals = kids.map((c) => nodePxDeep(c, row4));
+    const kids3 = (node.children || []).filter((c) => !nodeHidden(c));
+    if (!kids3.length) return 0;
+    const vals = kids3.map((c) => nodePxDeep(c, row4));
     if (vals.every((v2) => v2 <= 0)) return 0;
     const sameAxis = node.type === "dock" && node.dir === "row" === !!row4;
     return sameAxis ? vals.reduce((a, v2) => a + v2, 0) : Math.max(...vals);
@@ -23605,16 +23622,16 @@ ${BLOCK_END}
     return next;
   }
   function dockShares(node, isFixedPanel = () => false, docsId = "docs") {
-    const kids = node && node.children || [];
-    const out = kids.map(() => null);
+    const kids3 = node && node.children || [];
+    const out = kids3.map(() => null);
     const shown = [];
-    for (let i5 = 0; i5 < kids.length; i5++) if (!nodeHidden(kids[i5])) shown.push(i5);
+    for (let i5 = 0; i5 < kids3.length; i5++) if (!nodeHidden(kids3[i5])) shown.push(i5);
     if (!shown.length) return out;
     const sizeOf = (i5) => {
       const v2 = node.sizes && node.sizes[i5];
       return Number.isFinite(v2) && v2 > 0 ? v2 : 1;
     };
-    const soft = shown.filter((i5) => !nodeRigid(kids[i5], isFixedPanel));
+    const soft = shown.filter((i5) => !nodeRigid(kids3[i5], isFixedPanel));
     const sum2 = soft.reduce((a, i5) => a + sizeOf(i5), 0);
     const ratioOf = (i5) => sum2 > 0 ? sizeOf(i5) / sum2 : 1 / soft.length;
     for (const i5 of shown) out[i5] = { kind: "rigid" };
@@ -23626,7 +23643,7 @@ ${BLOCK_END}
       return out;
     }
     const pxKids = soft.filter((i5) => i5 !== fi);
-    const anyPinned = pxKids.some((i5) => nodePxDeep(kids[i5], row4) > 0);
+    const anyPinned = pxKids.some((i5) => nodePxDeep(kids3[i5], row4) > 0);
     if (!anyPinned) {
       for (const i5 of soft) out[i5] = { kind: "grow", grow: ratioOf(i5) };
       return out;
@@ -23636,7 +23653,7 @@ ${BLOCK_END}
         out[i5] = { kind: "flex" };
         continue;
       }
-      const px2 = nodePxDeep(kids[i5], row4);
+      const px2 = nodePxDeep(kids3[i5], row4);
       out[i5] = px2 > 0 ? { kind: "px", px: px2 } : { kind: "grow", grow: ratioOf(i5) };
     }
     return out;
@@ -23662,21 +23679,21 @@ ${BLOCK_END}
     const prune2 = (node) => {
       if (!node.children) return node;
       const before = node.children;
-      const kids = [], keep = [];
+      const kids3 = [], keep = [];
       for (let i5 = 0; i5 < before.length; i5++) {
         const c = before[i5];
         if (c.type === "panel" && c.id === id) continue;
         const pc = prune2(c);
         if (pc.children && pc.children.length === 0) continue;
-        kids.push(pc);
+        kids3.push(pc);
         keep.push(i5);
       }
-      node.children = kids;
+      node.children = kids3;
       if (node.type === "tabs") {
         if (node.active >= node.children.length) node.active = Math.max(0, node.children.length - 1);
       }
       if (node.type === "dock") {
-        node.sizes = kids.length === before.length && node.sizes && node.sizes.length === kids.length ? node.sizes : keepSizes(node.sizes, keep);
+        node.sizes = kids3.length === before.length && node.sizes && node.sizes.length === kids3.length ? node.sizes : keepSizes(node.sizes, keep);
       }
       return node;
     };
@@ -24309,10 +24326,10 @@ ${BLOCK_END}
           }
           let panel2;
           if (cur.panel.type === "tabs") {
-            const kids = [...cur.panel.children];
-            const at = Number.isInteger(index) ? Math.max(0, Math.min(index, kids.length)) : kids.length;
-            kids.splice(at, 0, node);
-            panel2 = { ...cur.panel, children: kids, active: at };
+            const kids3 = [...cur.panel.children];
+            const at = Number.isInteger(index) ? Math.max(0, Math.min(index, kids3.length)) : kids3.length;
+            kids3.splice(at, 0, node);
+            panel2 = { ...cur.panel, children: kids3, active: at };
           } else {
             panel2 = tabs([cur.panel, node], 1);
             if (nodePx(cur.panel, true) > 0) panel2.pxW = nodePx(cur.panel, true);
@@ -24351,12 +24368,12 @@ ${BLOCK_END}
         groupFloatIntoDock(floatId, targetId, index) {
           const f = this.floats.find((x) => x.id === floatId);
           if (!f || !this.root || !this.isDocked(targetId)) return false;
-          const kids = f.panel.type === "tabs" ? f.panel.children || [] : [f.panel];
-          if (!kids.length || kids.some((k) => k.id === targetId)) return false;
-          const actId = (kids[Math.max(0, Math.min(f.panel.active | 0, kids.length - 1))] || kids[0]).id;
+          const kids3 = f.panel.type === "tabs" ? f.panel.children || [] : [f.panel];
+          if (!kids3.length || kids3.some((k) => k.id === targetId)) return false;
+          const actId = (kids3[Math.max(0, Math.min(f.panel.active | 0, kids3.length - 1))] || kids3[0]).id;
           this.store.setFloats(this.floats.filter((x) => x.id !== floatId));
           let next = this.root;
-          kids.forEach((k, i5) => {
+          kids3.forEach((k, i5) => {
             next = Number.isInteger(index) ? addAsTabAt(next, targetId, k, index + i5) : addAsTab(next, targetId, k);
           });
           this.store.update(activatePanel(next, actId));
@@ -24422,12 +24439,12 @@ ${BLOCK_END}
         moveTab(tabsId, from2, to) {
           const fl = this.floats.find((f) => f.panel.type === "tabs" && f.panel.id === tabsId);
           if (fl) {
-            const kids = [...fl.panel.children || []];
-            if (from2 < 0 || from2 >= kids.length) return false;
-            const at = Math.max(0, Math.min(to, kids.length - 1));
-            const [mv] = kids.splice(from2, 1);
-            kids.splice(at, 0, mv);
-            this.store.setFloats(this.floats.map((f) => f === fl ? { ...f, panel: { ...f.panel, children: kids, active: at } } : f));
+            const kids3 = [...fl.panel.children || []];
+            if (from2 < 0 || from2 >= kids3.length) return false;
+            const at = Math.max(0, Math.min(to, kids3.length - 1));
+            const [mv] = kids3.splice(from2, 1);
+            kids3.splice(at, 0, mv);
+            this.store.setFloats(this.floats.map((f) => f === fl ? { ...f, panel: { ...f.panel, children: kids3, active: at } } : f));
             return true;
           }
           if (!this.root) return false;
@@ -24515,13 +24532,13 @@ ${BLOCK_END}
           this.store.root = r;
           this.store.floats = this.store.floats.map((f) => {
             if (f.panel.type !== "tabs") return f;
-            const kids = (f.panel.children || []).filter((c) => this.registry.has(c.id));
-            if (!kids.length) return null;
-            if (kids.length === 1) return { ...f, panel: kids[0] };
+            const kids3 = (f.panel.children || []).filter((c) => this.registry.has(c.id));
+            if (!kids3.length) return null;
+            if (kids3.length === 1) return { ...f, panel: kids3[0] };
             return { ...f, panel: {
               ...f.panel,
-              children: kids,
-              active: Math.max(0, Math.min(f.panel.active | 0, kids.length - 1))
+              children: kids3,
+              active: Math.max(0, Math.min(f.panel.active | 0, kids3.length - 1))
             } };
           }).filter((f) => f && (f.panel.type === "tabs" || this.registry.has(f.panel.id)));
           this.store.save();
@@ -25601,11 +25618,31 @@ ${BLOCK_END}
     }
   });
 
+  // src/wiki-names.js
+  function impliedNames(name5, aliases) {
+    const full = String(name5 || "").trim();
+    const words = full.split(/\s+/).filter(Boolean);
+    if (words.length < 2) return [];
+    const known2 = /* @__PURE__ */ new Set([full, ...(Array.isArray(aliases) ? aliases : []).map((a) => String(a || "").trim()).filter(Boolean)]);
+    const shorts = [...known2].filter((a) => a.length >= 2);
+    const out = [];
+    for (const w of words) {
+      if (w.length < 3 || known2.has(w) || out.includes(w)) continue;
+      if (shorts.some((a) => a !== w && a.length < w.length && w.startsWith(a))) out.push(w);
+    }
+    return out;
+  }
+  var init_wiki_names = __esm({
+    "src/wiki-names.js"() {
+    }
+  });
+
   // src/smart.js
   var SmartType;
   var init_smart = __esm({
     "src/smart.js"() {
       init_i18n();
+      init_wiki_names();
       SmartType = class {
         constructor() {
           this.names = [];
@@ -25657,6 +25694,10 @@ ${BLOCK_END}
                     names.add(n2);
                     fileOf2[n2] = p;
                     (byCat[cat] = byCat[cat] || []).push(n2);
+                  }
+                  for (const n2 of impliedNames(e.name, extra)) {
+                    names.add(n2);
+                    if (!fileOf2[n2]) fileOf2[n2] = p;
                   }
                 } catch {
                 }
@@ -26601,9 +26642,9 @@ ${BLOCK_END}
           el2.removeAttribute("data-i18n-applied");
           return;
         }
-        const attr = el2.getAttribute("data-i18n-attr");
-        if (attr) {
-          el2.setAttribute(attr, text);
+        const attr3 = el2.getAttribute("data-i18n-attr");
+        if (attr3) {
+          el2.setAttribute(attr3, text);
         } else if (el2.querySelector("*")) {
           const texts = [...el2.childNodes].filter((n2) => n2.nodeType === 3);
           if (texts.length) {
@@ -26818,6 +26859,10 @@ ${BLOCK_END}
         //   ทั้งคู่ปิด (ค่าเริ่มต้น) → เข้าหน้าแรกก่อน แล้วผู้ใช้เลือกโปรเจกต์เอง
         openLastProject: false,
         showHomeOnStartup: false,
+        // [alpha.170 · ข้อ 8] โหมดเรียบง่าย (Explorer + ตัวแก้ไข + ปุ่มพื้นฐาน) — ผู้ใช้ใหม่เปิดเป็นค่าเริ่มต้น (simple-mode.js)
+        // simpleLayoutPending = ยังไม่ได้จัดแผงให้ตามโหมด (ผู้ใช้ใหม่ยังไม่เคยเปิดโปรเจกต์ตอนที่โหมดถูกเปิดให้)
+        simpleMode: false,
+        simpleLayoutPending: false,
         // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (. @ > $shot # …) ในตัวแก้ไขนิยาย — เปิดไว้เป็นค่าเริ่มต้น
         showMarkdownCodes: true,
         // [alpha.135] อัปเดตโปรแกรม (ระดับผู้ใช้ — ไม่ผูกกับผลงานชิ้นไหน)
@@ -27311,6 +27356,7 @@ ${BLOCK_END}
     badRequestKind: () => badRequestKind,
     clip: () => clip,
     describeHttpError: () => describeHttpError,
+    headerNameOf: () => headerNameOf,
     hostOf: () => hostOf,
     redactSecrets: () => redactSecrets,
     serverMessage: () => serverMessage,
@@ -27449,8 +27495,9 @@ ${BLOCK_END}
       const kind = badRequestKind(srvMsg || rawBody);
       if (kind === "header") {
         code3 = "http-" + status + "-header";
-        reason = t("ui.aiError.missingHeader");
-        hints = [t("ui.aiError.missingHeaderHint")];
+        const hn = headerNameOf(srvMsg || rawBody);
+        reason = hn ? tf("ui.aiError.missingHeaderNamed", hn) : t("ui.aiError.missingHeader");
+        hints = [hn ? tf("ui.aiError.missingHeaderNamedHint", hn) : t("ui.aiError.missingHeaderHint")];
       } else if (kind === "protocol") {
         code3 = "http-" + status + "-protocol";
         reason = t("ui.aiError.wrongProtocol");
@@ -27488,6 +27535,11 @@ ${BLOCK_END}
     if (/\bmissing\b[^.]*\b(header|x-[a-z0-9-]+)\b|\b(header|x-[a-z0-9-]+)\b[^.]*\b(missing|required)\b/i.test(s)) return "header";
     if (/does not support (this )?(protocol|endpoint|api)|unsupported (protocol|endpoint)|not supported (on|by|for) (this|the) (endpoint|protocol|api)|use the (messages|responses|chat) api/i.test(s)) return "protocol";
     return "";
+  }
+  function headerNameOf(message) {
+    const s = String(message || "");
+    const m = /\b(x-[a-z0-9][a-z0-9-]*[a-z0-9])\b/i.exec(s) || /["'`]([A-Za-z][A-Za-z0-9-]{2,})["'`]\s+header/i.exec(s) || /header\s+["'`]?([A-Za-z][A-Za-z0-9-]*-[A-Za-z0-9-]+)/i.exec(s);
+    return m ? m[1] : "";
   }
   function shortError(info) {
     const parts = [info.reason];
@@ -28381,13 +28433,28 @@ ${BLOCK_END}
     });
     return { ...r, movedTo: dst };
   }
+  async function sameFileIn(api, dir2, name5, srcPath) {
+    if (typeof api.readBytes !== "function" || !name5) return false;
+    try {
+      const dst = await J(api, dir2, name5);
+      if (!await api.exists(dst)) return false;
+      const [a, b] = await Promise.all([api.readBytes(dst), api.readBytes(srcPath)]);
+      if (!a || !b || a.length !== b.length) return false;
+      for (let i5 = 0; i5 < a.length; i5++) if (a[i5] !== b[i5]) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
   async function addImageFile(api, root, id, srcPath) {
     const dir2 = await albumDir(api, root, id);
     await api.mkdir(dir2);
-    const norm5 = (p) => String(p || "").replace(/\\/g, "/").replace(/\/+$/, "");
-    const src2 = norm5(srcPath);
-    const same = src2.slice(0, src2.lastIndexOf("/")) === norm5(dir2);
-    const name5 = same ? src2.slice(src2.lastIndexOf("/") + 1) : await api.copyInto(srcPath, dir2);
+    const norm6 = (p) => String(p || "").replace(/\\/g, "/").replace(/\/+$/, "");
+    const src2 = norm6(srcPath);
+    const same2 = src2.slice(0, src2.lastIndexOf("/")) === norm6(dir2);
+    const base4 = src2.slice(src2.lastIndexOf("/") + 1);
+    const dup = !same2 && await sameFileIn(api, dir2, base4, srcPath);
+    const name5 = same2 ? base4 : dup ? base4 : await api.copyInto(srcPath, dir2);
     let doc3 = await readAlbumDoc(api, root, id);
     doc3 = syncAlbumDoc(doc3, [...Object.keys(doc3.images), name5]);
     await writeAlbumDoc(api, root, id, doc3);
@@ -28514,6 +28581,8 @@ ${BLOCK_END}
     BUG_CACHE_MS: () => BUG_CACHE_MS,
     BUG_FETCH_TIMEOUT_MS: () => BUG_FETCH_TIMEOUT_MS,
     OSK_SPAWN_WAIT_MS: () => OSK_SPAWN_WAIT_MS,
+    PROJECT_LOCK_BEAT_MS: () => PROJECT_LOCK_BEAT_MS,
+    PROJECT_LOCK_STALE_MS: () => PROJECT_LOCK_STALE_MS,
     RETRY_BASE_MS: () => RETRY_BASE_MS,
     RETRY_MAX_MS: () => RETRY_MAX_MS,
     SCRATCH_SAVE_DELAY_MS: () => SCRATCH_SAVE_DELAY_MS,
@@ -28527,7 +28596,7 @@ ${BLOCK_END}
     const k = Number.isFinite(+n2) && +n2 > 0 ? Math.floor(+n2) : 0;
     return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * Math.pow(2, k));
   }
-  var SPLASH_MAX_MS, UPDATE_FETCH_TIMEOUT_MS, BUG_FETCH_TIMEOUT_MS, BUG_CACHE_MS, SCRATCH_SAVE_DELAY_MS, RETRY_BASE_MS, RETRY_MAX_MS, ATTENTION_MIN_MS, TIP_DELAY_MS, TIP_WARM_MS, OSK_SPAWN_WAIT_MS;
+  var SPLASH_MAX_MS, UPDATE_FETCH_TIMEOUT_MS, BUG_FETCH_TIMEOUT_MS, BUG_CACHE_MS, SCRATCH_SAVE_DELAY_MS, RETRY_BASE_MS, RETRY_MAX_MS, ATTENTION_MIN_MS, TIP_DELAY_MS, TIP_WARM_MS, OSK_SPAWN_WAIT_MS, PROJECT_LOCK_BEAT_MS, PROJECT_LOCK_STALE_MS;
   var init_timing = __esm({
     "src/timing.js"() {
       SPLASH_MAX_MS = 3e4;
@@ -28541,6 +28610,8 @@ ${BLOCK_END}
       TIP_DELAY_MS = 450;
       TIP_WARM_MS = 600;
       OSK_SPAWN_WAIT_MS = 700;
+      PROJECT_LOCK_BEAT_MS = 2 * 60 * 1e3;
+      PROJECT_LOCK_STALE_MS = 10 * 60 * 1e3;
     }
   });
 
@@ -30303,8 +30374,8 @@ ${BLOCK_END}
       if (hit) return hit;
     }
     const base4 = rel.split("/").pop().toLowerCase();
-    const same = known2.filter((k) => k.split("/").pop().toLowerCase() === base4);
-    return same.length === 1 ? same[0] : rel;
+    const same2 = known2.filter((k) => k.split("/").pop().toLowerCase() === base4);
+    return same2.length === 1 ? same2[0] : rel;
   }
   function relinkPlanEntities(plan, root, knownRels) {
     let n2 = 0;
@@ -30544,8 +30615,8 @@ ${BLOCK_END}
     let best = null;
     for (let i5 = 0; i5 + 1 < (pts || []).length; i5++) {
       const a = pts[i5], b = pts[i5 + 1];
-      const vx = b.x - a.x, vy = b.y - a.y, L2 = vx * vx + vy * vy;
-      const t3 = L2 ? Math.max(0, Math.min(1, ((p.x - a.x) * vx + (p.y - a.y) * vy) / L2)) : 0;
+      const vx = b.x - a.x, vy = b.y - a.y, L22 = vx * vx + vy * vy;
+      const t3 = L22 ? Math.max(0, Math.min(1, ((p.x - a.x) * vx + (p.y - a.y) * vy) / L22)) : 0;
       const x = a.x + vx * t3, y = a.y + vy * t3, d = Math.hypot(p.x - x, p.y - y);
       if (!best || d < best.dist) best = { x: r3(x), y: r3(y), seg: i5, t: r3(t3), dist: r3(d), angle: r3(Math.atan2(vy, vx) * 180 / Math.PI) };
     }
@@ -30553,9 +30624,9 @@ ${BLOCK_END}
     return best;
   }
   function polylineLength(pts) {
-    let L2 = 0;
-    for (let i5 = 0; i5 + 1 < (pts || []).length; i5++) L2 += Math.hypot(pts[i5 + 1].x - pts[i5].x, pts[i5 + 1].y - pts[i5].y);
-    return r3(L2);
+    let L3 = 0;
+    for (let i5 = 0; i5 + 1 < (pts || []).length; i5++) L3 += Math.hypot(pts[i5 + 1].x - pts[i5].x, pts[i5 + 1].y - pts[i5].y);
+    return r3(L3);
   }
   function snapToTrack(plan, cam, want, i5) {
     if (!cam || !cam.trackId) return want;
@@ -31343,17 +31414,17 @@ ${BLOCK_END}
   function factsHash(facts, extra = "") {
     return hashText(JSON.stringify(facts || null) + "\n" + extra);
   }
-  function buildShotPromptRequest(o, L2) {
+  function buildShotPromptRequest(o, L3) {
     const parts = [];
-    parts.push(L2.facts + "\n```json\n" + JSON.stringify(o.facts, null, 1) + "\n```");
-    if (o.sceneInfo) parts.push(L2.sceneInfo + "\n" + o.sceneInfo);
-    if (o.excerpt) parts.push(L2.excerpt + '\n"""\n' + o.excerpt + '\n"""');
+    parts.push(L3.facts + "\n```json\n" + JSON.stringify(o.facts, null, 1) + "\n```");
+    if (o.sceneInfo) parts.push(L3.sceneInfo + "\n" + o.sceneInfo);
+    if (o.excerpt) parts.push(L3.excerpt + '\n"""\n' + o.excerpt + '\n"""');
     if (o.characters && o.characters.length) {
-      parts.push(L2.characters + "\n" + o.characters.map((c) => "- " + c.name + ": " + (c.text || "")).join("\n"));
+      parts.push(L3.characters + "\n" + o.characters.map((c) => "- " + c.name + ": " + (c.text || "")).join("\n"));
     }
-    if (o.style) parts.push(L2.style + "\n" + o.style);
-    if (o.previous) parts.push(L2.previous + "\n" + o.previous);
-    return { system: L2.system, prompt: parts.join("\n\n") };
+    if (o.style) parts.push(L3.style + "\n" + o.style);
+    if (o.previous) parts.push(L3.previous + "\n" + o.previous);
+    return { system: L3.system, prompt: parts.join("\n\n") };
   }
   function parseShotPrompts(text) {
     const s = String(text || "");
@@ -31393,13 +31464,13 @@ ${BLOCK_END}
     return t3.length > max2 ? t3.slice(0, max2 - 1) + "\u2026" : t3;
   }
   function excerptAround(lines, ref, before = 4, after = 6, maxChars = 2400) {
-    const L2 = lines || [];
-    if (!L2.length) return "";
+    const L3 = lines || [];
+    if (!L3.length) return "";
     let at = -1;
     if (ref && ref.text) {
       let seen = 0;
-      for (let k = 0; k < L2.length; k++) {
-        if (L2[k].text === ref.text) {
+      for (let k = 0; k < L3.length; k++) {
+        if (L3[k].text === ref.text) {
           if (seen === (ref.nth || 0)) {
             at = k;
             break;
@@ -31407,19 +31478,19 @@ ${BLOCK_END}
           seen++;
         }
       }
-      if (at < 0) at = L2.findIndex((x) => x.text.includes(ref.text.slice(0, 20)));
+      if (at < 0) at = L3.findIndex((x) => x.text.includes(ref.text.slice(0, 20)));
     }
-    const from2 = at < 0 ? 0 : Math.max(0, at - before), to = at < 0 ? Math.min(L2.length, before + after + 1) : Math.min(L2.length, at + after + 1);
-    const out = L2.slice(from2, to).map((x, k) => (from2 + k === at ? ">> " : "") + x.text).join("\n");
+    const from2 = at < 0 ? 0 : Math.max(0, at - before), to = at < 0 ? Math.min(L3.length, before + after + 1) : Math.min(L3.length, at + after + 1);
+    const out = L3.slice(from2, to).map((x, k) => (from2 + k === at ? ">> " : "") + x.text).join("\n");
     return out.length > maxChars ? out.slice(0, maxChars) : out;
   }
   function refSearchNth(lines, ref, term2) {
-    const L2 = lines || [];
+    const L3 = lines || [];
     const w = String(term2 || ref && ref.text || "").toLowerCase();
     if (!w || !ref || !ref.text) return 0;
     let at = -1, seen = 0;
-    for (let k = 0; k < L2.length; k++) {
-      if (L2[k].text === ref.text) {
+    for (let k = 0; k < L3.length; k++) {
+      if (L3[k].text === ref.text) {
         if (seen === (ref.nth || 0)) {
           at = k;
           break;
@@ -31430,7 +31501,7 @@ ${BLOCK_END}
     if (at < 0) return Math.max(0, Math.floor(Number(ref.nth) || 0));
     let n2 = 0;
     for (let k = 0; k < at; k++) {
-      const s = String(L2[k].text || "").toLowerCase();
+      const s = String(L3[k].text || "").toLowerCase();
       for (let i5 = s.indexOf(w); i5 >= 0; i5 = s.indexOf(w, i5 + 1)) n2++;
     }
     return n2;
@@ -32119,14 +32190,14 @@ ${BLOCK_END}
     const box2 = el("div", "k-dock");
     box2.dataset.dockId = node.id;
     box2.dataset.dir = node.dir === "row" ? "row" : "col";
-    const kids = node.children || [];
+    const kids3 = node.children || [];
     const shown = [];
-    for (let i5 = 0; i5 < kids.length; i5++) if (!nodeHidden(kids[i5])) shown.push(i5);
+    for (let i5 = 0; i5 < kids3.length; i5++) if (!nodeHidden(kids3[i5])) shown.push(i5);
     const shares = dockShares(node, fixedPanel(opts));
     const flexIdx = flexChildIndex(node);
     for (let s = 0; s < shown.length; s++) {
       const i5 = shown[s];
-      const childEl = renderNode(kids[i5], pm2, opts, depth + 1);
+      const childEl = renderNode(kids3[i5], pm2, opts, depth + 1);
       if (!childEl) continue;
       const sh = shares[i5] || { kind: "rigid" };
       if (sh.kind === "rigid") {
@@ -32145,7 +32216,7 @@ ${BLOCK_END}
       }
       box2.appendChild(childEl);
       const nextIdx = shown[s + 1];
-      if (nextIdx !== void 0 && !isRigid(kids[i5], opts) && !isRigid(kids[nextIdx], opts)) {
+      if (nextIdx !== void 0 && !isRigid(kids3[i5], opts) && !isRigid(kids3[nextIdx], opts)) {
         box2.appendChild(createResizeHandle(node.id, i5, node.dir, pm2, nextIdx));
       }
     }
@@ -32205,33 +32276,33 @@ ${BLOCK_END}
     const strip = !!node.collapsed;
     if (strip) box2.classList.add("icon-strip");
     const bar = el("div", "k-tab-bar" + (strip ? " k-vertical" : ""));
-    const kids = node.children || [];
+    const kids3 = node.children || [];
     const isHid = (k) => nodeHidden(k);
-    let active = Math.max(0, Math.min(node.active | 0, kids.length - 1));
-    if (kids[active] && isHid(kids[active])) {
-      const firstShown = kids.findIndex((k) => !isHid(k));
+    let active = Math.max(0, Math.min(node.active | 0, kids3.length - 1));
+    if (kids3[active] && isHid(kids3[active])) {
+      const firstShown = kids3.findIndex((k) => !isHid(k));
       if (firstShown >= 0) active = firstShown;
     }
-    for (let i5 = 0; i5 < kids.length; i5++) {
-      const child = kids[i5];
-      if (isHid(child)) continue;
-      const md = metaOf(opts, child.id);
+    for (let i5 = 0; i5 < kids3.length; i5++) {
+      const child2 = kids3[i5];
+      if (isHid(child2)) continue;
+      const md = metaOf(opts, child2.id);
       const tab = el("div", "k-tab" + (i5 === active ? " active" : ""));
       tab.dataset.index = String(i5);
-      tab.dataset.panelId = child.id;
+      tab.dataset.panelId = child2.id;
       tab.appendChild(iconSpan(md.icon, "k-tab-icon"));
-      tab.appendChild(el("span", "k-tab-title", md.title || child.title || child.id));
-      if (!strip) addTabClose(tab, child.id, md, pm2);
-      tab.title = (md.title || child.title || child.id) + (md.desc ? "\n" + md.desc : "");
+      tab.appendChild(el("span", "k-tab-title", md.title || child2.title || child2.id));
+      if (!strip) addTabClose(tab, child2.id, md, pm2);
+      tab.title = (md.title || child2.title || child2.id) + (md.desc ? "\n" + md.desc : "");
       tab.onclick = () => {
         if (strip) {
           toggleStrip(node.id, pm2, false);
-          pm2.activatePanel(child.id);
+          pm2.activatePanel(child2.id);
           return;
         }
-        pm2.activatePanel(child.id);
+        pm2.activatePanel(child2.id);
       };
-      makeTabDraggable(tab, child.id, node.id, i5, pm2, { host: opts.host, isFixedPanel: fixedPanel(opts) });
+      makeTabDraggable(tab, child2.id, node.id, i5, pm2, { host: opts.host, isFixedPanel: fixedPanel(opts) });
       bar.appendChild(tab);
     }
     const strBtn = makePanelButton({
@@ -32246,9 +32317,9 @@ ${BLOCK_END}
     box2.appendChild(bar);
     const body = el("div", "k-tab-content");
     const gOpts = { ...opts, inGroup: true };
-    for (let i5 = 0; i5 < kids.length; i5++) {
-      if (isHid(kids[i5])) continue;
-      const panelEl = renderNode(kids[i5], pm2, gOpts, depth + 1);
+    for (let i5 = 0; i5 < kids3.length; i5++) {
+      if (isHid(kids3[i5])) continue;
+      const panelEl = renderNode(kids3[i5], pm2, gOpts, depth + 1);
       if (!panelEl) continue;
       panelEl.classList.add("k-tabbed");
       if (i5 !== active) panelEl.classList.add("k-tab-hidden");
@@ -32547,23 +32618,23 @@ ${BLOCK_END}
     pop.style.top = box2.y + "px";
     pop.style.width = box2.w + "px";
     pop.style.height = box2.h + "px";
-    const kids = (g.children || []).filter((c) => !nodeHidden(c));
-    let active = Math.max(0, Math.min(g.active | 0, kids.length - 1));
+    const kids3 = (g.children || []).filter((c) => !nodeHidden(c));
+    let active = Math.max(0, Math.min(g.active | 0, kids3.length - 1));
     const bar = el("div", "k-tab-bar k-float-tabbar");
-    kids.forEach((child, i5) => {
-      const md = metaOf(opts, child.id);
+    kids3.forEach((child2, i5) => {
+      const md = metaOf(opts, child2.id);
       const tab = el("div", "k-tab" + (i5 === active ? " active" : ""));
       tab.dataset.index = String(i5);
-      tab.dataset.panelId = child.id;
+      tab.dataset.panelId = child2.id;
       tab.appendChild(iconSpan(md.icon, "k-tab-icon"));
-      tab.appendChild(el("span", "k-tab-title", md.title || child.title || child.id));
-      addTabClose(tab, child.id, md, pm2);
-      tab.title = (md.title || child.title || child.id) + (md.desc ? "\n" + md.desc : "");
+      tab.appendChild(el("span", "k-tab-title", md.title || child2.title || child2.id));
+      addTabClose(tab, child2.id, md, pm2);
+      tab.title = (md.title || child2.title || child2.id) + (md.desc ? "\n" + md.desc : "");
       tab.onclick = () => {
         const next = pm2.floats.map((x) => x.id === f.id ? { ...x, panel: { ...x.panel, active: i5 } } : x);
         pm2.store.setFloats(next);
       };
-      makeTabDraggable(tab, child.id, g.id, i5, pm2, { host: opts.host, isFixedPanel: fixedPanel(opts) });
+      makeTabDraggable(tab, child2.id, g.id, i5, pm2, { host: opts.host, isFixedPanel: fixedPanel(opts) });
       bar.appendChild(tab);
     });
     a11yTabBar(bar, t("ui.panelRenderer.tabsLabel"));
@@ -32571,10 +32642,10 @@ ${BLOCK_END}
       act: "close",
       cls: "k-group-close",
       glyph: gi("close"),
-      title: tf("ui.panelRenderer.closeGroupN", kids.length),
+      title: tf("ui.panelRenderer.closeGroupN", kids3.length),
       tip: "ui.panelTip.groupClose",
       onPress: () => {
-        for (const c of kids.slice()) pm2.hidePanel(c.id);
+        for (const c of kids3.slice()) pm2.hidePanel(c.id);
       }
     });
     const dockBtn = makePanelButton({
@@ -32585,7 +32656,7 @@ ${BLOCK_END}
       onPress: () => pm2.dockFloatGroup(f.id, "left", pm2.isDocked("docs") ? "docs" : void 0)
     });
     const btns = el("span", "k-panel-btns");
-    const actId = (kids[active] || {}).id;
+    const actId = (kids3[active] || {}).id;
     if (actId && opts.canTearOff && opts.canTearOff(actId)) {
       btns.appendChild(makePanelButton({
         act: "tearoff",
@@ -32600,8 +32671,8 @@ ${BLOCK_END}
     pop.appendChild(bar);
     const body = el("div", "k-tab-content");
     const gOpts = { ...opts, inGroup: true };
-    kids.forEach((child, i5) => {
-      const panelEl = renderNode(child, pm2, gOpts, 1);
+    kids3.forEach((child2, i5) => {
+      const panelEl = renderNode(child2, pm2, gOpts, 1);
       if (!panelEl) return;
       panelEl.classList.add("k-tabbed");
       if (i5 !== active) panelEl.classList.add("k-tab-hidden");
@@ -32708,9 +32779,9 @@ ${BLOCK_END}
           if (isPx(next)) upd[nextIndex ?? index + 1] = pxNext;
           try {
             const dockEl = h.parentElement;
-            const kids = (nodeById(pm2.root, dockId) || {}).children || [];
-            for (let i5 = 0; i5 < kids.length; i5++) {
-              const kid = kids[i5];
+            const kids3 = (nodeById(pm2.root, dockId) || {}).children || [];
+            for (let i5 = 0; i5 < kids3.length; i5++) {
+              const kid = kids3[i5];
               if (!kid || upd[i5] !== void 0 || nodePx(kid, row4) > 0) continue;
               const kel = dockEl.querySelector(
                 `:scope > [data-panel-id="${kid.id}"], :scope > [data-dock-id="${kid.id}"], :scope > [data-tabs-id="${kid.id}"]`
@@ -32814,9 +32885,9 @@ ${BLOCK_END}
   function dockReport(node, isFixedPanel = () => false, measured = {}, docsId = "docs") {
     const row4 = node.dir === "row";
     const shares = dockShares(node, isFixedPanel, docsId);
-    const kids = node.children || [];
+    const kids3 = node.children || [];
     const flexIdx = flexChildIndex(node, docsId);
-    const children = kids.map((k, i5) => {
+    const children = kids3.map((k, i5) => {
       const sh = shares[i5];
       const px2 = storedPx(k);
       return {
@@ -32837,7 +32908,7 @@ ${BLOCK_END}
       id: node.id,
       dir: node.dir,
       mode,
-      flexChild: flexIdx >= 0 ? (kids[flexIdx] || {}).id || null : null,
+      flexChild: flexIdx >= 0 ? (kids3[flexIdx] || {}).id || null : null,
       sizes: node.sizes || null,
       measured: measured[node.id] || null,
       children
@@ -32998,6 +33069,7 @@ ${BLOCK_END}
     defaultLayout: () => defaultLayout,
     deleteWorkspace: () => deleteWorkspace,
     dodgeHiddenChips: () => dodgeHiddenChips,
+    enterSimpleLayout: () => enterSimpleLayout,
     exportPanelLayout: () => exportPanelLayout,
     getPanelManager: () => getPanelManager,
     hiddenMode: () => hiddenMode,
@@ -33007,6 +33079,7 @@ ${BLOCK_END}
     isBuiltinWorkspace: () => isBuiltinWorkspace,
     isPanelOpen: () => isPanelOpen,
     isTornOff: () => isTornOff,
+    leaveSimpleLayout: () => leaveSimpleLayout,
     listWorkspaces: () => listWorkspaces,
     makePanelButton: () => makePanelButton,
     measurePanelGeometry: () => measurePanelGeometry,
@@ -33248,7 +33321,7 @@ ${BLOCK_END}
     return BUILTIN_WORKSPACES.some((w) => w.id === name5 || w.label === name5);
   }
   function listWorkspaces() {
-    const mine = getPanelManager().listWorkspaces();
+    const mine = getPanelManager().listWorkspaces().filter((n2) => !String(n2).startsWith("__k2"));
     return [
       ...BUILTIN_WORKSPACES.map((w) => ({ name: w.id, label: w.label, builtIn: true })),
       ...mine.map((n2) => ({ name: n2, label: n2, builtIn: false }))
@@ -33259,6 +33332,21 @@ ${BLOCK_END}
     if (!n2 || isBuiltinWorkspace(n2)) return false;
     rememberOpenPanels();
     return getPanelManager().saveWorkspace(n2, { homes: Object.fromEntries(homes) });
+  }
+  function enterSimpleLayout(keep) {
+    const m = getPanelManager();
+    if (!m.getWorkspace(keep)) {
+      rememberOpenPanels();
+      m.saveWorkspace(keep, { homes: Object.fromEntries(homes) });
+    }
+    return applyWorkspace("writing");
+  }
+  function leaveSimpleLayout(keep) {
+    const m = getPanelManager();
+    if (!m.getWorkspace(keep)) return false;
+    const ok2 = applyWorkspace(keep);
+    m.removeWorkspace(keep);
+    return ok2;
   }
   function deleteWorkspace(name5) {
     if (isBuiltinWorkspace(name5)) return false;
@@ -33562,11 +33650,11 @@ ${BLOCK_END}
     const found2 = [];
     for (const dockEl of h.querySelectorAll(".k-dock[data-dock-id]")) {
       const row4 = dockEl.dataset.dir === "row";
-      const kids = [...dockEl.children];
-      if (!kids.length) continue;
+      const kids3 = [...dockEl.children];
+      if (!kids3.length) continue;
       const total = row4 ? dockEl.clientWidth : dockEl.clientHeight;
       if (!total) continue;
-      const used = kids.reduce((a, e) => {
+      const used = kids3.reduce((a, e) => {
         const r = e.getBoundingClientRect();
         const cs = getComputedStyle(e);
         const mg = row4 ? (parseFloat(cs.marginLeft) || 0) + (parseFloat(cs.marginRight) || 0) : (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
@@ -33575,7 +33663,7 @@ ${BLOCK_END}
       const gap = total - used;
       if (gap <= GAP_TOL) continue;
       found2.push({ dock: dockEl.dataset.dockId, dir: dockEl.dataset.dir, gap: Math.round(gap), total: Math.round(total) });
-      const growable = kids.filter((e) => !e.classList.contains("k-resize-handle") && getComputedStyle(e).display !== "none" && !e.classList.contains("k-panel-fixed") && !e.classList.contains("k-collapsed"));
+      const growable = kids3.filter((e) => !e.classList.contains("k-resize-handle") && getComputedStyle(e).display !== "none" && !e.classList.contains("k-panel-fixed") && !e.classList.contains("k-collapsed"));
       const taker = growable.find((e) => e.classList.contains("k-flex-child")) || growable[growable.length - 1];
       if (taker) {
         taker.style.flexGrow = "1";
@@ -33585,7 +33673,7 @@ ${BLOCK_END}
       const key2 = dockEl.dataset.dockId + ":" + Math.round(gap / 10);
       if (!_gapLogged.has(key2) || opts.force) {
         _gapLogged.add(key2);
-        const detail = kids.map((e) => ({
+        const detail = kids3.map((e) => ({
           id: e.dataset.panelId || e.dataset.dockId || e.dataset.tabsId || e.className,
           cls: e.className,
           flex: e.style.flex || `${e.style.flexGrow}/${e.style.flexShrink}/${e.style.flexBasis}`,
@@ -35754,7 +35842,7 @@ ${BLOCK_END}
           wrap2.appendChild(ch);
           for (const k of Object.keys(this.e.customProperties || {})) {
             const r = linkedField(
-              k,
+              this.labels && this.labels[k] || k,
               String(this.e.customProperties[k] ?? ""),
               (v2) => {
                 this.e.customProperties[k] = v2;
@@ -36724,9 +36812,9 @@ ${BLOCK_END}
   async function activeSectionPath() {
     const f = state.active && (state.active.file || state.active.path);
     if (!f || !state.root) return "";
-    const norm5 = (p) => String(p).replace(/\\/g, "/");
-    const root = norm5(state.root).replace(/\/+$/, "");
-    const file = norm5(f);
+    const norm6 = (p) => String(p).replace(/\\/g, "/");
+    const root = norm6(state.root).replace(/\/+$/, "");
+    const file = norm6(f);
     if (!file.startsWith(root + "/")) return "";
     const first = file.slice(root.length + 1).split("/")[0];
     if (!first) return "";
@@ -39146,11 +39234,11 @@ ${mdToHtmlBody(md, o)}
   function projectImageUrl(root, src2) {
     const s = String(src2 == null ? "" : src2).trim();
     if (!s || /^(data:|https?:|file:|blob:)/i.test(s)) return s;
-    const norm5 = s.replace(/\\/g, "/");
-    if (/^([A-Za-z]:\/|\/)/.test(norm5)) return fileUrlFromPath(norm5);
+    const norm6 = s.replace(/\\/g, "/");
+    if (/^([A-Za-z]:\/|\/)/.test(norm6)) return fileUrlFromPath(norm6);
     if (!root) return s;
-    const k = norm5.lastIndexOf("/Images/");
-    const rel = k >= 0 ? "Images/" + norm5.slice(k + 8) : norm5.startsWith("Images/") ? norm5 : norm5.replace(/^(\.\.?\/)+/, "");
+    const k = norm6.lastIndexOf("/Images/");
+    const rel = k >= 0 ? "Images/" + norm6.slice(k + 8) : norm6.startsWith("Images/") ? norm6 : norm6.replace(/^(\.\.?\/)+/, "");
     return fileUrlFromPath(String(root).replace(/[\\/]+$/, "") + "/" + rel);
   }
   var init_file_url = __esm({
@@ -39163,7 +39251,8 @@ ${mdToHtmlBody(md, o)}
   __export(live_fonts_exports, {
     PROSE_EDITOR_SEL: () => PROSE_EDITOR_SEL,
     firstRealFont: () => firstRealFont,
-    liveProseFonts: () => liveProseFonts
+    liveProseFonts: () => liveProseFonts,
+    thaiFontOf: () => thaiFontOf
   });
   function liveProseFonts(doc3 = globalThis.document) {
     try {
@@ -39181,6 +39270,14 @@ ${mdToHtmlBody(md, o)}
       return {};
     }
   }
+  function thaiFontOf(stack) {
+    for (const raw of String(stack || "").split(",")) {
+      const f = raw.replace(/["']/g, "").trim();
+      if (/^Thonburi$/i.test(f)) break;
+      if (f && THAI_FAMILIES.test(f)) return f;
+    }
+    return "Tahoma";
+  }
   function firstRealFont(stack) {
     for (const raw of String(stack || "").split(",")) {
       const f = raw.replace(/["']/g, "").trim();
@@ -39191,10 +39288,11 @@ ${mdToHtmlBody(md, o)}
     }
     return "";
   }
-  var PROSE_EDITOR_SEL;
+  var PROSE_EDITOR_SEL, THAI_FAMILIES;
   var init_live_fonts = __esm({
     "src/live-fonts.js"() {
       PROSE_EDITOR_SEL = ".pane.on:not(.sp-pane):not(.wiki-pane) > .workspace > .ProseMirror";
+      THAI_FAMILIES = /^(Leelawadee( UI)?|Thonburi|TH Sarabun( New| PSK)?|Sarabun|Noto (Sans|Serif) Thai( Looped)?|Tahoma|Cordia(New|UPC| New)|Angsana( New|UPC)|Browallia( New|UPC)|Ayuthaya|Sathu|Silom|Krungthep|Sukhumvit Set|Kanit|Prompt|Mitr|Pridi|Taviraj|Trirong|Chakra Petch|Bai Jamjuree|K2D|Niramit|Charm|Chonburi|IBM Plex Sans Thai( Looped)?|Anuphan|Krub|Mali|Itim|Athiti|Maitree|Pattaya|Sriracha|Thasadith|Kodchasan|KoHo|Fahkwang|Srisakdi|Charmonman|Chakra|Garuda|Loma|Norasi|Kinnari|Umpush|Waree|Purisa|Sawasdee|Tlwg[\w ]*)$/i;
     }
   });
 
@@ -39944,13 +40042,13 @@ ${mdToHtmlBody(md, o)}
     meas.innerHTML = doc3.html;
     document.body.append(meas);
     {
-      const kids = [...meas.children];
+      const kids3 = [...meas.children];
       let i5 = 0;
       for (let pi = 0; pi < doc3.parts.length; pi++) {
         const tpl = document.createElement("template");
         tpl.innerHTML = partHtml(doc3.parts[pi], pi === 0);
         const n2 = tpl.content.children.length;
-        for (let k = 0; k < n2 && i5 < kids.length; k++, i5++) kids[i5].dataset.k2part = String(pi);
+        for (let k = 0; k < n2 && i5 < kids3.length; k++, i5++) kids3[i5].dataset.k2part = String(pi);
       }
     }
     await waitImages(meas, opts.imgWaitMs || 2500);
@@ -41632,14 +41730,14 @@ ${mdToHtmlBody(md, o)}
   }
   function defaultTitlePages(meta2 = {}, fmt2 = null) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
-    const L2 = f.margins.left;
+    const L3 = f.margins.left;
     const bottom = +f.paper.height - f.margins.bottom;
-    const tw = textWidth(f.paper, f.margins);
+    const tw2 = textWidth(f.paper, f.margins);
     const mid = (y, text, patch) => newTitleString({
       text,
-      x: L2,
+      x: L3,
       y,
-      width: tw,
+      width: tw2,
       align: "center",
       size: 12,
       ...patch
@@ -41652,9 +41750,9 @@ ${mdToHtmlBody(md, o)}
     if (String(meta2.draft || "").trim()) {
       rows.push(newTitleString({
         text: String(meta2.draft).trim(),
-        x: L2,
+        x: L3,
         y: bottom - 1.4,
-        width: tw,
+        width: tw2,
         align: "left",
         size: 12
       }));
@@ -41663,9 +41761,9 @@ ${mdToHtmlBody(md, o)}
     if (contact) {
       rows.push(newTitleString({
         text: contact,
-        x: L2,
+        x: L3,
         y: bottom - 1,
-        width: tw,
+        width: tw2,
         align: "left",
         size: 12
       }));
@@ -41674,9 +41772,9 @@ ${mdToHtmlBody(md, o)}
     if (cr) {
       rows.push(newTitleString({
         text: cr,
-        x: L2,
+        x: L3,
         y: bottom - 0.3,
-        width: tw,
+        width: tw2,
         align: "right",
         size: 10
       }));
@@ -41685,9 +41783,9 @@ ${mdToHtmlBody(md, o)}
   }
   function titlePageInnerHtml(page2, fmt2) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
-    const tw = textWidth(f.paper, f.margins);
+    const tw2 = textWidth(f.paper, f.margins);
     return (page2 && page2.strings ? page2.strings : []).filter((s) => String(s.text ?? "").trim() !== "").map((s) => {
-      const w = num(s.width, 0) > 0 ? Math.min(num(s.width, 0), +f.paper.width - num(s.x, 0)) : Math.max(0.5, Math.min(tw, +f.paper.width - num(s.x, 0) - f.margins.right));
+      const w = num(s.width, 0) > 0 ? Math.min(num(s.width, 0), +f.paper.width - num(s.x, 0)) : Math.max(0.5, Math.min(tw2, +f.paper.width - num(s.x, 0) - f.margins.right));
       const st = [
         "position:absolute",
         `left:${+num(s.x, 0).toFixed(4)}in`,
@@ -41969,9 +42067,9 @@ ${mdToHtmlBody(md, o)}
   function headerCss(hdr, fmt2) {
     const h = hdr && "strings" in hdr ? hdr : mergeHeaders(hdr);
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
-    const tw = +textWidth(f.paper, f.margins).toFixed(4);
+    const tw2 = +textWidth(f.paper, f.margins).toFixed(4);
     return [
-      `.sp-hdr{position:relative;width:${tw}in;height:1em;margin:0 0 ${Math.max(0, h.emptyLinesAfter)}em 0;white-space:nowrap}`,
+      `.sp-hdr{position:relative;width:${tw2}in;height:1em;margin:0 0 ${Math.max(0, h.emptyLinesAfter)}em 0;white-space:nowrap}`,
       ".sp-hdr-item{position:absolute;top:0}",
       ".sp-hdr-left{left:0}",
       ".sp-hdr-right{right:0}"
@@ -51871,17 +51969,17 @@ ${mdToHtmlBody(md, o)}
           return ns;
         }
       };
-      UPNG._copyTile = function(sb, sw, sh, tb2, tw, th, xoff, yoff, mode) {
-        var w = Math.min(sw, tw), h = Math.min(sh, th);
+      UPNG._copyTile = function(sb, sw, sh, tb2, tw2, th, xoff, yoff, mode) {
+        var w = Math.min(sw, tw2), h = Math.min(sh, th);
         var si = 0, ti = 0;
         for (var y = 0; y < h; y++)
           for (var x = 0; x < w; x++) {
             if (xoff >= 0 && yoff >= 0) {
               si = y * sw + x << 2;
-              ti = (yoff + y) * tw + xoff + x << 2;
+              ti = (yoff + y) * tw2 + xoff + x << 2;
             } else {
               si = (-yoff + y) * sw - xoff + x << 2;
-              ti = y * tw + x << 2;
+              ti = y * tw2 + x << 2;
             }
             if (mode == 0) {
               tb2[ti] = sb[si];
@@ -54584,8 +54682,8 @@ ${mdToHtmlBody(md, o)}
             return da;
           return void 0;
         };
-        PDFAcroField2.prototype.setKids = function(kids) {
-          this.dict.set(PDFName_default.of("Kids"), this.dict.context.obj(kids));
+        PDFAcroField2.prototype.setKids = function(kids3) {
+          this.dict.set(PDFName_default.of("Kids"), this.dict.context.obj(kids3));
         };
         PDFAcroField2.prototype.getParent = function() {
           var parentRef = this.dict.get(PDFName_default.of("Parent"));
@@ -55776,15 +55874,15 @@ ${mdToHtmlBody(md, o)}
       createPDFAcroFields = function(kidDicts) {
         if (!kidDicts)
           return [];
-        var kids = [];
+        var kids3 = [];
         for (var idx4 = 0, len5 = kidDicts.size(); idx4 < len5; idx4++) {
           var ref = kidDicts.get(idx4);
           var dict = kidDicts.lookup(idx4);
           if (ref instanceof PDFRef_default && dict instanceof PDFDict_default) {
-            kids.push([createPDFAcroField(dict, ref), ref]);
+            kids3.push([createPDFAcroField(dict, ref), ref]);
           }
         }
-        return kids;
+        return kids3;
       };
       createPDFAcroField = function(dict, ref) {
         var isNonTerminal = isNonTerminalAcroField(dict);
@@ -55793,10 +55891,10 @@ ${mdToHtmlBody(md, o)}
         return createPDFAcroTerminal(dict, ref);
       };
       isNonTerminalAcroField = function(dict) {
-        var kids = dict.lookup(PDFName_default.of("Kids"));
-        if (kids instanceof PDFArray_default) {
-          for (var idx4 = 0, len5 = kids.size(); idx4 < len5; idx4++) {
-            var kid = kids.lookup(idx4);
+        var kids3 = dict.lookup(PDFName_default.of("Kids"));
+        if (kids3 instanceof PDFArray_default) {
+          for (var idx4 = 0, len5 = kids3.size(); idx4 < len5; idx4++) {
+            var kid = kids3.lookup(idx4);
             var kidIsField = kid instanceof PDFDict_default && kid.has(PDFName_default.of("T"));
             if (kidIsField)
               return true;
@@ -60861,9 +60959,9 @@ ${mdToHtmlBody(md, o)}
           var fieldKids = field3.acroField.normalizedEntries().Kids;
           var kidsCount = fieldKids.size();
           for (var childIndex = 0; childIndex < kidsCount; childIndex++) {
-            var child = fieldKids.get(childIndex);
-            if (child instanceof PDFRef_default) {
-              this.doc.context.delete(child);
+            var child2 = fieldKids.get(childIndex);
+            if (child2 instanceof PDFRef_default) {
+              this.doc.context.delete(child2);
             }
           }
           this.doc.context.delete(field3.ref);
@@ -80675,17 +80773,17 @@ ${mdToHtmlBody(md, o)}
       });
       EncodeStream = createCommonjsModule(function(module) {
         (function() {
-          var DecodeStream$1, EncodeStream2, iconv, stream2, __hasProp = {}.hasOwnProperty, __extends2 = function __extends3(child, parent) {
+          var DecodeStream$1, EncodeStream2, iconv, stream2, __hasProp = {}.hasOwnProperty, __extends2 = function __extends3(child2, parent) {
             for (var key2 in parent) {
-              if (__hasProp.call(parent, key2)) child[key2] = parent[key2];
+              if (__hasProp.call(parent, key2)) child2[key2] = parent[key2];
             }
             function ctor() {
-              this.constructor = child;
+              this.constructor = child2;
             }
             ctor.prototype = parent.prototype;
-            child.prototype = new ctor();
-            child.__super__ = parent.prototype;
-            return child;
+            child2.prototype = new ctor();
+            child2.__super__ = parent.prototype;
+            return child2;
           };
           stream2 = Stream2;
           DecodeStream$1 = DecodeStream2;
@@ -80816,17 +80914,17 @@ ${mdToHtmlBody(md, o)}
       });
       _Number = createCommonjsModule(function(module, exports) {
         (function() {
-          var DecodeStream$1, Fixed, NumberT, __hasProp = {}.hasOwnProperty, __extends2 = function __extends3(child, parent) {
+          var DecodeStream$1, Fixed, NumberT, __hasProp = {}.hasOwnProperty, __extends2 = function __extends3(child2, parent) {
             for (var key2 in parent) {
-              if (__hasProp.call(parent, key2)) child[key2] = parent[key2];
+              if (__hasProp.call(parent, key2)) child2[key2] = parent[key2];
             }
             function ctor() {
-              this.constructor = child;
+              this.constructor = child2;
             }
             ctor.prototype = parent.prototype;
-            child.prototype = new ctor();
-            child.__super__ = parent.prototype;
-            return child;
+            child2.prototype = new ctor();
+            child2.__super__ = parent.prototype;
+            return child2;
           };
           DecodeStream$1 = DecodeStream2;
           NumberT = (function() {
@@ -81062,17 +81160,17 @@ ${mdToHtmlBody(md, o)}
       });
       LazyArray = createCommonjsModule(function(module) {
         (function() {
-          var ArrayT, LazyArray2, LazyArrayT, NumberT, inspect2, utils$1, __hasProp = {}.hasOwnProperty, __extends2 = function __extends3(child, parent) {
+          var ArrayT, LazyArray2, LazyArrayT, NumberT, inspect2, utils$1, __hasProp = {}.hasOwnProperty, __extends2 = function __extends3(child2, parent) {
             for (var key2 in parent) {
-              if (__hasProp.call(parent, key2)) child[key2] = parent[key2];
+              if (__hasProp.call(parent, key2)) child2[key2] = parent[key2];
             }
             function ctor() {
-              this.constructor = child;
+              this.constructor = child2;
             }
             ctor.prototype = parent.prototype;
-            child.prototype = new ctor();
-            child.__super__ = parent.prototype;
-            return child;
+            child2.prototype = new ctor();
+            child2.__super__ = parent.prototype;
+            return child2;
           };
           ArrayT = _Array;
           NumberT = _Number.Number;
@@ -81537,17 +81635,17 @@ ${mdToHtmlBody(md, o)}
       });
       VersionedStruct = createCommonjsModule(function(module) {
         (function() {
-          var Struct$1, VersionedStruct2, __hasProp = {}.hasOwnProperty, __extends2 = function __extends3(child, parent) {
+          var Struct$1, VersionedStruct2, __hasProp = {}.hasOwnProperty, __extends2 = function __extends3(child2, parent) {
             for (var key2 in parent) {
-              if (__hasProp.call(parent, key2)) child[key2] = parent[key2];
+              if (__hasProp.call(parent, key2)) child2[key2] = parent[key2];
             }
             function ctor() {
-              this.constructor = child;
+              this.constructor = child2;
             }
             ctor.prototype = parent.prototype;
-            child.prototype = new ctor();
-            child.__super__ = parent.prototype;
-            return child;
+            child2.prototype = new ctor();
+            child2.__super__ = parent.prototype;
+            return child2;
           };
           Struct$1 = Struct;
           VersionedStruct2 = (function(_super) {
@@ -90510,15 +90608,15 @@ ${mdToHtmlBody(md, o)}
           var cbox = new BBox(glyph3.xMin, glyph3.yMin, glyph3.xMax, glyph3.yMax);
           return Object.freeze(cbox);
         };
-        _proto2._parseGlyphCoord = function _parseGlyphCoord(stream2, prev, _short, same) {
+        _proto2._parseGlyphCoord = function _parseGlyphCoord(stream2, prev, _short, same2) {
           if (_short) {
             var val = stream2.readUInt8();
-            if (!same) {
+            if (!same2) {
               val = -val;
             }
             val += prev;
           } else {
-            if (same) {
+            if (same2) {
               var val = prev;
             } else {
               var val = prev + stream2.readInt16BE();
@@ -91758,32 +91856,32 @@ ${mdToHtmlBody(md, o)}
             function _clone(parent2, depth2) {
               if (parent2 === null) return null;
               if (depth2 == 0) return parent2;
-              var child;
+              var child2;
               var proto;
               if (typeof parent2 != "object") {
                 return parent2;
               }
               if (clone6.__isArray(parent2)) {
-                child = [];
+                child2 = [];
               } else if (clone6.__isRegExp(parent2)) {
-                child = new RegExp(parent2.source, __getRegExpFlags(parent2));
-                if (parent2.lastIndex) child.lastIndex = parent2.lastIndex;
+                child2 = new RegExp(parent2.source, __getRegExpFlags(parent2));
+                if (parent2.lastIndex) child2.lastIndex = parent2.lastIndex;
               } else if (clone6.__isDate(parent2)) {
-                child = new Date(parent2.getTime());
+                child2 = new Date(parent2.getTime());
               } else if (useBuffer && buffer_1.isBuffer(parent2)) {
                 if (buffer_1.allocUnsafe) {
-                  child = buffer_1.allocUnsafe(parent2.length);
+                  child2 = buffer_1.allocUnsafe(parent2.length);
                 } else {
-                  child = new buffer_1(parent2.length);
+                  child2 = new buffer_1(parent2.length);
                 }
-                parent2.copy(child);
-                return child;
+                parent2.copy(child2);
+                return child2;
               } else {
                 if (typeof prototype == "undefined") {
                   proto = Object.getPrototypeOf(parent2);
-                  child = Object.create(proto);
+                  child2 = Object.create(proto);
                 } else {
-                  child = Object.create(prototype);
+                  child2 = Object.create(prototype);
                   proto = prototype;
                 }
               }
@@ -91793,7 +91891,7 @@ ${mdToHtmlBody(md, o)}
                   return allChildren[index];
                 }
                 allParents.push(parent2);
-                allChildren.push(child);
+                allChildren.push(child2);
               }
               for (var i5 in parent2) {
                 var attrs;
@@ -91803,9 +91901,9 @@ ${mdToHtmlBody(md, o)}
                 if (attrs && attrs.set == null) {
                   continue;
                 }
-                child[i5] = _clone(parent2[i5], depth2 - 1);
+                child2[i5] = _clone(parent2[i5], depth2 - 1);
               }
-              return child;
+              return child2;
             }
             return _clone(parent, depth);
           }
@@ -91921,7 +92019,7 @@ ${mdToHtmlBody(md, o)}
           var xPoints = [];
           var yPoints = [];
           var flags2 = [];
-          var same = 0;
+          var same2 = 0;
           var lastX = 0, lastY = 0, lastFlag = 0;
           var pointCount = 0;
           for (var i5 = 0; i5 < path.commands.length; i5++) {
@@ -91945,13 +92043,13 @@ ${mdToHtmlBody(md, o)}
               }
               flag3 = this._encodePoint(x, lastX, xPoints, flag3, X_SHORT_VECTOR$1, SAME_X$1);
               flag3 = this._encodePoint(y, lastY, yPoints, flag3, Y_SHORT_VECTOR$1, SAME_Y$1);
-              if (flag3 === lastFlag && same < 255) {
+              if (flag3 === lastFlag && same2 < 255) {
                 flags2[flags2.length - 1] |= REPEAT$1;
-                same++;
+                same2++;
               } else {
-                if (same > 0) {
-                  flags2.push(same);
-                  same = 0;
+                if (same2 > 0) {
+                  flags2.push(same2);
+                  same2 = 0;
                 }
                 flags2.push(flag3);
                 lastFlag = flag3;
@@ -95672,7 +95770,7 @@ ${mdToHtmlBody(md, o)}
     const mgT = fmt2.margins.top * PT_PER_IN;
     const size = opts.fontPt;
     const lineH = lineHeightIn(fmt2) * PT_PER_IN;
-    const tw = textWidth(fmt2.paper, fmt2.margins);
+    const tw2 = textWidth(fmt2.paper, fmt2.margins);
     const hdrLines = headerLineCount(hdr);
     const newPage = () => doc3.addPage([pw, ph]);
     const baseline = (n2) => ph - mgT - (hdrLines + n2) * lineH - size * 0.82;
@@ -95699,7 +95797,7 @@ ${mdToHtmlBody(md, o)}
         const text = String(s.text ?? "");
         if (!text.trim()) continue;
         const x = num(s.x, 0) * PT_PER_IN;
-        const boxW = (num(s.width, 0) > 0 ? num(s.width, 0) : Math.max(0.5, tw)) * PT_PER_IN;
+        const boxW = (num(s.width, 0) > 0 ? num(s.width, 0) : Math.max(0.5, tw2)) * PT_PER_IN;
         const sz = numClamp(s.size, 12, 4, 96);
         const lh = sz * 1.2;
         const cpi = CHARS_PER_INCH * 12 / sz;
@@ -95759,7 +95857,7 @@ ${mdToHtmlBody(md, o)}
           italic: r.italic,
           underline: r.underline,
           align: r.align,
-          boxWidth: tw * PT_PER_IN
+          boxWidth: tw2 * PT_PER_IN
         });
       }
       if (opts.pageNumbers) {
@@ -95781,7 +95879,7 @@ ${mdToHtmlBody(md, o)}
         const marker = b.el === "more" || b.el === "continued-top" || b.el === "continued-bottom";
         const ind = num(c.indent, fmt2.margins.left);
         const x = marker ? markerX(b, fmt2) * PT_PER_IN : ind * PT_PER_IN;
-        const boxW = marker ? tw * PT_PER_IN : Math.max(0.3, Math.min(num(c.width, 6), tw - (ind - fmt2.margins.left))) * PT_PER_IN;
+        const boxW = marker ? tw2 * PT_PER_IN : Math.max(0.3, Math.min(num(c.width, 6), tw2 - (ind - fmt2.margins.left))) * PT_PER_IN;
         const align = b.el === "continued-bottom" || b.el === "transition" ? "right" : "left";
         const lines = row4.lines;
         const ec = pdfElementColor(b.el, opts.colorMode);
@@ -95843,7 +95941,7 @@ ${mdToHtmlBody(md, o)}
           x: mgL,
           y: ph - topPt - size * 0.82,
           size,
-          boxWidth: tw * PT_PER_IN,
+          boxWidth: tw2 * PT_PER_IN,
           align: "left"
         });
       }
@@ -95852,7 +95950,7 @@ ${mdToHtmlBody(md, o)}
           x: mgL,
           y: baseline(bodyLines),
           size,
-          boxWidth: tw * PT_PER_IN,
+          boxWidth: tw2 * PT_PER_IN,
           align: "right"
         });
       }
@@ -96764,8 +96862,8 @@ ${mdToHtmlBody(md, o)}
   async function pdfFontBytes() {
     const out = { regular: null, latin: null, file: "" };
     let dir2 = "";
-    const L2 = PDF_FONT_FILES.latin;
-    const all = [L2.regular, L2.bold, L2.italic, L2.boldItalic].filter(Boolean);
+    const L3 = PDF_FONT_FILES.latin;
+    const all = [L3.regular, L3.bold, L3.italic, L3.boldItalic].filter(Boolean);
     try {
       dir2 = await kapi.join(await kapi.appDir(), "renderer", "assets", "fonts");
       const cands = await pdfThaiFontCandidates();
@@ -96795,13 +96893,13 @@ ${mdToHtmlBody(md, o)}
         break;
       }
       if (out.skipped.length) log("debug", t("ui.pdf.thaiFontSkipped"), out.skipped);
-      const lr = await read3(L2.regular);
+      const lr = await read3(L3.regular);
       if (lr) {
         out.latin = {
           regular: lr,
-          bold: await read3(L2.bold),
-          italic: await read3(L2.italic),
-          boldItalic: await read3(L2.boldItalic)
+          bold: await read3(L3.bold),
+          italic: await read3(L3.italic),
+          boldItalic: await read3(L3.boldItalic)
         };
       }
     } catch (e) {
@@ -96828,7 +96926,8 @@ ${mdToHtmlBody(md, o)}
     }
     const fmt2 = spFormat();
     const ed = new TitlePageEditor(projectTitlePages());
-    if (!ed.count) ed.pages = defaultTitlePages(pdfMeta(), fmt2);
+    const novel = !(state.active && state.active.sp) && (state.meta || {}).template !== "screenplay";
+    if (!ed.count) ed.pages = defaultTitlePages(novel ? { ...pdfMeta(), screenplayBy: t("ui.spTitlePages.byNovel") } : pdfMeta(), fmt2);
     let pageIdx = 0, strIdx = -1;
     const { ov, box: box2 } = overlay("k-tp-dlg");
     box2.append(el("div", "k-dlg-title", t("ui.pdf.coverTitlePages")));
@@ -98154,13 +98253,13 @@ ${mdToHtmlBody(md, o)}
     return out;
   }
   function zoomLadder(z, dir2) {
-    const cur = clampZoom2(z), L2 = MAP_ZOOM_LADDER;
+    const cur = clampZoom2(z), L3 = MAP_ZOOM_LADDER;
     if (dir2 > 0) {
-      for (const v2 of L2) if (v2 > cur + 1e-6) return v2;
-      return L2[L2.length - 1];
+      for (const v2 of L3) if (v2 > cur + 1e-6) return v2;
+      return L3[L3.length - 1];
     }
-    for (let i5 = L2.length - 1; i5 >= 0; i5--) if (L2[i5] < cur - 1e-6) return L2[i5];
-    return L2[0];
+    for (let i5 = L3.length - 1; i5 >= 0; i5--) if (L3[i5] < cur - 1e-6) return L3[i5];
+    return L3[0];
   }
   function clampZoom2(z) {
     if (z === null || z === void 0 || z === "") return 1;
@@ -98674,12 +98773,12 @@ ${mdToHtmlBody(md, o)}
         return Math.hypot(r.x - p.x, r.y - p.y);
       };
       const own = d.zones.find((z) => z.name.toLowerCase() === q2) || null;
-      const me = d.places.filter((p) => p.name.toLowerCase() === q2);
-      for (const p of me) {
+      const me2 = d.places.filter((p) => p.name.toLowerCase() === q2);
+      for (const p of me2) {
         const around = d.places.filter((o) => o !== p).map((o) => ({ name: o.name, meters: distMeters(m, p.pt, o.pt), rel: +rel(p.pt, o.pt).toFixed(2) })).sort((x, y) => x.rel - y.rel).slice(0, k);
         out.push({ map: d.name, place: p, zone: own, around });
       }
-      if (!me.length && own) out.push({ map: d.name, place: null, zone: own, around: [] });
+      if (!me2.length && own) out.push({ map: d.name, place: null, zone: own, around: [] });
     }
     return out;
   }
@@ -99049,8 +99148,8 @@ ${mdToHtmlBody(md, o)}
     }
     return "\uFEFF" + lines.join("\r\n") + "\r\n";
   }
-  function timelineMarkdown(items, links, L2 = {}) {
-    const lab = { title: "Timeline", undated: "Undated", links: "Links", ...L2 };
+  function timelineMarkdown(items, links, L3 = {}) {
+    const lab = { title: "Timeline", undated: "Undated", links: "Links", ...L3 };
     const out = ["# " + lab.title, ""];
     for (const tr4 of groupByTrack(sortEvents(items || []), lab.defaultTrack)) {
       out.push("## " + tr4.name, "");
@@ -99071,8 +99170,8 @@ ${mdToHtmlBody(md, o)}
     }
     return out.join("\n");
   }
-  function timelineHtml(items, links, L2 = {}) {
-    const lab = { title: "Timeline", undated: "Undated", lang: "th", ...L2 };
+  function timelineHtml(items, links, L3 = {}) {
+    const lab = { title: "Timeline", undated: "Undated", lang: "th", ...L3 };
     const dated = [], undated = [];
     for (const it of sortEvents(items || [])) (eventSpan(it) ? dated : undated).push(it);
     const pxW = 1400;
@@ -99657,8 +99756,8 @@ ${cards.join("")}</div>${und}</body></html>`;
   }
   function sideMapSections(list3, cur, maps) {
     const par = parentMap(maps, cur.id);
-    const kids = childMaps(maps, cur.id);
-    if (par || kids.length) {
+    const kids3 = childMaps(maps, cur.id);
+    if (par || kids3.length) {
       const g = el("div", "map-side-group");
       g.append(el("div", "map-side-cat", gi("layers") + " " + t("ui.maps.sideSubMaps")));
       if (par) {
@@ -99667,7 +99766,7 @@ ${cards.join("")}</div>${und}</body></html>`;
         up.onclick = () => enterMap(par.id);
         g.append(up);
       }
-      for (const k of kids) {
+      for (const k of kids3) {
         const r = el("div", "map-side-link", gi("door") + " " + k.name);
         r.title = t("ui.maps.sideChildTip");
         r.onclick = () => enterMap(k.id);
@@ -100545,13 +100644,13 @@ ${cards.join("")}</div>${und}</body></html>`;
         if (shown2 && view.showLabels && !pin.hideLabel) el2.append(el("span", "map-pin-label", shown2));
         const scHere = hereScenes.filter((s) => s.pinId === pin.id);
         if (scHere.length) el2.append(el("span", "map-pin-count", String(scHere.length)));
-        const child = pin.kind === "portal" && pin.toMap ? findMap(maps, pin.toMap) : null;
+        const child2 = pin.kind === "portal" && pin.toMap ? findMap(maps, pin.toMap) : null;
         const ll = toLatLon(cur, pin);
         el2.title = [
           shown2 || (PIN_KIND[pin.kind] || {}).label || "",
           pin.note,
           ll ? formatLatLon(ll) : "",
-          child ? tf("ui.maps.portalTip", child.name) : "",
+          child2 ? tf("ui.maps.portalTip", child2.name) : "",
           scHere.length ? scHere.map((s) => gi("file") + " " + s.title).join("\n") : ""
         ].filter(Boolean).join("\n");
       }
@@ -100999,8 +101098,8 @@ ${cards.join("")}</div>${und}</body></html>`;
     if (pin.image) return { url: mapImgURL(pin.image) };
     const pf = pin.kind === "entity" && pin.entityFile ? portraits.get(pin.entityFile) : "";
     if (pf) return { url: mapImgURL("Images/" + pf) };
-    const child = pin.kind === "portal" && pin.toMap ? findMap(maps, pin.toMap) : null;
-    if (child && child.image) return { url: mapImgURL(child.image), child: true };
+    const child2 = pin.kind === "portal" && pin.toMap ? findMap(maps, pin.toMap) : null;
+    if (child2 && child2.image) return { url: mapImgURL(child2.image), child: true };
     return null;
   }
   function drawGeoMarks(canvas, geo) {
@@ -101663,15 +101762,15 @@ ${cards.join("")}</div>${und}</body></html>`;
         setStatus(t("ui.maps.dropSelfMap"));
         return false;
       }
-      const child = findMap(S10.data.maps, it.id);
-      if (!child) return false;
+      const child2 = findMap(S10.data.maps, it.id);
+      if (!child2) return false;
       const ex = (cur.pins || []).find((p) => p.kind === "portal" && p.toMap === it.id);
       if (ex) {
         ex.x = pt.x;
         ex.y = pt.y;
-      } else cur.pins.push(portalPin(pt.x, pt.y, it.id, child.name));
+      } else cur.pins.push(portalPin(pt.x, pt.y, it.id, child2.name));
       await saveMaps(S10.data);
-      setStatus(tf("ui.maps.dropPortalDone", child.name));
+      setStatus(tf("ui.maps.dropPortalDone", child2.name));
       refresh();
       return true;
     }
@@ -102425,8 +102524,8 @@ ${cards.join("")}</div>${und}</body></html>`;
       if (label2 && !pin.hideLabel) {
         const fs = Math.round(12.5 * kk);
         ctx2.font = `600 ${fs}px "Sarabun", sans-serif`;
-        const tw = ctx2.measureText(label2).width;
-        const lx = x - tw / 2 - 8 * kk, ly = y + sz / 2 + 4 * kk, lw = tw + 16 * kk, lh = fs * 1.6;
+        const tw2 = ctx2.measureText(label2).width;
+        const lx = x - tw2 / 2 - 8 * kk, ly = y + sz / 2 + 4 * kk, lw = tw2 + 16 * kk, lh = fs * 1.6;
         roundRect(ctx2, lx, ly, lw, lh, 5 * kk);
         ctx2.fillStyle = "rgba(14,18,26,.88)";
         ctx2.fill();
@@ -102580,8 +102679,8 @@ ${cards.join("")}</div>${und}</body></html>`;
       return false;
     }
     const maps = data2.maps || [];
-    const norm5 = (p) => String(p || "").replace(/\\/g, "/").toLowerCase();
-    const mine = (f) => f && norm5(f) === norm5(entityFile);
+    const norm6 = (p) => String(p || "").replace(/\\/g, "/").toLowerCase();
+    const mine = (f) => f && norm6(f) === norm6(entityFile);
     const hits = maps.filter((m) => (m.pins || []).some((p) => p.kind === "entity" && mine(p.entityFile)) || mapZones(m).some((z) => mine(z.entityFile)));
     const head2 = el("div", "wiki-map-head");
     head2.append(el("span", "wiki-map-title", gi("map") + " " + t("ui.maps.wikiBlock")));
@@ -104489,7 +104588,7 @@ ${cards.join("")}</div>${und}</body></html>`;
           function P2(e2, t4) {
             e2.pending_buf[e2.pending++] = t4 >>> 8 & 255, e2.pending_buf[e2.pending++] = 255 & t4;
           }
-          function L2(e2, t4) {
+          function L3(e2, t4) {
             var r4, n3, i6 = e2.max_chain_length, s2 = e2.strstart, a2 = e2.prev_length, o2 = e2.nice_match, h2 = e2.strstart > e2.w_size - z ? e2.strstart - (e2.w_size - z) : 0, u2 = e2.window, l2 = e2.w_mask, f2 = e2.prev, c2 = e2.strstart + S10, d2 = u2[s2 + a2 - 1], p2 = u2[s2 + a2];
             e2.prev_length >= e2.good_match && (i6 >>= 2), o2 > e2.lookahead && (o2 = e2.lookahead);
             do {
@@ -104523,7 +104622,7 @@ ${cards.join("")}</div>${und}</body></html>`;
                 if (j(e2), e2.lookahead < z && t4 === l) return A;
                 if (0 === e2.lookahead) break;
               }
-              if (r4 = 0, e2.lookahead >= x && (e2.ins_h = (e2.ins_h << e2.hash_shift ^ e2.window[e2.strstart + x - 1]) & e2.hash_mask, r4 = e2.prev[e2.strstart & e2.w_mask] = e2.head[e2.ins_h], e2.head[e2.ins_h] = e2.strstart), 0 !== r4 && e2.strstart - r4 <= e2.w_size - z && (e2.match_length = L2(e2, r4)), e2.match_length >= x) if (n3 = u._tr_tally(e2, e2.strstart - e2.match_start, e2.match_length - x), e2.lookahead -= e2.match_length, e2.match_length <= e2.max_lazy_match && e2.lookahead >= x) {
+              if (r4 = 0, e2.lookahead >= x && (e2.ins_h = (e2.ins_h << e2.hash_shift ^ e2.window[e2.strstart + x - 1]) & e2.hash_mask, r4 = e2.prev[e2.strstart & e2.w_mask] = e2.head[e2.ins_h], e2.head[e2.ins_h] = e2.strstart), 0 !== r4 && e2.strstart - r4 <= e2.w_size - z && (e2.match_length = L3(e2, r4)), e2.match_length >= x) if (n3 = u._tr_tally(e2, e2.strstart - e2.match_start, e2.match_length - x), e2.lookahead -= e2.match_length, e2.match_length <= e2.max_lazy_match && e2.lookahead >= x) {
                 for (e2.match_length--; e2.strstart++, e2.ins_h = (e2.ins_h << e2.hash_shift ^ e2.window[e2.strstart + x - 1]) & e2.hash_mask, r4 = e2.prev[e2.strstart & e2.w_mask] = e2.head[e2.ins_h], e2.head[e2.ins_h] = e2.strstart, 0 != --e2.match_length; ) ;
                 e2.strstart++;
               } else e2.strstart += e2.match_length, e2.match_length = 0, e2.ins_h = e2.window[e2.strstart], e2.ins_h = (e2.ins_h << e2.hash_shift ^ e2.window[e2.strstart + 1]) & e2.hash_mask;
@@ -104538,7 +104637,7 @@ ${cards.join("")}</div>${und}</body></html>`;
                 if (j(e2), e2.lookahead < z && t4 === l) return A;
                 if (0 === e2.lookahead) break;
               }
-              if (r4 = 0, e2.lookahead >= x && (e2.ins_h = (e2.ins_h << e2.hash_shift ^ e2.window[e2.strstart + x - 1]) & e2.hash_mask, r4 = e2.prev[e2.strstart & e2.w_mask] = e2.head[e2.ins_h], e2.head[e2.ins_h] = e2.strstart), e2.prev_length = e2.match_length, e2.prev_match = e2.match_start, e2.match_length = x - 1, 0 !== r4 && e2.prev_length < e2.max_lazy_match && e2.strstart - r4 <= e2.w_size - z && (e2.match_length = L2(e2, r4), e2.match_length <= 5 && (1 === e2.strategy || e2.match_length === x && 4096 < e2.strstart - e2.match_start) && (e2.match_length = x - 1)), e2.prev_length >= x && e2.match_length <= e2.prev_length) {
+              if (r4 = 0, e2.lookahead >= x && (e2.ins_h = (e2.ins_h << e2.hash_shift ^ e2.window[e2.strstart + x - 1]) & e2.hash_mask, r4 = e2.prev[e2.strstart & e2.w_mask] = e2.head[e2.ins_h], e2.head[e2.ins_h] = e2.strstart), e2.prev_length = e2.match_length, e2.prev_match = e2.match_start, e2.match_length = x - 1, 0 !== r4 && e2.prev_length < e2.max_lazy_match && e2.strstart - r4 <= e2.w_size - z && (e2.match_length = L3(e2, r4), e2.match_length <= 5 && (1 === e2.strategy || e2.match_length === x && 4096 < e2.strstart - e2.match_start) && (e2.match_length = x - 1)), e2.prev_length >= x && e2.match_length <= e2.prev_length) {
                 for (i6 = e2.strstart + e2.lookahead - x, n3 = u._tr_tally(e2, e2.strstart - 1 - e2.prev_match, e2.prev_length - x), e2.lookahead -= e2.prev_length - 1, e2.prev_length -= 2; ++e2.strstart <= i6 && (e2.ins_h = (e2.ins_h << e2.hash_shift ^ e2.window[e2.strstart + x - 1]) & e2.hash_mask, r4 = e2.prev[e2.strstart & e2.w_mask] = e2.head[e2.ins_h], e2.head[e2.ins_h] = e2.strstart), 0 != --e2.prev_length; ) ;
                 if (e2.match_available = 0, e2.match_length = x - 1, e2.strstart++, n3 && (N(e2, false), 0 === e2.strm.avail_out)) return A;
               } else if (e2.match_available) {
@@ -104750,7 +104849,7 @@ ${cards.join("")}</div>${und}</body></html>`;
         }, {}], 49: [function(e, t3, r) {
           "use strict";
           var I = e("../utils/common"), O = e("./adler32"), B = e("./crc32"), R2 = e("./inffast"), T3 = e("./inftrees"), D = 1, F = 2, N = 0, U = -2, P2 = 1, n2 = 852, i5 = 592;
-          function L2(e2) {
+          function L3(e2) {
             return (e2 >>> 24 & 255) + (e2 >>> 8 & 65280) + ((65280 & e2) << 8) + ((255 & e2) << 24);
           }
           function s() {
@@ -104895,7 +104994,7 @@ ${cards.join("")}</div>${und}</body></html>`;
                   if (0 === o2) break e;
                   o2--, u2 += n3[s2++] << l2, l2 += 8;
                 }
-                e2.adler = r4.check = L2(u2), l2 = u2 = 0, r4.mode = 11;
+                e2.adler = r4.check = L3(u2), l2 = u2 = 0, r4.mode = 11;
               case 11:
                 if (0 === r4.havedict) return e2.next_out = a2, e2.avail_out = h2, e2.next_in = s2, e2.avail_in = o2, r4.hold = u2, r4.bits = l2, 2;
                 e2.adler = r4.check = 1, r4.mode = 12;
@@ -105114,7 +105213,7 @@ ${cards.join("")}</div>${und}</body></html>`;
                     if (0 === o2) break e;
                     o2--, u2 |= n3[s2++] << l2, l2 += 8;
                   }
-                  if (c2 -= h2, e2.total_out += c2, r4.total += c2, c2 && (e2.adler = r4.check = r4.flags ? B(r4.check, i6, c2, a2 - c2) : O(r4.check, i6, c2, a2 - c2)), c2 = h2, (r4.flags ? u2 : L2(u2)) !== r4.check) {
+                  if (c2 -= h2, e2.total_out += c2, r4.total += c2, c2 && (e2.adler = r4.check = r4.flags ? B(r4.check, i6, c2, a2 - c2) : O(r4.check, i6, c2, a2 - c2)), c2 = h2, (r4.flags ? u2 : L3(u2)) !== r4.check) {
                     e2.msg = "incorrect data check", r4.mode = 30;
                     break;
                   }
@@ -105223,7 +105322,7 @@ ${cards.join("")}</div>${und}</body></html>`;
           function P2(e2, t4, r4) {
             e2.bi_valid > d - r4 ? (e2.bi_buf |= t4 << e2.bi_valid & 65535, U(e2, e2.bi_buf), e2.bi_buf = t4 >> d - e2.bi_valid, e2.bi_valid += r4 - d) : (e2.bi_buf |= t4 << e2.bi_valid & 65535, e2.bi_valid += r4);
           }
-          function L2(e2, t4, r4) {
+          function L3(e2, t4, r4) {
             P2(e2, r4[2 * t4], r4[2 * t4 + 1]);
           }
           function j(e2, t4) {
@@ -105258,8 +105357,8 @@ ${cards.join("")}</div>${und}</body></html>`;
           }
           function K(e2, t4, r4) {
             var n3, i6, s2, a2, o2 = 0;
-            if (0 !== e2.last_lit) for (; n3 = e2.pending_buf[e2.d_buf + 2 * o2] << 8 | e2.pending_buf[e2.d_buf + 2 * o2 + 1], i6 = e2.pending_buf[e2.l_buf + o2], o2++, 0 === n3 ? L2(e2, i6, t4) : (L2(e2, (s2 = A[i6]) + u + 1, t4), 0 !== (a2 = w[s2]) && P2(e2, i6 -= I[s2], a2), L2(e2, s2 = N(--n3), r4), 0 !== (a2 = k[s2]) && P2(e2, n3 -= T3[s2], a2)), o2 < e2.last_lit; ) ;
-            L2(e2, m, t4);
+            if (0 !== e2.last_lit) for (; n3 = e2.pending_buf[e2.d_buf + 2 * o2] << 8 | e2.pending_buf[e2.d_buf + 2 * o2 + 1], i6 = e2.pending_buf[e2.l_buf + o2], o2++, 0 === n3 ? L3(e2, i6, t4) : (L3(e2, (s2 = A[i6]) + u + 1, t4), 0 !== (a2 = w[s2]) && P2(e2, i6 -= I[s2], a2), L3(e2, s2 = N(--n3), r4), 0 !== (a2 = k[s2]) && P2(e2, n3 -= T3[s2], a2)), o2 < e2.last_lit; ) ;
+            L3(e2, m, t4);
           }
           function Y(e2, t4) {
             var r4, n3, i6, s2 = t4.dyn_tree, a2 = t4.stat_desc.static_tree, o2 = t4.stat_desc.has_stree, h2 = t4.stat_desc.elems, u2 = -1;
@@ -105287,8 +105386,8 @@ ${cards.join("")}</div>${und}</body></html>`;
           function V3(e2, t4, r4) {
             var n3, i6, s2 = -1, a2 = t4[1], o2 = 0, h2 = 7, u2 = 4;
             for (0 === a2 && (h2 = 138, u2 = 3), n3 = 0; n3 <= r4; n3++) if (i6 = a2, a2 = t4[2 * (n3 + 1) + 1], !(++o2 < h2 && i6 === a2)) {
-              if (o2 < u2) for (; L2(e2, i6, e2.bl_tree), 0 != --o2; ) ;
-              else 0 !== i6 ? (i6 !== s2 && (L2(e2, i6, e2.bl_tree), o2--), L2(e2, b, e2.bl_tree), P2(e2, o2 - 3, 2)) : o2 <= 10 ? (L2(e2, v2, e2.bl_tree), P2(e2, o2 - 3, 3)) : (L2(e2, y, e2.bl_tree), P2(e2, o2 - 11, 7));
+              if (o2 < u2) for (; L3(e2, i6, e2.bl_tree), 0 != --o2; ) ;
+              else 0 !== i6 ? (i6 !== s2 && (L3(e2, i6, e2.bl_tree), o2--), L3(e2, b, e2.bl_tree), P2(e2, o2 - 3, 2)) : o2 <= 10 ? (L3(e2, v2, e2.bl_tree), P2(e2, o2 - 3, 3)) : (L3(e2, y, e2.bl_tree), P2(e2, o2 - 11, 7));
               s2 = i6, u2 = (o2 = 0) === a2 ? (h2 = 138, 3) : i6 === a2 ? (h2 = 6, 3) : (h2 = 7, 4);
             }
           }
@@ -105333,7 +105432,7 @@ ${cards.join("")}</div>${und}</body></html>`;
           }, r._tr_tally = function(e2, t4, r4) {
             return e2.pending_buf[e2.d_buf + 2 * e2.last_lit] = t4 >>> 8 & 255, e2.pending_buf[e2.d_buf + 2 * e2.last_lit + 1] = 255 & t4, e2.pending_buf[e2.l_buf + e2.last_lit] = 255 & r4, e2.last_lit++, 0 === t4 ? e2.dyn_ltree[2 * r4]++ : (e2.matches++, t4--, e2.dyn_ltree[2 * (A[r4] + u + 1)]++, e2.dyn_dtree[2 * N(t4)]++), e2.last_lit === e2.lit_bufsize - 1;
           }, r._tr_align = function(e2) {
-            P2(e2, 2, 3), L2(e2, m, z), (function(e3) {
+            P2(e2, 2, 3), L3(e2, m, z), (function(e3) {
               16 === e3.bi_valid ? (U(e3, e3.bi_buf), e3.bi_buf = 0, e3.bi_valid = 0) : 8 <= e3.bi_valid && (e3.pending_buf[e3.pending++] = 255 & e3.bi_buf, e3.bi_buf >>= 8, e3.bi_valid -= 8);
             })(e2);
           };
@@ -105552,8 +105651,8 @@ ${cards.join("")}</div>${und}</body></html>`;
         if (it.caption) {
           g.save();
           g.font = `600 ${Math.round(12 * scale2)}px "Sarabun", sans-serif`;
-          const tw = g.measureText(it.caption).width;
-          rrect(g, ox + 8 * scale2, oy + it.h * scale2 - 30 * scale2, tw + 16 * scale2, 22 * scale2, 6 * scale2);
+          const tw2 = g.measureText(it.caption).width;
+          rrect(g, ox + 8 * scale2, oy + it.h * scale2 - 30 * scale2, tw2 + 16 * scale2, 22 * scale2, 6 * scale2);
           g.fillStyle = "rgba(0,0,0,.72)";
           g.fill();
           g.fillStyle = CARD_INK;
@@ -105612,8 +105711,8 @@ ${cards.join("")}</div>${und}</body></html>`;
     const title2 = it.title || "";
     if (title2) {
       g.font = `700 ${Math.round(12.5 * s)}px "Sarabun", sans-serif`;
-      const tw = g.measureText(title2).width;
-      rrect(g, x + 10 * s, y - 11 * s, tw + 18 * s, 22 * s, 6 * s);
+      const tw2 = g.measureText(title2).width;
+      rrect(g, x + 10 * s, y - 11 * s, tw2 + 18 * s, 22 * s, 6 * s);
       g.fillStyle = "rgba(12,12,16,.88)";
       g.fill();
       g.fillStyle = CARD_INK;
@@ -106278,9 +106377,9 @@ a.card:hover{border-color:${CARD_STRIPE}}
           const d = await this.doc();
           const bg = normalizeBoardBg(d.moodBoardBg);
           const pop = el("div", "mb-bg-pop k-hud-pop");
-          const row4 = (label2, ...kids) => {
+          const row4 = (label2, ...kids3) => {
             const r4 = el("label", "mb-bg-row");
-            r4.append(el("span", null, label2), ...kids);
+            r4.append(el("span", null, label2), ...kids3);
             pop.append(r4);
             return r4;
           };
@@ -107102,29 +107201,29 @@ a.card:hover{border-color:${CARD_STRIPE}}
     const text = parts.join("\n\n");
     return { text, used: text.length, truncated, missing };
   }
-  function buildRewritePrompt(o = {}, L2 = {}) {
-    const sys = [L2.role || ""];
+  function buildRewritePrompt(o = {}, L3 = {}) {
+    const sys = [L3.role || ""];
     if (o.agent) {
-      sys.push("", (L2.persona || "") + (o.agent.name ? " \u2014 " + o.agent.name : ""));
+      sys.push("", (L3.persona || "") + (o.agent.name ? " \u2014 " + o.agent.name : ""));
       if (String(o.agent.persona || "").trim()) sys.push(String(o.agent.persona).trim());
     }
-    for (const r of L2.rules || []) sys.push("- " + r);
-    if (o.format === "screenplay" && L2.screenplay) sys.push("- " + L2.screenplay);
+    for (const r of L3.rules || []) sys.push("- " + r);
+    if (o.format === "screenplay" && L3.screenplay) sys.push("- " + L3.screenplay);
     const p = [];
     const block = (head2, body) => {
       if (String(body || "").trim()) p.push("## " + head2, String(body).trim(), "");
     };
-    block(L2.refs || "References", o.refText);
-    block(L2.project || "Project context", o.project);
-    block(L2.before || "Before", o.before ? clipTail(o.before, AROUND_CHARS) : "");
-    block(L2.after || "After", o.after ? clipHead(o.after, AROUND_CHARS) : "");
+    block(L3.refs || "References", o.refText);
+    block(L3.project || "Project context", o.project);
+    block(L3.before || "Before", o.before ? clipTail(o.before, AROUND_CHARS) : "");
+    block(L3.after || "After", o.after ? clipHead(o.after, AROUND_CHARS) : "");
     p.push(
-      "## " + (L2.instruction || "Instruction"),
-      String(o.instruction || "").trim() || (L2.defaultInstruction || ""),
+      "## " + (L3.instruction || "Instruction"),
+      String(o.instruction || "").trim() || (L3.defaultInstruction || ""),
       ""
     );
-    p.push("## " + (L2.source || "Text to rewrite"), "<<<", String(o.text || ""), ">>>", "");
-    if (L2.output) p.push(L2.output);
+    p.push("## " + (L3.source || "Text to rewrite"), "<<<", String(o.text || ""), ">>>", "");
+    if (L3.output) p.push(L3.output);
     return {
       system: sys.filter((x, i5, a) => !(x === "" && a[i5 - 1] === "")).join("\n").trim(),
       prompt: p.join("\n").trim()
@@ -108532,9 +108631,40 @@ a.card:hover{border-color:${CARD_STRIPE}}
     return true;
   }
   async function currentProvider() {
-    const p = activeProvider(aiMeta());
+    let p = activeProvider(aiMeta());
+    if (!p && await adoptMyDefaults()) p = activeProvider(aiMeta());
     if (!p) return null;
     return withSecrets(p, await loadKeys());
+  }
+  async function adoptMyDefaults() {
+    const root = state.root;
+    if (!root || !state.meta || _adopted.has(root) || !kapi.aiDefaultsLoad) return false;
+    if (listProviders(aiMeta()).length) return false;
+    _adopted.add(root);
+    let defaults = null;
+    try {
+      defaults = await kapi.aiDefaultsLoad();
+    } catch {
+      defaults = null;
+    }
+    if (!defaults || !Array.isArray(defaults.providers) || !defaults.providers.length) return false;
+    if (state.root !== root) return false;
+    const m = mergeDefaults([], defaults);
+    if (!m.added) return false;
+    const active = defaults.activeProviderId && m.rows.some((x) => x.id === defaults.activeProviderId) ? defaults.activeProviderId : m.rows[0].id;
+    if (Object.keys(m.keys).length) {
+      const keys4 = await loadKeys();
+      Object.assign(keys4, m.keys);
+      await saveKeys(keys4);
+    }
+    await persist2(m.rows, active);
+    log("info", "ai: defaults adopted for new project", { added: m.added, withKeys: Object.keys(m.keys).length });
+    try {
+      const { toast: toast2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
+      toast2(tf("ui.aiProvider.defaultsAdopted", m.added), { level: "ok" });
+    } catch {
+    }
+    return true;
   }
   async function providerById(id) {
     const rows = listProviders(aiMeta());
@@ -108633,6 +108763,8 @@ a.card:hover{border-color:${CARD_STRIPE}}
       detail: info.detail,
       hints: info.hints,
       code: info.code,
+      serverMessage: info.serverMessage || "",
+      // [trial 2026-10-25 ข้อ 12] ข้อความของเซิร์ฟเวอร์ตรง ๆ (ปุ่มทดสอบโชว์)
       body: redactSecrets(String(e.body || ""))
     };
   }
@@ -108688,7 +108820,14 @@ a.card:hover{border-color:${CARD_STRIPE}}
       ok: false,
       msg: tf("ui.aiProvider.testChatFail", r.models.length, model, c.error || ""),
       models: r.models,
-      chat: { ok: false, model, error: c.error || "", code: c.code || "", hints: c.hints || [] }
+      chat: {
+        ok: false,
+        model,
+        error: c.error || "",
+        code: c.code || "",
+        hints: c.hints || [],
+        serverMessage: c.serverMessage || ""
+      }
     };
   }
   function noteThinking(provider, model, usage, thinking) {
@@ -109451,7 +109590,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
         setBusy2(true, credMsg, t("ui.aiProvider.busyTest"));
         const r = await testCredential(p, { model: modelSel.value });
         setBusy2(false);
-        say(credMsg, r.ok, (r.ok ? gi("check-circle") + " " : gi("fail") + " ") + r.msg + (r.chat && !r.ok && r.chat.hints && r.chat.hints[0] ? " \u2014 " + r.chat.hints[0] : ""));
+        say(credMsg, r.ok, (r.ok ? gi("check-circle") + " " : gi("fail") + " ") + r.msg + (r.chat && !r.ok && r.chat.hints && r.chat.hints[0] ? " \u2014 " + r.chat.hints[0] : "") + (r.chat && !r.ok && r.chat.serverMessage ? " \xB7 " + t("ui.aiError.reply") + clip(r.chat.serverMessage, 240) : ""));
         if (r.models.length) fillModels(r.models, modelSel.value);
       };
       loadModelsBtn.onclick = async () => {
@@ -109515,7 +109654,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
       };
     });
   }
-  var KEY_FILE, _keys, _thinkSeen, thinkKey;
+  var KEY_FILE, _keys, _adopted, _thinkSeen, thinkKey;
   var init_ai_provider_ui = __esm({
     "src/ai/ai-provider-ui.js"() {
       init_i18n();
@@ -109529,6 +109668,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
       init_locale();
       KEY_FILE = "ai-key.json";
       _keys = null;
+      _adopted = /* @__PURE__ */ new Set();
       _thinkSeen = /* @__PURE__ */ new Map();
       thinkKey = (provider, model) => String(provider && (provider.id || provider.name) || "") + "|" + String(model || "");
     }
@@ -109583,7 +109723,12 @@ a.card:hover{border-color:${CARD_STRIPE}}
   }
   async function aiConfigured() {
     if (!state.root) return { ok: false, code: "noProject", why: t("ui.common.cantOpenProject") };
-    const ai = getAISettings();
+    let ai = getAISettings();
+    if (!(Array.isArray(ai.providers) && ai.providers.length) && (ai.provider || "openai") !== "ollama" && !await loadApiKey()) {
+      const { currentProvider: currentProvider2 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
+      await currentProvider2();
+      ai = getAISettings();
+    }
     if (Array.isArray(ai.providers) && ai.providers.length) {
       const { currentProvider: currentProvider2 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
       const p = await currentProvider2();
@@ -110012,17 +110157,19 @@ a.card:hover{border-color:${CARD_STRIPE}}
       };
       search2.oninput = () => drawGrid2();
       addB.onclick = async () => {
-        const src2 = await kapi.openImageDialog();
-        if (!src2) return;
+        const picked = kapi.openImagesDialog ? await kapi.openImagesDialog() : [await kapi.openImageDialog()];
+        const srcs = (Array.isArray(picked) ? picked : [picked]).filter(Boolean);
+        if (!srcs.length) return;
         const target = cur === ALL_ALBUM2 ? ROOT_ALBUM2 : cur;
-        const name5 = await addImageFile(kapi, root, target, src2);
+        const names = [];
+        for (const src2 of srcs) names.push(await addImageFile(kapi, root, target, src2));
         await syncFlatIndex(kapi, root);
         urlCache.clear();
         albums = await listAlbums(kapi, root);
         await loadItems();
         drawSide();
         drawGrid2();
-        setStatus(t("ui.gallery.addImageDone") + name5);
+        setStatus(t("ui.gallery.addImageDone") + names.join(", "));
       };
       await loadItems();
       drawSide();
@@ -110478,7 +110625,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
           });
           main.append(name5, cap);
           if (it.tags && it.tags.length) {
-            const tw = el("div", "gal2-cell-tags");
+            const tw2 = el("div", "gal2-cell-tags");
             for (const t3 of it.tags) {
               const c = el("span", "gal2-chip sm k-tag-" + tagKind(t3), t3);
               c.onclick = (e) => {
@@ -110489,9 +110636,9 @@ a.card:hover{border-color:${CARD_STRIPE}}
                   this.draw();
                 }
               };
-              tw.append(c);
+              tw2.append(c);
             }
-            main.append(tw);
+            main.append(tw2);
           }
           const side = el("div", "gal2-row-side");
           side.append(el("div", "gal2-row-size", formatBytes(it.size)));
@@ -110562,7 +110709,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
           });
           cell.append(cap);
           if (it.tags && it.tags.length) {
-            const tw = el("div", "gal2-cell-tags");
+            const tw2 = el("div", "gal2-cell-tags");
             for (const t3 of it.tags) {
               const c = el("span", "gal2-chip sm k-tag-" + tagKind(t3), t3);
               c.onclick = (e) => {
@@ -110573,9 +110720,9 @@ a.card:hover{border-color:${CARD_STRIPE}}
                   this.draw();
                 }
               };
-              tw.append(c);
+              tw2.append(c);
             }
-            cell.append(tw);
+            cell.append(tw2);
           }
           const meta2 = el("div", "gal2-cell-meta");
           meta2.textContent = formatBytes(it.size);
@@ -111522,7 +111669,9 @@ a.card:hover{border-color:${CARD_STRIPE}}
         "save-all-btn",
         "search-all-btn",
         // [alpha.161 · K3] ปุ่ม "»" ท้ายแถบ (ปุ่มที่ล้น/ถูกซ่อน) — โปรแกรมคุมเอง ซ่อนไม่ได้ ไม่ล้นเอง
-        "tb-overflow"
+        "tb-overflow",
+        // [alpha.170 · ข้อ 8] ปุ่ม "เครื่องมือทั้งหมด" — ทางออกของโหมดเรียบง่าย (โผล่เฉพาะในโหมดนั้น)
+        "tb-simple-exit"
       ];
       TOOLBAR_GROUPS = [
         // [alpha.150 ข้อ 1] ย้อนกลับ/ทำซ้ำ — อยู่บนแถบรูปแบบลอย แต่ต้องมีแถวที่นี่ด้วย
@@ -111944,6 +112093,52 @@ a.card:hover{border-color:${CARD_STRIPE}}
       ];
       DEFAULT_FAB_ACTIONS = ["scene", "chapter", "character", "location"];
       DEG2 = Math.PI / 180;
+    }
+  });
+
+  // src/simple-mode.js
+  function simpleFmtbar(norm6, ids) {
+    const out = {};
+    for (const [mode, v2] of Object.entries(norm6 || {})) {
+      const hidden2 = { ...v2 && v2.hidden || {} };
+      for (const id of ids || []) if (!SIMPLE_FMT.has(id)) hidden2[id] = true;
+      out[mode] = { ...v2 || {}, hidden: hidden2 };
+    }
+    return out;
+  }
+  function simpleByDefault(rawGlobal) {
+    return !rawGlobal || typeof rawGlobal !== "object" || Object.keys(rawGlobal).length === 0;
+  }
+  var SIMPLE_MAIN, SIMPLE_FMT, SIMPLE_WS, simpleMainVisible;
+  var init_simple_mode = __esm({
+    "src/simple-mode.js"() {
+      SIMPLE_MAIN = /* @__PURE__ */ new Set([
+        "tb-undo",
+        "tb-redo",
+        "tb-tree-panel",
+        "tb-outline-panel",
+        // Explorer · Navigation
+        "tb-read",
+        "tb-focus",
+        // อ่าน · โฟกัส
+        "tb-settings"
+      ]);
+      SIMPLE_FMT = /* @__PURE__ */ new Set([
+        "tb-undo",
+        "tb-redo",
+        "tb-style",
+        "tb-h2",
+        "tb-h3",
+        "tb-bold",
+        "tb-italic",
+        "tb-underline",
+        "tb-ul",
+        "tb-ol",
+        "tb-quote",
+        "tb-find"
+      ]);
+      SIMPLE_WS = "__k2-before-simple";
+      simpleMainVisible = (on2, id) => !on2 || SIMPLE_MAIN.has(id);
     }
   });
 
@@ -114505,11 +114700,11 @@ a.card:hover{border-color:${CARD_STRIPE}}
         return { stats: [] };
     }
   }
-  function doctorDigest(id, L2 = {}) {
+  function doctorDigest(id, L3 = {}) {
     const lines = [];
-    for (const s of L2.stats || []) lines.push(`- ${s.label}: ${s.value}`);
+    for (const s of L3.stats || []) lines.push(`- ${s.label}: ${s.value}`);
     const take = (rows, fmt2, n2) => (rows || []).slice(0, n2).forEach((r) => lines.push("- " + fmt2(r)));
-    if (id === "dialog") take(L2.flagged, (r) => tf(
+    if (id === "dialog") take(L3.flagged, (r) => tf(
       "ui.aia.dgDialog",
       r.title,
       r.sceneId,
@@ -114517,7 +114712,7 @@ a.card:hover{border-color:${CARD_STRIPE}}
       reasonText(r.reasons),
       r.quote
     ), 30);
-    if (id === "drag") take((L2.rows || []).filter((r) => r.drag >= DRAG_FLAG), (r) => tf(
+    if (id === "drag") take((L3.rows || []).filter((r) => r.drag >= DRAG_FLAG), (r) => tf(
       "ui.aia.dgDrag",
       r.title,
       r.id,
@@ -114526,12 +114721,12 @@ a.card:hover{border-color:${CARD_STRIPE}}
       r.narration,
       reasonText(r.reasons, "drag")
     ), 25);
-    if (id === "logic") take(L2.rows, (r) => tf("ui.aia.dgLogic", r.title, r.id, r.words.join(", "), r.quote), 25);
+    if (id === "logic") take(L3.rows, (r) => tf("ui.aia.dgLogic", r.title, r.id, r.words.join(", "), r.quote), 25);
     if (id === "ooc") {
-      take(L2.rows, (r) => tf("ui.aia.dgOocChar", r.name, r.lines, r.pronoun || "\u2014", r.particle || "\u2014"), 15);
-      take(L2.outliers, (r) => tf("ui.aia.dgOocOdd", r.name, r.title, r.sceneId, r.form, r.expected, r.quote), 20);
+      take(L3.rows, (r) => tf("ui.aia.dgOocChar", r.name, r.lines, r.pronoun || "\u2014", r.particle || "\u2014"), 15);
+      take(L3.outliers, (r) => tf("ui.aia.dgOocOdd", r.name, r.title, r.sceneId, r.form, r.expected, r.quote), 20);
     }
-    if (id === "tone") take(L2.rows, (r) => tf(
+    if (id === "tone") take(L3.rows, (r) => tf(
       "ui.aia.dgTone",
       r.title,
       r.id,
@@ -114541,10 +114736,10 @@ a.card:hover{border-color:${CARD_STRIPE}}
     ) + (r.adjust ? " \u2192 " + ADJUST_LABELS[r.adjust] : "") + (r.whiplash ? " \xB7 " + t("ui.aia.toneWhip") : ""), 40);
     return lines.join("\n");
   }
-  function doctorPromptExtras(id, { characters = [], local = {}, opts = {} } = {}) {
+  function doctorPromptExtras(id, { characters = [], local: local3 = {}, opts = {} } = {}) {
     const lines = [];
     if (id === "ooc") {
-      const speaking = new Set((local.rows || []).map((r) => r.name));
+      const speaking = new Set((local3.rows || []).map((r) => r.name));
       const use = characters.filter((c) => speaking.has(c.name) || !speaking.size).slice(0, 12);
       const prof = use.map((c) => ({ name: c.name, text: c.profile || profileText(c.entity) })).filter((x) => x.text);
       if (prof.length) {
@@ -114558,31 +114753,31 @@ a.card:hover{border-color:${CARD_STRIPE}}
     }
     return lines;
   }
-  function doctorTable(id, L2 = {}) {
+  function doctorTable(id, L3 = {}) {
     const H3 = (...a) => a;
-    if (id === "dialog" && L2.flagged) return [
+    if (id === "dialog" && L3.flagged) return [
       H3(t("ui.aia.csScene"), t("ui.aia.csSpeaker"), t("ui.aia.csReason"), t("ui.aia.csQuote")),
-      ...L2.flagged.map((r) => [r.title, r.speaker, reasonText(r.reasons), r.quote])
+      ...L3.flagged.map((r) => [r.title, r.speaker, reasonText(r.reasons), r.quote])
     ];
-    if (id === "drag" && L2.rows) return [
+    if (id === "drag" && L3.rows) return [
       H3(t("ui.aia.csScene"), t("ui.aia.csWords"), t("ui.aia.csTempo"), t("ui.aia.csNarration"), t("ui.aia.csDrag"), t("ui.aia.csReason")),
-      ...L2.rows.map((r) => [r.title, r.words, r.tempo, r.narration, r.drag, reasonText(r.reasons, "drag")])
+      ...L3.rows.map((r) => [r.title, r.words, r.tempo, r.narration, r.drag, reasonText(r.reasons, "drag")])
     ];
-    if (id === "logic" && L2.rows) return [
+    if (id === "logic" && L3.rows) return [
       H3(t("ui.aia.csScene"), t("ui.aia.csCount"), t("ui.aia.csMarkers"), t("ui.aia.csQuote")),
-      ...L2.rows.map((r) => [r.title, r.count, r.words.join(" "), r.quote])
+      ...L3.rows.map((r) => [r.title, r.count, r.words.join(" "), r.quote])
     ];
-    if (id === "ooc" && L2.rows) {
+    if (id === "ooc" && L3.rows) {
       const rows = [H3(t("ui.aia.csCharacter"), t("ui.aia.csLines"), t("ui.aia.csPronoun"), t("ui.aia.csParticle"), t("ui.aia.csOdd"))];
-      for (const r of L2.rows) rows.push([r.name, r.lines, r.pronoun, r.particle, r.outliers]);
+      for (const r of L3.rows) rows.push([r.name, r.lines, r.pronoun, r.particle, r.outliers]);
       rows.push([]);
       rows.push(H3(t("ui.aia.csCharacter"), t("ui.aia.csScene"), t("ui.aia.csExpected"), t("ui.aia.csFound"), t("ui.aia.csQuote")));
-      for (const o of L2.outliers || []) rows.push([o.name, o.title, o.expected, o.form, o.quote]);
+      for (const o of L3.outliers || []) rows.push([o.name, o.title, o.expected, o.form, o.quote]);
       return rows;
     }
-    if (id === "tone" && L2.rows) return [
+    if (id === "tone" && L3.rows) return [
       H3(t("ui.aia.csScene"), t("ui.aia.csComedy"), t("ui.aia.csDrama"), t("ui.aia.csTone"), t("ui.aia.csAdjust")),
-      ...L2.rows.map((r) => [r.title, r.comedy, r.drama, TONE_LABELS[r.tone] || r.tone, r.adjust ? ADJUST_LABELS[r.adjust] : ""])
+      ...L3.rows.map((r) => [r.title, r.comedy, r.drama, TONE_LABELS[r.tone] || r.tone, r.adjust ? ADJUST_LABELS[r.adjust] : ""])
     ];
     return null;
   }
@@ -115825,7 +116020,7 @@ ${h.text}`;
     const ws = rows.map((r) => r.words);
     const avg = +mean(ws).toFixed(0), med = +median(ws).toFixed(0), sd = stdev(ws);
     const long = rows.filter((r) => sd > 0 && r.words > avg + 2 * sd);
-    const short2 = rows.filter((r) => sd > 0 && r.words < avg - 2 * sd);
+    const short3 = rows.filter((r) => sd > 0 && r.words < avg - 2 * sd);
     const total = ws.reduce((a, b) => a + b, 0);
     return {
       rows,
@@ -115833,7 +116028,7 @@ ${h.text}`;
       median: med,
       sd: +sd.toFixed(0),
       long,
-      short: short2,
+      short: short3,
       total,
       stats: [
         { label: t("ui.aia.stAvgWordScene"), value: fmtNum(avg) },
@@ -116155,20 +116350,20 @@ ${h.text}`;
       rows: thin.map((r) => ({ id: r.sceneIds[0] || "", title: r.name, note: t("ui.aia.noteCharOnce") }))
     };
   }
-  function localDigest(id, local = {}) {
-    if (isDoctor(id)) return doctorDigest(id, local);
+  function localDigest(id, local3 = {}) {
+    if (isDoctor(id)) return doctorDigest(id, local3);
     const lines = [];
-    for (const s of local.stats || []) lines.push(`- ${s.label}: ${s.value}`);
+    for (const s of local3.stats || []) lines.push(`- ${s.label}: ${s.value}`);
     const takeRows = (rows, fmt2, n2 = 12) => (rows || []).slice(0, n2).forEach((r) => lines.push("- " + fmt2(r)));
-    if (id === "pacing") takeRows(local.rows, (r) => tf("ui.aia.dgPacing", r.title, r.id, r.tempo, r.dialogue, r.words), 20);
-    if (id === "arc") takeRows(local.chars, (c) => tf("ui.aia.dgArc", c.name, c.total, c.scenes) + (c.gaps.length ? tf("ui.aia.dgArcGap", c.gaps.map((g) => g.from + gt("arrow-right") + g.to).join(", ")) : ""));
-    if (id === "words") takeRows(local.rows, (r) => tf("ui.aia.dgWords", r.word, r.count, r.per10k), 30);
-    if (id === "conflict") takeRows(local.empty, (r) => tf("ui.aia.dgConflict", r.title, r.id), 20);
-    if (id === "length") takeRows(local.rows, (r) => tf("ui.aia.dgLength", r.title, r.id, r.words, r.minutes), 25);
-    if (id === "repeat") takeRows(local.rows, (r) => tf("ui.aia.dgRepeat", r.word, r.count, r.title, r.id, r.closest), 25);
-    if (id === "shipping") takeRows(local.rows, (r) => tf("ui.aia.dgShipping", r.a, r.b, r.scenes, r.score), 15);
-    if (id === "screentime") takeRows(local.rows, (r) => tf("ui.aia.dgScreentime", r.name, r.scenes, r.mentions, r.share), 20);
-    if (id === "composition") takeRows(local.rows, (r) => tf(
+    if (id === "pacing") takeRows(local3.rows, (r) => tf("ui.aia.dgPacing", r.title, r.id, r.tempo, r.dialogue, r.words), 20);
+    if (id === "arc") takeRows(local3.chars, (c) => tf("ui.aia.dgArc", c.name, c.total, c.scenes) + (c.gaps.length ? tf("ui.aia.dgArcGap", c.gaps.map((g) => g.from + gt("arrow-right") + g.to).join(", ")) : ""));
+    if (id === "words") takeRows(local3.rows, (r) => tf("ui.aia.dgWords", r.word, r.count, r.per10k), 30);
+    if (id === "conflict") takeRows(local3.empty, (r) => tf("ui.aia.dgConflict", r.title, r.id), 20);
+    if (id === "length") takeRows(local3.rows, (r) => tf("ui.aia.dgLength", r.title, r.id, r.words, r.minutes), 25);
+    if (id === "repeat") takeRows(local3.rows, (r) => tf("ui.aia.dgRepeat", r.word, r.count, r.title, r.id, r.closest), 25);
+    if (id === "shipping") takeRows(local3.rows, (r) => tf("ui.aia.dgShipping", r.a, r.b, r.scenes, r.score), 15);
+    if (id === "screentime") takeRows(local3.rows, (r) => tf("ui.aia.dgScreentime", r.name, r.scenes, r.mentions, r.share), 20);
+    if (id === "composition") takeRows(local3.rows, (r) => tf(
       "ui.aia.dgComposition",
       r.title,
       r.id,
@@ -116177,8 +116372,8 @@ ${h.text}`;
       r.narration,
       COMPOSITION_LABELS[r.lean] || "\u2014"
     ), 30);
-    if (id === "score") takeRows(local.criteria, (c) => tf("ui.aia.dgScore", c.label, c.score, c.note), 10);
-    if (id === "plothole" || id === "continuity") takeRows(local.rows, (r) => tf("ui.aia.dgNote", r.title, r.id, r.note), 20);
+    if (id === "score") takeRows(local3.criteria, (c) => tf("ui.aia.dgScore", c.label, c.score, c.note), 10);
+    if (id === "plothole" || id === "continuity") takeRows(local3.rows, (r) => tf("ui.aia.dgNote", r.title, r.id, r.note), 20);
     return lines.join("\n");
   }
   function sceneBlocks(scenes = [], budget = 6e3) {
@@ -116205,7 +116400,7 @@ ${h.text}`;
   }
   function buildAnalysisPrompt(id, {
     scenes = [],
-    local = {},
+    local: local3 = {},
     scope: scope2 = {},
     focus = "",
     budget = 6e3,
@@ -116222,13 +116417,13 @@ ${h.text}`;
     lines.push(t("ui.aia.pHeadTask") + (def ? def.title : id));
     lines.push(task);
     lines.push("");
-    const digest = localDigest(id, local);
+    const digest = localDigest(id, local3);
     if (digest) {
       lines.push(t("ui.aia.pHeadNumbers"));
       lines.push(digest);
       lines.push("");
     }
-    const extras2 = isDoctor(id) ? doctorPromptExtras(id, { characters, local, opts }) : [];
+    const extras2 = isDoctor(id) ? doctorPromptExtras(id, { characters, local: local3, opts }) : [];
     if (extras2.length) {
       lines.push(...extras2);
       lines.push("");
@@ -116270,12 +116465,12 @@ ${h.text}`;
     if (!def) return { id, error: t("ui.aia.errUnknownKind"), local: { stats: [] }, ai: null };
     const scenes = filterScope(o.scenes || [], o.scope || {});
     if (!scenes.length) return { id, error: t("ui.aia.errNoScene"), local: { stats: [] }, ai: null, scope: describeScope(o.scope, o.scenes || []) };
-    const local = runLocal(id, scenes, o.characters || [], o);
+    const local3 = runLocal(id, scenes, o.characters || [], o);
     const scope2 = describeScope(o.scope, o.scenes || []);
-    if (o.useAI === false || !o.client) return { id, local, ai: null, scope: scope2, scenes: scenes.length };
+    if (o.useAI === false || !o.client) return { id, local: local3, ai: null, scope: scope2, scenes: scenes.length };
     const built = buildAnalysisPrompt(id, {
       scenes,
-      local,
+      local: local3,
       scope: o.scope,
       focus: o.focus,
       budget: o.budget || 6e3,
@@ -116289,11 +116484,11 @@ ${h.text}`;
       temperature: o.temperature ?? 0.3,
       maxTokens: o.maxTokens || (isDoctor(id) ? 1800 : 1200)
     });
-    if (!res || !res.ok) return { id, local, ai: { ok: false, error: res && res.error || t("ui.aia.errAiFail") }, scope: scope2, scenes: scenes.length };
+    if (!res || !res.ok) return { id, local: local3, ai: { ok: false, error: res && res.error || t("ui.aia.errAiFail") }, scope: scope2, scenes: scenes.length };
     const parsed = parseAnalysisReply(id, res.text, { sceneIds: built.sceneIds });
     return {
       id,
-      local,
+      local: local3,
       scope: scope2,
       scenes: scenes.length,
       truncated: built.truncated,
@@ -116397,43 +116592,43 @@ ${h.text}`;
   function csvJoin(rows = []) {
     return rows.map((r) => r.map(csvEscape).join(",")).join("\r\n");
   }
-  function localTable(id, local = {}) {
-    const L2 = local || {};
+  function localTable(id, local3 = {}) {
+    const L3 = local3 || {};
     const H3 = (...a) => a;
-    if (id === "pacing" && L2.rows) return [
+    if (id === "pacing" && L3.rows) return [
       H3(t("ui.aia.csScene"), t("ui.aia.csChapter"), t("ui.aia.csWords"), t("ui.aia.csDialogue"), t("ui.aia.csAvgSent"), t("ui.aia.csTempo")),
-      ...L2.rows.map((r) => [r.title, r.chapterTitle, r.words, r.dialogue, r.avgSentence, r.tempo])
+      ...L3.rows.map((r) => [r.title, r.chapterTitle, r.words, r.dialogue, r.avgSentence, r.tempo])
     ];
-    if (id === "arc" && L2.chars) {
+    if (id === "arc" && L3.chars) {
       const rows = [H3(t("ui.aia.csCharacter"), t("ui.aia.csChapter"), t("ui.aia.csCount"))];
-      for (const c of L2.chars) for (const ch of c.perChapter) rows.push([c.name, ch.chapterTitle, ch.count]);
+      for (const c of L3.chars) for (const ch of c.perChapter) rows.push([c.name, ch.chapterTitle, ch.count]);
       return rows;
     }
-    if (id === "words" && L2.rows) return [
+    if (id === "words" && L3.rows) return [
       H3(t("ui.aia.csWord"), t("ui.aia.csCount"), t("ui.aia.csPer10k")),
-      ...L2.rows.map((r) => [r.word, r.count, r.per10k])
+      ...L3.rows.map((r) => [r.word, r.count, r.per10k])
     ];
-    if (id === "conflict" && L2.rows) return [
+    if (id === "conflict" && L3.rows) return [
       H3(t("ui.aia.csScene"), t("ui.aia.csChapter"), t("ui.aia.csWords"), t("ui.aia.csScore"), t("ui.aia.csDensity"), t("ui.aia.csMarkers")),
-      ...L2.rows.map((r) => [r.title, r.chapterTitle, r.words, r.score, r.density, r.hits.map((h) => h.word + gi("times") + h.count).join(" ")])
+      ...L3.rows.map((r) => [r.title, r.chapterTitle, r.words, r.score, r.density, r.hits.map((h) => h.word + gi("times") + h.count).join(" ")])
     ];
-    if (id === "length" && L2.rows) return [
+    if (id === "length" && L3.rows) return [
       H3(t("ui.aia.csScene"), t("ui.aia.csChapter"), t("ui.aia.csWords"), t("ui.aia.csMinutes"), t("ui.aia.csPages")),
-      ...L2.rows.map((r) => [r.title, r.chapterTitle, r.words, r.minutes, r.pages])
+      ...L3.rows.map((r) => [r.title, r.chapterTitle, r.words, r.minutes, r.pages])
     ];
-    if (id === "repeat" && L2.rows) return [
+    if (id === "repeat" && L3.rows) return [
       H3(t("ui.aia.csWord"), t("ui.aia.csCount"), t("ui.aia.csClosest"), t("ui.aia.csScene"), t("ui.aia.csChapter")),
-      ...L2.rows.map((r) => [r.word, r.count, r.closest, r.title, r.chapterTitle])
+      ...L3.rows.map((r) => [r.word, r.count, r.closest, r.title, r.chapterTitle])
     ];
-    if (id === "shipping" && L2.rows) return [
+    if (id === "shipping" && L3.rows) return [
       H3(t("ui.aia.csSideA"), t("ui.aia.csSideB"), t("ui.aia.csSharedScenes"), t("ui.aia.csMentions"), t("ui.aia.csScore")),
-      ...L2.rows.map((r) => [r.a, r.b, r.scenes, r.mentions, r.score])
+      ...L3.rows.map((r) => [r.a, r.b, r.scenes, r.mentions, r.score])
     ];
-    if (id === "screentime" && L2.rows) return [
+    if (id === "screentime" && L3.rows) return [
       H3(t("ui.aia.csCharacter"), t("ui.common.scene2"), t("ui.aia.csMentions"), t("ui.aia.csWords"), t("ui.aia.csShare")),
-      ...L2.rows.map((r) => [r.name, r.scenes, r.mentions, r.words, r.share])
+      ...L3.rows.map((r) => [r.name, r.scenes, r.mentions, r.words, r.share])
     ];
-    if (id === "composition" && L2.rows) return [
+    if (id === "composition" && L3.rows) return [
       H3(
         t("ui.aia.csScene"),
         t("ui.aia.csChapter"),
@@ -116442,14 +116637,14 @@ ${h.text}`;
         COMPOSITION_LABELS.narration + " %",
         t("ui.aia.stCmpLean")
       ),
-      ...L2.rows.map((r) => [r.title, r.chapterTitle, r.dialogue, r.interiority, r.narration, COMPOSITION_LABELS[r.lean] || ""])
+      ...L3.rows.map((r) => [r.title, r.chapterTitle, r.dialogue, r.interiority, r.narration, COMPOSITION_LABELS[r.lean] || ""])
     ];
-    if (id === "score" && L2.criteria) return [
+    if (id === "score" && L3.criteria) return [
       H3(t("ui.aia.csCriterion"), t("ui.aia.csScore"), t("ui.aia.csNote")),
-      ...L2.criteria.map((c) => [c.label, c.score, c.note])
+      ...L3.criteria.map((c) => [c.label, c.score, c.note])
     ];
-    if (isDoctor(id)) return doctorTable(id, L2);
-    if (L2.rows && L2.rows.length) return [H3(t("ui.aia.csTitle"), t("ui.aia.csNote")), ...L2.rows.map((r) => [r.title, r.note || ""])];
+    if (isDoctor(id)) return doctorTable(id, L3);
+    if (L3.rows && L3.rows.length) return [H3(t("ui.aia.csTitle"), t("ui.aia.csNote")), ...L3.rows.map((r) => [r.title, r.note || ""])];
     return null;
   }
   function resultCsv(id, res = {}) {
@@ -117667,7 +117862,7 @@ ${h.text}`;
         return null;
       }
       const base4 = safeName2(state.meta && state.meta.title || state.title) + "-timeline." + fmt2;
-      const L2 = {
+      const L3 = {
         title: t("ui.timeline.lineTime"),
         undated: t("ui.timeline.undated"),
         links: t("ui.timeline.linksHead"),
@@ -117677,7 +117872,7 @@ ${h.text}`;
       const links = liveLinks(data2.links, items);
       if (fmt2 === "png") {
         const { saveCanvasPng: saveCanvasPng2 } = await Promise.resolve().then(() => (init_export_image(), export_image_exports));
-        const out = await saveCanvasPng2(drawTimelineCanvas(items, links, L2), base4, outPath);
+        const out = await saveCanvasPng2(drawTimelineCanvas(items, links, L3), base4, outPath);
         if (out) log("info", "timeline: export done", { fmt: fmt2, to: out });
         return out;
       }
@@ -117692,7 +117887,7 @@ ${h.text}`;
           t("ui.timeline.colKind"),
           t("ui.timeline.colDesc"),
           t("ui.timeline.colRefs")
-        ]) : fmt2 === "md" ? timelineMarkdown(items, links, L2) : timelineHtml(items, links, L2);
+        ]) : fmt2 === "md" ? timelineMarkdown(items, links, L3) : timelineHtml(items, links, L3);
         await kapi.writeFile(dest, text);
       }
       log("info", "timeline: export done", { fmt: fmt2, to: dest });
@@ -117704,7 +117899,7 @@ ${h.text}`;
       return null;
     }
   }
-  function drawTimelineCanvas(items, links, L2 = {}) {
+  function drawTimelineCanvas(items, links, L3 = {}) {
     const dated = items.filter((it) => eventSpan(it));
     let min = Infinity, max2 = -Infinity;
     for (const it of dated) {
@@ -117722,7 +117917,7 @@ ${h.text}`;
     }
     const Wd = 1600, ppu = fitPxPerUnit(min, max2, Wd, PAD_X);
     const X2 = (v2) => PAD_X + (v2 - min) * ppu;
-    const tracks = groupByTrack(dated, L2.defaultTrack);
+    const tracks = groupByTrack(dated, L3.defaultTrack);
     const layout = [];
     let y = AXIS_H + 50;
     for (const tr4 of tracks) {
@@ -117750,7 +117945,7 @@ ${h.text}`;
     g.fillStyle = PRINT.inkTitle;
     g.font = 'bold 20px "Sarabun", sans-serif';
     g.textBaseline = "middle";
-    g.fillText(L2.title || "", 20, 24);
+    g.fillText(L3.title || "", 20, 24);
     const unit = timeUnitLabel(items);
     g.font = '12px "Sarabun", sans-serif';
     for (const tk of boardTicks(min, max2, W - PAD_X * 2)) {
@@ -118370,10 +118565,10 @@ ${h.text}`;
     const moving = cards.findIndex((c) => c.id === sceneId);
     if (moving >= 0) cards.splice(moving, 1);
     const at = Math.max(0, Math.min(index, cards.length));
-    const me = findScene(scenes, sceneId);
+    const me2 = findScene(scenes, sceneId);
     cards.splice(at, 0, { id: sceneId });
     cards.forEach((c, i5) => {
-      const hit = c.id === sceneId ? me : findScene(scenes, c.id);
+      const hit = c.id === sceneId ? me2 : findScene(scenes, c.id);
       if (hit) hit.row.kbOrder = i5;
     });
   }
@@ -118733,9 +118928,9 @@ ${h.text}`;
     try {
       kapi.onLocalWrite((p) => {
         if (!board || !p) return;
-        const norm5 = String(p).replace(/\\/g, "/");
+        const norm6 = String(p).replace(/\\/g, "/");
         const dp = String(board.draftPath || "").replace(/\\/g, "/");
-        if (dp && norm5.startsWith(dp) && /\/(scenes|draft)\.json$/.test(norm5)) scheduleSync(true);
+        if (dp && norm6.startsWith(dp) && /\/(scenes|draft)\.json$/.test(norm6)) scheduleSync(true);
       });
     } catch {
     }
@@ -119189,7 +119384,7 @@ ${h.text}`;
     let nCh = 0, nSc = 0, words = 0;
     const sceneRows = [];
     const sceneStatuses = [];
-    const sceneTexts = [];
+    const sceneTexts2 = [];
     const chapterWords = [];
     for (const secName of await kapi.listDirs(root)) {
       if (stale2()) return false;
@@ -119218,7 +119413,7 @@ ${h.text}`;
               words += w;
               cw += w;
               sceneRows.push({ title: sc.title, ch: ch.title, file, flag: sc.flag });
-              sceneTexts.push({ id: sc.id, title: sc.title, text: body });
+              sceneTexts2.push({ id: sc.id, title: sc.title, text: body });
             } catch {
             }
           }
@@ -119299,7 +119494,7 @@ ${h.text}`;
       try {
         const { analyzeWords: analyzeWords2 } = await Promise.resolve().then(() => (init_ai_analyze(), ai_analyze_exports));
         const chars3 = allEnts.filter((e) => e.cat === "characters").map((e) => ({ name: e.name, aliases: e.aliases || [] }));
-        const res = analyzeWords2(sceneTexts, { top: 30, characters: chars3 });
+        const res = analyzeWords2(sceneTexts2, { top: 30, characters: chars3 });
         if (res.rows.length) {
           const wpanel = el("div", "dash-apanel dash-words");
           wpanel.append(el("div", "dash-apanel-title", t("ui.dash.topWords")));
@@ -120743,14 +120938,14 @@ ${h.text}`;
     if (exact) return exact;
     const sameText = list3.find((s) => navNormLabel(s.label) === want);
     if (sameText) return sameText;
-    const tw = navTightLabel(row4.label);
-    const sameTight = list3.find((s) => navTightLabel(s.label) === tw);
+    const tw2 = navTightLabel(row4.label);
+    const sameTight = list3.find((s) => navTightLabel(s.label) === tw2);
     if (sameTight) return sameTight;
-    const head2 = tw.slice(0, 12);
+    const head2 = tw2.slice(0, 12);
     if (!head2) return null;
     return list3.find((s) => {
       const st = navTightLabel(s.label);
-      return st.startsWith(head2) || tw.startsWith(st.slice(0, 12));
+      return st.startsWith(head2) || tw2.startsWith(st.slice(0, 12));
     }) || null;
   }
   var NAV_GROUPS, NAV_KIND_GROUP, NAV_GROUP_KEYS, NAV_GROUP_ICON, NAV_FLAG_DEFS, NAV_FLAG_IDS, TODO_RE, NAV_PER_PAGE_MIN, NAV_PER_PAGE_MAX, NAV_PER_PAGE_DEFAULT;
@@ -121359,8 +121554,8 @@ ${h.text}`;
     return { journal: { ...j, entries: keep }, dropped };
   }
   function relPath(p, root) {
-    const norm5 = (s) => String(s || "").replace(/\\/g, "/");
-    const a = norm5(p), b = norm5(root).replace(/\/+$/, "");
+    const norm6 = (s) => String(s || "").replace(/\\/g, "/");
+    const a = norm6(p), b = norm6(root).replace(/\/+$/, "");
     return b && a.toLowerCase().startsWith(b.toLowerCase() + "/") ? a.slice(b.length + 1) : a;
   }
   function describe(entry, root) {
@@ -123824,6 +124019,7 @@ ${h.text}`;
     currentFmtMode: () => currentFmtMode,
     fabContextItems: () => fabContextItems,
     fmtbarContextItems: () => fmtbarContextItems,
+    isSimpleMode: () => isSimpleMode,
     labelOf: () => labelOf2,
     layoutToolbarOverflow: () => layoutToolbarOverflow,
     openFmtbarSettings: () => openFmtbarSettings,
@@ -123845,18 +124041,42 @@ ${h.text}`;
       return k.id && isConfigurable(k.id) ? k.id : null;
     });
   }
+  function isSimpleMode() {
+    return !!(state.settings && state.settings.simpleMode);
+  }
+  function ensureSimpleExit(bar, simple) {
+    let b = bar.querySelector(":scope > #tb-simple-exit");
+    if (!b && !simple) return;
+    if (!b) {
+      b = el("button", "tb k-simple-exit");
+      b.id = "tb-simple-exit";
+      b.type = "button";
+      b.append(icon("view-grid", 16), el("span", "k-simple-exit-lbl", t("ui.simple.exitLabel")));
+      b.title = t("ui.simple.exitTip");
+      b.onclick = async () => {
+        const { handleCommand: handleCommand2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+        handleCommand2("toggle-simple-mode");
+      };
+      const ovf = bar.querySelector(":scope > #tb-overflow");
+      if (ovf) bar.insertBefore(b, ovf);
+      else bar.append(b);
+    }
+    b.hidden = !simple;
+  }
   function applyToolbarConfig(cfg) {
     const conf = normalizeToolbar(cfg ?? (state.settings && state.settings.toolbar));
-    const vis = (id) => !conf.hidden[id];
+    const simple = isSimpleMode();
+    document.body.classList.toggle("k-simple", simple);
+    const vis = (id) => !conf.hidden[id] && simpleMainVisible(simple, id);
     let found2 = false;
     for (const sel2 of TB_MAIN_HOSTS) {
       const bar = document.querySelector(sel2);
       if (!bar) continue;
       found2 = true;
-      const kids = [...bar.children];
+      const kids3 = [...bar.children];
       const seq3 = barSeq(bar);
       const show = layoutToolbar(seq3.map((x) => x ?? " keep"), (x) => x === " keep" ? true : vis(x));
-      kids.forEach((k, i5) => {
+      kids3.forEach((k, i5) => {
         if (seq3[i5] === "sep") {
           k.classList.toggle("tb-hidden", !show[i5]);
           return;
@@ -123864,6 +124084,7 @@ ${h.text}`;
         if (!seq3[i5]) return;
         k.classList.toggle("tb-hidden", !vis(seq3[i5]));
       });
+      if (bar.id === "toolbar") ensureSimpleExit(bar, simple);
     }
     applyFmtbarConfig();
     scheduleToolbarOverflow();
@@ -123892,10 +124113,15 @@ ${h.text}`;
   function scheduleToolbarOverflow() {
     if (typeof requestAnimationFrame !== "function") return;
     cancelAnimationFrame(OVF.job);
-    OVF.job = requestAnimationFrame(() => {
+    clearTimeout(OVF.tmo);
+    const run3 = () => {
+      cancelAnimationFrame(OVF.job);
+      clearTimeout(OVF.tmo);
       OVF.job = 0;
       layoutToolbarOverflow();
-    });
+    };
+    OVF.job = requestAnimationFrame(run3);
+    OVF.tmo = setTimeout(run3, 120);
   }
   function layoutToolbarOverflow() {
     const bar = document.querySelector("#toolbar");
@@ -123912,15 +124138,16 @@ ${h.text}`;
       const m = getComputedStyle(k);
       return k.getBoundingClientRect().width + (parseFloat(m.marginLeft) || 0) + (parseFloat(m.marginRight) || 0);
     };
-    const avail = bar.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0) - outerW(ob) - gap;
-    const kids = [...bar.children].filter((k) => k !== ob && k.getClientRects().length > 0);
-    const items = kids.map((k) => ({
+    const obW = ob.getBoundingClientRect().width + (parseFloat(getComputedStyle(ob).marginRight) || 0);
+    const avail = bar.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0) - obW - gap;
+    const kids3 = [...bar.children].filter((k) => k !== ob && k.getClientRects().length > 0);
+    const items = kids3.map((k) => ({
       id: k.id || "",
       w: outerW(k) + gap,
       locked: !k.id || !isConfigurable(k.id)
     }));
     const hide2 = new Set(overflowPlan(items, avail));
-    for (const k of kids) if (k.id && hide2.has(k.id)) k.classList.add("tb-ovf");
+    for (const k of kids3) if (k.id && hide2.has(k.id)) k.classList.add("tb-ovf");
     const vis = [...bar.children].filter((k) => k !== ob && k.getClientRects().length > 0);
     for (let i5 = vis.length - 1; i5 >= 0 && vis[i5].classList.contains("sep"); i5--) vis[i5].classList.add("tb-ovf");
     OVF.list = [...hide2];
@@ -123944,7 +124171,8 @@ ${h.text}`;
       for (const b of ovf) items.push(mk2(b));
     }
     const conf = normalizeToolbar(state.settings && state.settings.toolbar);
-    const hid = allButtonIds().filter((id) => conf.hidden[id] && byId(id) && !OVF.list.includes(id) && byId(id).closest("#toolbar"));
+    const simple = isSimpleMode();
+    const hid = allButtonIds().filter((id) => (conf.hidden[id] || !simpleMainVisible(simple, id)) && byId(id) && !OVF.list.includes(id) && byId(id).closest("#toolbar"));
     if (hid.length) {
       if (items.length) items.push("-");
       items.push({ label: t("ui.toolbar.overflowHidden"), disabled: true });
@@ -123965,10 +124193,10 @@ ${h.text}`;
     {
       const rank = /* @__PURE__ */ new Map();
       TOOLBAR_GROUPS.forEach((g, gi2) => g.buttons.forEach((b, bi) => rank.set(b.id, gi2 * 1e3 + bi)));
-      const kids = [...bar.children].filter((k) => k.id && rank.has(k.id));
-      const sorted = [...kids].sort((x, y) => rank.get(x.id) - rank.get(y.id));
-      if (kids.length && sorted.some((k, i5) => k !== kids[i5])) {
-        const anchor = kids[kids.length - 1].nextSibling;
+      const kids3 = [...bar.children].filter((k) => k.id && rank.has(k.id));
+      const sorted = [...kids3].sort((x, y) => rank.get(x.id) - rank.get(y.id));
+      if (kids3.length && sorted.some((k, i5) => k !== kids3[i5])) {
+        const anchor = kids3[kids3.length - 1].nextSibling;
         for (const k of sorted) bar.insertBefore(k, anchor);
       }
     }
@@ -123993,11 +124221,12 @@ ${h.text}`;
   function applyFmtbarConfig(cfg, mode) {
     const bar = document.querySelector(TB_FMT_HOST);
     if (!bar) return false;
-    const conf = cfg ?? (state.settings && state.settings.fmtbar);
+    let conf = cfg ?? (state.settings && state.settings.fmtbar);
+    if (isSimpleMode()) conf = simpleFmtbar(normalizeFmtbar(conf, state.settings && state.settings.toolbar), fmtbarConfigurableIds());
     const m = fmtMode(mode ?? currentFmtMode());
-    const kids = [...bar.children];
+    const kids3 = [...bar.children];
     const { show, grey } = layoutFmtbar(barSeq(bar), conf, m);
-    kids.forEach((k, i5) => {
+    kids3.forEach((k, i5) => {
       const isSep = k.classList.contains("sep");
       if (isSep || k.id && isConfigurable(k.id)) k.classList.toggle("tb-hidden", !show[i5]);
       k.classList.toggle("tb-na", !!grey[i5]);
@@ -124408,6 +124637,7 @@ ${h.text}`;
       init_fab_config();
       init_icons();
       init_ui();
+      init_simple_mode();
       btn = (id) => document.getElementById(id);
       TB_FMT_HOST = ".k-fmtbar:not(.planner-fmtbar)";
       TB_HOSTS = ["#toolbar", TB_FMT_HOST];
@@ -126137,7 +126367,7 @@ ${h.text}`;
     if (ob.gel === "color" && ob.gelColor) return safeCssColor(ob.gelColor, "#ffd27f");
     return cctToHex((ob.cct || 5600) + gelShift(ob.gel));
   }
-  function label(L2, x, y, text, k, P2, o = {}) {
+  function label(L3, x, y, text, k, P2, o = {}) {
     if (!text) return null;
     const n2 = sv("text", {
       x,
@@ -126151,14 +126381,14 @@ ${h.text}`;
       "stroke-linejoin": "round",
       "font-weight": o.bold ? 600 : 400,
       class: "fp-label"
-    }, L2);
+    }, L3);
     n2.textContent = text;
     return n2;
   }
   function entityR(ob, k) {
     return Math.max(ob.size || 0.35, 9 * k);
   }
-  function drawEntity2(g, L2, ob, p, k, P2, inFrame) {
+  function drawEntity2(g, L3, ob, p, k, P2, inFrame) {
     const r = entityR(ob, k), col = ob.color || P2.fg;
     if (inFrame) sv("circle", { cx: p.x, cy: p.y, r: r + 4 * k, fill: "none", stroke: P2.accent, "stroke-width": 2, "vector-effect": "non-scaling-stroke", class: "fp-framed" }, g);
     sv("circle", { cx: p.x, cy: p.y, r, fill: col, stroke: P2.bg, "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }, g);
@@ -126177,17 +126407,17 @@ ${h.text}`;
     const ini = sv("text", { x: p.x, y: p.y + r * 0.36, "font-size": r * 1.05, "text-anchor": "middle", fill: P2.onColor, "font-weight": 600, "pointer-events": "none" }, g);
     ini.textContent = Array.from(name5.trim())[0] || "";
     const lx = p.x - Math.cos(a) * (r + 12 * k), ly = p.y - Math.sin(a) * (r + 12 * k) + 4 * k;
-    label(L2, lx, ly, name5, k, P2);
+    label(L3, lx, ly, name5, k, P2);
   }
-  function drawCamera(g, L2, ob, p, k, P2, on2) {
+  function drawCamera(g, L3, ob, p, k, P2, on2) {
     const col = on2 ? ob.color || P2.accent : P2.dim;
     const inner = sv("g", { transform: `translate(${p.x} ${p.y}) rotate(${p.rot})` }, g);
     sv("rect", { x: -12 * k, y: -8 * k, width: 17 * k, height: 16 * k, rx: 2 * k, fill: col, stroke: P2.bg, "stroke-width": 1.2, "vector-effect": "non-scaling-stroke" }, inner);
     sv("path", { d: `M${5 * k} ${-5 * k}L${13 * k} ${-9 * k}V${9 * k}L${5 * k} ${5 * k}Z`, fill: col, stroke: P2.bg, "stroke-width": 1.2, "vector-effect": "non-scaling-stroke" }, inner);
     if (ob.support === "dolly" || ob.support === "slider") sv("rect", { x: -14 * k, y: -11 * k, width: 21 * k, height: 22 * k, fill: "none", stroke: col, "stroke-width": 1, "stroke-dasharray": "2 2", "vector-effect": "non-scaling-stroke" }, inner);
-    label(L2, p.x, p.y - 15 * k, (ob.label || "?") + " \xB7 " + Math.round(ob.lens || 0) + "mm", k, P2, { bold: on2, fill: on2 ? col : P2.fg });
+    label(L3, p.x, p.y - 15 * k, (ob.label || "?") + " \xB7 " + Math.round(ob.lens || 0) + "mm", k, P2, { bold: on2, fill: on2 ? col : P2.fg });
   }
-  function drawLight(g, L2, ob, p, k, P2) {
+  function drawLight(g, L3, ob, p, k, P2) {
     const col = lightColor(ob);
     const inner = sv("g", { transform: `translate(${p.x} ${p.y}) rotate(${p.rot})` }, g);
     if (ob.beam >= 359) {
@@ -126197,10 +126427,10 @@ ${h.text}`;
     } else {
       sv("path", { d: `M${-9 * k} ${-6 * k}H${2 * k}L${9 * k} ${-10 * k}V${10 * k}L${2 * k} ${6 * k}H${-9 * k}Z`, fill: col, stroke: P2.bg, "stroke-width": 1.2, "vector-effect": "non-scaling-stroke" }, inner);
     }
-    label(L2, p.x, p.y - 14 * k, ob.label || t(labelKey("light", ob.kind)), k, P2, { size: 10 });
+    label(L3, p.x, p.y - 14 * k, ob.label || t(labelKey("light", ob.kind)), k, P2, { size: 10 });
   }
-  function drawShape(L2, ob, p, k, P2) {
-    const g = sv("g", { "data-id": ob.id, class: "fp-obj fp-shape fp-shape-" + (ob.kind || ob.type) }, L2);
+  function drawShape(L3, ob, p, k, P2) {
+    const g = sv("g", { "data-id": ob.id, class: "fp-obj fp-shape fp-shape-" + (ob.kind || ob.type) }, L3);
     const fill3 = ob.fill || P2.chip, stroke2 = ob.stroke || P2.fg;
     if (ob.type === "track") {
       const pts = worldPts(ob, p);
@@ -126277,10 +126507,10 @@ ${h.text}`;
     if (ob.label) label(g, p.x, p.y + 4 * k, ob.label, k, P2, { size: 10 });
     return g;
   }
-  function handle(L2, x, y, h, k, P2, shape = "circle") {
+  function handle(L3, x, y, h, k, P2, shape = "circle") {
     const a = { "data-h": h, class: "fp-h fp-h-" + h.split(":")[0], fill: P2.bg, stroke: P2.accent, "stroke-width": 1.6, "vector-effect": "non-scaling-stroke" };
-    if (shape === "rect") return sv("rect", { x: x - 5 * k, y: y - 5 * k, width: 10 * k, height: 10 * k, ...a }, L2);
-    return sv("circle", { cx: x, cy: y, r: 5.5 * k, ...a }, L2);
+    if (shape === "rect") return sv("rect", { x: x - 5 * k, y: y - 5 * k, width: 10 * k, height: 10 * k, ...a }, L3);
+    return sv("circle", { cx: x, cy: y, r: 5.5 * k, ...a }, L3);
   }
   function objRadius(ob, k) {
     if (ob.type === "entity") return entityR(ob, k);
@@ -126288,16 +126518,16 @@ ${h.text}`;
     if (ob.type === "light") return 11 * k;
     return Math.hypot(ob.w || 1, ob.h || 1) / 2;
   }
-  function drawSelection(L2, plan, id, poses, k, P2) {
+  function drawSelection(L3, plan, id, poses, k, P2) {
     const ob = objById(plan, id), p = poses.get(id);
     if (!ob || !p) return;
     if (ob.pts) {
       const pts = worldPts(ob, p);
-      pts.forEach((q2, i5) => handle(L2, q2.x, q2.y, "v:" + i5, k, P2, "rect"));
+      pts.forEach((q2, i5) => handle(L3, q2.x, q2.y, "v:" + i5, k, P2, "rect"));
       return;
     }
     const R2 = objRadius(ob, k);
-    sv("circle", { cx: p.x, cy: p.y, r: R2 + 5 * k, fill: "none", stroke: P2.accent, "stroke-width": 1.2, "stroke-dasharray": "4 3", "vector-effect": "non-scaling-stroke", "pointer-events": "none" }, L2);
+    sv("circle", { cx: p.x, cy: p.y, r: R2 + 5 * k, fill: "none", stroke: P2.accent, "stroke-width": 1.2, "stroke-dasharray": "4 3", "vector-effect": "non-scaling-stroke", "pointer-events": "none" }, L3);
     const a = p.rot * Math.PI / 180;
     const rr = R2 + 22 * k;
     sv("line", {
@@ -126309,13 +126539,13 @@ ${h.text}`;
       "stroke-width": 1,
       "vector-effect": "non-scaling-stroke",
       "pointer-events": "none"
-    }, L2);
-    handle(L2, p.x + Math.cos(a) * rr, p.y + Math.sin(a) * rr, "rot", k, P2);
+    }, L3);
+    handle(L3, p.x + Math.cos(a) * rr, p.y + Math.sin(a) * rr, "rot", k, P2);
     const c = coneOf(ob);
-    if (c && c.range > 0) handle(L2, p.x + Math.cos(a) * c.range, p.y + Math.sin(a) * c.range, "range", k, P2, "rect");
+    if (c && c.range > 0) handle(L3, p.x + Math.cos(a) * c.range, p.y + Math.sin(a) * c.range, "range", k, P2, "rect");
     if (ob.type === "shape") {
       const cx2 = (ob.w || 1) / 2, cy2 = (ob.h || 1) / 2;
-      handle(L2, p.x + cx2 * Math.cos(a) - cy2 * Math.sin(a), p.y + cx2 * Math.sin(a) + cy2 * Math.cos(a), "size", k, P2, "rect");
+      handle(L3, p.x + cx2 * Math.cos(a) - cy2 * Math.sin(a), p.y + cx2 * Math.sin(a) + cy2 * Math.cos(a), "size", k, P2, "rect");
     }
   }
   function drawPreview(svg, cam, W, H3) {
@@ -127361,11 +127591,11 @@ ${h.text}`;
     });
   }
   async function sceneLines(file) {
-    const { parseMdFile: parseMdFile25, inlinePlainText: inlinePlainText5 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile27, inlinePlainText: inlinePlainText6 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { liveBody: liveBody2 } = await Promise.resolve().then(() => (init_tab_bridge(), tab_bridge_exports));
     let body = "";
     try {
-      body = parseMdFile25(await kapi.readFile(file)).body || "";
+      body = parseMdFile27(await kapi.readFile(file)).body || "";
     } catch {
     }
     body = liveBody2(file, body);
@@ -127375,7 +127605,7 @@ ${h.text}`;
       let s = raw.replace(/<!--[\s\S]*?-->/g, "").trim();
       if (!s || /^---+$/.test(s) || /^!\[/.test(s)) continue;
       s = s.slice(prefixLen(s)).replace(/^>\s*/, "").replace(/^#{1,6}\s+/, "").replace(/^(?:[-*+]|\d+[.)])\s+/, "").trim();
-      s = inlinePlainText5 ? inlinePlainText5(s) : s;
+      s = inlinePlainText6 ? inlinePlainText6(s) : s;
       s = s.trim();
       if (!s) continue;
       const nth = seen.get(s) || 0;
@@ -127642,8 +127872,8 @@ ${h.text}`;
     if (file) {
       excerpt = excerptAround(await sceneLines(file), b.ref && b.ref.kind === "scene" ? b.ref : null);
       try {
-        const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
-        const m = parseMdFile25(await kapi.readFile(file)).meta || {};
+        const { parseMdFile: parseMdFile27 } = await Promise.resolve().then(() => __toESM(require_md()));
+        const m = parseMdFile27(await kapi.readFile(file)).meta || {};
         sceneInfo = [plan.scene.title, m.storyDate, m.synopsis, m.pov && "POV: " + m.pov, m.emotion].filter(Boolean).join(" \xB7 ");
       } catch {
         sceneInfo = plan.scene.title || "";
@@ -128209,6 +128439,17 @@ ${h.text}`;
     }
   });
 
+  // src/scene-format-default.js
+  function defaultSceneFormat(siblings, template) {
+    const kinds = new Set((Array.isArray(siblings) ? siblings : []).map((f) => f === "screenplay" ? "screenplay" : "prose"));
+    if (kinds.size === 1) return [...kinds][0];
+    return template === "screenplay" ? "screenplay" : "prose";
+  }
+  var init_scene_format_default = __esm({
+    "src/scene-format-default.js"() {
+    }
+  });
+
   // src/scene-file-name.js
   async function freeSceneFileName(dPath, folderName, title2, taken = /* @__PURE__ */ new Set()) {
     return freeSceneFile(kapi, dPath, folderName, String(title2 == null ? "" : title2), taken);
@@ -128256,6 +128497,19 @@ ${h.text}`;
     toggleSceneFlag: () => toggleSceneFlag,
     trashVisSidecar: () => trashVisSidecar
   });
+  async function siblingFormat(dPath, ch, list3) {
+    const seen = [];
+    for (const row4 of list3 || []) {
+      try {
+        const f = await kapi.join(dPath, "Chapters", ch.folderName, row4.fileName);
+        const { meta: meta2 } = (0, import_md12.parseMdFile)(await kapi.readFile(f));
+        seen.push(meta2 && meta2.format === "screenplay" ? "screenplay" : "prose");
+      } catch {
+      }
+      if (new Set(seen).size > 1) break;
+    }
+    return defaultSceneFormat(seen, state.meta && state.meta.template);
+  }
   async function renameScene(dPath, ch, sc) {
     const title2 = await ask(t("ui.scene.nameSceneNew"), { value: sc.title });
     if (!title2) return;
@@ -128585,7 +128839,8 @@ ${h.text}`;
         synopsis: ""
       };
       file = await kapi.join(dPath, "Chapters", ch.folderName, fileName);
-      const meta2 = { title: title2, type: "scene", format: "prose", pov: "", tags: [], ...opts.meta || {} };
+      const format3 = opts.meta && opts.meta.format || await siblingFormat(dPath, ch, list3);
+      const meta2 = { title: title2, type: "scene", format: format3, pov: "", tags: [], ...opts.meta || {} };
       await writeMdKeepingComments(kapi, file, (0, import_md12.dumpMdFile)(meta2, opts.body || ""), opts.commentsFrom || null);
       d.chapters[ch.guid] = [...list3, sc];
     });
@@ -128881,6 +129136,7 @@ ${h.text}`;
       init_vis_core();
       init_icons();
       init_json_store();
+      init_scene_format_default();
       init_scene_file_name();
       init_scene_file_name();
       init_disk_sync();
@@ -129476,9 +129732,9 @@ ${h.text}`;
     const I = emInst(view2);
     if (I !== EM.detached) EM.cur = I;
     const next = (list3 || []).filter((e) => Number.isFinite(e.pos)).map((e) => ({ pos: e.pos, severity: e.severity === "error" ? "error" : "warn" }));
-    const same = next.length === I.list.length && next.every((e, i5) => e.pos === I.list[i5].pos && e.severity === I.list[i5].severity);
+    const same2 = next.length === I.list.length && next.every((e, i5) => e.pos === I.list[i5].pos && e.severity === I.list[i5].severity);
     I.list = next;
-    return !same;
+    return !same2;
   }
   function errDecos(I, doc3) {
     if (!_errOn || !doc3 || !I.list.length) return DecorationSet.empty;
@@ -130955,13 +131211,13 @@ ${h.text}`;
   }
   function lerpCam(a, b, t3) {
     const k = ease(t3);
-    const L2 = (x, y) => x + (y - x) * k;
+    const L3 = (x, y) => x + (y - x) * k;
     const sa = clampScale(a.scale), sb = clampScale(b.scale);
     return {
       ...b,
-      tx: L2(a.tx, b.tx),
-      ty: L2(a.ty, b.ty),
-      tz: L2(a.tz, b.tz),
+      tx: L3(a.tx, b.tx),
+      ty: L3(a.ty, b.ty),
+      tz: L3(a.tz, b.tz),
       scale: sa * Math.pow(sb / sa, k),
       rx: lerpAngle(a.rx, b.rx, k),
       ry: lerpAngle(a.ry, b.ry, k)
@@ -131578,8 +131834,8 @@ ${h.text}`;
     const fp = f || skyFocal(w, h);
     const v2 = { x: (X2 - w / 2) / fp, y: (Y - h / 2) / fp, z: 1 };
     const d = unrot3(v2, rot ? rot.rx : 0, rot ? rot.ry : 0);
-    const L2 = Math.hypot(d.x, d.y, d.z) || 1;
-    return { x: d.x / L2, y: d.y / L2, z: d.z / L2 };
+    const L3 = Math.hypot(d.x, d.y, d.z) || 1;
+    return { x: d.x / L3, y: d.y / L3, z: d.z / L3 };
   }
   function skyProject(d, w, h, rot, f) {
     const fp = f || skyFocal(w, h);
@@ -131661,8 +131917,8 @@ ${h.text}`;
           let col = mix(c2, c1, clamp01(0.5 + e * 0.8));
           const { u, v: v2 } = equirectUV(d);
           const gu = Math.abs(u * 36 % 1 - 0.5), gv = Math.abs(v2 * 18 % 1 - 0.5);
-          const L2 = Math.max(clamp01((gu - 0.44) * 12), clamp01((gv - 0.44) * 12));
-          if (L2 > 0) col = mix(col, line, L2 * 0.55 * (1 - Math.abs(e) * 0.6));
+          const L3 = Math.max(clamp01((gu - 0.44) * 12), clamp01((gv - 0.44) * 12));
+          if (L3 > 0) col = mix(col, line, L3 * 0.55 * (1 - Math.abs(e) * 0.6));
           return col;
         };
       }
@@ -131702,8 +131958,8 @@ ${h.text}`;
       mix = (a, b, t3) => [a[0] + (b[0] - a[0]) * t3, a[1] + (b[1] - a[1]) * t3, a[2] + (b[2] - a[2]) * t3];
       clamp01 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
       BAND = (() => {
-        const L2 = Math.hypot(0.35, 1, 0.2);
-        return { x: 0.35 / L2, y: 1 / L2, z: 0.2 / L2 };
+        const L3 = Math.hypot(0.35, 1, 0.2);
+        return { x: 0.35 / L3, y: 1 / L3, z: 0.2 / L3 };
       })();
     }
   });
@@ -131803,8 +132059,8 @@ ${h.text}`;
   function capRect(pr, cellArea, max2) {
     const area = (pr.u1 - pr.u0) * (pr.v1 - pr.v0);
     if (area / cellArea <= max2) return pr;
-    const L2 = Math.sqrt(max2 * cellArea) / 2;
-    return { ...pr, u0: Math.max(pr.u0, pr.mu - L2), u1: Math.min(pr.u1, pr.mu + L2), v0: Math.max(pr.v0, pr.mv - L2), v1: Math.min(pr.v1, pr.mv + L2) };
+    const L3 = Math.sqrt(max2 * cellArea) / 2;
+    return { ...pr, u0: Math.max(pr.u0, pr.mu - L3), u1: Math.min(pr.u1, pr.mu + L3), v0: Math.max(pr.v0, pr.mv - L3), v1: Math.min(pr.v1, pr.mv + L3) };
   }
   function gridLayer(w, h) {
     if (!_gridCv || _gridCv.width !== w || _gridCv.height !== h) {
@@ -132146,8 +132402,8 @@ ${h.text}`;
       c.fillRect(0, 0, w, h);
     }
     if (extra.showGrid !== false && !extra.mode3D && pr) {
-      const L2 = gridLayer(w, h);
-      const gc = L2.getContext("2d");
+      const L3 = gridLayer(w, h);
+      const gc = L3.getContext("2d");
       gc.setTransform(1, 0, 0, 1, 0, 0);
       gc.clearRect(0, 0, w, h);
       const used = drawGrid(gc, pj, pr, sc.grid, gridColorOf(sc, theme.grid));
@@ -132168,7 +132424,7 @@ ${h.text}`;
           gc.globalCompositeOperation = "source-over";
         }
       }
-      c.drawImage(L2, 0, 0);
+      c.drawImage(L3, 0, 0);
     }
     c.restore();
   }
@@ -132356,9 +132612,9 @@ ${h.text}`;
     d.style.setProperty("--dot", color || "var(--dim)");
     return d;
   }
-  function row3(label2, ...kids) {
+  function row3(label2, ...kids3) {
     const r = el("label", "net-side-row");
-    r.append(el("span", "net-side-lbl", label2), ...kids);
+    r.append(el("span", "net-side-lbl", label2), ...kids3);
     return r;
   }
   function slider(min, max2, step, value, onInput, title2) {
@@ -132882,9 +133138,9 @@ ${h.text}`;
     pop.hidden = true;
     const ca = new Set(CAT_ARR.slice(0, 4)), tf2 = /* @__PURE__ */ new Set([...REL_TYPES.map((t3) => t3.key), "co-occur", "scene-link", "ent-scene"]);
     const sep = () => mk2("span", "net-tbar-sep");
-    const section = (titleKey, ...kids) => {
+    const section = (titleKey, ...kids3) => {
       const s = mk2("div", "net-pop-sec");
-      s.append(mk2("div", "net-pop-title", t(titleKey)), ...kids);
+      s.append(mk2("div", "net-pop-title", t(titleKey)), ...kids3);
       return s;
     };
     const cr = mk2("div", "net-tbar-row net-tbar-cats");
@@ -133092,11 +133348,11 @@ ${h.text}`;
     c.fillText(text, x, cy2);
     c.restore();
     if (!badge) return;
-    const tw = c.measureText(text).width;
+    const tw2 = c.measureText(text).width;
     const bf = fontSize * 0.74;
     c.font = "600 " + bf + 'px "Segoe UI","Leelawadee UI",sans-serif';
     const bw = c.measureText(badge).width + bf * 1.1, bh = bf * 1.55;
-    const bx = x + tw + fontSize * 0.45;
+    const bx = x + tw2 + fontSize * 0.45;
     c.fillStyle = hexToRgba(THEME.canvas.labelBg, 0.85);
     roundRect3(c, bx, cy2 - bh / 2, bw, bh, bh / 2);
     c.fill();
@@ -133110,9 +133366,9 @@ ${h.text}`;
   function drawEdgeLabel(c, text, x, y, fontSize, ring) {
     c.font = fontSize + 'px "Segoe UI","Leelawadee UI",sans-serif';
     const m = c.measureText(text);
-    const tw = m.width + fontSize * 1.1, th = fontSize * 1.75;
+    const tw2 = m.width + fontSize * 1.1, th = fontSize * 1.75;
     c.fillStyle = hexToRgba(THEME.canvas.labelBg, 0.82);
-    roundRect3(c, x - tw / 2, y - th / 2, tw, th, th / 2);
+    roundRect3(c, x - tw2 / 2, y - th / 2, tw2, th, th / 2);
     c.fill();
     if (ring) {
       c.strokeStyle = hexToRgba(ring, 0.8);
@@ -134140,12 +134396,12 @@ ${h.text}`;
             if (rel && alpha > 0.05) {
               const ra = this._nodeR(e.a) * Math.min(1.6, pa.f), rb = this._nodeR(e.b) * Math.min(1.6, pb.f);
               const wa = ra * (hot ? 0.5 : 0.34), wb = rb * (hot ? 0.5 : 0.34);
-              const N = 14, L2 = [], R2 = [];
+              const N = 14, L3 = [], R2 = [];
               for (let i5 = 0; i5 <= N; i5++) {
                 const t3 = i5 / N, p = qpt(pa, ctl, pb, t3), q3 = qpt(pa, ctl, pb, Math.min(1, t3 + 0.02)), q0 = qpt(pa, ctl, pb, Math.max(0, t3 - 0.02));
                 const dx = q3.x - q0.x, dy = q3.y - q0.y, dl = Math.hypot(dx, dy) || 1;
                 const wv2 = (wa * (1 - t3) + wb * t3) * (0.35 + 0.65 * Math.pow(Math.abs(t3 - 0.5) * 2, 1.6));
-                L2.push({ x: p.x - dy / dl * wv2, y: p.y + dx / dl * wv2 });
+                L3.push({ x: p.x - dy / dl * wv2, y: p.y + dx / dl * wv2 });
                 R2.push({ x: p.x + dy / dl * wv2, y: p.y - dx / dl * wv2 });
               }
               const g = c.createLinearGradient(pa.x, pa.y, pb.x, pb.y);
@@ -134158,8 +134414,8 @@ ${h.text}`;
               c.globalAlpha = alpha * (hot ? 1 : 0.8);
               c.fillStyle = g;
               c.beginPath();
-              c.moveTo(L2[0].x, L2[0].y);
-              for (const p of L2) c.lineTo(p.x, p.y);
+              c.moveTo(L3[0].x, L3[0].y);
+              for (const p of L3) c.lineTo(p.x, p.y);
               for (let i5 = R2.length - 1; i5 >= 0; i5--) c.lineTo(R2[i5].x, R2[i5].y);
               c.closePath();
               c.fill();
@@ -134192,14 +134448,14 @@ ${h.text}`;
           if (edgeLbls.length) {
             edgeLbls.sort((a, b) => b.pri - a.pri);
             const taken = labelOk.boxes || [];
-            for (const L2 of edgeLbls) {
-              c.font = L2.fs + 'px "Segoe UI","Leelawadee UI",sans-serif';
-              const bw = (c.measureText(L2.lbl).width + L2.fs * 1.1) * s, bh = L2.fs * 1.75 * s;
-              const b = { x0: L2.mid.x * s - bw / 2, x1: L2.mid.x * s + bw / 2, y0: L2.mid.y * s - bh / 2, y1: L2.mid.y * s + bh / 2 };
-              if (this._declutter && L2.pri < 1e5 && taken.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0)) continue;
+            for (const L3 of edgeLbls) {
+              c.font = L3.fs + 'px "Segoe UI","Leelawadee UI",sans-serif';
+              const bw = (c.measureText(L3.lbl).width + L3.fs * 1.1) * s, bh = L3.fs * 1.75 * s;
+              const b = { x0: L3.mid.x * s - bw / 2, x1: L3.mid.x * s + bw / 2, y0: L3.mid.y * s - bh / 2, y1: L3.mid.y * s + bh / 2 };
+              if (this._declutter && L3.pri < 1e5 && taken.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0)) continue;
               taken.push(b);
-              c.globalAlpha = L2.alpha;
-              drawEdgeLabel(c, L2.lbl, L2.mid.x, L2.mid.y, L2.fs, L2.ring);
+              c.globalAlpha = L3.alpha;
+              drawEdgeLabel(c, L3.lbl, L3.mid.x, L3.mid.y, L3.fs, L3.ring);
               c.globalAlpha = 1;
             }
           }
@@ -135106,13 +135362,13 @@ ${h.text}`;
     return list3.map((it, k) => k === i5 ? { ...it, done: !it.done } : it);
   }
   function todoRowAt(n2, lx, ly) {
-    const L2 = TODO_LAYOUT;
+    const L3 = TODO_LAYOUT;
     const items = normTodoItems(n2 && n2.items);
-    const y = ly - L2.headH + num(n2 && n2.scrollY, 0);
+    const y = ly - L3.headH + num(n2 && n2.scrollY, 0);
     if (y < 0) return { index: -1, onBox: false };
-    const i5 = Math.floor(y / L2.rowH);
+    const i5 = Math.floor(y / L3.rowH);
     if (i5 < 0 || i5 >= items.length) return { index: -1, onBox: false };
-    const onBox = lx >= L2.padX - 3 && lx <= L2.padX + L2.boxSize + 3;
+    const onBox = lx >= L3.padX - 3 && lx <= L3.padX + L3.boxSize + 3;
     return { index: i5, onBox };
   }
   function uid3(prefix2) {
@@ -135831,10 +136087,10 @@ ${h.text}`;
           return n2;
         }
         addNodeRaw(n2) {
-          const norm5 = this._normNode(n2);
-          this._nodes.push(norm5);
+          const norm6 = this._normNode(n2);
+          this._nodes.push(norm6);
           this._dirty = true;
-          return norm5;
+          return norm6;
         }
         removeNode(id) {
           const idx4 = this._nodes.findIndex((n2) => n2.id === id);
@@ -138642,8 +138898,8 @@ ${h.text}`;
           if (!doc3) {
             return offset;
           }
-          for (var attr in offsetAttributes) {
-            offset[offsetAttributes[attr]] += parseInt(getElementStyle(element, attr), 10) || 0;
+          for (var attr3 in offsetAttributes) {
+            offset[offsetAttributes[attr3]] += parseInt(getElementStyle(element, attr3), 10) || 0;
           }
           docElem = doc3.documentElement;
           if (typeof element.getBoundingClientRect !== "undefined") {
@@ -138657,15 +138913,15 @@ ${h.text}`;
         }
         var getElementStyle;
         if (fabric4.document.defaultView && fabric4.document.defaultView.getComputedStyle) {
-          getElementStyle = function(element, attr) {
+          getElementStyle = function(element, attr3) {
             var style = fabric4.document.defaultView.getComputedStyle(element, null);
-            return style ? style[attr] : void 0;
+            return style ? style[attr3] : void 0;
           };
         } else {
-          getElementStyle = function(element, attr) {
-            var value = element.style[attr];
+          getElementStyle = function(element, attr3) {
+            var value = element.style[attr3];
             if (!value && element.currentStyle) {
-              value = element.currentStyle[attr];
+              value = element.currentStyle[attr3];
             }
             return value;
           };
@@ -139256,25 +139512,25 @@ ${h.text}`;
         fabric5.cssRules = {};
         fabric5.gradientDefs = {};
         fabric5.clipPaths = {};
-        function normalizeAttr(attr) {
-          if (attr in attributesMap) {
-            return attributesMap[attr];
+        function normalizeAttr(attr3) {
+          if (attr3 in attributesMap) {
+            return attributesMap[attr3];
           }
-          return attr;
+          return attr3;
         }
-        function normalizeValue(attr, value, parentAttributes, fontSize) {
+        function normalizeValue(attr3, value, parentAttributes, fontSize) {
           var isArray3 = Array.isArray(value), parsed;
-          if ((attr === "fill" || attr === "stroke") && value === "none") {
+          if ((attr3 === "fill" || attr3 === "stroke") && value === "none") {
             value = "";
-          } else if (attr === "strokeUniform") {
+          } else if (attr3 === "strokeUniform") {
             return value === "non-scaling-stroke";
-          } else if (attr === "strokeDashArray") {
+          } else if (attr3 === "strokeDashArray") {
             if (value === "none") {
               value = null;
             } else {
               value = value.replace(/,/g, " ").split(/\s+/).map(parseFloat);
             }
-          } else if (attr === "transformMatrix") {
+          } else if (attr3 === "transformMatrix") {
             if (parentAttributes && parentAttributes.transformMatrix) {
               value = multiplyTransformMatrices(
                 parentAttributes.transformMatrix,
@@ -139283,21 +139539,21 @@ ${h.text}`;
             } else {
               value = fabric5.parseTransformAttribute(value);
             }
-          } else if (attr === "visible") {
+          } else if (attr3 === "visible") {
             value = value !== "none" && value !== "hidden";
             if (parentAttributes && parentAttributes.visible === false) {
               value = false;
             }
-          } else if (attr === "opacity") {
+          } else if (attr3 === "opacity") {
             value = parseFloat(value);
             if (parentAttributes && typeof parentAttributes.opacity !== "undefined") {
               value *= parentAttributes.opacity;
             }
-          } else if (attr === "textAnchor") {
+          } else if (attr3 === "textAnchor") {
             value = value === "start" ? "left" : value === "end" ? "right" : "center";
-          } else if (attr === "charSpacing") {
+          } else if (attr3 === "charSpacing") {
             parsed = parseUnit(value, fontSize) / fontSize * 1e3;
-          } else if (attr === "paintFirst") {
+          } else if (attr3 === "paintFirst") {
             var fillIndex = value.indexOf("fill");
             var strokeIndex = value.indexOf("stroke");
             var value = "fill";
@@ -139306,9 +139562,9 @@ ${h.text}`;
             } else if (fillIndex === -1 && strokeIndex > -1) {
               value = "stroke";
             }
-          } else if (attr === "href" || attr === "xlink:href" || attr === "font") {
+          } else if (attr3 === "href" || attr3 === "xlink:href" || attr3 === "font") {
             return value;
-          } else if (attr === "imageSmoothing") {
+          } else if (attr3 === "imageSmoothing") {
             return value === "optimizeQuality";
           } else {
             parsed = isArray3 ? value.map(parseUnit) : parseUnit(value, fontSize);
@@ -139319,21 +139575,21 @@ ${h.text}`;
           return new RegExp("^(" + arr.join("|") + ")\\b", "i");
         }
         function _setStrokeFillOpacity(attributes) {
-          for (var attr in colorAttributes) {
-            if (typeof attributes[colorAttributes[attr]] === "undefined" || attributes[attr] === "") {
+          for (var attr3 in colorAttributes) {
+            if (typeof attributes[colorAttributes[attr3]] === "undefined" || attributes[attr3] === "") {
               continue;
             }
-            if (typeof attributes[attr] === "undefined") {
-              if (!fabric5.Object.prototype[attr]) {
+            if (typeof attributes[attr3] === "undefined") {
+              if (!fabric5.Object.prototype[attr3]) {
                 continue;
               }
-              attributes[attr] = fabric5.Object.prototype[attr];
+              attributes[attr3] = fabric5.Object.prototype[attr3];
             }
-            if (attributes[attr].indexOf("url(") === 0) {
+            if (attributes[attr3].indexOf("url(") === 0) {
               continue;
             }
-            var color = new fabric5.Color(attributes[attr]);
-            attributes[attr] = color.setAlpha(toFixed(color.getAlpha() * attributes[colorAttributes[attr]], 2)).toRgba();
+            var color = new fabric5.Color(attributes[attr3]);
+            attributes[attr3] = color.setAlpha(toFixed(color.getAlpha() * attributes[colorAttributes[attr3]], 2)).toRgba();
           }
           return attributes;
         }
@@ -139417,23 +139673,23 @@ ${h.text}`;
           };
         })();
         function parseStyleString(style, oStyle) {
-          var attr, value;
+          var attr3, value;
           style.replace(/;\s*$/, "").split(";").forEach(function(chunk) {
             var pair = chunk.split(":");
-            attr = pair[0].trim().toLowerCase();
+            attr3 = pair[0].trim().toLowerCase();
             value = pair[1].trim();
-            oStyle[attr] = value;
+            oStyle[attr3] = value;
           });
         }
         function parseStyleObject(style, oStyle) {
-          var attr, value;
+          var attr3, value;
           for (var prop in style) {
             if (typeof style[prop] === "undefined") {
               continue;
             }
-            attr = prop.toLowerCase();
+            attr3 = prop.toLowerCase();
             value = style[prop];
-            oStyle[attr] = value;
+            oStyle[attr3] = value;
           }
         }
         function getGlobalStylesForElement(element, svgUid) {
@@ -139504,13 +139760,13 @@ ${h.text}`;
             if (xlinkAttribute === null) {
               return;
             }
-            var xlink = xlinkAttribute.slice(1), x = el2.getAttribute("x") || 0, y = el2.getAttribute("y") || 0, el22 = elementById(doc3, xlink).cloneNode(true), currentTrans = (el22.getAttribute("transform") || "") + " translate(" + x + ", " + y + ")", parentNode2, oldLength = nodelist.length, attr, j, attrs, len5, namespace = fabric5.svgNS;
+            var xlink = xlinkAttribute.slice(1), x = el2.getAttribute("x") || 0, y = el2.getAttribute("y") || 0, el22 = elementById(doc3, xlink).cloneNode(true), currentTrans = (el22.getAttribute("transform") || "") + " translate(" + x + ", " + y + ")", parentNode2, oldLength = nodelist.length, attr3, j, attrs, len5, namespace = fabric5.svgNS;
             applyViewboxTransform(el22);
             if (/^svg$/i.test(el22.nodeName)) {
               var el3 = el22.ownerDocument.createElementNS(namespace, "g");
               for (j = 0, attrs = el22.attributes, len5 = attrs.length; j < len5; j++) {
-                attr = attrs.item(j);
-                el3.setAttributeNS(namespace, attr.nodeName, attr.nodeValue);
+                attr3 = attrs.item(j);
+                el3.setAttributeNS(namespace, attr3.nodeName, attr3.nodeValue);
               }
               while (el22.firstChild) {
                 el3.appendChild(el22.firstChild);
@@ -139518,14 +139774,14 @@ ${h.text}`;
               el22 = el3;
             }
             for (j = 0, attrs = el2.attributes, len5 = attrs.length; j < len5; j++) {
-              attr = attrs.item(j);
-              if (attr.nodeName === "x" || attr.nodeName === "y" || attr.nodeName === "xlink:href" || attr.nodeName === "href") {
+              attr3 = attrs.item(j);
+              if (attr3.nodeName === "x" || attr3.nodeName === "y" || attr3.nodeName === "xlink:href" || attr3.nodeName === "href") {
                 continue;
               }
-              if (attr.nodeName === "transform") {
-                currentTrans = attr.nodeValue + " " + currentTrans;
+              if (attr3.nodeName === "transform") {
+                currentTrans = attr3.nodeValue + " " + currentTrans;
               } else {
-                el22.setAttribute(attr.nodeName, attr.nodeValue);
+                el22.setAttribute(attr3.nodeName, attr3.nodeValue);
               }
             }
             el22.setAttribute("transform", currentTrans);
@@ -139686,9 +139942,9 @@ ${h.text}`;
           if (referencedGradient && referencedGradient.getAttribute(xlinkAttr)) {
             recursivelyParseGradientsXlink(doc3, referencedGradient);
           }
-          gradientsAttrs.forEach(function(attr) {
-            if (referencedGradient && !gradient.hasAttribute(attr) && referencedGradient.hasAttribute(attr)) {
-              gradient.setAttribute(attr, referencedGradient.getAttribute(attr));
+          gradientsAttrs.forEach(function(attr3) {
+            if (referencedGradient && !gradient.hasAttribute(attr3) && referencedGradient.hasAttribute(attr3)) {
+              gradient.setAttribute(attr3, referencedGradient.getAttribute(attr3));
             }
           });
           if (!gradient.children.length) {
@@ -139778,10 +140034,10 @@ ${h.text}`;
             if (element.parentNode && fabric5.svgValidParentsRegEx.test(element.parentNode.nodeName)) {
               parentAttributes = fabric5.parseAttributes(element.parentNode, attributes, svgUid);
             }
-            var ownAttributes = attributes.reduce(function(memo, attr2) {
-              value = element.getAttribute(attr2);
+            var ownAttributes = attributes.reduce(function(memo, attr4) {
+              value = element.getAttribute(attr4);
               if (value) {
-                memo[attr2] = value;
+                memo[attr4] = value;
               }
               return memo;
             }, {});
@@ -139801,9 +140057,9 @@ ${h.text}`;
               ownAttributes[fSize] = fontSize = parseUnit(ownAttributes[fSize], parentFontSize);
             }
             var normalizedAttr, normalizedValue, normalizedStyle = {};
-            for (var attr in ownAttributes) {
-              normalizedAttr = normalizeAttr(attr);
-              normalizedValue = normalizeValue(normalizedAttr, ownAttributes[attr], parentAttributes, fontSize);
+            for (var attr3 in ownAttributes) {
+              normalizedAttr = normalizeAttr(attr3);
+              normalizedValue = normalizeValue(normalizedAttr, ownAttributes[attr3], parentAttributes, fontSize);
               normalizedStyle[normalizedAttr] = normalizedValue;
             }
             if (normalizedStyle && normalizedStyle.font) {
@@ -160304,9 +160560,9 @@ ${h.text}`;
     o.setCoords();
     return o;
   }
-  function _kidsMin(kids) {
+  function _kidsMin(kids3) {
     let minX = Infinity, minY = Infinity;
-    for (const k of kids || []) {
+    for (const k of kids3 || []) {
       if (!k || typeof k.getBoundingRect !== "function") continue;
       const r = k.getBoundingRect(true, true);
       if (r.left < minX) minX = r.left;
@@ -160528,9 +160784,9 @@ ${h.text}`;
           return group;
         }
         renderNode(n2) {
-          const kids = this._cardChildren(n2);
-          const { minX, minY } = _kidsMin(kids);
-          const group = new import_fabric.fabric.Group(kids, {
+          const kids3 = this._cardChildren(n2);
+          const { minX, minY } = _kidsMin(kids3);
+          const group = new import_fabric.fabric.Group(kids3, {
             left: n2.x,
             top: n2.y,
             originX: "left",
@@ -160590,9 +160846,9 @@ ${h.text}`;
           if (Math.abs(sx2 - 1) < 1e-3 && Math.abs(sy2 - 1) < 1e-3) return false;
           const box2 = absBox(group);
           const W = Math.max(16, Math.round(box2.width)), H3 = Math.max(16, Math.round(box2.height));
-          const kids = this._cardChildren({ ...n2, width: W, height: H3 });
-          const { minX, minY } = _kidsMin(kids);
-          const probe = new import_fabric.fabric.Group(kids, { originX: "left", originY: "top" });
+          const kids3 = this._cardChildren({ ...n2, width: W, height: H3 });
+          const { minX, minY } = _kidsMin(kids3);
+          const probe = new import_fabric.fabric.Group(kids3, { originX: "left", originY: "top" });
           this._forceBox(probe, W, H3, minX, minY);
           const objs = probe._objects.slice();
           probe._objects = [];
@@ -160660,7 +160916,7 @@ ${h.text}`;
          * @param obj   วัตถุที่ต้องถูกครอบ (Textbox/กลุ่มข้อความ)
          * @param box   กรอบเนื้อหาในพิกัดของการ์ด `{left, top, width, height}`
          */
-        _clipInto(kids, obj, box2, n2, contentH, contentW) {
+        _clipInto(kids3, obj, box2, n2, contentH, contentW) {
           const cH = contentH == null ? obj.height || 0 : contentH;
           const cW = contentW == null ? box2.width : contentW;
           const maxY = Math.max(0, Math.round(cH - box2.height));
@@ -160682,8 +160938,8 @@ ${h.text}`;
             originX: "center",
             originY: "center"
           });
-          kids.push(obj);
-          kids.push(...this._scrollBars(box2, { x: sx2, y: sy2 }, { x: maxX, y: maxY }, { w: cW, h: cH }));
+          kids3.push(obj);
+          kids3.push(...this._scrollBars(box2, { x: sx2, y: sy2 }, { x: maxX, y: maxY }, { w: cW, h: cH }));
           return { x: maxX, y: maxY };
         }
         /**
@@ -160727,39 +160983,39 @@ ${h.text}`;
           const fs = n2.fontSize || d.fontSize || 12.5;
           this._scrollMax = 0;
           this._scrollMaxX = 0;
-          let kids;
+          let kids3;
           switch (n2.type) {
             case "sticky":
-              kids = this._stickyChildren(n2, W, H3, textFill, fs);
+              kids3 = this._stickyChildren(n2, W, H3, textFill, fs);
               break;
             case "text":
-              kids = this._textChildren(n2, W, H3, textFill, fs);
+              kids3 = this._textChildren(n2, W, H3, textFill, fs);
               break;
             case "shape":
-              kids = this._shapeChildren(n2, W, H3, textFill, fs);
+              kids3 = this._shapeChildren(n2, W, H3, textFill, fs);
               break;
             case "frame":
-              kids = this._frameChildren(n2, W, H3, textFill, fs);
+              kids3 = this._frameChildren(n2, W, H3, textFill, fs);
               break;
             case "comment":
-              kids = this._commentChildren(n2, W, H3, textFill, fs);
+              kids3 = this._commentChildren(n2, W, H3, textFill, fs);
               break;
             case "image":
-              kids = this._imageChildren(n2, W, H3, textFill, fs);
+              kids3 = this._imageChildren(n2, W, H3, textFill, fs);
               break;
             case "todo":
-              kids = this._todoChildren(n2, W, H3, textFill, fs);
+              kids3 = this._todoChildren(n2, W, H3, textFill, fs);
               break;
             default:
-              kids = this._recordChildren(n2, W, H3, textFill, fs);
+              kids3 = this._recordChildren(n2, W, H3, textFill, fs);
           }
-          if (kids && kids[0]) _strokeInside(kids[0], W, H3);
-          return kids;
+          if (kids3 && kids3[0]) _strokeInside(kids3[0], W, H3);
+          return kids3;
         }
         // ── รูปบนกระดาน (ข้อ 6) ──
         _imageChildren(n2, W, H3, textFill, fs) {
           const st = this._stroke(n2, "rgba(255,255,255,0.14)", 0);
-          const kids = [new import_fabric.fabric.Rect({
+          const kids3 = [new import_fabric.fabric.Rect({
             left: 0,
             top: 0,
             width: W,
@@ -160773,7 +161029,7 @@ ${h.text}`;
           })];
           const im = this.imageFor(n2.src, n2.id);
           if (!im) {
-            kids.push(new import_fabric.fabric.Text(glyphOf(n2.src ? "hourglass" : "image"), {
+            kids3.push(new import_fabric.fabric.Text(glyphOf(n2.src ? "hourglass" : "image"), {
               left: W / 2,
               top: H3 / 2,
               fontSize: Math.min(40, Math.min(W, H3) * 0.35),
@@ -160783,7 +161039,7 @@ ${h.text}`;
               originY: "center"
             }));
             if (!n2.src) {
-              kids.push(new import_fabric.fabric.Text(t("ui.planner.imgPickHint"), {
+              kids3.push(new import_fabric.fabric.Text(t("ui.planner.imgPickHint"), {
                 left: W / 2,
                 top: H3 / 2 + 30,
                 fontSize: Math.max(9, fs),
@@ -160793,14 +161049,14 @@ ${h.text}`;
                 originY: "top"
               }));
             }
-            return kids;
+            return kids3;
           }
           const placed = _fitImage(im, n2, W, H3);
-          kids.push(...placed.objects);
+          kids3.push(...placed.objects);
           this._scrollMax = Math.max(this._scrollMax || 0, placed.max.y);
           this._scrollMaxX = Math.max(this._scrollMaxX || 0, placed.max.x);
           if (placed.max.x > 0 || placed.max.y > 0) {
-            kids.push(...this._scrollBars(
+            kids3.push(...this._scrollBars(
               { left: 0, top: 0, width: W, height: H3 },
               placed.pos,
               placed.max,
@@ -160808,7 +161064,7 @@ ${h.text}`;
             ));
           }
           if (n2.title) {
-            kids.push(new import_fabric.fabric.Text(_clip(n2.title, 40), {
+            kids3.push(new import_fabric.fabric.Text(_clip(n2.title, 40), {
               left: 8,
               top: H3 - 18,
               fontSize: Math.max(9, fs),
@@ -160821,7 +161077,7 @@ ${h.text}`;
           }
           if (st.strokeWidth > 0) {
             const sw = st.strokeWidth;
-            kids.push(new import_fabric.fabric.Rect({
+            kids3.push(new import_fabric.fabric.Rect({
               left: 0,
               top: 0,
               width: Math.max(1, W - sw),
@@ -160836,15 +161092,15 @@ ${h.text}`;
               evented: false
             }));
           }
-          return kids;
+          return kids3;
         }
         // ── รายการสิ่งที่ต้องทำ (ข้อ 9) ──
         _todoChildren(n2, W, H3, textFill, fs) {
-          const L2 = TODO_LAYOUT;
+          const L3 = TODO_LAYOUT;
           const items = normTodoItems(n2.items);
           const prog = todoProgress(items);
           const st = this._stroke(n2, "rgba(255,255,255,0.12)", 1);
-          const kids = [new import_fabric.fabric.Rect({
+          const kids3 = [new import_fabric.fabric.Rect({
             left: 0,
             top: 0,
             width: W,
@@ -160856,8 +161112,8 @@ ${h.text}`;
             originX: "left",
             originY: "top"
           })];
-          kids.push(new import_fabric.fabric.Text(_clip(_withGlyph(ICONS.todo, n2.title || t("ui.planner.todoNew")), 34), {
-            left: L2.padX,
+          kids3.push(new import_fabric.fabric.Text(_clip(_withGlyph(ICONS.todo, n2.title || t("ui.planner.todoNew")), 34), {
+            left: L3.padX,
             top: 7,
             fontSize: fs,
             fill: textFill,
@@ -160865,8 +161121,8 @@ ${h.text}`;
             originX: "left",
             originY: "top"
           }));
-          kids.push(new import_fabric.fabric.Text(`${prog.done}/${prog.total}`, {
-            left: W - L2.padX,
+          kids3.push(new import_fabric.fabric.Text(`${prog.done}/${prog.total}`, {
+            left: W - L3.padX,
             top: 8,
             fontSize: Math.max(8, fs - 2),
             fill: "rgba(255,255,255,0.45)",
@@ -160874,11 +161130,11 @@ ${h.text}`;
             originX: "right",
             originY: "top"
           }));
-          kids.push(new import_fabric.fabric.Rect({
-            left: L2.padX,
-            top: L2.headH - 7,
-            width: W - L2.padX * 2,
-            height: L2.progH,
+          kids3.push(new import_fabric.fabric.Rect({
+            left: L3.padX,
+            top: L3.headH - 7,
+            width: W - L3.padX * 2,
+            height: L3.progH,
             rx: 2,
             ry: 2,
             fill: "rgba(255,255,255,0.1)",
@@ -160886,11 +161142,11 @@ ${h.text}`;
             originY: "top"
           }));
           if (prog.total) {
-            kids.push(new import_fabric.fabric.Rect({
-              left: L2.padX,
-              top: L2.headH - 7,
-              width: (W - L2.padX * 2) * (prog.percent / 100),
-              height: L2.progH,
+            kids3.push(new import_fabric.fabric.Rect({
+              left: L3.padX,
+              top: L3.headH - 7,
+              width: (W - L3.padX * 2) * (prog.percent / 100),
+              height: L3.progH,
               rx: 2,
               ry: 2,
               fill: PLANNER_KIND.done,
@@ -160898,19 +161154,19 @@ ${h.text}`;
               originY: "top"
             }));
           }
-          const box2 = { left: 0, top: L2.headH, width: W, height: Math.max(10, H3 - L2.headH - 4) };
-          const contentH = items.length * L2.rowH + 4;
+          const box2 = { left: 0, top: L3.headH, width: W, height: Math.max(10, H3 - L3.headH - 4) };
+          const contentH = items.length * L3.rowH + 4;
           const max2 = Math.max(0, Math.round(contentH - box2.height));
           const sy2 = Math.min(max2, Math.max(0, Math.round(n2.scrollY || 0)));
           this._scrollMax = max2;
           const rows = [];
           items.forEach((it, i5) => {
-            const y = i5 * L2.rowH;
+            const y = i5 * L3.rowH;
             rows.push(new import_fabric.fabric.Rect({
-              left: L2.padX,
+              left: L3.padX,
               top: y + 3,
-              width: L2.boxSize,
-              height: L2.boxSize,
+              width: L3.boxSize,
+              height: L3.boxSize,
               rx: 3,
               ry: 3,
               fill: it.done ? PLANNER_KIND.done : "rgba(0,0,0,0.25)",
@@ -160921,9 +161177,9 @@ ${h.text}`;
             }));
             if (it.done) {
               rows.push(new import_fabric.fabric.Text(glyphOf("checkmark"), {
-                left: L2.padX + L2.boxSize / 2,
-                top: y + 3 + L2.boxSize / 2,
-                fontSize: L2.boxSize - 2,
+                left: L3.padX + L3.boxSize / 2,
+                top: y + 3 + L3.boxSize / 2,
+                fontSize: L3.boxSize - 2,
                 fill: PLANNER_KIND.onColor,
                 fontFamily: FONT,
                 originX: "center",
@@ -160931,7 +161187,7 @@ ${h.text}`;
               }));
             }
             rows.push(new import_fabric.fabric.Text(_clip(it.text || "", 40), {
-              left: L2.padX + L2.boxSize + L2.boxGap,
+              left: L3.padX + L3.boxSize + L3.boxGap,
               top: y + 3,
               fontSize: Math.max(8, fs - 1),
               fill: it.done ? "rgba(255,255,255,0.4)" : textFill,
@@ -160943,7 +161199,7 @@ ${h.text}`;
           });
           if (!items.length) {
             rows.push(new import_fabric.fabric.Text(t("ui.planner.todoEmpty"), {
-              left: L2.padX,
+              left: L3.padX,
               top: 4,
               fontSize: Math.max(8, fs - 1),
               fill: "rgba(255,255,255,0.35)",
@@ -160971,13 +161227,13 @@ ${h.text}`;
             originX: "center",
             originY: "center"
           });
-          kids.push(list3);
-          if (max2 > 0) kids.push(...this._scrollBar({ ...box2, left: 2, width: W - 4 }, sy2, max2, contentH));
-          return kids;
+          kids3.push(list3);
+          if (max2 > 0) kids3.push(...this._scrollBar({ ...box2, left: 2, width: W - 4 }, sy2, max2, contentH));
+          return kids3;
         }
         // ── การ์ดผูกเนื้อเรื่อง (ฉาก/บท/Wiki/โน้ต) ──
         _recordChildren(n2, W, H3, textFill, fs) {
-          const kids = [new import_fabric.fabric.Rect({
+          const kids3 = [new import_fabric.fabric.Rect({
             left: 0,
             top: 0,
             width: W,
@@ -161002,7 +161258,7 @@ ${h.text}`;
               originY: "top"
             });
             const pad5 = 6;
-            kids.push(new import_fabric.fabric.Rect({
+            kids3.push(new import_fabric.fabric.Rect({
               left: W - 10 - (txt.width + pad5 * 2),
               top: 6,
               width: txt.width + pad5 * 2,
@@ -161016,7 +161272,7 @@ ${h.text}`;
             titleW = Math.max(30, W - 30 - txt.width - 12);
           }
           const ha = n2.textAlign || "left";
-          kids.push(new import_fabric.fabric.Textbox(_clip(_withGlyph(ICONS[n2.type], n2.title || t("ui.common.notSpecifyName")), 70), {
+          kids3.push(new import_fabric.fabric.Textbox(_clip(_withGlyph(ICONS[n2.type], n2.title || t("ui.common.notSpecifyName")), 70), {
             left: 10,
             top: 8,
             width: Math.max(20, titleW),
@@ -161035,9 +161291,9 @@ ${h.text}`;
             const bandH = Math.max(24, Math.round((H3 - 44) * (n2.imageH == null ? 0.45 : n2.imageH)));
             const band = { left: 10, top: bodyTop, width: W - 20, height: bandH };
             if (im) {
-              for (const o of _fitImageInto(im, n2, band)) kids.push(o);
+              for (const o of _fitImageInto(im, n2, band)) kids3.push(o);
             } else {
-              kids.push(new import_fabric.fabric.Rect({
+              kids3.push(new import_fabric.fabric.Rect({
                 left: band.left,
                 top: band.top,
                 width: band.width,
@@ -161067,7 +161323,7 @@ ${h.text}`;
               splitByGrapheme: true,
               lineHeight: 1.15
             });
-            this._clipInto(kids, tb2, { left: 10, top: bodyTop, width: W - 20, height: room }, n2);
+            this._clipInto(kids3, tb2, { left: 10, top: bodyTop, width: W - 20, height: room }, n2);
           }
           if (n2.tags && n2.tags.length) {
             let tx2 = 10;
@@ -161084,13 +161340,13 @@ ${h.text}`;
                 originY: "top"
               });
               if (tx2 + (txt.width || 30) > W - 10) break;
-              kids.push(txt);
+              kids3.push(txt);
               tx2 += (txt.width || 30) + 6;
             }
           }
           if (n2.file) {
-            const short2 = String(n2.file).split(/[\\/]/).pop() || n2.file;
-            kids.push(new import_fabric.fabric.Text(_clip(_withGlyph("paperclip", short2), 26), {
+            const short3 = String(n2.file).split(/[\\/]/).pop() || n2.file;
+            kids3.push(new import_fabric.fabric.Text(_clip(_withGlyph("paperclip", short3), 26), {
               left: 10,
               top: H3 - 16,
               fontSize: 9,
@@ -161100,12 +161356,12 @@ ${h.text}`;
               originY: "top"
             }));
           }
-          return kids;
+          return kids3;
         }
         // ── โพสต์อิต ──
         _stickyChildren(n2, W, H3, textFill, fs) {
           const body = n2.synopsis || n2.title || "";
-          const kids = [new import_fabric.fabric.Rect({
+          const kids3 = [new import_fabric.fabric.Rect({
             left: 0,
             top: 0,
             width: W,
@@ -161133,12 +161389,12 @@ ${h.text}`;
             textAlign: n2.textAlign || "left"
             // [alpha.151] จัดข้อความในการ์ดได้
           });
-          this._clipInto(kids, tb2, { left: 12, top: 12, width: W - 24, height: Math.max(10, H3 - 24) }, n2);
-          return kids;
+          this._clipInto(kids3, tb2, { left: 12, top: 12, width: W - 24, height: Math.max(10, H3 - 24) }, n2);
+          return kids3;
         }
         // ── ข้อความลอย ──
         _textChildren(n2, W, H3, textFill, fs) {
-          const kids = [new import_fabric.fabric.Rect({
+          const kids3 = [new import_fabric.fabric.Rect({
             left: 0,
             top: 0,
             width: W,
@@ -161162,8 +161418,8 @@ ${h.text}`;
             splitByGrapheme: true,
             lineHeight: 1.25
           });
-          this._clipInto(kids, tb2, { left: 2, top: 2, width: Math.max(20, W - 4), height: Math.max(10, H3 - 4) }, n2);
-          return kids;
+          this._clipInto(kids3, tb2, { left: 2, top: 2, width: Math.max(20, W - 4), height: Math.max(10, H3 - 4) }, n2);
+          return kids3;
         }
         // ── รูปทรง ──
         _shapeChildren(n2, W, H3, textFill, fs) {
@@ -161213,7 +161469,7 @@ ${h.text}`;
             default:
               shape = new import_fabric.fabric.Rect({ ...common, width: W, height: H3, rx: 4, ry: 4 });
           }
-          const kids = [shape];
+          const kids3 = [shape];
           if (n2.title) {
             const tb2 = new import_fabric.fabric.Textbox(n2.title, {
               left: 8,
@@ -161229,7 +161485,7 @@ ${h.text}`;
               splitByGrapheme: true
             });
             this._clipInto(
-              kids,
+              kids3,
               tb2,
               {
                 left: 8,
@@ -161240,7 +161496,7 @@ ${h.text}`;
               { ...n2, textVAlign: n2.textVAlign || "middle" }
             );
           }
-          return kids;
+          return kids3;
         }
         // ── เฟรม (กรอบจัดกลุ่มพื้นที่ แบบ Miro) ──
         /**
@@ -161292,7 +161548,7 @@ ${h.text}`;
         // ── คอมเมนต์ ──
         _commentChildren(n2, W, H3, textFill, fs) {
           const fill3 = this._fill(n2, PLANNER_KIND.paper);
-          const kids = [
+          const kids3 = [
             new import_fabric.fabric.Path(_bubblePath(W, H3), {
               left: 0,
               top: 0,
@@ -161326,8 +161582,8 @@ ${h.text}`;
             splitByGrapheme: true,
             lineHeight: 1.25
           });
-          this._clipInto(kids, tb2, { left: 10, top: 26, width: W - 20, height: Math.max(10, H3 - 26 - 16) }, n2);
-          return kids;
+          this._clipInto(kids3, tb2, { left: 10, top: 26, width: W - 20, height: Math.max(10, H3 - 26 - 16) }, n2);
+          return kids3;
         }
         // ═════════════════ เส้นเชื่อม (บั๊ก 9/10/11) ═════════════════
         /** วาดเส้นทั้งหมดใหม่ — ใช้ตอนโหลด/undo เท่านั้น */
@@ -163481,8 +163737,8 @@ ${h.text}`;
     }
     bar.applyConfig = () => {
       const { seq: seq3, show } = layoutPlannerBar(getCfg ? getCfg() : null);
-      const kids = [...bar.children].filter((k) => k !== grip);
-      kids.forEach((k, i5) => k.classList.toggle("tb-hidden", show[i5] === false));
+      const kids3 = [...bar.children].filter((k) => k !== grip);
+      kids3.forEach((k, i5) => k.classList.toggle("tb-hidden", show[i5] === false));
       return seq3.length;
     };
     bar.syncState = (st) => {
@@ -166236,8 +166492,8 @@ ${h.text}`;
     let far = 0;
     for (let i5 = 1; i5 <= n2; i5++) {
       if (i5 - far > MAX_TH_LEN) break;
-      for (let L2 = 1; L2 <= Math.min(MAX_TH_LEN, i5); L2++) {
-        if (ok2[i5 - L2] && known2.has(run3.slice(i5 - L2, i5))) {
+      for (let L3 = 1; L3 <= Math.min(MAX_TH_LEN, i5); L3++) {
+        if (ok2[i5 - L3] && known2.has(run3.slice(i5 - L3, i5))) {
           ok2[i5] = true;
           break;
         }
@@ -166253,8 +166509,8 @@ ${h.text}`;
     let near2 = n2;
     for (let i5 = n2 - 1; i5 >= 0; i5--) {
       if (near2 - i5 > MAX_TH_LEN) break;
-      for (let L2 = 1; L2 <= Math.min(MAX_TH_LEN, n2 - i5); L2++) {
-        if (ok2[i5 + L2] && known2.has(run3.slice(i5, i5 + L2))) {
+      for (let L3 = 1; L3 <= Math.min(MAX_TH_LEN, n2 - i5); L3++) {
+        if (ok2[i5 + L3] && known2.has(run3.slice(i5, i5 + L3))) {
           ok2[i5] = true;
           break;
         }
@@ -166272,7 +166528,15 @@ ${h.text}`;
       a = 0;
       b = run3.length;
     }
-    return [[a, b]];
+    return [snapThaiSpan(run3, a, b)];
+  }
+  function snapThaiSpan(run3, a, b) {
+    let s = Math.max(0, a), e = Math.min(run3.length, b);
+    while (s > 0 && TH_MARK.test(run3[s])) s--;
+    if (s > 0 && TH_LEAD.test(run3[s - 1])) s--;
+    while (e < run3.length && TH_MARK.test(run3[e])) e++;
+    if (e > s && TH_LEAD.test(run3[e - 1]) && e < run3.length) e++;
+    return [s, e];
   }
   function check(text) {
     if (!text || !base2.loaded) return [];
@@ -166346,7 +166610,7 @@ ${h.text}`;
     }
     return out;
   }
-  var THAI_RE, LATIN_RE, THAI_FULL, MAX_TH_LEN, MIN_WORD, MAX_WORD, base2, extraTh, extraEn, mergedTh, mergedEn, CACHE_MAX, CACHE_TEXT_MAX, cache2, ignored, TH_ALPHA, EN_ALPHA;
+  var THAI_RE, LATIN_RE, THAI_FULL, MAX_TH_LEN, MIN_WORD, MAX_WORD, base2, extraTh, extraEn, mergedTh, mergedEn, CACHE_MAX, CACHE_TEXT_MAX, cache2, ignored, CH, TH_MARK, TH_LEAD, TH_ALPHA, EN_ALPHA;
   var init_spell = __esm({
     "src/spell.js"() {
       THAI_RE = /[\u0E00-\u0E7F]+/g;
@@ -166364,6 +166628,9 @@ ${h.text}`;
       CACHE_TEXT_MAX = 8e3;
       cache2 = /* @__PURE__ */ new Map();
       ignored = /* @__PURE__ */ new Set();
+      CH = (n2) => String.fromCharCode(n2);
+      TH_MARK = new RegExp("[" + CH(3633) + CH(3636) + "-" + CH(3642) + CH(3655) + "-" + CH(3662) + "]");
+      TH_LEAD = new RegExp("[" + CH(3648) + "-" + CH(3652) + "]");
       TH_ALPHA = "\u0E01\u0E02\u0E04\u0E06\u0E07\u0E08\u0E09\u0E0A\u0E0B\u0E0C\u0E0D\u0E0E\u0E0F\u0E10\u0E11\u0E12\u0E13\u0E14\u0E15\u0E16\u0E17\u0E18\u0E19\u0E1A\u0E1B\u0E1C\u0E1D\u0E1E\u0E1F\u0E20\u0E21\u0E22\u0E23\u0E25\u0E27\u0E28\u0E29\u0E2A\u0E2B\u0E2C\u0E2D\u0E2E\u0E30\u0E31\u0E32\u0E33\u0E34\u0E35\u0E36\u0E37\u0E38\u0E39\u0E40\u0E41\u0E42\u0E43\u0E44\u0E47\u0E48\u0E49\u0E4A\u0E4B\u0E4C\u0E4D\u0E2F\u0E46";
       EN_ALPHA = "abcdefghijklmnopqrstuvwxyz";
     }
@@ -167080,21 +167347,21 @@ ${h.text}`;
     wrap2.append(...rows.slice(0, limit));
     return wrap2;
   }
-  function renderDoctorLocal(id, L2, h) {
+  function renderDoctorLocal(id, L3, h) {
     const box2 = el("div", "aia-doc");
     if (id === "dialog") {
-      if (!L2.flagged || !L2.flagged.length) {
+      if (!L3.flagged || !L3.flagged.length) {
         box2.append(empty2());
         return box2;
       }
-      box2.append(list2(L2.flagged.map((f) => quoteRow(h, {
+      box2.append(list2(L3.flagged.map((f) => quoteRow(h, {
         title: f.title,
         meta: (f.speaker ? f.speaker + " \xB7 " : "") + reasonText(f.reasons),
         quote: f.quote,
         sceneId: f.sceneId
       }))));
     } else if (id === "drag") {
-      box2.append(h.barList(L2.rows.map((r) => ({
+      box2.append(h.barList(L3.rows.map((r) => ({
         label: r.title || r.id,
         value: r.drag,
         display: r.drag,
@@ -167102,7 +167369,7 @@ ${h.text}`;
         sub: r.reasons.length ? reasonText(r.reasons, "drag") : "",
         tone: r.drag >= DRAG_FLAG ? "slow" : ""
       })), { max: 100 }));
-      for (const g of L2.runs || []) {
+      for (const g of L3.runs || []) {
         box2.append(quoteRow(h, {
           title: t("ui.aia.slowRun"),
           meta: tf("ui.aia.runRange", g.from, g.to, g.count),
@@ -167111,11 +167378,11 @@ ${h.text}`;
         }));
       }
     } else if (id === "logic") {
-      if (!L2.rows || !L2.rows.length) {
+      if (!L3.rows || !L3.rows.length) {
         box2.append(empty2());
         return box2;
       }
-      box2.append(list2(L2.rows.map((r) => quoteRow(h, {
+      box2.append(list2(L3.rows.map((r) => quoteRow(h, {
         title: r.title || r.id,
         meta: r.words.join(", ") + (r.late ? " \xB7 " + t("ui.aia.stLogicLate") : ""),
         quote: r.quote,
@@ -167123,12 +167390,12 @@ ${h.text}`;
         cls: r.late ? "aia-doc-warn" : ""
       }))));
     } else if (id === "ooc") {
-      if (!L2.rows || !L2.rows.length) {
+      if (!L3.rows || !L3.rows.length) {
         box2.append(empty2());
         return box2;
       }
       const chips = el("div", "aia-chips");
-      for (const r of L2.rows) {
+      for (const r of L3.rows) {
         const c = el(
           "span",
           "aia-chip" + (r.outliers ? " aia-chip-warn" : ""),
@@ -167137,8 +167404,8 @@ ${h.text}`;
         chips.append(c);
       }
       box2.append(chips);
-      if (L2.outliers && L2.outliers.length) {
-        box2.append(list2(L2.outliers.map((o) => quoteRow(h, {
+      if (L3.outliers && L3.outliers.length) {
+        box2.append(list2(L3.outliers.map((o) => quoteRow(h, {
           title: o.name + " \u2014 " + o.title,
           meta: tf("ui.aia.oocShift", o.form, o.expected),
           quote: o.quote,
@@ -167148,7 +167415,7 @@ ${h.text}`;
       }
     } else if (id === "tone") {
       const wrap2 = el("div", "aia-tone");
-      for (const r of L2.rows) {
+      for (const r of L3.rows) {
         const row4 = el("div", "aia-tone-row" + (r.adjust ? " is-off" : "") + (r.whiplash ? " is-whip" : ""));
         row4.append(el("div", "aia-tone-name", r.title || r.id));
         const bar = el("div", "aia-tone-bar");
@@ -167467,35 +167734,35 @@ ${h.text}`;
       log("warn", t("ui.aia.errOpenScene"), e);
     }
   }
-  function renderLocal(id, local) {
+  function renderLocal(id, local3) {
     const box2 = el("div", "aia-result-local");
-    box2.append(statsBar(local.stats));
-    const L2 = local;
+    box2.append(statsBar(local3.stats));
+    const L3 = local3;
     if (isDoctor(id)) {
-      box2.append(renderDoctorLocal(id, L2, { barList, jumpToScene: jumpToScene2 }));
+      box2.append(renderDoctorLocal(id, L3, { barList, jumpToScene: jumpToScene2 }));
       return box2;
     }
     if (id === "pacing") {
-      box2.append(barList(L2.rows.map((r) => ({
+      box2.append(barList(L3.rows.map((r) => ({
         label: r.title || r.id,
         value: r.tempo,
         display: r.tempo,
         sub: tf("ui.aia.rowPacing", r.words, r.dialogue, r.avgSentence),
         sceneId: r.id,
-        tone: r.tempo < L2.avg - L2.sd * 0.5 ? "slow" : r.tempo > L2.avg + L2.sd * 0.5 ? "fast" : ""
+        tone: r.tempo < L3.avg - L3.sd * 0.5 ? "slow" : r.tempo > L3.avg + L3.sd * 0.5 ? "fast" : ""
       }))));
-      if (L2.slowRuns.length) box2.append(noteList(L2.slowRuns.map((g) => ({
+      if (L3.slowRuns.length) box2.append(noteList(L3.slowRuns.map((g) => ({
         title: t("ui.aia.slowRun"),
         note: tf("ui.aia.runRange", g.from, g.to, g.count),
         sceneId: g.sceneId
       }))));
-      if (L2.fastRuns.length) box2.append(noteList(L2.fastRuns.map((g) => ({
+      if (L3.fastRuns.length) box2.append(noteList(L3.fastRuns.map((g) => ({
         title: t("ui.aia.fastRun"),
         note: tf("ui.aia.runRange", g.from, g.to, g.count),
         sceneId: g.sceneId
       }))));
     } else if (id === "arc") {
-      for (const c of L2.chars.slice(0, 8)) {
+      for (const c of L3.chars.slice(0, 8)) {
         box2.append(el("div", "aia-sub-head", tf("ui.aia.arcHead", c.name, c.total, c.scenes)));
         box2.append(barList(c.perChapter.map((ch) => ({ label: ch.chapterTitle, value: ch.count, display: ch.count }))));
         if (c.gaps.length) box2.append(noteList(c.gaps.map((g) => ({
@@ -167504,13 +167771,13 @@ ${h.text}`;
         }))));
       }
     } else if (id === "words") {
-      box2.append(barList(L2.rows.map((r) => ({
+      box2.append(barList(L3.rows.map((r) => ({
         label: r.word,
         value: r.count,
         display: r.count + " (" + r.per10k + ")"
       })), { limit: 40 }));
     } else if (id === "conflict") {
-      box2.append(barList(L2.rows.map((r) => ({
+      box2.append(barList(L3.rows.map((r) => ({
         label: r.title || r.id,
         value: r.score,
         display: r.score,
@@ -167519,16 +167786,16 @@ ${h.text}`;
         tone: r.score === 0 ? "slow" : ""
       }))));
     } else if (id === "length") {
-      box2.append(barList(L2.rows.map((r) => ({
+      box2.append(barList(L3.rows.map((r) => ({
         label: r.title || r.id,
         value: r.words,
         display: tf("ui.aia.rowLength", r.words, r.minutes),
         sceneId: r.id,
-        tone: L2.long.includes(r) ? "fast" : L2.short.includes(r) ? "slow" : ""
+        tone: L3.long.includes(r) ? "fast" : L3.short.includes(r) ? "slow" : ""
       }))));
     } else if (id === "repeat") {
       box2.append(barList(
-        L2.rows.map((r) => ({
+        L3.rows.map((r) => ({
           label: r.word,
           value: r.count,
           display: r.count + gi("times"),
@@ -167538,7 +167805,7 @@ ${h.text}`;
         { limit: 40 }
       ));
     } else if (id === "shipping") {
-      box2.append(barList(L2.rows.map((r) => ({
+      box2.append(barList(L3.rows.map((r) => ({
         label: r.a + " " + gi("times") + " " + r.b,
         value: r.score,
         display: r.score,
@@ -167546,7 +167813,7 @@ ${h.text}`;
         sceneId: r.sceneIds[0]
       }))));
     } else if (id === "screentime") {
-      box2.append(barList(L2.rows.map((r) => ({
+      box2.append(barList(L3.rows.map((r) => ({
         label: r.name,
         value: r.words,
         display: r.share + "%",
@@ -167554,11 +167821,11 @@ ${h.text}`;
         sceneId: r.sceneIds[0]
       }))));
     } else if (id === "composition") {
-      box2.append(compositionView(L2));
+      box2.append(compositionView(L3));
     } else if (id === "score") {
-      box2.append(scoreBox(L2.criteria, L2.total, t("ui.aia.scoreLocalHead")));
-    } else if (L2.rows && L2.rows.length) {
-      box2.append(noteList(L2.rows.map((r) => ({ title: r.title, note: r.note, sceneId: r.id }))));
+      box2.append(scoreBox(L3.criteria, L3.total, t("ui.aia.scoreLocalHead")));
+    } else if (L3.rows && L3.rows.length) {
+      box2.append(noteList(L3.rows.map((r) => ({ title: r.title, note: r.note, sceneId: r.id }))));
     }
     return box2;
   }
@@ -167573,24 +167840,24 @@ ${h.text}`;
     }
     return bar;
   }
-  function compositionView(L2) {
+  function compositionView(L3) {
     const wrap2 = el("div", "aia-cmp");
     const legend = el("div", "aia-cmp-legend");
     for (const k of CMP_ORDER) {
       const it = el("span", "aia-cmp-key aia-cmp-" + k);
-      it.append(el("i"), document.createTextNode(COMPOSITION_LABELS[k] + " \xB7 " + tf("ui.aia.cmpLeanN", L2.lean[k] || 0)));
+      it.append(el("i"), document.createTextNode(COMPOSITION_LABELS[k] + " \xB7 " + tf("ui.aia.cmpLeanN", L3.lean[k] || 0)));
       legend.append(it);
     }
-    if (L2.lean.balanced) legend.append(el("span", "aia-cmp-key", COMPOSITION_LABELS.balanced + " \xB7 " + tf("ui.aia.cmpLeanN", L2.lean.balanced)));
+    if (L3.lean.balanced) legend.append(el("span", "aia-cmp-key", COMPOSITION_LABELS.balanced + " \xB7 " + tf("ui.aia.cmpLeanN", L3.lean.balanced)));
     wrap2.append(legend);
     const all = el("div", "aia-cmp-row aia-cmp-total");
     all.append(
       el("div", "aia-cmp-name", t("ui.aia.cmpOverall")),
-      stackBar(L2.overall),
-      el("div", "aia-cmp-lean", COMPOSITION_LABELS[L2.overallLean] || "\u2014")
+      stackBar(L3.overall),
+      el("div", "aia-cmp-lean", COMPOSITION_LABELS[L3.overallLean] || "\u2014")
     );
     wrap2.append(all);
-    for (const r of L2.rows) {
+    for (const r of L3.rows) {
       const row4 = el("div", "aia-cmp-row" + (r.lean ? " lean-" + r.lean : ""));
       const name5 = el("div", "aia-cmp-name");
       name5.textContent = r.title || r.id;
@@ -168777,7 +169044,7 @@ ${h.text}`;
       init_err_text();
       import_jszip2 = __toESM(require_jszip_min());
       SKIP_DIRS4 = ["Snapshots", ".k2history", "Backups", "Recycle"];
-      ZIP_SKIP_ROOT_FILES = ["ai-key.json"];
+      ZIP_SKIP_ROOT_FILES = ["ai-key.json", ".k2lock.json"];
       BIN_EXT = /\.(png|jpe?g|gif|webp|bmp|ico|pdf|zip|mp3|mp4|wav|ttf|otf|woff2?)$/i;
     }
   });
@@ -168789,6 +169056,7 @@ ${h.text}`;
     HOME_VIEWS: () => HOME_VIEWS,
     buildHomeActions: () => buildHomeActions,
     buildHomeQuick: () => buildHomeQuick,
+    closeHomeDialogs: () => closeHomeDialogs,
     createBrokenCard: () => createBrokenCard,
     createProjectCard: () => createProjectCard,
     homeEmptyBox: () => homeEmptyBox,
@@ -169246,9 +169514,21 @@ ${h.text}`;
     card.addEventListener("click", () => openBtn.click());
     return card;
   }
+  function closeHomeDialogs() {
+    let n2 = 0;
+    for (const ov of [...HOME_OVS]) {
+      try {
+        ov.remove();
+        n2++;
+      } catch {
+      }
+    }
+    HOME_OVS.clear();
+    return n2;
+  }
   async function showHomeDialog(opts = {}) {
     const ov = el("div", "k-overlay" + (opts.startup ? " k-home-startup" : ""));
-    ov.style.zIndex = "90";
+    ov.classList.add("k-home-ov");
     if (opts.startup) {
       document.body.classList.add("k-home-only");
       const rawRemove = ov.remove.bind(ov);
@@ -169287,8 +169567,10 @@ ${h.text}`;
         offEsc();
       } catch {
       }
+      HOME_OVS.delete(ov);
       removeOv();
     };
+    HOME_OVS.add(ov);
     const thumb = Math.max(120, Math.min(400, parseInt(state.settings?.homeThumb, 10) || 190));
     box2.style.setProperty("--home-thumb", thumb + "px");
     await loadPanelProjects(grid, () => ov.remove());
@@ -169328,7 +169610,7 @@ ${h.text}`;
       grid.append(el("div", "home-empty", t("ui.home.occurErrorLoadProject")));
     }
   }
-  var HOME_VIEWS, HOME_QUICK_MAX, HOME_QUICK;
+  var HOME_VIEWS, HOME_QUICK_MAX, HOME_QUICK, HOME_OVS;
   var init_home_ui = __esm({
     "src/home-ui.js"() {
       init_i18n();
@@ -169355,6 +169637,7 @@ ${h.text}`;
         { cmd: "cheatsheet", label: "ui.home.quickShortcuts", tip: "ui.tip.cheatsheet", icon: "keyboard" },
         { cmd: "changelog", label: "ui.home.quickChangelog", tip: "ui.tip.changelog", icon: "history" }
       ];
+      HOME_OVS = /* @__PURE__ */ new Set();
     }
   });
 
@@ -170546,9 +170829,9 @@ ${h.text}`;
       choiceCount: graph.edges.length
     };
   }
-  function graphSummary(a, L2 = {}) {
-    const scenes = L2.scenes || t("ui.common.sceneGraph"), choices = L2.choices || t("ui.common.choice");
-    const roots = L2.roots || t("ui.common.dotStart"), endings = L2.endings || t("ui.common.actEnd");
+  function graphSummary(a, L3 = {}) {
+    const scenes = L3.scenes || t("ui.common.sceneGraph"), choices = L3.choices || t("ui.common.choice");
+    const roots = L3.roots || t("ui.common.dotStart"), endings = L3.endings || t("ui.common.actEnd");
     return `${a.total} ${scenes} \xB7 ${a.choiceCount} ${choices} \xB7 ${a.roots.length} ${roots} \xB7 ${a.endings.length} ${endings}`;
   }
   function enumeratePaths(graph, startId, limit = 40) {
@@ -170686,10 +170969,10 @@ ${h.text}`;
     return s.length > max2 ? s.slice(0, max2 - 1) + "\u2026" : s;
   }
   function graphToOutline(graph, opts = {}) {
-    const L2 = opts.labels || {};
-    const openTxt = L2.open || t("ui.common.notSpecifyTo");
-    const goneTxt = L2.gone || t("ui.common.sceneFind");
-    const loopTxt = L2.loop || t("ui.common.back");
+    const L3 = opts.labels || {};
+    const openTxt = L3.open || t("ui.common.notSpecifyTo");
+    const goneTxt = L3.gone || t("ui.common.sceneFind");
+    const loopTxt = L3.loop || t("ui.common.back");
     const titleOf2 = (id) => (graph.byId.get(id) || {}).title || "?";
     const lines = [];
     const walk3 = (id, prefix2, stack) => {
@@ -170753,15 +171036,15 @@ ${h.text}`;
   }
   function graphToHtmlTree(graph, opts = {}) {
     const a = opts.analysis || analyzeGraph(graph);
-    const L2 = opts.labels || {};
+    const L3 = opts.labels || {};
     const rootSet = new Set(a.roots), endSet = new Set(a.endings);
-    const title2 = opts.title || (L2.title || t("ui.common.graphBreakBranch"));
-    const openTxt = L2.open || t("ui.common.notSpecifyTo2");
-    const goneTxt = L2.gone || t("ui.common.sceneFind");
-    const loopTxt = L2.loop || t("ui.common.back");
+    const title2 = opts.title || (L3.title || t("ui.common.graphBreakBranch"));
+    const openTxt = L3.open || t("ui.common.notSpecifyTo2");
+    const goneTxt = L3.gone || t("ui.common.sceneFind");
+    const loopTxt = L3.loop || t("ui.common.back");
     const showBody = opts.excerpt !== false;
     const sceneLine = (n2) => {
-      const badge = rootSet.has(n2.id) ? `<span class="badge b-root">${gt("play")} ${esc7(L2.root || t("ui.common.dotStart"))}</span>` : endSet.has(n2.id) ? `<span class="badge b-end">${gt("flag-finish")} ${esc7(L2.ending || t("ui.common.actEnd"))}</span>` : "";
+      const badge = rootSet.has(n2.id) ? `<span class="badge b-root">${gt("play")} ${esc7(L3.root || t("ui.common.dotStart"))}</span>` : endSet.has(n2.id) ? `<span class="badge b-end">${gt("flag-finish")} ${esc7(L3.ending || t("ui.common.actEnd"))}</span>` : "";
       const style = n2.color ? ` style="border-left-color:${esc7(n2.color)}"` : "";
       return `<span class="scene"${style}><span class="t">${esc7(n2.title)}</span>` + (n2.chapterName ? `<span class="c">${esc7(n2.chapterName)}</span>` : "") + `</span>${badge}`;
     };
@@ -170769,7 +171052,7 @@ ${h.text}`;
       const n2 = graph.byId.get(id);
       if (!n2) return "";
       const ex = showBody ? bodyExcerpt(n2.body, opts.excerptLen ?? 260) : "";
-      const kids = n2.choices.map((c) => {
+      const kids3 = n2.choices.map((c) => {
         const target = c.nextSceneId ? graph.byId.get(c.nextSceneId) : null;
         const looped = target && stack.includes(c.nextSceneId);
         const cstyle = c.color ? ` style="color:${esc7(c.color)}"` : "";
@@ -170779,8 +171062,8 @@ ${h.text}`;
         if (looped) return `<li>${label2} ${sceneLine(target)} <span class="loop">${gt("reply")} ${esc7(loopTxt)}</span></li>`;
         return `<li>${label2} ${walk3(c.nextSceneId, [...stack, c.nextSceneId], depth + 1)}</li>`;
       }).join("\n");
-      const inner = (ex ? `<div class="excerpt">${esc7(ex)}</div>` : "") + (kids ? `<ul>
-${kids}
+      const inner = (ex ? `<div class="excerpt">${esc7(ex)}</div>` : "") + (kids3 ? `<ul>
+${kids3}
 </ul>` : "");
       if (!inner) return sceneLine(n2);
       return `<details open><summary>${sceneLine(n2)}</summary>
@@ -170795,8 +171078,8 @@ ${inner}
 <style>${TREE_CSS}</style></head>
 <body>
 <h1>${esc7(title2)}</h1>
-<div class="stats">${esc7(graphSummary(a, L2))}</div>
-${body || '<p class="open">' + esc7(L2.empty || t("ui.common.notHasSceneHas")) + "</p>"}
+<div class="stats">${esc7(graphSummary(a, L3))}</div>
+${body || '<p class="open">' + esc7(L3.empty || t("ui.common.notHasSceneHas")) + "</p>"}
 </body></html>`;
   }
   var NODE_W, NODE_H, GAP_X, GAP_Y, PAD, PORT_IN_Y, CHOICE_Y0, CHOICE_ROW_H, CHOICE_ROWS, MARKER_SRC, edgeKey2, esc7, TREE_CSS;
@@ -170912,10 +171195,10 @@ details>summary::-webkit-details-marker{display:none}
       return { graph: ps.graph, analysis: ps.analysis };
     }
     const scenes = await collectScenes2();
-    const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile27 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const sc of scenes) {
       try {
-        sc.body = sc.filePath ? parseMdFile25(await kapi.readFile(sc.filePath)).body || "" : "";
+        sc.body = sc.filePath ? parseMdFile27(await kapi.readFile(sc.filePath)).body || "" : "";
       } catch {
         sc.body = "";
       }
@@ -171383,17 +171666,17 @@ details>summary::-webkit-details-marker{display:none}
     if (!planState.path || !planState.live) return false;
     if (planLockBlocked()) return false;
     const bs = bstate();
-    const L2 = planState.live;
+    const L3 = planState.live;
     const plan = planFromState({
       name: planState.name,
-      note: L2.note,
-      status: L2.status,
-      color: L2.color,
-      tags: L2.tags,
-      book: L2.book,
-      choices: L2.choices,
-      positions: L2.positions,
-      colors: L2.colors,
+      note: L3.note,
+      status: L3.status,
+      color: L3.color,
+      tags: L3.tags,
+      book: L3.book,
+      choices: L3.choices,
+      positions: L3.positions,
+      colors: L3.colors,
       view: bs.view,
       zoom: bs.zoom,
       sel: bs.sel,
@@ -171477,7 +171760,7 @@ details>summary::-webkit-details-marker{display:none}
       setStatus(t("ui.branch.cantOpenPlan"));
       return false;
     }
-    const L2 = planState.live;
+    const L3 = planState.live;
     const { el: E } = await Promise.resolve().then(() => (init_core(), core_exports));
     return new Promise((resolve) => {
       const ov = E("div", "k-overlay");
@@ -171499,7 +171782,7 @@ details>summary::-webkit-details-marker{display:none}
       for (const st of PLAN_STATUSES) {
         const o = E("option", null, dataLabel(st));
         o.value = st;
-        if (st === (L2.status || PLAN_DEFAULT_STATUS)) o.selected = true;
+        if (st === (L3.status || PLAN_DEFAULT_STATUS)) o.selected = true;
         iStatus.append(o);
       }
       rSt.append(iStatus);
@@ -171514,18 +171797,18 @@ details>summary::-webkit-details-marker{display:none}
         for (const [n2, hex2] of SCENE_COLORS) {
           const o = E("option", null, gi("dot") + " " + dataLabel(n2));
           o.value = hex2;
-          if (hex2 === L2.color) o.selected = true;
+          if (hex2 === L3.color) o.selected = true;
           iColor.append(o);
         }
       }
       rC.append(iColor);
       box2.append(rC);
-      const iTags = mk2(t("ui.common.tag2"), (L2.tags || []).join(", "));
-      const iBook = mk2(t("ui.branch.bookSkipEmpty"), L2.book);
+      const iTags = mk2(t("ui.common.tag2"), (L3.tags || []).join(", "));
+      const iBook = mk2(t("ui.branch.bookSkipEmpty"), L3.book);
       iBook.placeholder = t("ui.branch.egBookShort");
       iBook.title = t("ui.branch.egBookOneUse");
-      const iNote = mk2(t("ui.common.note"), L2.note, "textarea");
-      const info = E("div", "dim", planSummary(L2));
+      const iNote = mk2(t("ui.common.note"), L3.note, "textarea");
+      const info = E("div", "dim", planSummary(L3));
       box2.append(info);
       const btns = E("div", "k-dlg-btns");
       const cB = E("button", "k-cancel", t("ui.common.cancel"));
@@ -171629,16 +171912,16 @@ details>summary::-webkit-details-marker{display:none}
   function setPlanProps(props) {
     if (!planState.live) return false;
     if (planLockBlocked()) return false;
-    const L2 = planState.live;
+    const L3 = planState.live;
     if (props.name !== void 0) {
       planState.name = String(props.name).trim() || planState.name;
-      L2.name = planState.name;
+      L3.name = planState.name;
     }
-    if (props.status !== void 0) L2.status = PLAN_STATUSES.includes(props.status) ? props.status : PLAN_DEFAULT_STATUS;
-    if (props.color !== void 0) L2.color = props.color || "";
-    if (props.tags !== void 0) L2.tags = props.tags;
-    if (props.book !== void 0) L2.book = props.book || "";
-    if (props.note !== void 0) L2.note = props.note || "";
+    if (props.status !== void 0) L3.status = PLAN_STATUSES.includes(props.status) ? props.status : PLAN_DEFAULT_STATUS;
+    if (props.color !== void 0) L3.color = props.color || "";
+    if (props.tags !== void 0) L3.tags = props.tags;
+    if (props.book !== void 0) L3.book = props.book || "";
+    if (props.note !== void 0) L3.note = props.note || "";
     markPlanDirty2();
     return true;
   }
@@ -171691,11 +171974,11 @@ details>summary::-webkit-details-marker{display:none}
     return out;
   }
   async function loadSceneBodies(scenes) {
-    const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile27 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const sc of scenes) {
       if (typeof sc.body === "string" || !sc.filePath) continue;
       try {
-        sc.body = parseMdFile25(await kapi.readFile(sc.filePath)).body || "";
+        sc.body = parseMdFile27(await kapi.readFile(sc.filePath)).body || "";
       } catch {
         sc.body = "";
       }
@@ -172435,9 +172718,9 @@ details>summary::-webkit-details-marker{display:none}
   }
   function sceneNodeFor(graph, it) {
     if (it.id && graph.byId.has(it.id)) return graph.byId.get(it.id);
-    const norm5 = (p) => String(p || "").replace(/\\/g, "/").toLowerCase();
-    const f = norm5(it.path || it.file);
-    return f ? graph.nodes.find((x) => norm5(x.filePath) === f) || null : null;
+    const norm6 = (p) => String(p || "").replace(/\\/g, "/").toLowerCase();
+    const f = norm6(it.path || it.file);
+    return f ? graph.nodes.find((x) => norm6(x.filePath) === f) || null : null;
   }
   async function dropChoiceOn(target, graph, redraw3) {
     const d = dragChoice;
@@ -172604,7 +172887,7 @@ ${tr2("mergeNote")}`,
     st.textContent = SVG_STYLE;
     out.append(st);
     out.append(svgEl("rect", { x: 0, y: 0, width: w, height: h, fill: PRINT.panel }));
-    for (const child of src2.childNodes) out.append(child.cloneNode(true));
+    for (const child2 of src2.childNodes) out.append(child2.cloneNode(true));
     for (const box2 of canvas.querySelectorAll(".branch-node")) {
       const x = parseFloat(box2.style.left) || 0, y = parseFloat(box2.style.top) || 0;
       const accent = box2.style.borderLeftColor || PRINT.accentAlt;
@@ -172698,8 +172981,8 @@ ${tr2("mergeNote")}`,
   async function readSceneBody(node) {
     if (!node || !node.filePath) return "";
     try {
-      const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
-      return liveBody(node.filePath, parseMdFile25(await kapi.readFile(node.filePath)).body || "");
+      const { parseMdFile: parseMdFile27 } = await Promise.resolve().then(() => __toESM(require_md()));
+      return liveBody(node.filePath, parseMdFile27(await kapi.readFile(node.filePath)).body || "");
     } catch (e) {
       log("warn", t("ui.branch.branchingReadBodyScene"), e);
       return "";
@@ -172710,7 +172993,7 @@ ${tr2("mergeNote")}`,
       setStatus(tr2("noFile"));
       return false;
     }
-    const { parseMdFile: parseMdFile25, dumpMdFile: dumpMdFile11 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile27, dumpMdFile: dumpMdFile12 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { tabHandle: tabHandle2 } = await Promise.resolve().then(() => (init_tab_bridge(), tab_bridge_exports));
     const { writeMdKeepingComments: writeMdKeepingComments2 } = await Promise.resolve().then(() => (init_comment_core(), comment_core_exports));
     const marker = "[" + text + "]";
@@ -172723,9 +173006,9 @@ ${tr2("mergeNote")}`,
       setStatus(tr2("insertedDirty"));
       return true;
     }
-    const { meta: meta2, body } = parseMdFile25(await kapi.readFile(node.filePath));
+    const { meta: meta2, body } = parseMdFile27(await kapi.readFile(node.filePath));
     if (body.includes(marker)) return true;
-    await writeMdKeepingComments2(kapi, node.filePath, dumpMdFile11(meta2, append2(body)));
+    await writeMdKeepingComments2(kapi, node.filePath, dumpMdFile12(meta2, append2(body)));
     if (h && h.kind !== "wiki") await h.reloadFromDisk();
     return true;
   }
@@ -172740,9 +173023,9 @@ ${tr2("mergeNote")}`,
     let body = "";
     if (tab && (tab.editor || tab.sp)) body = (tab.editor || tab.sp).getMarkdown();
     if (!body) {
-      const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
+      const { parseMdFile: parseMdFile27 } = await Promise.resolve().then(() => __toESM(require_md()));
       try {
-        body = parseMdFile25(await kapi.readFile(state.active.file)).body || "";
+        body = parseMdFile27(await kapi.readFile(state.active.file)).body || "";
       } catch {
       }
     }
@@ -172767,14 +173050,14 @@ ${tr2("mergeNote")}`,
     return missing.length;
   }
   async function scanAllScenes(scenes, redraw3) {
-    const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile27 } = await Promise.resolve().then(() => __toESM(require_md()));
     const { confirmBox: confirmBox2 } = await Promise.resolve().then(() => (init_ui(), ui_exports));
     const found2 = [];
     for (const sc of scenes) {
       if (!sc.filePath) continue;
       let body = "";
       try {
-        body = parseMdFile25(await kapi.readFile(sc.filePath)).body || "";
+        body = parseMdFile27(await kapi.readFile(sc.filePath)).body || "";
       } catch {
         continue;
       }
@@ -173566,9 +173849,9 @@ ${preview2}` + (found2.length > 8 ? `
     const sDraft = await readJson(sdf, { chapters: [] });
     const entry = (sDraft.chapters || []).find((c) => c.guid === chGuid);
     if (!entry) return null;
-    const same = srcD === dstD;
-    if (move && same) return entry;
-    const dList = sortByOrder((same ? sDraft : await readJson(ddf, { chapters: [] })).chapters);
+    const same2 = srcD === dstD;
+    if (move && same2) return entry;
+    const dList = sortByOrder((same2 ? sDraft : await readJson(ddf, { chapters: [] })).chapters);
     const newGuid = move && !dList.some((c) => c.guid === chGuid) ? chGuid : guid();
     const newTitle = title2 || entry.title || "";
     let at = afterGuid ? dList.findIndex((c) => c.guid === afterGuid) + 1 : dList.length;
@@ -173607,7 +173890,7 @@ ${preview2}` + (found2.length > 8 ? `
     }
     const newEntry2 = { ...entry, guid: newGuid, title: newTitle, folderName };
     if (!move) delete newEntry2.locked;
-    if (move && !same) {
+    if (move && !same2) {
       await mutateJson(kapi, sdf, (d) => {
         d.chapters = (d.chapters || []).filter((c) => c.guid !== chGuid);
       });
@@ -173712,9 +173995,9 @@ ${preview2}` + (found2.length > 8 ? `
   }
   async function chapterFromScenes(dPath, ch, items) {
     const list3 = (items || []).filter((it) => it && it.sc);
-    const same = list3.filter((it) => it.dPath === dPath);
-    if (!same.length) return null;
-    const name5 = await ask(t("ui.treeAct.chapterFromScenesAsk"), { value: same[0].sc.title || "" });
+    const same2 = list3.filter((it) => it.dPath === dPath);
+    if (!same2.length) return null;
+    const name5 = await ask(t("ui.treeAct.chapterFromScenesAsk"), { value: same2[0].sc.title || "" });
     if (!name5) return null;
     const newCh = await addChapter(dPath, name5);
     if (!newCh) return null;
@@ -173726,10 +174009,10 @@ ${preview2}` + (found2.length > 8 ? `
       if (from2 < 0 || anchor < 0) return false;
       fresh.chapters = moveToPosition(sorted, from2, anchor + 2).map((c, k) => ({ ...c, order: k + 1 }));
     });
-    for (const it of same) await moveSceneToChapter(dPath, it.ch, { id: it.sc.id }, newCh);
+    for (const it of same2) await moveSceneToChapter(dPath, it.ch, { id: it.sc.id }, newCh);
     await buildTree2();
-    const skipped = list3.length - same.length;
-    setStatus(tf("ui.treeAct.chapterFromScenesDone", name5, same.length) + (skipped ? " \xB7 " + tf("ui.treeAct.crossDraftSkipped", skipped) : ""));
+    const skipped = list3.length - same2.length;
+    setStatus(tf("ui.treeAct.chapterFromScenesDone", name5, same2.length) + (skipped ? " \xB7 " + tf("ui.treeAct.crossDraftSkipped", skipped) : ""));
     return newCh;
   }
   async function readMemo(file) {
@@ -176118,10 +176401,10 @@ ${preview2}` + (found2.length > 8 ? `
   }
   function colMenu(e, st) {
     const cols = readCols();
-    const L2 = COL_LABEL();
+    const L3 = COL_LABEL();
     const items = [];
     for (const c of cols)
-      items.push({ label: (c.on ? gi("checkbox-checked") + " " : gi("checkbox") + " ") + L2[c.key], click: async () => {
+      items.push({ label: (c.on ? gi("checkbox-checked") + " " : gi("checkbox") + " ") + L3[c.key], click: async () => {
         toggleCol(cols, c.key);
         await writeCols(cols);
         await renderVisual(st.key);
@@ -176129,7 +176412,7 @@ ${preview2}` + (found2.length > 8 ? `
     items.push("-");
     cols.forEach((c, i5) => {
       if (i5 === 0) return;
-      items.push({ label: gi("triangle-up") + " " + L2[c.key], click: async () => {
+      items.push({ label: gi("triangle-up") + " " + L3[c.key], click: async () => {
         moveCol(cols, c.key, -1);
         await writeCols(cols);
         await renderVisual(st.key);
@@ -176151,14 +176434,14 @@ ${preview2}` + (found2.length > 8 ? `
       return;
     }
     const cols = readCols().filter((c) => c.on);
-    const L2 = COL_LABEL();
+    const L3 = COL_LABEL();
     const res = resolveAll(st.rows, st.lines);
     const names = smart && smart.names || [];
     if (visView() === "table") {
       const table9 = el("div", "vis-table");
       applyGrid(table9, cols);
       table9.append(el("div", "vis-th vis-th-move", ""));
-      for (const c of cols) table9.append(headCell(st, c, L2[c.key]));
+      for (const c of cols) table9.append(headCell(st, c, L3[c.key]));
       table9.append(el("div", "vis-th vis-th-del", ""));
       for (let i5 = 0; i5 < st.rows.length; i5++) {
         table9.append(moveCell(st, i5));
@@ -176248,7 +176531,7 @@ ${preview2}` + (found2.length > 8 ? `
   async function cardFor(st, i5, res, cols, names) {
     const card = el("div", "vis-card");
     card.dataset.row = String(i5);
-    const L2 = COL_LABEL();
+    const L3 = COL_LABEL();
     const head2 = el("div", "vis-card-head");
     head2.append(el("span", "vis-card-no", String(st.rows[i5].no)));
     const up = el("button", "vis-mini vis-up", gi("triangle-up"));
@@ -176280,7 +176563,7 @@ ${preview2}` + (found2.length > 8 ? `
     for (const c of cols) {
       if (c.key === "no") continue;
       const line = el("div", "vis-card-line vis-card-" + c.key);
-      line.append(el("div", "vis-card-label", L2[c.key]));
+      line.append(el("div", "vis-card-label", L3[c.key]));
       const v2 = el("div", "vis-card-val");
       v2.append(await fieldFor(st, i5, res, c.key, names));
       line.append(v2);
@@ -176633,8 +176916,8 @@ ${preview2}` + (found2.length > 8 ? `
       const memoDir = await kapi.join(state.root, "Memos");
       await kapi.mkdir(memoDir);
       const fname = safeName5(title2) + "-" + Date.now().toString(36) + ".md";
-      const { dumpMdFile: dumpMdFile11 } = await Promise.resolve().then(() => __toESM(require_md()));
-      await kapi.writeFile(await kapi.join(memoDir, fname), dumpMdFile11({ title: title2, type: "memo" }, ta.value));
+      const { dumpMdFile: dumpMdFile12 } = await Promise.resolve().then(() => __toESM(require_md()));
+      await kapi.writeFile(await kapi.join(memoDir, fname), dumpMdFile12({ title: title2, type: "memo" }, ta.value));
       setStatus(t("ui.notes.moveInMemoDone") + title2);
       await buildTree3();
     };
@@ -177108,9 +177391,9 @@ ${preview2}` + (found2.length > 8 ? `
   }
   function computeScoreSingle(matches2, { ignoreFieldNorm = Config.ignoreFieldNorm }) {
     let totalScore = 1;
-    matches2.forEach(({ key: key2, norm: norm5, score }) => {
+    matches2.forEach(({ key: key2, norm: norm6, score }) => {
       const weight = key2 ? key2.weight : null;
-      totalScore *= Math.pow(score === 0 && weight ? Number.EPSILON : score, (weight || 1) * (ignoreFieldNorm ? 1 : norm5));
+      totalScore *= Math.pow(score === 0 && weight ? Number.EPSILON : score, (weight || 1) * (ignoreFieldNorm ? 1 : norm6));
     });
     return totalScore;
   }
@@ -178061,14 +178344,14 @@ ${preview2}` + (found2.length > 8 ? `
           const requireAllTokens = this.options.useTokenSearch && this.options.tokenMatch === "all";
           const { records } = this._myIndex;
           const results = heap ? null : [];
-          records.forEach(({ v: text, i: idx4, n: norm5 }) => {
+          records.forEach(({ v: text, i: idx4, n: norm6 }) => {
             if (!isDefined(text)) return;
             const searchResult = searcher.searchIn(text);
             if (searchResult.isMatch) {
               const match = {
                 score: searchResult.score,
                 value: text,
-                norm: norm5,
+                norm: norm6,
                 indices: searchResult.indices
               };
               if (requireAllTokens) {
@@ -178123,8 +178406,8 @@ ${preview2}` + (found2.length > 8 ? `
             const { children, operator } = node;
             const res = [];
             for (let i5 = 0, len5 = children.length; i5 < len5; i5 += 1) {
-              const child = children[i5];
-              const result = evaluate(child, item, idx4);
+              const child2 = children[i5];
+              const result = evaluate(child2, item, idx4);
               if (result.length) res.push(...result);
               else if (operator === LogicalOperator.AND) return [];
             }
@@ -178193,7 +178476,7 @@ ${preview2}` + (found2.length > 8 ? `
         _findMatches({ key: key2, value, searcher }) {
           if (!isDefined(value)) return [];
           const matches2 = [];
-          if (isArray2(value)) value.forEach(({ v: text, i: idx4, n: norm5 }) => {
+          if (isArray2(value)) value.forEach(({ v: text, i: idx4, n: norm6 }) => {
             if (!isDefined(text)) return;
             const searchResult = searcher.searchIn(text);
             if (searchResult.isMatch) {
@@ -178202,7 +178485,7 @@ ${preview2}` + (found2.length > 8 ? `
                 key: key2,
                 value: text,
                 idx: idx4,
-                norm: norm5,
+                norm: norm6,
                 indices: searchResult.indices,
                 hasInverse: searchResult.hasInverse
               };
@@ -178215,14 +178498,14 @@ ${preview2}` + (found2.length > 8 ? `
             }
           });
           else {
-            const { v: text, n: norm5 } = value;
+            const { v: text, n: norm6 } = value;
             const searchResult = searcher.searchIn(text);
             if (searchResult.isMatch) {
               const match = {
                 score: searchResult.score,
                 key: key2,
                 value: text,
-                norm: norm5,
+                norm: norm6,
                 indices: searchResult.indices,
                 hasInverse: searchResult.hasInverse
               };
@@ -178721,7 +179004,7 @@ ${preview2}` + (found2.length > 8 ? `
       init_ui();
       init_local_date();
       SKIP_DIRS6 = ["Recycle", "Snapshots", ".k2history", "Backups", "Research"];
-      SKIP_ROOT_FILES = ["ai-key.json"];
+      SKIP_ROOT_FILES = ["ai-key.json", ".k2lock.json"];
       MAX_KEEP = 7;
       BACKUP_DONE_MARK = ".k2backup-done.json";
       backupTimer = null;
@@ -179069,7 +179352,10 @@ img{max-width:100%}` }
       version: "2.0",
       created: (/* @__PURE__ */ new Date()).toISOString(),
       template: tplKey,
-      settings: { ...DEFAULT_SETTINGS },
+      // [trial 2026-10-25 ข้อ 8] เฉพาะค่าของ "ผลงาน" — ค่าระดับผู้ใช้ (ซูมพอดีความกว้าง ฯลฯ) มาจากไฟล์ผู้ใช้ตอนเปิด
+      // (เดิมสำเนา DEFAULT_SETTINGS ทั้งก้อน → ไฟล์ผลงานชนะ แล้วค่าที่ผู้ใช้เปิดไว้ถูกปิดในทุกโปรเจกต์ใหม่)
+      // [trial 2026-10-25 ข้อ 18] นิยายในหน้าจอภาษาไทย = กระดาษ A4 (บทภาพยนตร์คง Letter ตามมาตรฐานบท)
+      settings: { ...PROJECT_DEFAULTS, ...format3 !== "screenplay" && i18n.lang === "th" ? { paperSize: "a4" } : {} },
       goals: { ...DEFAULT_GOALS },
       // หมวดที่ไม่ใช่หมวดมาตรฐานเท่านั้นที่ต้องประกาศ (BUILTIN_CATS มีอยู่แล้วในตัวโปรแกรม)
       wikiCats: tpl.wikiCats.filter((k) => !["characters", "locations", "items", "lore"].includes(k)).map((k) => ({ key: k, label: CAT_LABEL[k] || k, icon: CAT_ICON[k] || gi("bookmark") }))
@@ -179096,7 +179382,7 @@ img{max-width:100%}` }
       });
       await W(await kapi.join(dr, "draft.json"), { chapters: chData });
       const scenesByCh = {};
-      const { dumpMdFile: dumpMdFile11 } = await Promise.resolve().then(() => __toESM(require_md()));
+      const { dumpMdFile: dumpMdFile12 } = await Promise.resolve().then(() => __toESM(require_md()));
       for (const ch of chData) {
         const sc = {
           id: guid3(),
@@ -179108,7 +179394,7 @@ img{max-width:100%}` }
         scenesByCh[ch.guid] = [sc];
         await kapi.writeFile(
           await kapi.join(dr, "Chapters", ch.folderName, sc.fileName),
-          dumpMdFile11({ title: sc.title, type: "scene", format: format3 }, "")
+          dumpMdFile12({ title: sc.title, type: "scene", format: format3 }, "")
         );
       }
       await W(await kapi.join(dr, "scenes.json"), { chapters: scenesByCh });
@@ -179188,33 +179474,80 @@ img{max-width:100%}` }
       };
       TEMPLATES = {
         novel: {
-          name: t("ui.common.novel"),
-          desc: t("ui.project.structureNovelChapterScene"),
+          get name() {
+            return t("ui.common.novel");
+          },
+          get desc() {
+            return t("ui.project.structureNovelChapterScene");
+          },
           sections: [{ chapters: [t("ui.common.chapterOne2"), t("ui.project.chapterTwo")] }],
           wikiCats: ["characters", "locations", "lore"],
           templates: "default"
         },
         screenplay: {
-          name: t("ui.project.screenplay"),
-          desc: t("ui.project.structureChapterFilmAct"),
+          get name() {
+            return t("ui.project.screenplay");
+          },
+          get desc() {
+            return t("ui.project.structureChapterFilmAct");
+          },
           sections: [{ title: t("ui.common.chapterFilm"), chapters: [t("ui.project.act"), t("ui.project.act2"), t("ui.project.act3")] }],
           wikiCats: ["characters", "locations"],
           templates: "screenplay",
           format: "screenplay"
         },
         fantasy: {
-          name: t("ui.project.fantasy"),
-          desc: t("ui.project.novelFantasyWorldbuilding"),
+          get name() {
+            return t("ui.project.fantasy");
+          },
+          get desc() {
+            return t("ui.project.novelFantasyWorldbuilding");
+          },
           sections: [{ chapters: [t("ui.project.chapter"), t("ui.common.chapterOne2")] }],
           wikiCats: ["characters", "locations", "items", "lore", "factions"],
           templates: "fantasy"
         },
         mystery: {
-          name: t("ui.project.investigateBack"),
-          desc: t("ui.project.novelInvestigateCharacterSuspect"),
+          get name() {
+            return t("ui.project.investigateBack");
+          },
+          get desc() {
+            return t("ui.project.novelInvestigateCharacterSuspect");
+          },
           sections: [{ chapters: [t("ui.project.start"), t("ui.project.investigation"), t("ui.project.chapterSummary")] }],
           wikiCats: ["characters", "locations", "items", "lore"],
           templates: "mystery"
+        },
+        // [alpha.170 · ข้อ 8] ผลสำรวจผู้ใช้: เทมเพลตตามประเภทงาน — นิยายเว็บ (ลงทีละตอน) · นิยายภาพ (VN · มีเส้นทางแยก)
+        webnovel: {
+          get name() {
+            return t("ui.project.tplWebnovel");
+          },
+          get desc() {
+            return t("ui.project.tplWebnovelDesc");
+          },
+          get sections() {
+            return [{ chapters: [1, 2, 3].map((n2) => tf("ui.project.episodeF", n2)) }];
+          },
+          wikiCats: ["characters", "locations", "lore"],
+          templates: "default"
+        },
+        vn: {
+          get name() {
+            return t("ui.project.tplVn");
+          },
+          get desc() {
+            return t("ui.project.tplVnDesc");
+          },
+          // เส้นทางหลัก (ทุกคนเห็น) + เส้นทางแยกของตัวละคร — เล่มละเส้นทาง · ทางเลือกต่อกันด้วยผังแตกสาย
+          get sections() {
+            return [
+              { title: t("ui.project.vnCommon"), chapters: [t("ui.project.vnPrologue"), t("ui.common.chapterOne2")] },
+              { title: tf("ui.project.vnRouteF", "A"), chapters: [t("ui.common.chapterOne2")] }
+            ];
+          },
+          wikiCats: ["characters", "locations", "items", "lore"],
+          templates: "default"
         }
       };
       BLANK_TEMPLATE = "__blank__";
@@ -180574,8 +180907,8 @@ img{max-width:100%}` }
           return;
         }
         const raw = await kapi.readFile(file);
-        const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
-        parts.push("### " + label2 + "\n" + parseMdFile25(raw).body);
+        const { parseMdFile: parseMdFile27 } = await Promise.resolve().then(() => __toESM(require_md()));
+        parts.push("### " + label2 + "\n" + parseMdFile27(raw).body);
       } catch {
       }
     };
@@ -180607,10 +180940,10 @@ img{max-width:100%}` }
   async function ragSource() {
     const scenes = [];
     const files = await allMdFiles(state.root);
-    const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
+    const { parseMdFile: parseMdFile27 } = await Promise.resolve().then(() => __toESM(require_md()));
     for (const f of files) {
       try {
-        const { meta: meta2 = {}, body: diskBody = "" } = parseMdFile25(await kapi.readFile(f));
+        const { meta: meta2 = {}, body: diskBody = "" } = parseMdFile27(await kapi.readFile(f));
         const h = tabHandle(f);
         const body = h && h.kind !== "wiki" ? h.getText() : diskBody;
         if (!String(body).trim()) continue;
@@ -180687,9 +181020,9 @@ img{max-width:100%}` }
     }
     for (const f of files) {
       try {
-        const { parseMdFile: parseMdFile25 } = await Promise.resolve().then(() => __toESM(require_md()));
+        const { parseMdFile: parseMdFile27 } = await Promise.resolve().then(() => __toESM(require_md()));
         const raw = await kapi.readFile(f.path);
-        out += "\n\n### " + gt("paperclip") + " " + (f.name || f.path) + "\n" + parseMdFile25(raw).body;
+        out += "\n\n### " + gt("paperclip") + " " + (f.name || f.path) + "\n" + parseMdFile27(raw).body;
       } catch {
       }
     }
@@ -181413,6 +181746,23 @@ img{max-width:100%}` }
     const u = [...sess && sess.messages || []].reverse().find((m) => m.role === "user" && !m.toolResult);
     return u ? u.text : "";
   }
+  function showNoProvider(ta) {
+    const row4 = ta && ta.parentElement;
+    if (!row4 || !row4.parentElement) return;
+    let box2 = row4.parentElement.querySelector(":scope > .ai-chat-noprov");
+    if (!box2) {
+      box2 = el("div", "ai-chat-noprov k-hint");
+      box2.setAttribute("role", "alert");
+      row4.parentElement.insertBefore(box2, row4);
+    }
+    box2.replaceChildren(document.createTextNode(t("ui.aiChatPanel.cantSettingsProviderAI") + " "));
+    const go = el("button", "cmp-mini", t("ui.aiChatPanel.openAiSettings"));
+    go.onclick = async () => {
+      const { showAISettingsDialog: showAISettingsDialog2 } = await Promise.resolve().then(() => (init_ai_provider_ui(), ai_provider_ui_exports));
+      showAISettingsDialog2();
+    };
+    box2.append(go);
+  }
   async function send(s0, ta, sendBtn) {
     const s = live(s0);
     const text = String(ta.value || "").trim();
@@ -181420,8 +181770,11 @@ img{max-width:100%}` }
     const prov = s.providerId ? await providerById(s.providerId) : await currentProvider();
     if (!prov) {
       setStatus(t("ui.aiChatPanel.cantSettingsProviderAI"));
+      showNoProvider(ta);
       return;
     }
+    const np = ta.parentElement && ta.parentElement.parentElement && ta.parentElement.parentElement.querySelector(":scope > .ai-chat-noprov");
+    if (np) np.remove();
     ta.value = "";
     const userMsg = newMessage("user", text, { files: (s.files || []).slice() });
     S3.cur = addMessage(s, userMsg);
@@ -181709,7 +182062,7 @@ img{max-width:100%}` }
     return results;
   }
   function guessLimit(used) {
-    for (const L2 of [8192, 16384, 32768, 65536, 128e3, 2e5, 1e6]) if (used <= L2) return L2;
+    for (const L3 of [8192, 16384, 32768, 65536, 128e3, 2e5, 1e6]) if (used <= L3) return L3;
     return used;
   }
   function recordUsage2(res, prov, s, cost) {
@@ -182587,8 +182940,8 @@ img{max-width:100%}` }
     return { kind: "want-scene", id: id || "" };
   }
   function samePath(a, b) {
-    const norm5 = (s) => String(s || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
-    return !!a && !!b && norm5(a) === norm5(b);
+    const norm6 = (s) => String(s || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+    return !!a && !!b && norm6(a) === norm6(b);
   }
   function tabsToReload(tabs2, changedPath) {
     if (!changedPath) return [];
@@ -183199,15 +183552,15 @@ img{max-width:100%}` }
     const box2 = el("div", "k-split-container");
     box2.dataset.splitId = node.id;
     box2.dataset.dir = node.dir === "col" ? "col" : "row";
-    const kids = node.children || [];
-    for (let i5 = 0; i5 < kids.length; i5++) {
-      const childEl = renderSplitNode(kids[i5], sm);
+    const kids3 = node.children || [];
+    for (let i5 = 0; i5 < kids3.length; i5++) {
+      const childEl = renderSplitNode(kids3[i5], sm);
       if (!childEl) continue;
       childEl.style.flexGrow = String(node.sizes?.[i5] ?? 1);
       childEl.style.flexShrink = "1";
       childEl.style.flexBasis = "0%";
       box2.appendChild(childEl);
-      if (i5 < kids.length - 1) box2.appendChild(splitHandle(node, i5, sm));
+      if (i5 < kids3.length - 1) box2.appendChild(splitHandle(node, i5, sm));
     }
     return box2;
   }
@@ -183755,9 +184108,9 @@ img{max-width:100%}` }
         flag: !!sc.flag
       });
       const fmt2 = mode === "auto" ? sc.format === "screenplay" ? "screenplay" : "prose" : mode;
-      let kids = fmt2 === "screenplay" ? parseScreenplay(sc.body) : parseProse(sc.body);
-      if (fmt2 !== "screenplay" && !showBeats) kids = kids.filter((k) => k.kind === "heading");
-      kids.forEach((k) => nodes.push(Object.assign({ id: sc.id, sceneId: sc.id }, k)));
+      let kids3 = fmt2 === "screenplay" ? parseScreenplay(sc.body) : parseProse(sc.body);
+      if (fmt2 !== "screenplay" && !showBeats) kids3 = kids3.filter((k) => k.kind === "heading");
+      kids3.forEach((k) => nodes.push(Object.assign({ id: sc.id, sceneId: sc.id }, k)));
     });
     return nodes;
   }
@@ -183808,13 +184161,13 @@ img{max-width:100%}` }
     }
     return out;
   }
-  function infoRows(entity) {
+  function infoRows(entity, labelOf3 = null) {
     const f = entity && entity.fields || {};
     const rows = [];
     for (const k of Object.keys(f)) {
       const v2 = f[k];
       const text = Array.isArray(v2) ? v2.filter(Boolean).join(", ") : String(v2 == null ? "" : v2);
-      if (text.trim()) rows.push([k, text]);
+      if (text.trim()) rows.push([labelOf3 && labelOf3(k, entity) || k, text]);
     }
     return rows;
   }
@@ -183852,7 +184205,7 @@ img{max-width:100%}` }
   function entityPage(e, ctx2) {
     const { pages, siteTitle, nav: nav2, labels, mentions } = ctx2;
     const ent = e.entity || {};
-    const rows = infoRows(ent);
+    const rows = infoRows(ent, ctx2.fieldLabel || null);
     const rels = relationRows(ent, pages);
     const seen = mentions && mentions[e.path] || [];
     const img = ent.image || ent.portrait || Array.isArray(ent.images) && ent.images[0] || "";
@@ -183906,7 +184259,14 @@ q.addEventListener('input',function(){var v=q.value.trim().toLowerCase();
       { href: "index.html", label: t("ui.common.pageFirst") },
       ...cats.map((c) => ({ href: "cat-" + slug(c) + ".html", label: catLabel4(c, labels) }))
     ];
-    const ctx2 = { pages, siteTitle: opts.siteTitle || "Codex", nav: nav2, labels, mentions: opts.mentions || {} };
+    const ctx2 = {
+      pages,
+      siteTitle: opts.siteTitle || "Codex",
+      nav: nav2,
+      labels,
+      mentions: opts.mentions || {},
+      fieldLabel: typeof opts.fieldLabel === "function" ? opts.fieldLabel : null
+    };
     const files = [{ name: "index.html", text: indexPage(list3, ctx2) }];
     for (const c of cats) {
       files.push({
@@ -184031,7 +184391,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     h.append(panelEmpty(t("ui.codex.busyRead")));
     const ents = (await listEntities(state.root)).sort((a, b) => cmpText(String(a.name), String(b.name)));
     s.ents = ents;
-    const { resolveImg: resolveImg2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    const { resolveImg: resolveImg2, fieldLabels: fieldLabels2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+    const fieldLabel = (k, ent) => (fieldLabels2(ent && ent.templateId) || {})[k] || "";
     const imgOf = (e) => {
       const p = entityPortrait(e.entity);
       return p && p.file ? resolveImg2(state.root, "Images/" + p.file) : "";
@@ -184181,10 +184542,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     function showHero(e, carousel) {
       hero.replaceChildren();
       prev.replaceChildren();
-      if (!e) {
-        hero.append(panelEmpty(t("ui.codex.notHasWikiNew")));
-        return;
-      }
+      hero.hidden = !e;
+      if (!e) return;
       const bg = el("div", "k-codex-hero-bg");
       tileBg(bg, e);
       hero.append(bg);
@@ -184213,7 +184572,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         }
       }
       const ent = e.entity || {};
-      const rows = infoRows(ent);
+      const rows = infoRows(ent, fieldLabel);
       if (rows.length) {
         const tb2 = el("table", "k-codex-info");
         for (const [k, v2] of rows) {
@@ -184239,7 +184598,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       setStatus(t("ui.codex.busyNewWebCodex"));
       try {
         const mentions = await collectMentions(ents);
-        const files = buildCodexSite(ents, { siteTitle: state.title || "Codex", labels, mentions });
+        const files = buildCodexSite(ents, { siteTitle: state.title || "Codex", labels, mentions, fieldLabel });
         const out = await kapi.join(dir2, "codex");
         await kapi.mkdir(out);
         for (const f of files) await kapi.writeFile(await kapi.join(out, f.name), f.text);
@@ -184898,13 +185257,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         sub: (m[4] || "").replace(/^\/+|\/+$/g, "")
       };
     }
-    const short2 = /^([\w.-]+)\/([\w.-]+)$/.exec(raw);
-    if (short2) {
+    const short3 = /^([\w.-]+)\/([\w.-]+)$/.exec(raw);
+    if (short3) {
       return {
         kind: SRC_GITHUB,
         ok: true,
-        owner: short2[1],
-        repo: short2[2].replace(/\.git$/i, ""),
+        owner: short3[1],
+        repo: short3[2].replace(/\.git$/i, ""),
         ref: "",
         sub: ""
       };
@@ -186527,13 +186886,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return rows;
   }
   function buildSystem(session, charId, opts = {}) {
-    const me = castById(session, charId);
-    if (!me) return "";
+    const me2 = castById(session, charId);
+    if (!me2) return "";
     const mono = !!opts.mono;
     const rows = [];
-    rows.push(me.persona || tf("ui.dlgBuilder.personaYouAre", me.name));
+    rows.push(me2.persona || tf("ui.dlgBuilder.personaYouAre", me2.name));
     const pron = [];
-    if (me.selfPronoun) pron.push(tf("ui.dlgBuilder.pronSelf", me.selfPronoun));
+    if (me2.selfPronoun) pron.push(tf("ui.dlgBuilder.pronSelf", me2.selfPronoun));
     for (const other of session.cast || []) {
       if (other.id === charId) continue;
       const r = relOf2(session, charId, other.id);
@@ -186553,7 +186912,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
     if (session.situation) rows.push("", t("ui.dlgBuilder.headSituation"), session.situation);
     rows.push("", t("ui.dlgBuilder.headRules"));
-    rows.push(tf("ui.dlgBuilder.ruleOnlyMe", me.name));
+    rows.push(tf("ui.dlgBuilder.ruleOnlyMe", me2.name));
     rows.push(lengthDef(session.len).rule);
     rows.push(session.paren !== false ? t("ui.dlgBuilder.ruleParenOn") : t("ui.dlgBuilder.ruleParenOff"));
     rows.push(t("ui.dlgBuilder.ruleNoName"));
@@ -186609,8 +186968,8 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     return tf("ui.dlgBuilder.cueYourTurn", to);
   }
   function buildTurnRequest(session, speaker, listener, opts = {}) {
-    const me = castById(session, speaker);
-    if (!me) return null;
+    const me2 = castById(session, speaker);
+    if (!me2) return null;
     const mono = listener === SELF_MONO;
     const messages = buildMessages(session, speaker, opts);
     messages.push({ role: "user", content: turnCue(session, speaker, listener) });
@@ -186618,7 +186977,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       system: buildSystem(session, speaker, { mono }),
       messages,
       maxTokens: lengthDef(session.len).maxTokens,
-      cast: me,
+      cast: me2,
       mono
     };
   }
@@ -189036,6 +189395,27 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     const f = fmt2 || {};
     return { ...f, pageNumbers: { ...PAGE_NUMBER_DEFAULTS, ...f.pageNumbers || {} } };
   }
+  function coverBookLine(book, title2, bookCount = 1) {
+    const b = String(book || "").trim();
+    const tl = String(title2 || "").trim();
+    if (!b || b === tl) return "";
+    if ((+bookCount || 1) <= 1 && /^Book \d+$/i.test(b)) return "";
+    if (tl && b.startsWith(tl)) {
+      const rest = b.slice(tl.length).replace(/^[\s:·—–-]+/, "").trim();
+      return rest;
+    }
+    return b;
+  }
+  function exportNameFields(scope2, { title: title2 = "", project = "", book = "", books = 1 } = {}) {
+    if (scope2 === "tab") return { title: String(title2 || project || ""), book: String(book || "") };
+    const many = (+books || 1) > 1 && String(book || "").trim();
+    return { title: many ? String(book) : String(project || title2 || ""), book: String(book || "") };
+  }
+  function pdfColorMode(pdf, kind) {
+    const m = pdf && pdf.colorMode;
+    if (m === "color" || m === "mono") return m;
+    return kind === "screenplay" ? "mono" : "color";
+  }
   function defaultHubSettings() {
     return {
       format: "pdf",
@@ -189049,7 +189429,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
       // titlePages = หน้าปก (บทหนัง = หน้าปกของบท · นิยาย = รูปปกจาก "จัดการเล่ม")
       // roster     = หน้ารายชื่อตัวละคร — ทั้งคู่เป็น "หน้าหน้าเล่ม" ที่ **ไม่นับเลขหน้า**
       // [alpha.132 ข้อ 3+4] เลขหน้ากับเลขฉากเป็นคนละสวิตช์ · โหมดสี/ขาวดำ
-      // (ค่าเริ่มต้นขาวดำตามธรรมเนียมบทถ่ายทำ — ตรงกับกล่องส่งออก PDF ของบท)
+      // (ค่าเริ่มต้น 'auto' — บทภาพยนตร์ขาวดำตามธรรมเนียมบทถ่ายทำ · นิยายสี: ดู pdfColorMode())
       pdf: {
         toc: true,
         titlePages: true,
@@ -189057,11 +189437,13 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         headers: true,
         pageNumbers: true,
         sceneNumbers: true,
-        colorMode: "mono",
+        colorMode: "auto",
         watermark: ""
       },
       html: { wysiwyg: true },
-      rtf: { fontPt: 12 }
+      rtf: { fontPt: 12 },
+      // [alpha.170 · คอมเมนต์ไปกลับกับ Word] แนบคอมเมนต์ที่ยังเปิดอยู่ของฉากไปในไฟล์ Word (ส่งให้ บก. ตอบ)
+      docx: { comments: false }
     };
   }
   function normalizeHub(saved) {
@@ -189075,10 +189457,11 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     out.pdf = { ...d.pdf, ...s.pdf || {} };
     out.pdf.watermark = String(out.pdf.watermark || "");
     out.pdf.sceneNumbers = s.pdf && "sceneNumbers" in s.pdf ? !!s.pdf.sceneNumbers : d.pdf.sceneNumbers;
-    out.pdf.colorMode = out.pdf.colorMode === "color" ? "color" : "mono";
+    out.pdf.colorMode = out.pdf.colorMode === "color" || out.pdf.colorMode === "mono" ? out.pdf.colorMode : "auto";
     out.html = { ...d.html, ...s.html || {} };
     out.rtf = { ...d.rtf, ...s.rtf || {} };
     out.rtf.fontPt = num(out.rtf.fontPt, 12);
+    out.docx = { comments: !!(s.docx && s.docx.comments) };
     return out;
   }
   function defaultWorkflowFor(fmtKey, workflows = PRESETS, kind = "") {
@@ -189241,6 +189624,693 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     }
   });
 
+  // src/import/import-scrivener.js
+  function parseXml(xml) {
+    const src2 = String(xml || "").replace(/<\?xml[\s\S]*?\?>/g, "").replace(/<!--[\s\S]*?-->/g, "");
+    const root = { tag: "#root", attrs: {}, children: [], text: "" };
+    const stack = [root];
+    const re = /<\s*(\/)?\s*([\w:.-]+)((?:\s+[\w:.-]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/)?\s*>|([^<]+)/g;
+    let m;
+    while (m = re.exec(src2)) {
+      const [, close2, tag3, attrStr, selfClose, textRun] = m;
+      const top = stack[stack.length - 1];
+      if (textRun != null) {
+        top.text += decodeEntities(textRun);
+        continue;
+      }
+      if (close2) {
+        if (stack.length > 1 && stack[stack.length - 1].tag === tag3) stack.pop();
+        continue;
+      }
+      const node = { tag: tag3, attrs: parseAttrs(attrStr), children: [], text: "" };
+      top.children.push(node);
+      if (!selfClose) stack.push(node);
+    }
+    return root;
+  }
+  function parseAttrs(s) {
+    const out = {};
+    for (const m of String(s || "").matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+      out[m[1]] = decodeEntities(m[2] != null ? m[2] : m[3]);
+    }
+    return out;
+  }
+  function decodeEntities(s) {
+    return String(s).replace(/&(#x?[0-9a-f]+|\w+);/gi, (all, e) => {
+      if (e[0] === "#") return String.fromCodePoint(parseInt(e[1] === "x" || e[1] === "X" ? e.slice(2) : e.slice(1), e[1] === "x" || e[1] === "X" ? 16 : 10));
+      return { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " }[e.toLowerCase()] ?? all;
+    });
+  }
+  function findAll(node, tag3, out = []) {
+    for (const c of node.children || []) {
+      if (c.tag === tag3) out.push(c);
+      findAll(c, tag3, out);
+    }
+    return out;
+  }
+  function firstChild(node, tag3) {
+    return (node.children || []).find((c) => c.tag === tag3) || null;
+  }
+  function rtfToText(rtf) {
+    const src2 = String(rtf || "");
+    let out = "";
+    let i5 = 0;
+    let skipDepth = 0;
+    let depth = 0;
+    let ucSkip = 1;
+    while (i5 < src2.length) {
+      const ch = src2[i5];
+      if (ch === "{") {
+        depth++;
+        i5++;
+        continue;
+      }
+      if (ch === "}") {
+        depth--;
+        if (skipDepth && depth < skipDepth) skipDepth = 0;
+        i5++;
+        continue;
+      }
+      if (ch === "\\") {
+        const ctrl = /^\\([a-zA-Z]+)(-?\d+)?[ ]?/.exec(src2.slice(i5));
+        if (ctrl) {
+          const word = ctrl[1], arg = ctrl[2] ? parseInt(ctrl[2], 10) : null;
+          i5 += ctrl[0].length;
+          if (word === "u" && arg != null) {
+            if (!skipDepth) out += String.fromCharCode(arg < 0 ? arg + 65536 : arg);
+            let skipped = 0;
+            while (skipped < ucSkip && i5 < src2.length) {
+              if (src2[i5] === "\\" && src2[i5 + 1] === "'") {
+                i5 += 4;
+                skipped++;
+                continue;
+              }
+              if (src2[i5] === "{" || src2[i5] === "}" || src2[i5] === "\\") break;
+              i5++;
+              skipped++;
+            }
+            continue;
+          }
+          if (word === "uc") {
+            ucSkip = arg == null ? 1 : arg;
+            continue;
+          }
+          if (word === "par" || word === "line") {
+            if (!skipDepth) out += "\n";
+            continue;
+          }
+          if (word === "tab") {
+            if (!skipDepth) out += "	";
+            continue;
+          }
+          if (SKIP_GROUPS.test(word) && !skipDepth) {
+            skipDepth = depth;
+            continue;
+          }
+          continue;
+        }
+        const esc10 = src2[i5 + 1];
+        if (esc10 === "'") {
+          const hex2 = src2.slice(i5 + 2, i5 + 4);
+          if (!skipDepth) {
+            const code3 = parseInt(hex2, 16);
+            if (code3 >= 32) out += String.fromCharCode(code3);
+          }
+          i5 += 4;
+          continue;
+        }
+        if (esc10 === "*") {
+          skipDepth = depth;
+          i5 += 2;
+          continue;
+        }
+        if (!skipDepth && (esc10 === "\\" || esc10 === "{" || esc10 === "}")) out += esc10;
+        i5 += 2;
+        continue;
+      }
+      if (!skipDepth) out += ch;
+      i5++;
+    }
+    return out.replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+  function parseBinder(xml) {
+    const doc3 = parseXml(xml);
+    const binder = findAll(doc3, "Binder")[0] || doc3;
+    const walk3 = (node) => (node.children || []).filter((c) => c.tag === "BinderItem").map((item) => {
+      const titleNode = firstChild(item, "Title");
+      const kids3 = firstChild(item, "Children");
+      const meta2 = firstChild(item, "MetaData");
+      const inc = meta2 ? firstChild(meta2, "IncludeInCompile") : null;
+      return {
+        id: item.attrs.UUID || item.attrs.ID || "",
+        type: item.attrs.Type || "Text",
+        title: (titleNode ? titleNode.text : "").trim(),
+        include: inc ? !/^no$/i.test(inc.text.trim()) : true,
+        // ติ๊ก "Include in Compile" ไว้ไหม
+        children: kids3 ? walk3(kids3) : []
+      };
+    });
+    return walk3(binder);
+  }
+  function mapBinder(binder, opts = {}) {
+    const draftOnly = opts.draftOnly !== false;
+    const roots = draftOnly ? pickDraft(binder) : binder;
+    const chapters = [];
+    let loose = null;
+    const pushScene = (chapter, item) => chapter.scenes.push({ srcId: item.id, title: item.title || t("ui.common.notNamed") });
+    const visit = (items, chapter) => {
+      for (const it of items) {
+        if (opts.onlyCompiled && it.include === false) continue;
+        if (SCRIV_FOLDER.has(it.type) || it.children && it.children.length) {
+          const ch = { title: it.title || t("ui.common.notNamed"), scenes: [] };
+          chapters.push(ch);
+          if (!chapter) loose = null;
+          visit(it.children || [], ch);
+          if (!ch.scenes.length && SCRIV_TEXT.has(it.type)) pushScene(ch, it);
+        } else if (SCRIV_TEXT.has(it.type)) {
+          if (!chapter) {
+            if (!loose) {
+              loose = { title: opts.looseTitle || t("ui.impOrtScrivener.notHasChapter"), scenes: [] };
+              chapters.push(loose);
+            }
+            pushScene(loose, it);
+          } else pushScene(chapter, it);
+        }
+      }
+    };
+    visit(roots, null);
+    const kept = chapters.filter((c) => c.scenes.length);
+    return {
+      sections: [{ title: opts.sectionTitle || DEFAULT_BOOK + " 1", chapters: kept }],
+      counts: { chapters: kept.length, scenes: kept.reduce((n2, c) => n2 + c.scenes.length, 0) }
+    };
+  }
+  function pickDraft(binder) {
+    const draft = binder.find((b) => b.type === "DraftFolder" || /^(draft|manuscript|ต้นฉบับ)$/i.test(b.title));
+    return draft ? draft.children : binder;
+  }
+  async function importScrivener(filePath, options = {}) {
+    const io4 = options.io;
+    if (!io4) return { ok: false, error: t("ui.impOrtScrivener.mustSendIoAdapter"), code: "no-io" };
+    const warnings = [];
+    let files = [];
+    try {
+      files = await io4.listFiles(filePath);
+    } catch {
+      files = [];
+    }
+    const scrivx = files.find((f) => f.toLowerCase().endsWith(".scrivx"));
+    if (!scrivx) return { ok: false, error: t("ui.impOrtScrivener.notFoundFileScrivx"), code: "no-scrivx" };
+    const xml = await io4.readFile(io4.join(filePath, scrivx));
+    const binder = parseBinder(xml);
+    if (!binder.length) return { ok: false, error: t("ui.impOrtScrivener.readOutlineBinderCant"), code: "bad-binder" };
+    const mapped = mapBinder(binder, options);
+    const title2 = options.title || scrivx.replace(/\.scrivx$/i, "");
+    for (const sec2 of mapped.sections) {
+      for (const ch of sec2.chapters) {
+        for (const sc of ch.scenes) {
+          const rtf = await readDocRtf(io4, filePath, sc.srcId);
+          if (rtf == null) {
+            warnings.push(tf("ui.impOrtScrivener.notFoundBody", sc.title, sc.srcId));
+            sc.body = "";
+            continue;
+          }
+          sc.body = rtfToText(rtf);
+        }
+      }
+    }
+    const plan = buildPlan(mapped, title2, options);
+    if (options.dryRun) return { ok: true, plan, counts: mapped.counts, warnings, written: 0, title: title2 };
+    const dest = options.dest;
+    if (!dest) return { ok: false, error: t("ui.impOrtScrivener.cantPickFolderTo"), code: "no-dest", plan, counts: mapped.counts };
+    let written = 0;
+    for (const f of plan.files) {
+      const full = io4.join(dest, ...f.path);
+      if (io4.mkdir) await io4.mkdir(dirOf3(io4, dest, f.path));
+      await io4.writeFile(full, f.content);
+      written++;
+      if (options.onProgress) options.onProgress(written, plan.files.length, f.path.join("/"));
+    }
+    return { ok: true, plan, counts: mapped.counts, warnings, written, title: title2, dest };
+  }
+  function dirOf3(io4, dest, parts) {
+    return io4.join(dest, ...parts.slice(0, -1));
+  }
+  async function readDocRtf(io4, root, id) {
+    const candidates = [
+      ["Files", "Data", id, "content.rtf"],
+      // Scrivener 3
+      ["Files", "Docs", id + ".rtf"],
+      // Scrivener 2
+      ["Files", "Docs", id, "content.rtf"]
+    ];
+    for (const parts of candidates) {
+      const p = io4.join(root, ...parts);
+      try {
+        if (await io4.exists(p)) return await io4.readFile(p);
+      } catch {
+      }
+    }
+    return null;
+  }
+  function buildPlan(mapped, title2, opts = {}) {
+    const files = [];
+    files.push({ path: ["project.khn.json"], content: JSON.stringify({
+      title: title2,
+      type: "killian-project",
+      importedFrom: "scrivener",
+      importedAt: opts.now || null
+    }, null, 2) });
+    const usedSec = [];
+    mapped.sections.forEach((sec2, si) => {
+      const secDir = freeName2(diskBase(sec2.title, DEFAULT_BOOK + " " + (si + 1)), usedSec);
+      usedSec.push(secDir);
+      files.push({ path: [secDir, "section.json"], content: JSON.stringify({
+        guid: "s" + (si + 1),
+        title: sec2.title,
+        order: si + 1,
+        folderName: secDir
+      }, null, 2) });
+      const chapters = [];
+      const scenesMap = {};
+      const usedCh = [];
+      sec2.chapters.forEach((ch, ci) => {
+        const guid3 = `c${si + 1}_${ci + 1}`;
+        const folderName = freeName2(diskBase(ch.title, t("ui.common.chapter")), usedCh);
+        usedCh.push(folderName);
+        chapters.push({ guid: guid3, title: ch.title, order: ci + 1, folderName });
+        const usedSc = [];
+        const names = ch.scenes.map((sc) => {
+          const n2 = freeName2(diskBase(sc.title, "scene"), usedSc, ".md");
+          usedSc.push(n2);
+          return n2;
+        });
+        scenesMap[guid3] = ch.scenes.map((sc, i5) => ({
+          id: `${guid3}_s${i5 + 1}`,
+          title: sc.title,
+          order: i5 + 1,
+          fileName: names[i5]
+        }));
+        ch.scenes.forEach((sc, i5) => {
+          files.push({
+            path: [secDir, "Draft", "default", "Chapters", folderName, names[i5]],
+            content: `---
+title: ${sc.title}
+type: scene
+format: prose
+---
+
+${sc.body || ""}
+`
+          });
+        });
+      });
+      files.push({ path: [secDir, "Draft", "default", "draft.json"], content: JSON.stringify({ chapters }, null, 2) });
+      files.push({ path: [secDir, "Draft", "default", "scenes.json"], content: JSON.stringify({ chapters: scenesMap }, null, 2) });
+    });
+    return { files, count: files.length };
+  }
+  var SKIP_GROUPS, SCRIV_TEXT, SCRIV_FOLDER;
+  var init_import_scrivener = __esm({
+    "src/import/import-scrivener.js"() {
+      init_i18n();
+      init_disk_names();
+      SKIP_GROUPS = /^(fonttbl|colortbl|stylesheet|info|pict|\*|listtable|listoverridetable|rsidtbl|generator|xmlnstbl)/;
+      SCRIV_TEXT = /* @__PURE__ */ new Set(["Text", "Document"]);
+      SCRIV_FOLDER = /* @__PURE__ */ new Set(["Folder", "DraftFolder"]);
+    }
+  });
+
+  // src/comments/docx-comments.js
+  var docx_comments_exports = {};
+  __export(docx_comments_exports, {
+    MK_CLOSE: () => MK_CLOSE,
+    MK_END: () => MK_END,
+    MK_START: () => MK_START,
+    commentMarkXml: () => commentMarkXml,
+    commentsParts: () => commentsParts,
+    flattenThreads: () => flattenThreads,
+    hasMarks: () => hasMarks,
+    markSceneComments: () => markSceneComments,
+    planCommentImport: () => planCommentImport,
+    readDocxComments: () => readDocxComments,
+    splitMarks: () => splitMarks,
+    stripMarks: () => stripMarks
+  });
+  function splitMarks(text) {
+    const out = [];
+    const s = String(text ?? "");
+    let last2 = 0, m;
+    MK_RE.lastIndex = 0;
+    while (m = MK_RE.exec(s)) {
+      if (m.index > last2) out.push({ text: s.slice(last2, m.index) });
+      out.push(m[1] != null ? { start: +m[1] } : { end: +m[2] });
+      last2 = m.index + m[0].length;
+    }
+    if (last2 < s.length) out.push({ text: s.slice(last2) });
+    return out;
+  }
+  function markSceneComments(body, comments, threads, opts = {}) {
+    let md = String(body ?? "");
+    const list3 = (comments || []).filter((c) => c && (opts.includeResolved || !c.resolved) && String(c.text || "").trim());
+    const placed = [];
+    for (const c of list3) {
+      const q2 = c.anchor && c.anchor.quote ? String(c.anchor.quote) : "";
+      let at = -1;
+      if (q2) {
+        let best = -1, dist = Infinity, from2 = 0, i5;
+        const want = Number(c.anchor.start) || 0;
+        while ((i5 = md.indexOf(q2, from2)) >= 0) {
+          const d = Math.abs(i5 - want);
+          if (d < dist) {
+            dist = d;
+            best = i5;
+          }
+          from2 = i5 + 1;
+        }
+        at = best;
+      }
+      placed.push({ c, at, len: at >= 0 ? q2.length : 0 });
+    }
+    let pointAt = 0;
+    {
+      let off3 = 0;
+      for (const line of md.split("\n")) {
+        if (line.trim() && !NOT_TEXT_LINE.test(line)) {
+          pointAt = off3 + LINE_PREFIX.exec(line)[1].length;
+          break;
+        }
+        off3 += line.length + 1;
+      }
+    }
+    const edits = [];
+    for (const p of placed) {
+      const n2 = threads.length;
+      threads.push({ comment: p.c, scene: opts.scene || "", anchored: p.at >= 0 });
+      const s = p.at >= 0 ? p.at : pointAt;
+      const e = p.at >= 0 ? p.at + p.len : pointAt;
+      edits.push({ pos: e, n: n2, txt: MK_END + n2 + MK_CLOSE, order: 0 });
+      edits.push({ pos: s, n: n2, txt: MK_START + n2 + MK_CLOSE, order: 1 });
+    }
+    edits.sort((a, b) => b.pos - a.pos || b.n - a.n || a.order - b.order);
+    for (const e of edits) md = md.slice(0, e.pos) + e.txt + md.slice(e.pos);
+    return md;
+  }
+  function flattenThreads(threads) {
+    const out = [];
+    threads.forEach((th, t3) => {
+      const walk3 = (c, parentIdx) => {
+        const idx4 = out.length;
+        out.push({ t: t3, comment: c, parent: parentIdx });
+        for (const r of c.replies || []) walk3(r, parentIdx == null ? idx4 : parentIdx);
+      };
+      walk3(th.comment, null);
+    });
+    return out;
+  }
+  function commentMarkXml(flat, part) {
+    const ids = (t3) => flat.map((f, i5) => f.t === t3 ? i5 : -1).filter((i5) => i5 >= 0);
+    if (part.start != null) return ids(part.start).map((i5) => `<w:commentRangeStart w:id="${i5}"/>`).join("");
+    if (part.end != null) {
+      return ids(part.end).map((i5) => `<w:commentRangeEnd w:id="${i5}"/><w:r><w:rPr><w:rStyle w:val="CommentReference"/></w:rPr><w:commentReference w:id="${i5}"/></w:r>`).join("");
+    }
+    return "";
+  }
+  function commentsParts(threads, opts = {}) {
+    const flat = flattenThreads(threads);
+    if (!flat.length) return { files: [], rels: "", types: "", count: 0, flat };
+    const date = (c) => {
+      const d = new Date(c.timestamp || opts.now || Date.now());
+      return (Number.isNaN(d.getTime()) ? /* @__PURE__ */ new Date(0) : d).toISOString().replace(/\.\d+Z$/, "Z");
+    };
+    const paras = (text, i5) => {
+      const lines = String(text ?? "").split(/\r?\n/);
+      return lines.map((l, k) => `<w:p${k === lines.length - 1 ? ` w14:paraId="${paraId(i5)}" w14:textId="77777777"` : ""}>` + (k === 0 ? '<w:pPr><w:pStyle w:val="CommentText"/></w:pPr><w:r><w:rPr><w:rStyle w:val="CommentReference"/></w:rPr><w:annotationRef/></w:r>' : "") + `<w:r><w:t xml:space="preserve">${xmlEsc(l)}</w:t></w:r></w:p>`).join("");
+    };
+    const author = (c) => String(c.author || "").trim() || opts.defaultAuthor || "Killian";
+    const commentsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="${W14}">
+${flat.map((f, i5) => `<w:comment w:id="${i5}" w:author="${xmlEsc(author(f.comment))}" w:date="${date(f.comment)}" w:initials="${xmlEsc(initialsOf(author(f.comment)))}">${paras(f.comment.text, i5)}</w:comment>`).join("\n")}
+</w:comments>`;
+    const extXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w15:commentsEx xmlns:w15="${W15}">
+${flat.map((f, i5) => {
+      const root = f.parent == null ? f : flat[f.parent];
+      const done3 = root.comment.resolved ? "1" : "0";
+      return `<w15:commentEx w15:paraId="${paraId(i5)}"${f.parent != null ? ` w15:paraIdParent="${paraId(f.parent)}"` : ""} w15:done="${done3}"/>`;
+    }).join("\n")}
+</w15:commentsEx>`;
+    return {
+      flat,
+      count: flat.length,
+      files: [
+        { path: "word/comments.xml", data: commentsXml },
+        { path: "word/commentsExtended.xml", data: extXml }
+      ],
+      rels: '<Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>\n<Relationship Id="rIdCommentsEx" Type="http://schemas.microsoft.com/office/2011/relationships/commentsExtended" Target="commentsExtended.xml"/>',
+      types: '<Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>\n<Override PartName="/word/commentsExtended.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.commentsExtended+xml"/>'
+    };
+  }
+  function descend(n2, name5, out = []) {
+    for (const c of kids(n2)) {
+      if (local(c.tag) === name5) out.push(c);
+      descend(c, name5, out);
+    }
+    return out;
+  }
+  function plainText2(n2) {
+    let s = "";
+    const walk3 = (x) => {
+      for (const c of kids(x)) {
+        const k = local(c.tag);
+        if (k === "del" || k === "moveFrom" || k === "delText" || k === "instrText") continue;
+        if (k === "t") s += c.text;
+        else if (k === "tab") s += "	";
+        else if (k === "br" || k === "cr") s += "\n";
+        else walk3(c);
+      }
+    };
+    walk3(n2);
+    return s;
+  }
+  function readDocxComments(parts = {}) {
+    if (!parts.comments) return [];
+    const cm = /* @__PURE__ */ new Map();
+    for (const c of descend(parseXml(parts.comments), "comment")) {
+      const ps = kids(c).filter((x) => local(x.tag) === "p");
+      const text = ps.map((p) => plainText2(p)).join("\n").replace(/\s+$/, "");
+      const last2 = ps[ps.length - 1];
+      cm.set(String(attr(c, "id")), {
+        id: String(attr(c, "id")),
+        author: String(attr(c, "author") || ""),
+        date: String(attr(c, "date") || ""),
+        text,
+        paraId: last2 ? String(attr(last2, "paraId") || "") : ""
+      });
+    }
+    const ext = /* @__PURE__ */ new Map();
+    if (parts.commentsExtended) {
+      for (const e of descend(parseXml(parts.commentsExtended), "commentEx")) {
+        ext.set(String(attr(e, "paraId") || ""), { parent: String(attr(e, "paraIdParent") || ""), done: attr(e, "done") === "1" });
+      }
+    }
+    const quote = /* @__PURE__ */ new Map(), context2 = /* @__PURE__ */ new Map(), orderOf = /* @__PURE__ */ new Map();
+    const open = /* @__PURE__ */ new Set();
+    let para2 = "";
+    const seen = (id) => {
+      if (!orderOf.has(id)) orderOf.set(id, orderOf.size);
+    };
+    const walk3 = (n2) => {
+      for (const c of kids(n2)) {
+        const k = local(c.tag);
+        if (k === "del" || k === "moveFrom" || k === "delText" || k === "instrText") continue;
+        if (k === "commentRangeStart") {
+          const id = String(attr(c, "id"));
+          open.add(id);
+          quote.set(id, "");
+          context2.set(id, para2);
+          seen(id);
+          continue;
+        }
+        if (k === "commentRangeEnd") {
+          open.delete(String(attr(c, "id")));
+          continue;
+        }
+        if (k === "commentReference") {
+          const id = String(attr(c, "id"));
+          seen(id);
+          if (!context2.has(id)) context2.set(id, para2);
+          continue;
+        }
+        if (k === "p") {
+          for (const id of open) if (quote.get(id)) quote.set(id, quote.get(id) + "\n");
+          const prev = para2;
+          para2 = plainText2(c);
+          walk3(c);
+          para2 = prev;
+          continue;
+        }
+        let piece = "";
+        if (k === "t") piece = c.text;
+        else if (k === "tab") piece = "	";
+        else if (k === "br" || k === "cr") piece = "\n";
+        if (piece) {
+          for (const id of open) quote.set(id, quote.get(id) + piece);
+          continue;
+        }
+        walk3(c);
+      }
+    };
+    walk3(parseXml(parts.document || ""));
+    const byPara = /* @__PURE__ */ new Map();
+    for (const c of cm.values()) if (c.paraId) byPara.set(c.paraId, c);
+    const parentOf3 = (c) => {
+      const e = ext.get(c.paraId);
+      return e && e.parent && byPara.has(e.parent) ? byPara.get(e.parent) : null;
+    };
+    const rootOf = (c) => {
+      let r = c, guard = 0;
+      while (parentOf3(r) && guard++ < 50) r = parentOf3(r);
+      return r;
+    };
+    const threads = /* @__PURE__ */ new Map();
+    const sorted = [...cm.values()].sort((a, b) => (orderOf.get(a.id) ?? 1e9) - (orderOf.get(b.id) ?? 1e9) || +a.id - +b.id);
+    for (const c of sorted) {
+      const r = rootOf(c);
+      if (!threads.has(r.id)) {
+        const e = ext.get(r.paraId);
+        threads.set(r.id, {
+          id: r.id,
+          author: r.author,
+          date: r.date,
+          text: r.text,
+          done: !!(e && e.done),
+          quote: (quote.get(r.id) || "").replace(/^\n+|\n+$/g, ""),
+          context: String(context2.get(r.id) || ""),
+          replies: []
+        });
+      }
+      if (r !== c) threads.get(r.id).replies.push({ id: c.id, author: c.author, date: c.date, text: c.text });
+    }
+    return [...threads.values()].filter((t3) => t3.text.trim() || t3.replies.length);
+  }
+  function planCommentImport(threads, scenes, opts = {}) {
+    const now = opts.now || Date.now();
+    const stats = { added: 0, replies: 0, resolved: 0, same: 0, unmatched: 0 };
+    const work = new Map(scenes.map((s) => [s.key, { ...s, comments: JSON.parse(JSON.stringify(s.comments || [])), changed: false }]));
+    const unmatched = [];
+    let seq3 = 0;
+    const idOf = () => "cw" + now.toString(36) + (seq3++).toString(36);
+    const findScene3 = (th) => {
+      const q2 = norm4(th.quote), ctx2 = norm4(th.context);
+      const hits = [];
+      for (const s of work.values()) {
+        const p = norm4(s.plain);
+        let score = 0;
+        if (ctx2 && ctx2.length >= 4 && p.includes(ctx2)) score += 2;
+        if (q2 && p.includes(q2)) score += 1;
+        if (score) hits.push({ s, score });
+      }
+      for (const s of work.values()) {
+        if (s.comments.some((c) => same(c.text, th.text) && same(c.author || "", th.author || ""))) hits.push({ s, score: 3 });
+      }
+      hits.sort((a, b) => b.score - a.score);
+      return hits.length ? hits[0].s : null;
+    };
+    const anchorFor = (raw, th) => {
+      const q2 = String(th.quote || "").trim();
+      if (!q2) return null;
+      const fm = /^---\r?\n[\s\S]*?\r?\n---\r?\n/.exec(raw);
+      const from2 = fm ? fm[0].length : 0;
+      let i5 = raw.indexOf(q2, from2);
+      if (i5 >= 0) return normalizeAnchor({ start: i5, end: i5 + q2.length, quote: q2 });
+      const words = q2.split(/\s+/).filter(Boolean).sort((a, b) => b.length - a.length);
+      for (const w of words) {
+        if (w.length >= 2 && (i5 = raw.indexOf(w, from2)) >= 0) return normalizeAnchor({ start: i5, end: i5 + w.length, quote: w });
+      }
+      return null;
+    };
+    for (const th of threads) {
+      const s = findScene3(th);
+      if (!s) {
+        stats.unmatched++;
+        unmatched.push(th);
+        continue;
+      }
+      const mine = s.comments.find((c2) => same(c2.text, th.text) && same(c2.author || "", th.author || ""));
+      if (mine) {
+        stats.same++;
+        for (const r of th.replies) {
+          if ((mine.replies || []).some((x) => same(x.text, r.text) && same(x.author || "", r.author || ""))) continue;
+          mine.replies = [...mine.replies || [], makeComment({ text: r.text, author: r.author, now: tsOf(r.date, now), id: idOf() })];
+          stats.replies++;
+          s.changed = true;
+        }
+        if (th.done && !mine.resolved) {
+          mine.resolved = true;
+          mine.resolvedAt = new Date(now).toISOString();
+          stats.resolved++;
+          s.changed = true;
+        }
+        continue;
+      }
+      const c = makeComment({ text: th.text, author: th.author, position: anchorFor(s.raw, th), now: tsOf(th.date, now), id: idOf() });
+      c.replies = th.replies.map((r) => makeComment({ text: r.text, author: r.author, now: tsOf(r.date, now), id: idOf() }));
+      if (th.done) {
+        c.resolved = true;
+        c.resolvedAt = new Date(now).toISOString();
+      }
+      c.source = "docx";
+      s.comments.push(c);
+      s.changed = true;
+      stats.added++;
+      stats.replies += c.replies.length;
+    }
+    const updates = /* @__PURE__ */ new Map();
+    for (const s of work.values()) if (s.changed) updates.set(s.key, s.comments);
+    return { updates, stats, unmatched };
+  }
+  var MK_START, MK_END, MK_CLOSE, MK_RE, hasMarks, stripMarks, LINE_PREFIX, NOT_TEXT_LINE, xmlEsc, initialsOf, paraId, W14, W15, local, kids, attr, norm4, same, tsOf;
+  var init_docx_comments = __esm({
+    "src/comments/docx-comments.js"() {
+      init_import_scrivener();
+      init_comment_core();
+      MK_START = String.fromCharCode(57536);
+      MK_END = String.fromCharCode(57538);
+      MK_CLOSE = String.fromCharCode(57537);
+      MK_RE = new RegExp(`${MK_START}(\\d+)${MK_CLOSE}|${MK_END}(\\d+)${MK_CLOSE}`, "g");
+      hasMarks = (s) => {
+        const t3 = String(s || "");
+        return t3.includes(MK_START) || t3.includes(MK_END);
+      };
+      stripMarks = (s) => String(s || "").replace(MK_RE, "");
+      LINE_PREFIX = /^((?:<!--align:\w+-->)?\s*(?:#{1,6}\s+|>\s*|[-*]\s+|\d+\.\s+)?)/;
+      NOT_TEXT_LINE = /^\s*(?:!\[[^\]]*\]\([^)]*\)\s*$|<!--|```|~~~|(?:[-*_]\s*){3,}$|(?:\*\s+){2,}\*\s*$)/;
+      xmlEsc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+      initialsOf = (name5) => {
+        const w = String(name5 || "").trim().split(/\s+/).filter(Boolean);
+        if (!w.length) return "K2";
+        return w.slice(0, 2).map((x) => Array.from(x)[0]).join("").toUpperCase();
+      };
+      paraId = (i5) => (268435456 + i5 * 7 + 1).toString(16).toUpperCase().padStart(8, "0");
+      W14 = "http://schemas.microsoft.com/office/word/2010/wordml";
+      W15 = "http://schemas.microsoft.com/office/word/2012/wordml";
+      local = (tag3) => String(tag3 || "").replace(/^[\w.-]+:/, "");
+      kids = (n2) => n2 && n2.children || [];
+      attr = (n2, name5) => {
+        if (!n2) return void 0;
+        for (const [k, v2] of Object.entries(n2.attrs || {})) if (local(k) === name5) return v2;
+        return void 0;
+      };
+      norm4 = (s) => String(s || "").replace(/\s+/g, " ").trim();
+      same = (a, b) => norm4(a) === norm4(b);
+      tsOf = (d, fallback) => {
+        const x = new Date(d);
+        return Number.isNaN(x.getTime()) ? fallback : x.getTime();
+      };
+    }
+  });
+
   // src/export-ebook.js
   var export_ebook_exports = {};
   __export(export_ebook_exports, {
@@ -189251,7 +190321,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     imageSize: () => imageSize,
     mdToXhtmlSections: () => mdToXhtmlSections,
     plainInline: () => plainInline2,
-    xmlEsc: () => xmlEsc
+    xmlEsc: () => xmlEsc2
   });
   function hex6(c) {
     const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(c || "").trim());
@@ -189302,9 +190372,9 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
   }
   function inlineXhtml(text, imgHref) {
     return segsOf(text).map((seg) => {
-      let s = xmlEsc(seg.text).replace(RE_INLINE_IMG, (m, a, u) => {
+      let s = xmlEsc2(seg.text).replace(RE_INLINE_IMG, (m, a, u) => {
         const href = imgHref(unesc(u));
-        return href ? `<img alt="${a}" src="${xmlEsc(href)}"/>` : a;
+        return href ? `<img alt="${a}" src="${xmlEsc2(href)}"/>` : a;
       });
       const marks2 = seg.marks || [];
       const has4 = (n2) => marks2.some((m) => markName(m) === n2);
@@ -189357,15 +190427,15 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
           cur.parts.push(`<blockquote><p${al(b.align)}>${inlineXhtml(b.text, imgHref)}</p></blockquote>`);
           break;
         case "hr":
-          cur.parts.push(b.text ? `<p class="scene-break" style="text-align:center;text-indent:0">${xmlEsc(b.text)}</p>` : "<hr/>");
+          cur.parts.push(b.text ? `<p class="scene-break" style="text-align:center;text-indent:0">${xmlEsc2(b.text)}</p>` : "<hr/>");
           break;
         case "code":
-          cur.parts.push(`<pre><code>${xmlEsc(b.text)}</code></pre>`);
+          cur.parts.push(`<pre><code>${xmlEsc2(b.text)}</code></pre>`);
           break;
         case "figure": {
           const href = imgHref(b.src);
-          if (href) cur.parts.push(`<figure${al(b.align)}><img alt="${xmlEsc(b.alt || "")}" src="${xmlEsc(href)}"/></figure>`);
-          else if (b.alt) cur.parts.push(`<p class="k-img-alt">${xmlEsc(b.alt)}</p>`);
+          if (href) cur.parts.push(`<figure${al(b.align)}><img alt="${xmlEsc2(b.alt || "")}" src="${xmlEsc2(href)}"/></figure>`);
+          else if (b.alt) cur.parts.push(`<p class="k-img-alt">${xmlEsc2(b.alt)}</p>`);
           break;
         }
         default: {
@@ -189403,7 +190473,7 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
         id: "titlepage",
         title: title2,
         file: "text/title.xhtml",
-        html: `<div class="k-title-page"><h1>${xmlEsc(title2)}</h1>${opts.author ? `<p>${xmlEsc(opts.author)}</p>` : ""}</div>`,
+        html: `<div class="k-title-page"><h1>${xmlEsc2(title2)}</h1>${opts.author ? `<p>${xmlEsc2(opts.author)}</p>` : ""}</div>`,
         toc: false
       });
     }
@@ -189426,12 +190496,12 @@ footer{color:var(--dim);font-size:13px;text-align:center;padding:28px 0 0}
     files.push({ path: "OEBPS/style.css", data: opts.css ? EPUB_CSS + "\n" + opts.css : EPUB_CSS });
     files.push({ path: "OEBPS/nav.xhtml", data: `<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${xmlEsc(lang)}" lang="${xmlEsc(lang)}">
-<head><meta charset="utf-8"/><title>${xmlEsc(title2)}</title></head>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${xmlEsc2(lang)}" lang="${xmlEsc2(lang)}">
+<head><meta charset="utf-8"/><title>${xmlEsc2(title2)}</title></head>
 <body>
-<nav epub:type="toc" id="toc"><h1>${xmlEsc(title2)}</h1>
+<nav epub:type="toc" id="toc"><h1>${xmlEsc2(title2)}</h1>
 <ol>
-${tocItems.map((c) => `<li><a href="${xmlEsc(c.file)}">${xmlEsc(c.title)}</a></li>`).join("\n")}
+${tocItems.map((c) => `<li><a href="${xmlEsc2(c.file)}">${xmlEsc2(c.title)}</a></li>`).join("\n")}
 </ol>
 </nav>
 </body>
@@ -189439,10 +190509,10 @@ ${tocItems.map((c) => `<li><a href="${xmlEsc(c.file)}">${xmlEsc(c.title)}</a></l
 ` });
     files.push({ path: "OEBPS/toc.ncx", data: `<?xml version="1.0" encoding="utf-8"?>
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
-<head><meta name="dtb:uid" content="${xmlEsc(id)}"/></head>
-<docTitle><text>${xmlEsc(title2)}</text></docTitle>
+<head><meta name="dtb:uid" content="${xmlEsc2(id)}"/></head>
+<docTitle><text>${xmlEsc2(title2)}</text></docTitle>
 <navMap>
-${tocItems.map((c, i5) => `<navPoint id="np${i5 + 1}" playOrder="${i5 + 1}"><navLabel><text>${xmlEsc(c.title)}</text></navLabel><content src="${xmlEsc(c.file)}"/></navPoint>`).join("\n")}
+${tocItems.map((c, i5) => `<navPoint id="np${i5 + 1}" playOrder="${i5 + 1}"><navLabel><text>${xmlEsc2(c.title)}</text></navLabel><content src="${xmlEsc2(c.file)}"/></navPoint>`).join("\n")}
 </navMap>
 </ncx>
 ` });
@@ -189451,17 +190521,17 @@ ${tocItems.map((c, i5) => `<navPoint id="np${i5 + 1}" playOrder="${i5 + 1}"><nav
       '<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>',
       '<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>',
       '<item id="css" href="style.css" media-type="text/css"/>',
-      ...chapters.map((c) => `<item id="${c.id}" href="${xmlEsc(c.file)}" media-type="application/xhtml+xml"/>`),
-      ...[...used.values()].map((im) => `<item id="${im.id}" href="${xmlEsc(im.href)}" media-type="${im.type}"/>`)
+      ...chapters.map((c) => `<item id="${c.id}" href="${xmlEsc2(c.file)}" media-type="application/xhtml+xml"/>`),
+      ...[...used.values()].map((im) => `<item id="${im.id}" href="${xmlEsc2(im.href)}" media-type="${im.type}"/>`)
     ];
     files.splice(2, 0, { path: "OEBPS/content.opf", data: `<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="${xmlEsc(lang)}">
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="${xmlEsc2(lang)}">
 <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-<dc:identifier id="bookid">${xmlEsc(id)}</dc:identifier>
-<dc:title>${xmlEsc(title2)}</dc:title>
-${opts.author ? `<dc:creator>${xmlEsc(opts.author)}</dc:creator>
-` : ""}<dc:language>${xmlEsc(lang)}</dc:language>
-<meta property="dcterms:modified">${xmlEsc(modified)}</meta>
+<dc:identifier id="bookid">${xmlEsc2(id)}</dc:identifier>
+<dc:title>${xmlEsc2(title2)}</dc:title>
+${opts.author ? `<dc:creator>${xmlEsc2(opts.author)}</dc:creator>
+` : ""}<dc:language>${xmlEsc2(lang)}</dc:language>
+<meta property="dcterms:modified">${xmlEsc2(modified)}</meta>
 </metadata>
 <manifest>
 ${manifest2.join("\n")}
@@ -189487,10 +190557,11 @@ ${chapters.map((c) => `<itemref idref="${c.id}"/>`).join("\n")}
     if (has4("sup")) rp.push('<w:vertAlign w:val="superscript"/>');
     else if (has4("sub")) rp.push('<w:vertAlign w:val="subscript"/>');
     const rPr = rp.length ? `<w:rPr>${rp.join("")}</w:rPr>` : "";
-    return String(text).split("	").map((part, i5) => (i5 ? `<w:r>${rPr}<w:tab/></w:r>` : "") + (part ? `<w:r>${rPr}<w:t xml:space="preserve">${xmlEsc(part)}</w:t></w:r>` : "")).join("");
+    return String(text).split("	").map((part, i5) => (i5 ? `<w:r>${rPr}<w:tab/></w:r>` : "") + (part ? `<w:r>${rPr}<w:t xml:space="preserve">${xmlEsc2(part)}</w:t></w:r>` : "")).join("");
   }
   function buildDocx(md, opts = {}) {
     const font = String(opts.font || "Tahoma").replace(/["<>&]/g, "");
+    const csFont = String(opts.thaiFont || font).replace(/["<>&]/g, "");
     const fontPt = Number.isFinite(+opts.fontPt) && +opts.fontPt > 0 ? +opts.fontPt : 14;
     const lang = String(opts.language || "th-TH");
     const paper = opts.paper || { width: 8.27, height: 11.69 };
@@ -189498,7 +190569,8 @@ ${chapters.map((c) => `<itemref idref="${c.id}"/>`).join("\n")}
     const contentIn = Math.max(1, (+paper.width || 8.27) - (+mg.left || 1) - (+mg.right || 1));
     const imgData = opts.images instanceof Map ? opts.images : /* @__PURE__ */ new Map();
     const media = /* @__PURE__ */ new Map();
-    const imgRun = (src2, alt) => {
+    const contentHIn = Math.max(1, (+paper.height || 11.69) - (+mg.top || 1) - (+mg.bottom || 1));
+    const imgRun = (src2, alt, fitPage = false) => {
       const data2 = imgData.get(src2);
       if (!data2) return "";
       const sz = imageSize(data2);
@@ -189508,20 +190580,26 @@ ${chapters.map((c) => `<itemref idref="${c.id}"/>`).join("\n")}
         media.set(src2, { rid: "rIdImg" + n2, name: `image${n2}.${sz.type === "jpeg" ? "jpeg" : sz.type}`, type: sz.type, data: data2, n: n2 });
       }
       const m = media.get(src2);
-      const wIn = Math.min(contentIn, sz.w / 96), hIn = wIn * (sz.h / sz.w);
+      let wIn = fitPage ? contentIn : Math.min(contentIn, sz.w / 96), hIn = wIn * (sz.h / sz.w);
+      if (fitPage && hIn > contentHIn) {
+        hIn = contentHIn;
+        wIn = hIn * (sz.w / sz.h);
+      }
       const cx2 = Math.round(wIn * 914400), cy2 = Math.round(hIn * 914400);
       const id = 1e3 + m.n;
-      return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx2}" cy="${cy2}"/><wp:docPr id="${id}" name="${xmlEsc(m.name)}" descr="${xmlEsc(alt || "")}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="${xmlEsc(m.name)}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${m.rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx2}" cy="${cy2}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+      return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx2}" cy="${cy2}"/><wp:docPr id="${id}" name="${xmlEsc2(m.name)}" descr="${xmlEsc2(alt || "")}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="${xmlEsc2(m.name)}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${m.rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx2}" cy="${cy2}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
     };
+    const cmt = opts.comments && opts.comments.length ? commentsParts(opts.comments, { defaultAuthor: opts.author }) : null;
+    const rx = cmt ? (text, marks2, sz) => splitMarks(text).map((p) => p.text != null ? runXml(p.text, marks2, sz) : commentMarkXml(cmt.flat, p)).join("") : runXml;
     const runsOf = (text, extraMarks = []) => segsOf(text).map((seg) => {
       const marks2 = [...seg.marks || [], ...extraMarks];
       let out = "", last2 = 0;
       for (const m of seg.text.matchAll(RE_INLINE_IMG)) {
-        out += runXml(seg.text.slice(last2, m.index), marks2, 0);
-        out += imgRun(m[2], m[1]) || runXml(m[1], marks2, 0);
+        out += rx(seg.text.slice(last2, m.index), marks2, 0);
+        out += imgRun(m[2], m[1]) || rx(m[1], marks2, 0);
         last2 = m.index + m[0].length;
       }
-      return out + runXml(seg.text.slice(last2), marks2, 0);
+      return out + rx(seg.text.slice(last2), marks2, 0);
     }).join("");
     const body = [];
     const nums = [];
@@ -189532,6 +190610,34 @@ ${chapters.map((c) => `<itemref idref="${c.id}"/>`).join("\n")}
       body.push(xml);
       paragraphs2++;
     };
+    const fm = opts.front || null;
+    if (fm) {
+      let any = false;
+      const pageBreak = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+      const next = () => {
+        if (any) push(pageBreak);
+        any = true;
+      };
+      if (fm.cover) {
+        next();
+        const r = fm.cover.src ? imgRun(fm.cover.src, "", true) : "";
+        if (r) push(`<w:p>${pPr("Figure", "center")}${r}</w:p>`);
+        if (!fm.cover.full || !r) {
+          push(`<w:p>${pPr("Title", "center")}${rx(fm.cover.title || "", [], 0)}</w:p>`);
+          if (fm.cover.book) push(`<w:p>${pPr("Subtitle", "center")}${rx(fm.cover.book, [], 0)}</w:p>`);
+          if (fm.cover.author) push(`<w:p>${pPr("Subtitle", "center")}${rx(fm.cover.author, [], 0)}</w:p>`);
+        }
+      }
+      if (fm.titleParas && fm.titleParas.length) {
+        next();
+        for (const x of fm.titleParas) push(x);
+      }
+      if (fm.roster) {
+        next();
+        for (const line of String(fm.roster).split("\n")) push(`<w:p>${pPr(null, null)}${rx(line, [], 0)}</w:p>`);
+      }
+      if (any) push(pageBreak);
+    }
     for (const b of (0, import_md28.mdBlocks)(md, { breakMarker: opts.breakMarker || "" })) {
       if (b.kind !== "li") curList = null;
       switch (b.kind) {
@@ -189554,18 +190660,18 @@ ${chapters.map((c) => `<itemref idref="${c.id}"/>`).join("\n")}
           break;
         case "hr":
           if (b.text) {
-            push(`<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t xml:space="preserve">${xmlEsc(b.text)}</w:t></w:r></w:p>`);
+            push(`<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t xml:space="preserve">${xmlEsc2(stripMarks(b.text))}</w:t></w:r></w:p>`);
             break;
           }
           push('<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="999999"/></w:pBdr></w:pPr></w:p>');
           break;
         case "code":
-          for (const line of String(b.text).split("\n")) push(`<w:p>${pPr("Code", null)}${runXml(line, [], 0)}</w:p>`);
+          for (const line of String(b.text).split("\n")) push(`<w:p>${pPr("Code", null)}${rx(line, [], 0)}</w:p>`);
           break;
         case "figure": {
           const r = imgRun(b.src, b.alt);
           if (r) push(`<w:p>${pPr("Figure", b.align || "center")}${r}</w:p>`);
-          else if (b.alt) push(`<w:p>${pPr("Figure", b.align || "center")}${runXml(b.alt, ["em"], 0)}</w:p>`);
+          else if (b.alt) push(`<w:p>${pPr("Figure", b.align || "center")}${rx(b.alt, ["em"], 0)}</w:p>`);
           break;
         }
         default: {
@@ -189582,11 +190688,11 @@ ${chapters.map((c) => `<itemref idref="${c.id}"/>`).join("\n")}
 ${body.join("\n")}
 ${sectPr}
 </w:body></w:document>`;
-    const fonts = `<w:rFonts w:ascii="${font}" w:hAnsi="${font}" w:eastAsia="${font}" w:cs="${font}"/>`;
+    const fonts = `<w:rFonts w:ascii="${font}" w:hAnsi="${font}" w:eastAsia="${font}" w:cs="${csFont}"/>`;
     const hs = [0, 2, 1.6, 1.35, 1.2, 1.1, 1];
     const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:docDefaults><w:rPrDefault><w:rPr>${fonts}<w:sz w:val="${fontPt * 2}"/><w:szCs w:val="${fontPt * 2}"/><w:lang w:val="${xmlEsc(lang)}" w:bidi="${xmlEsc(lang)}"/></w:rPr></w:rPrDefault>
+<w:docDefaults><w:rPrDefault><w:rPr>${fonts}<w:sz w:val="${fontPt * 2}"/><w:szCs w:val="${fontPt * 2}"/><w:lang w:val="${xmlEsc2(lang)}" w:bidi="${xmlEsc2(lang)}"/></w:rPr></w:rPrDefault>
 <w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="300" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
 <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>
 ${[1, 2, 3, 4, 5, 6].map((n2) => `<w:style w:type="paragraph" w:styleId="Heading${n2}"><w:name w:val="heading ${n2}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="120"/><w:outlineLvl w:val="${n2 - 1}"/></w:pPr><w:rPr><w:b/><w:bCs/><w:sz w:val="${Math.round(fontPt * 2 * hs[n2])}"/><w:szCs w:val="${Math.round(fontPt * 2 * hs[n2])}"/></w:rPr></w:style>`).join("\n")}
@@ -189594,6 +190700,10 @@ ${[1, 2, 3, 4, 5, 6].map((n2) => `<w:style w:type="paragraph" w:styleId="Heading
 <w:style w:type="paragraph" w:styleId="Quote"><w:name w:val="Quote"/><w:basedOn w:val="Normal"/><w:pPr><w:ind w:left="720" w:right="720"/></w:pPr><w:rPr><w:i/><w:iCs/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="0"/></w:pPr><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="${font}"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Figure"><w:name w:val="Figure"/><w:basedOn w:val="Normal"/><w:pPr><w:jc w:val="center"/></w:pPr></w:style>
+<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:before="480" w:after="240"/><w:jc w:val="center"/></w:pPr><w:rPr><w:b/><w:bCs/><w:sz w:val="${Math.round(fontPt * 2 * 2.1)}"/><w:szCs w:val="${Math.round(fontPt * 2 * 2.1)}"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Subtitle"><w:name w:val="Subtitle"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:jc w:val="center"/></w:pPr><w:rPr><w:sz w:val="${Math.round(fontPt * 2 * 1.25)}"/><w:szCs w:val="${Math.round(fontPt * 2 * 1.25)}"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="CommentText"><w:name w:val="annotation text"/><w:basedOn w:val="Normal"/><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
+<w:style w:type="character" w:styleId="CommentReference"><w:name w:val="annotation reference"/><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:style>
 </w:styles>`;
     const numberingXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -189610,6 +190720,7 @@ ${[...exts].map((e) => `<Default Extension="${e}" ContentType="image/${e}"/>`).j
 <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
 <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
 <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+${cmt ? cmt.types : ""}
 <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
 </Types>`;
     const created = String(opts.created || (/* @__PURE__ */ new Date()).toISOString()).replace(/\.\d+Z$/, "Z");
@@ -189623,29 +190734,32 @@ ${[...exts].map((e) => `<Default Extension="${e}" ContentType="image/${e}"/>`).j
       { path: "word/document.xml", data: documentXml },
       { path: "word/styles.xml", data: stylesXml },
       { path: "word/numbering.xml", data: numberingXml },
+      ...cmt ? cmt.files : [],
       { path: "word/_rels/document.xml.rels", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 <Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+${cmt ? cmt.rels : ""}
 ${[...media.values()].map((m) => `<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${m.name}"/>`).join("\n")}
 </Relationships>` },
       { path: "docProps/core.xml", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-<dc:title>${xmlEsc(opts.title || "")}</dc:title>
-<dc:creator>${xmlEsc(opts.author || "")}</dc:creator>
-<dcterms:created xsi:type="dcterms:W3CDTF">${xmlEsc(created)}</dcterms:created>
+<dc:title>${xmlEsc2(opts.title || "")}</dc:title>
+<dc:creator>${xmlEsc2(opts.author || "")}</dc:creator>
+<dcterms:created xsi:type="dcterms:W3CDTF">${xmlEsc2(created)}</dcterms:created>
 </cp:coreProperties>` },
       ...[...media.values()].map((m) => ({ path: "word/media/" + m.name, data: m.data }))
     ];
-    return { files, paragraphs: paragraphs2, images: media.size };
+    return { files, paragraphs: paragraphs2, images: media.size, comments: cmt ? cmt.count : 0 };
   }
-  var import_md28, clean, xmlEsc, markName, segsOf, RE_INLINE_IMG, EXT_TYPES, extOf2, X_TAGS, unesc, EPUB_CSS, xhtmlDoc, W_NS, JC, twip;
+  var import_md28, clean, xmlEsc2, markName, segsOf, RE_INLINE_IMG, EXT_TYPES, extOf2, X_TAGS, unesc, EPUB_CSS, xhtmlDoc, W_NS, JC, twip;
   var init_export_ebook = __esm({
     "src/export-ebook.js"() {
       import_md28 = __toESM(require_md());
       init_i18n();
+      init_docx_comments();
       clean = (s) => String(s == null ? "" : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, "");
-      xmlEsc = (s) => clean(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      xmlEsc2 = (s) => clean(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       markName = (m) => typeof m === "string" ? m : m && m.type;
       segsOf = (text) => (0, import_md28.parseInline)((0, import_md28.stripMentions)(String(text || ""))).filter((s) => s.text);
       RE_INLINE_IMG = /!\[([^\]]*)\]\(([^)\s]*)(?:\s+"[^"]*")?\)/g;
@@ -189677,8 +190791,8 @@ ${[...media.values()].map((m) => `<Relationship Id="${m.rid}" Type="http://schem
       ].join("\n");
       xhtmlDoc = (title2, lang, body) => `<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${xmlEsc(lang)}" lang="${xmlEsc(lang)}">
-<head><meta charset="utf-8"/><title>${xmlEsc(title2)}</title><link rel="stylesheet" type="text/css" href="../style.css"/></head>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${xmlEsc2(lang)}" lang="${xmlEsc2(lang)}">
+<head><meta charset="utf-8"/><title>${xmlEsc2(title2)}</title><link rel="stylesheet" type="text/css" href="../style.css"/></head>
 <body>
 ${body}
 </body>
@@ -189700,7 +190814,7 @@ ${body}
     generateRtf: () => generateRtf,
     inTw: () => inTw,
     paraCtrl: () => paraCtrl,
-    plainText: () => plainText2,
+    plainText: () => plainText3,
     rtfFs: () => rtfFs
   });
   function escapeRtf(s) {
@@ -189747,16 +190861,16 @@ ${body}
     }
     return out;
   }
-  function plainText2(s) {
+  function plainText3(s) {
     return (0, import_md29.inlinePlainText)(String(s ?? "")).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2");
   }
   function paraCtrl(el2, fmt2, fontPt) {
     const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
     const c = f.elements[el2] || f.elements.action;
     const st = (f.styles[el2] || f.styles.action).print;
-    const tw = textWidth(f.paper, f.margins);
+    const tw2 = textWidth(f.paper, f.margins);
     const li = Math.max(0, num(c.indent, 0) - f.margins.left);
-    const ri = Math.max(0, tw - li - num(c.width, tw));
+    const ri = Math.max(0, tw2 - li - num(c.width, tw2));
     const sb = Math.max(0, Math.round(num(c.linesBefore, 10) / 10)) * TWIPS_PER_LINE;
     let s = "\\pard\\plain\\f0\\fs" + rtfFs(fontPt);
     s += "\\li" + inTw(li) + "\\ri" + inTw(ri);
@@ -189771,15 +190885,15 @@ ${body}
   function titlePagesRtf(pages, f) {
     const out = [];
     const m = f.margins;
-    const tw = textWidth(f.paper, m);
+    const tw2 = textWidth(f.paper, m);
     for (const p of pages) {
       const rows = (p.strings || []).filter((s) => String(s.text ?? "").trim() !== "").slice().sort((a, b) => num(a.y, 0) - num(b.y, 0) || num(a.x, 0) - num(b.x, 0));
       let prevY = m.top;
       for (const s of rows) {
         const y = num(s.y, 0);
         const li = Math.max(0, num(s.x, m.left) - m.left);
-        const w = num(s.width, 0) > 0 ? num(s.width, 0) : Math.max(0.5, tw - li);
-        const ri = Math.max(0, tw - li - w);
+        const w = num(s.width, 0) > 0 ? num(s.width, 0) : Math.max(0.5, tw2 - li);
+        const ri = Math.max(0, tw2 - li - w);
         const gap = Math.max(0, y - prevY);
         const size = Math.round(numTitleSize(s.size) * 2);
         let ctrl = "\\pard\\plain\\f0\\fs" + size + "\\li" + inTw(li) + "\\ri" + inTw(ri);
@@ -189820,7 +190934,7 @@ ${body}
     }
     for (const b of blocks || []) {
       if (!b || b.el === "blank") continue;
-      const text = plainText2(b.text);
+      const text = plainText3(b.text);
       if (b.el === "page-break" || !text.replace(/\f/g, "").trim() && text.includes("\f")) {
         out.push("\\page");
         continue;
@@ -189945,6 +191059,178 @@ ${body}
     }
   });
 
+  // src/export-sp-docx.js
+  var export_sp_docx_exports = {};
+  __export(export_sp_docx_exports, {
+    buildScreenplayDocx: () => buildScreenplayDocx,
+    spParaProps: () => spParaProps,
+    titlePageParas: () => titlePageParas
+  });
+  function spParaProps(el2, fmt2, linePt) {
+    const f = fmt2 && fmt2.elements ? fmt2 : mergeSpFormat(fmt2);
+    const c = f.elements[el2] || f.elements.action;
+    const st = (f.styles[el2] || f.styles.action).print;
+    const width = textWidth(f.paper, f.margins);
+    const li = Math.max(0, num(c.indent, 0) - f.margins.left);
+    const ri = Math.max(0, width - li - num(c.width, width));
+    const before = Math.max(0, Math.round(num(c.linesBefore, 10) / 10)) * Math.round(num(linePt, 12) * 20);
+    return {
+      li: tw(li),
+      ri: tw(ri),
+      before,
+      keepNext: c.keepNext === true,
+      right: el2 === "transition",
+      bold: !!st.bold,
+      italic: !!st.italic,
+      underline: !!st.underline,
+      caps: !!st.caps
+    };
+  }
+  function runXml2(text, p) {
+    const rp = [];
+    if (p && p.bold) rp.push("<w:b/><w:bCs/>");
+    if (p && p.italic) rp.push("<w:i/><w:iCs/>");
+    if (p && p.underline) rp.push('<w:u w:val="single"/>');
+    if (p && p.size) rp.push(`<w:sz w:val="${p.size}"/><w:szCs w:val="${p.size}"/>`);
+    const rPr = rp.length ? `<w:rPr>${rp.join("")}</w:rPr>` : "";
+    return String(text).split("\n").map((line, i5) => (i5 ? `<w:r>${rPr}<w:br/></w:r>` : "") + (line ? `<w:r>${rPr}<w:t xml:space="preserve">${xmlEsc2(line)}</w:t></w:r>` : "")).join("");
+  }
+  function titlePageParas(pages, f) {
+    const out = [];
+    const width = textWidth(f.paper, f.margins);
+    pages.forEach((p, pi) => {
+      const rows = (p.strings || []).filter((s) => String(s.text ?? "").trim() !== "").slice().sort((a, b) => num(a.y, 0) - num(b.y, 0) || num(a.x, 0) - num(b.x, 0));
+      let prevY = f.margins.top;
+      rows.forEach((s, i5) => {
+        const li = Math.max(0, num(s.x, f.margins.left) - f.margins.left);
+        const w = num(s.width, 0) > 0 ? num(s.width, 0) : Math.max(0.5, width - li);
+        const ri = Math.max(0, width - li - w);
+        const gap = Math.max(0, num(s.y, 0) - prevY);
+        const jc = s.align === "center" ? "center" : s.align === "right" ? "right" : "left";
+        const pg = pi > 0 && i5 === 0 ? "<w:pageBreakBefore/>" : "";
+        out.push(`<w:p><w:pPr>${pg}<w:spacing w:before="${tw(gap)}" w:after="0"/><w:ind w:left="${tw(li)}" w:right="${tw(ri)}"/><w:jc w:val="${jc}"/></w:pPr>` + runXml2(String(s.text), { bold: s.bold, italic: s.italic, underline: s.underline, size: Math.round(num(s.size, 12) * 2) }) + "</w:p>");
+        prevY = num(s.y, 0) + num(s.size, 12) / 72;
+      });
+    });
+    return out;
+  }
+  function buildScreenplayDocx(blocks, opts = {}) {
+    const f = opts.fmt && opts.fmt.elements ? opts.fmt : mergeSpFormat(opts.fmt);
+    const m = f.margins;
+    const pt = Math.min(96, Math.max(4, num(opts.fontPt, 12)));
+    const font = safeFont(opts.font, "Courier Prime");
+    const thai = safeFont(opts.thaiFont, "Tahoma");
+    const lang = String(opts.language || "th-TH");
+    const body = [];
+    let paragraphs2 = 0;
+    const push = (xml) => {
+      body.push(xml);
+      paragraphs2++;
+    };
+    const titles = normalizeTitlePages(opts.titlePages).filter((p) => p.strings.some((s) => String(s.text ?? "").trim() !== ""));
+    const front = titles.length ? titlePageParas(titles, f) : [];
+    for (const x of front) push(x);
+    let firstBody = true;
+    let pendingBreak = false;
+    for (const b of blocks || []) {
+      if (!b || b.el === "blank") continue;
+      const text = plainText3(b.text);
+      if (b.el === "page-break" || !text.replace(/\f/g, "").trim() && text.includes("\f")) {
+        pendingBreak = true;
+        continue;
+      }
+      if (!text.trim() && b.el === "action") continue;
+      const p = spParaProps(b.el, f, pt);
+      const t22 = (p.caps ? text.toUpperCase() : text).replace(/\f/g, "");
+      const pPr = [
+        `<w:pStyle w:val="SP${b.el.replace(/[^a-z0-9]/gi, "")}"/>`,
+        p.keepNext ? "<w:keepNext/>" : "",
+        pendingBreak ? "<w:pageBreakBefore/>" : "",
+        // ย่อหน้าแรกของหน้าไม่ต้องเว้นนำ (เหมือน paginate() ที่ตัดบรรทัดว่างหัวหน้าทิ้ง)
+        `<w:spacing w:before="${firstBody || pendingBreak ? 0 : p.before}" w:after="0" w:line="240" w:lineRule="auto"/>`,
+        `<w:ind w:left="${p.li}" w:right="${p.ri}"/>`,
+        p.right ? '<w:jc w:val="right"/>' : ""
+      ].join("");
+      push(`<w:p><w:pPr>${pPr}</w:pPr>${runXml2(t22, p)}</w:p>`);
+      firstBody = false;
+      pendingBreak = false;
+    }
+    const showNum = opts.pageNumbers !== false;
+    const suffix = String(opts.suffix == null ? "." : opts.suffix).replace(/[<>&"]/g, "");
+    const start = Math.max(1, Math.round(num(opts.startPage, 1)));
+    const pgSz = `<w:pgSz w:w="${tw(f.paper.width)}" w:h="${tw(f.paper.height)}"/>`;
+    const pgMar = (header) => `<w:pgMar w:top="${tw(m.top)}" w:right="${tw(m.right)}" w:bottom="${tw(m.bottom)}" w:left="${tw(m.left)}" w:header="${header}" w:footer="708" w:gutter="0"/>`;
+    const headerTw = tw(num(f.pageNumbers && f.pageNumbers.top, 0.5));
+    if (front.length) {
+      body.push(`<w:p><w:pPr><w:sectPr>${pgSz}${pgMar(headerTw)}</w:sectPr></w:pPr></w:p>`);
+    }
+    const titlePg = showNum && opts.firstPageNumber === false;
+    const sectPr = `<w:sectPr>${showNum ? '<w:headerReference w:type="default" r:id="rIdHdr1"/>' : ""}${titlePg ? '<w:headerReference w:type="first" r:id="rIdHdr2"/>' : ""}${pgSz}${pgMar(headerTw)}<w:pgNumType w:start="${start}"/>${titlePg ? "<w:titlePg/>" : ""}</w:sectPr>`;
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document ${W_NS2}><w:body>
+${body.join("\n")}
+${sectPr}
+</w:body></w:document>`;
+    const rightInd = Math.max(0, tw(num(m.right, 1) - num(f.pageNumbers && f.pageNumbers.right, 1)));
+    const headerXml = (withNum) => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:hdr ${W_NS2}><w:p><w:pPr><w:jc w:val="right"/><w:ind w:right="${-rightInd}"/></w:pPr>${withNum ? `<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>${start}</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>${suffix ? `<w:r><w:t xml:space="preserve">${xmlEsc2(suffix)}</w:t></w:r>` : ""}` : ""}</w:p></w:hdr>`;
+    const fonts = `<w:rFonts w:ascii="${font}" w:hAnsi="${font}" w:eastAsia="${font}" w:cs="${thai}"/>`;
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:docDefaults><w:rPrDefault><w:rPr>${fonts}<w:sz w:val="${Math.round(pt * 2)}"/><w:szCs w:val="${Math.round(pt * 2)}"/><w:lang w:val="${xmlEsc2(lang)}" w:bidi="${xmlEsc2(lang)}"/></w:rPr></w:rPrDefault>
+<w:pPrDefault><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>
+${Object.keys(f.elements).map((k) => `<w:style w:type="paragraph" w:customStyle="1" w:styleId="SP${k.replace(/[^a-z0-9]/gi, "")}"><w:name w:val="Screenplay ${xmlEsc2(k)}"/><w:basedOn w:val="Normal"/></w:style>`).join("\n")}
+</w:styles>`;
+    const created = String(opts.created || (/* @__PURE__ */ new Date()).toISOString()).replace(/\.\d+Z$/, "Z");
+    const hdrTypes = showNum ? '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>\n' + (titlePg ? '<Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>\n' : "") : "";
+    const hdrRels = showNum ? '<Relationship Id="rIdHdr1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>\n' + (titlePg ? '<Relationship Id="rIdHdr2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/>\n' : "") : "";
+    const files = [
+      { path: "[Content_Types].xml", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+${hdrTypes}<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+</Types>` },
+      { path: "_rels/.rels", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+</Relationships>` },
+      { path: "word/document.xml", data: documentXml },
+      { path: "word/styles.xml", data: stylesXml },
+      { path: "word/_rels/document.xml.rels", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+${hdrRels}</Relationships>` },
+      { path: "docProps/core.xml", data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<dc:title>${xmlEsc2(opts.title || "")}</dc:title>
+<dc:creator>${xmlEsc2(opts.author || "")}</dc:creator>
+<dcterms:created xsi:type="dcterms:W3CDTF">${xmlEsc2(created)}</dcterms:created>
+</cp:coreProperties>` }
+    ];
+    if (showNum) files.push({ path: "word/header1.xml", data: headerXml(true) });
+    if (titlePg) files.push({ path: "word/header2.xml", data: headerXml(false) });
+    return { files, paragraphs: paragraphs2, images: 0, comments: 0 };
+  }
+  var TW, tw, W_NS2, safeFont;
+  var init_export_sp_docx = __esm({
+    "src/export-sp-docx.js"() {
+      init_sp_format();
+      init_sp_title_pages();
+      init_export_rtf();
+      init_export_ebook();
+      init_num();
+      TW = 1440;
+      tw = (inch) => Math.round(num(inch, 0) * TW);
+      W_NS2 = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+      safeFont = (f, d) => String(f || d).replace(/["<>&]/g, "").trim() || d;
+    }
+  });
+
   // src/export-fdx.js
   var export_fdx_exports = {};
   __export(export_fdx_exports, {
@@ -189952,12 +191238,12 @@ ${body}
     escapeXml: () => escapeXml,
     fdxType: () => fdxType,
     generateFdx: () => generateFdx,
-    plainText: () => plainText3
+    plainText: () => plainText4
   });
   function escapeXml(s) {
     return String(s ?? "").replace(XML_BAD, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
   }
-  function plainText3(s) {
+  function plainText4(s) {
     return (0, import_md30.inlinePlainText)(String(s ?? "")).replace(/(^|[^!])\[([^\]]+)\]\([^)\s]*\)/g, "$1$2").replace(/\u00A0/g, " ");
   }
   function generateFdx(blocks, meta2 = {}, opts = {}) {
@@ -189985,7 +191271,7 @@ ${body}
       if (!String(text ?? "").trim()) return;
       for (const line of String(text).split("\n")) {
         title2.push(`      <Paragraph Alignment="${align}" Type="Action">
-        <Text>${escapeXml(plainText3(line))}</Text>
+        <Text>${escapeXml(plainText4(line))}</Text>
       </Paragraph>`);
       }
     };
@@ -190059,7 +191345,7 @@ ${title2.join("\n")}
       };
       XML_BAD = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
       para = (type, text, indent = "    ", attrs = "") => `${indent}<Paragraph Type="${escapeXml(type)}"${attrs}>
-${indent}  <Text>${escapeXml(plainText3(text))}</Text>
+${indent}  <Text>${escapeXml(plainText4(text))}</Text>
 ${indent}</Paragraph>`;
     }
   });
@@ -190097,11 +191383,17 @@ ${indent}</Paragraph>`;
     const d = drafts.find((x) => x.dPath === cfg.draft) || drafts[0];
     if (!d) return null;
     const model = await A.buildDraftModel(d.dPath);
+    const cover = await A.sectionCoverInfo(d.dPath);
+    const books = new Set(drafts.map((x) => String(x.dPath || "").replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, ""))).size;
     return {
       model,
       kind: forced || docKind(model),
       dPath: d.dPath,
-      coverUrl: await A.sectionCoverUrl(d.dPath)
+      coverUrl: cover.url,
+      coverFull: !!(cover.full && cover.url),
+      coverOn: cover.on !== false,
+      bookLine: coverBookLine(model.book, model.title, books),
+      books
     };
   }
   async function compose2(A, cfg, model, wf2, markdownOut, beforeHtml) {
@@ -190136,15 +191428,34 @@ ${indent}</Paragraph>`;
     const fontCss = await A.exportFontCss();
     return fontCss ? html.replace("<style>", "<style>" + String.fromCharCode(10) + fontCss + String.fromCharCode(10)) : html;
   }
-  async function frontMatterHtml(A, cfg, model, coverUrl2) {
-    const wantCover = cfg.pdf.titlePages !== false;
-    const roster = cfg.pdf.roster !== false ? String(model.roster || "").trim() : "";
-    if (!wantCover && !roster) return "";
+  function proseFront(cfg, built) {
+    const b = built || {};
+    const want = cfg.pdf.titlePages !== false;
+    const cover = want && b.coverOn !== false ? {
+      url: b.coverUrl || "",
+      full: !!(b.coverFull && b.coverUrl),
+      title: b.title || "",
+      book: b.bookLine || "",
+      author: b.author || ""
+    } : null;
+    const titlePages = want ? normalizeTitlePages((state.meta || {}).titlePages).filter((p) => p.strings.some((s) => String(s.text ?? "").trim() !== "")) : [];
+    const roster = cfg.pdf.roster !== false ? String(b.roster || "").trim() : "";
+    return { cover, titlePages, roster };
+  }
+  async function frontMatterHtml(A, cfg, model, built) {
+    const fr = proseFront(cfg, built);
+    if (!fr.cover && !fr.titlePages.length && !fr.roster) return "";
     const spf = A.spFormat();
     const esc10 = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     const pages = [];
-    if (wantCover) {
-      pages.push('<section class="k-front k-cover">' + (coverUrl2 ? `<img class="k-cover-img" src="${esc10(coverUrl2)}" alt="">` : "") + `<div class="k-cover-title">${esc10(model.title || "")}</div>` + (model.author ? `<div class="k-cover-author">${esc10(model.author)}</div>` : "") + "</section>");
+    const roster = fr.roster;
+    if (fr.cover && fr.cover.full) {
+      pages.push(`<section class="k-front-bleed"><img class="k-cover-bleed" src="${esc10(fr.cover.url)}" alt=""></section>`);
+    } else if (fr.cover) {
+      pages.push('<section class="k-front k-cover">' + (fr.cover.url ? `<img class="k-cover-img" src="${esc10(fr.cover.url)}" alt="">` : "") + `<div class="k-cover-title">${esc10(fr.cover.title)}</div>` + (fr.cover.book ? `<div class="k-cover-book">${esc10(fr.cover.book)}</div>` : "") + (fr.cover.author ? `<div class="k-cover-author">${esc10(fr.cover.author)}</div>` : "") + "</section>");
+    }
+    if (fr.titlePages.length) {
+      for (const tp of fr.titlePages) pages.push(`<section class="k-front-tp">${titlePageInnerHtml(tp, spf)}</section>`);
     }
     if (roster) {
       pages.push('<section class="k-front k-cast"><pre class="k-cast-body">' + esc10(roster) + "</pre></section>");
@@ -190164,6 +191475,13 @@ ${indent}</Paragraph>`;
       ".k-cover-img{max-width:100%;max-height:62%;object-fit:contain;margin-bottom:.5in}",
       ".k-cover-title{font-size:2.1em;font-weight:700;line-height:1.25}",
       ".k-cover-author{font-size:1.15em;margin-top:.28in;opacity:.85}",
+      ".k-cover-book{font-size:1.35em;margin-top:.18in}",
+      // หน้าที่วางตามขอบกระดาษ (ปกเต็มหน้า · หน้าปกที่แต่งเอง) = named page ไม่มีระยะขอบ
+      "@page k-bleed{margin:0}",
+      `.k-front-bleed,.k-front-tp{page:k-bleed;position:relative;width:${spf.paper.width}in;height:${spf.paper.height}in;overflow:hidden;break-after:page;page-break-after:always}`,
+      ".k-front-bleed:last-child,.k-front-tp:last-child{break-after:auto;page-break-after:auto}",
+      ".k-cover-bleed{display:block;width:100%;height:100%;object-fit:cover}",
+      ".k-front-tp .sp-tp-str{line-height:1.2}",
       ".k-cast{justify-content:flex-start;text-align:left;align-items:stretch}",
       ".k-cast-body{font-family:inherit;white-space:pre-wrap;margin:0;font-size:1em;line-height:1.6}"
     ].join("\n");
@@ -190203,7 +191521,8 @@ ${pages.join("\n")}
             headers: o.headers,
             pageNumbers: o.pageNumbers !== false,
             sceneNumbers: o.sceneNumbers !== false,
-            colorMode: o.colorMode === "color" ? "color" : "mono",
+            colorMode: pdfColorMode(o, "screenplay"),
+            // [trial 2026-10-25 ข้อ 13]
             watermark: o.watermark,
             openPage: 0,
             startPage: built.startPage || 1
@@ -190259,7 +191578,31 @@ ${pages.join("\n")}
   async function buildEbookBytes(A, cfg, built) {
     const E = await Promise.resolve().then(() => (init_export_ebook(), export_ebook_exports));
     const { PAGE_BREAK: PAGE_BREAK2 } = await Promise.resolve().then(() => (init_compile(), compile_exports));
-    const JSZip5 = (await Promise.resolve().then(() => __toESM(require_jszip_min()))).default;
+    const JSZip7 = (await Promise.resolve().then(() => __toESM(require_jszip_min()))).default;
+    const lang0 = String(state.settings && state.settings.language || "th");
+    if (cfg.format === "docx" && built.kind === "screenplay" && built.blocks) {
+      const { buildScreenplayDocx: buildScreenplayDocx2 } = await Promise.resolve().then(() => (init_export_sp_docx(), export_sp_docx_exports));
+      const fmtS = exportPageNumberFmt(A.spFormat());
+      const spStack = String(state.settings && state.settings.spFontFamily || "");
+      const pkgS = buildScreenplayDocx2(built.blocks, {
+        title: built.title || "",
+        author: state.meta && state.meta.author || "",
+        fmt: fmtS,
+        titlePages: await scriptTitlePages(cfg, built, fmtS),
+        fontPt: num((state.settings || {}).spFontPt, 12),
+        font: firstRealFont(spStack) || "Courier Prime",
+        thaiFont: thaiFontOf(spStack),
+        language: lang0 === "th" ? "th-TH" : lang0,
+        pageNumbers: cfg.pdf.pageNumbers !== false,
+        firstPageNumber: fmtS.pageNumbers.firstPage !== false,
+        suffix: fmtS.pageNumbers.suffix,
+        startPage: built.startPage || 1
+      });
+      const zipS = new JSZip7();
+      for (const f of pkgS.files) zipS.file(f.path, f.data);
+      const bytesS = await zipS.generateAsync({ type: "uint8array", compression: "DEFLATE" });
+      return { bytes: bytesS, note: tf("ui.xhub.doneDocx", pkgS.paragraphs, 0), pkg: pkgS };
+    }
     const md = built.md || "";
     const images = /* @__PURE__ */ new Map();
     for (const src2 of E.collectImageSrcs(md, { breakMarker: PAGE_BREAK2 })) {
@@ -190273,6 +191616,26 @@ ${pages.join("\n")}
     }
     const lang = String(state.settings && state.settings.language || "th");
     const common = { title: built.title || "", author: built.author || "", breakMarker: PAGE_BREAK2, images };
+    if (cfg.format === "docx" && built.commentThreads && built.commentThreads.length) common.comments = built.commentThreads;
+    if (cfg.format === "docx") {
+      const fr = proseFront(cfg, built);
+      if (fr.cover || fr.titlePages.length || fr.roster) {
+        const { titlePageParas: titlePageParas2 } = await Promise.resolve().then(() => (init_export_sp_docx(), export_sp_docx_exports));
+        if (fr.cover && fr.cover.url) {
+          const p = pathFromFileUrl(fr.cover.url);
+          try {
+            if (p) images.set(fr.cover.url, new Uint8Array(await kapi.readBytes(p)));
+          } catch (e) {
+            log("warn", t("ui.xhub.ebookImgFail") + fr.cover.url, e);
+          }
+        }
+        common.front = {
+          cover: fr.cover ? { ...fr.cover, src: fr.cover.url } : null,
+          roster: fr.roster,
+          titleParas: fr.titlePages.length ? titlePageParas2(fr.titlePages, A.spFormat()) : []
+        };
+      }
+    }
     let pkg;
     if (cfg.format === "epub") {
       const uuid = globalThis.crypto && crypto.randomUUID ? crypto.randomUUID() : "k2-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
@@ -190283,26 +191646,48 @@ ${pages.join("\n")}
       pkg = E.buildDocx(md, {
         ...common,
         font,
+        thaiFont: thaiFontOf(liveProseFonts().fontStack),
         fontPt: num(A.proseFormat().fontPt, 16),
         paper: spf.paper,
         margins: spf.margins,
         language: lang === "th" ? "th-TH" : lang
       });
     }
-    const zip = new JSZip5();
+    const zip = new JSZip7();
     for (const f of pkg.files) zip.file(f.path, f.data, f.store ? { compression: "STORE" } : {});
     const bytes = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
-    const note = cfg.format === "epub" ? tf("ui.xhub.doneEpub", pkg.sections, pkg.images) : tf("ui.xhub.doneDocx", pkg.paragraphs, pkg.images);
+    const note = cfg.format === "epub" ? tf("ui.xhub.doneEpub", pkg.sections, pkg.images) : tf("ui.xhub.doneDocx", pkg.paragraphs, pkg.images) + (pkg.comments ? " \xB7 " + tf("ui.xhub.doneDocxComments", pkg.comments) : "");
     return { bytes, note, pkg };
   }
   async function buildAll(A, cfg, drafts) {
     const mk2 = await buildModel(A, cfg, drafts);
     if (!mk2) return null;
     const { model, kind } = mk2;
+    const commentThreads = [];
+    const spDocx = cfg.format === "docx" && kind === "screenplay";
+    if (cfg.format === "docx" && !spDocx && cfg.docx && cfg.docx.comments) {
+      const { markSceneComments: markSceneComments2 } = await Promise.resolve().then(() => (init_docx_comments(), docx_comments_exports));
+      const { parseComments: parseComments2, stripComments: stripComments3 } = await Promise.resolve().then(() => (init_comment_core(), comment_core_exports));
+      for (const ch of model.chapters || []) {
+        for (const sc of ch.scenes || []) {
+          let raw = sc.body || "";
+          let list3 = parseComments2(raw);
+          if (!list3.length && sc.file) {
+            try {
+              list3 = parseComments2(await kapi.readFile(sc.file));
+            } catch {
+              list3 = [];
+            }
+          }
+          if (!list3.length) continue;
+          sc.body = markSceneComments2(stripComments3(raw), list3, commentThreads, { scene: sc.file || "" });
+        }
+      }
+    }
     const wf2 = A.allWorkflows().find((w) => w.id === cfg.workflow) || defaultWorkflowFor(cfg.format, A.allWorkflows(), kind);
     const wf22 = { ...wf2, steps: (wf2.steps || []).map((s) => s.key === "cover" || s.key === "roster" ? { ...s, on: false } : s) };
     const engine2 = pdfEngine(kind);
-    const isEbook = cfg.format === "epub" || cfg.format === "docx";
+    const isEbook = cfg.format === "epub" || cfg.format === "docx" && !spDocx;
     const proseRtf = cfg.format === "rtf" && kind !== "screenplay";
     const { parseScript: parseScript2, stripFountainCodes: stripFountainCodes2 } = await Promise.resolve().then(() => (init_fountain(), fountain_exports));
     const r = await compose2(
@@ -190313,7 +191698,7 @@ ${pages.join("\n")}
       cfg.format === "pdf" && engine2 === "html" || isEbook || proseRtf,
       stripFountainCodes2
     );
-    const viaScript = cfg.format === "rtf" && !proseRtf || cfg.format === "fdx" || cfg.format === "pdf" && engine2 === "pdflib";
+    const viaScript = cfg.format === "rtf" && !proseRtf || cfg.format === "fdx" || spDocx || cfg.format === "pdf" && engine2 === "pdflib";
     const text = viaScript || r.ext === "html" ? r.text : stripFountainCodes2(r.text);
     const out = {
       title: model.title,
@@ -190324,6 +191709,13 @@ ${pages.join("\n")}
       frontHtml: "",
       roster: model.roster || "",
       coverUrl: mk2.coverUrl || "",
+      coverFull: !!mk2.coverFull,
+      coverOn: mk2.coverOn !== false,
+      bookLine: mk2.bookLine || "",
+      author: model.author || "",
+      book: model.book || "",
+      books: mk2.books || 1,
+      scope: cfg.scope,
       engine: engine2,
       blocks: null,
       startPage: mk2.startPage || 1
@@ -190332,16 +191724,18 @@ ${pages.join("\n")}
       out.html = r.ext === "html" ? await withFontCss(A, r.text) : await proseHtml(A, text, model.title, cfg.html.wysiwyg);
     }
     if (cfg.format === "pdf" && engine2 === "html") {
-      out.html = await proseHtml(A, text, model.title, true, cfg.pdf.colorMode !== "color");
-      out.frontHtml = await frontMatterHtml(A, cfg, model, mk2.coverUrl || "");
+      out.html = await proseHtml(A, text, model.title, true, pdfColorMode(cfg.pdf, "prose") !== "color");
+      out.frontHtml = await frontMatterHtml(A, cfg, model, out);
     }
-    const scriptSrc = cfg.format === "rtf" || cfg.format === "fdx" ? r.text.replace(/[ \t]*\f[ \t]*/g, "\n\n---\n\n") : r.text;
+    const scriptSrc = cfg.format === "rtf" || cfg.format === "fdx" || spDocx ? r.text.replace(/[ \t]*\f[ \t]*/g, "\n\n---\n\n") : r.text;
     if (viaScript) out.blocks = parseScript2(scriptSrc);
-    if (cfg.format === "rtf" || cfg.format === "fdx") out.preview = proseRtf ? text.replace(/<!--[\s\S]*?-->/g, "") : text;
+    if (cfg.format === "rtf" || cfg.format === "fdx" || spDocx) out.preview = proseRtf ? text.replace(/<!--[\s\S]*?-->/g, "") : text;
     if (isEbook) {
       out.md = text;
       out.author = model.author || "";
-      out.preview = text.replace(/<!--[\s\S]*?-->/g, "");
+      out.commentThreads = commentThreads;
+      const { stripMarks: stripMarks2 } = await Promise.resolve().then(() => (init_docx_comments(), docx_comments_exports));
+      out.preview = stripMarks2(text).replace(/<!--[\s\S]*?-->/g, "");
     }
     if (proseRtf) {
       const { generateProseRtf: generateProseRtf2 } = await Promise.resolve().then(() => (init_export_rtf(), export_rtf_exports));
@@ -190410,9 +191804,9 @@ ${pages.join("\n")}
     return titles.length;
   }
   function renderFrontPreview(box2, built, cfg, paper, scale2, look = {}) {
-    const wantCover = cfg.pdf.titlePages !== false;
-    const roster = cfg.pdf.roster !== false ? String(built.roster || "").trim() : "";
-    if (!wantCover && !roster) return 0;
+    const fr = proseFront(cfg, built);
+    const roster = fr.roster;
+    if (!fr.cover && !fr.titlePages.length && !roster) return 0;
     const frag = document.createDocumentFragment();
     const pxW = paper.width * 96 * scale2, pxH = paper.height * 96 * scale2;
     const mkPage = (cls) => {
@@ -190430,15 +191824,28 @@ ${pages.join("\n")}
       return page2;
     };
     let n2 = 0;
-    if (wantCover) {
+    if (fr.cover && fr.cover.full) {
+      const p = mkPage("xhub-front-cover xhub-front-bleed");
+      const img = el("img", "xhub-front-bleed-img");
+      img.src = fr.cover.url;
+      p.append(img);
+      n2++;
+    } else if (fr.cover) {
       const p = mkPage("xhub-front-cover");
-      if (built.coverUrl) {
+      if (fr.cover.url) {
         const img = el("img", "xhub-front-img");
-        img.src = built.coverUrl;
+        img.src = fr.cover.url;
         p.append(img);
       }
-      p.append(el("div", "xhub-front-title", built.title || ""));
-      if (built.author) p.append(el("div", "xhub-front-author", built.author));
+      p.append(el("div", "xhub-front-title", fr.cover.title));
+      if (fr.cover.book) p.append(el("div", "xhub-front-book", fr.cover.book));
+      if (fr.cover.author) p.append(el("div", "xhub-front-author", fr.cover.author));
+      n2++;
+    }
+    for (const tp of fr.titlePages) {
+      const p = mkPage("xhub-front-tp");
+      p.style.padding = "0";
+      p.innerHTML = titlePageInnerHtml(tp, look.fmt);
       n2++;
     }
     if (roster) {
@@ -190493,7 +191900,7 @@ ${pages.join("\n")}
         };
         const { pdfElementColor: pdfElementColor2 } = await Promise.resolve().then(() => (init_pdf_generator(), pdf_generator_exports));
         const colorOf = (elName) => {
-          const c = pdfElementColor2(elName, cfg.pdf.colorMode);
+          const c = pdfElementColor2(elName, pdfColorMode(cfg.pdf, "screenplay"));
           return c ? "rgb(" + c.map((x) => Math.round(x * 255)).join(",") + ")" : "";
         };
         const { projectHeaders: projectHeaders2, pdfMeta: pdfMeta2 } = await Promise.resolve().then(() => (init_pdf_ui(), pdf_ui_exports));
@@ -190540,7 +191947,7 @@ ${pages.join("\n")}
         const { mdToHtmlBody: mdToHtmlBody2 } = await Promise.resolve().then(() => (init_compile(), compile_exports));
         const { proseExportCss: proseExportCss2, mergeProseFormat: mergeProseFormat2 } = await Promise.resolve().then(() => (init_prose_format(), prose_format_exports));
         const pf = A.proseFormat();
-        const mono = cfg.pdf.colorMode !== "color";
+        const mono = pdfColorMode(cfg.pdf, "prose") !== "color";
         const css = proseExportCss2(
           mergeProseFormat2(pf),
           fmt2.paper,
@@ -190574,7 +191981,7 @@ ${pages.join("\n")}
           cfg,
           fmt2.paper,
           fs.scale,
-          { stack: withThaiFallback(liveProseFonts().fontStack || proseFontStack2(pf2)), pt: num(pf2.fontPt, 12) }
+          { stack: withThaiFallback(liveProseFonts().fontStack || proseFontStack2(pf2)), pt: num(pf2.fontPt, 12), fmt: fmt2 }
         );
       }
       return "page";
@@ -190628,7 +192035,17 @@ ${pages.join("\n")}
       saveGlobal: A.saveGlobalSetting
     });
     box2.append(nameRow.node);
-    A.liveShortcodeContext().then((c) => nameRow.setCtx(c)).catch((e) => log("warn", t("ui.xname.ctxFail"), e));
+    let baseCtx = {};
+    const syncNameCtx = () => nameRow.setCtx(built ? { ...baseCtx, ...exportNameFields(built.scope, {
+      title: built.title,
+      project: state.title || "",
+      book: built.book,
+      books: built.books
+    }) } : baseCtx);
+    A.liveShortcodeContext().then((c) => {
+      baseCtx = c || {};
+      syncNameCtx();
+    }).catch((e) => log("warn", t("ui.xname.ctxFail"), e));
     const foot = el("div", "k-dlg-btns");
     const warnLbl = el("span", "dim xhub-warn");
     const bClose = el("button", "k-cancel", t("ui.common.close"));
@@ -190693,6 +192110,15 @@ ${pages.join("\n")}
       r.append(node, el("span", "xhub-row-lbl", label2));
       if (hint) r.append(el("span", "dim xhub-row-hint", hint));
       return r;
+    };
+    const firstPageRow = () => {
+      const c = chk(exportPageNumberFmt(A.spFormat()).pageNumbers.firstPage !== false);
+      c.id = "xhub-first-page";
+      c.onchange = () => {
+        A.setFirstPageNumber(c.checked);
+        refresh2();
+      };
+      return optRow(t("ui.setTpl.putNumTopPage"), c, tf("ui.xhub.firstPageHint", t("ui.setTpl.tabPageNum")));
     };
     let autoKind = null;
     let hasRoster = false;
@@ -190800,6 +192226,7 @@ ${pages.join("\n")}
         if (kind0 !== "prose" || hasRoster) mk2("roster", "ui.xhub.pdfRoster");
         if (kind0 !== "prose") mk2("headers", "ui.xhub.pdfHeaders");
         mk2("pageNumbers", "ui.xhub.pdfNums");
+        colOpt.append(firstPageRow());
         const kindNow = cfg.kind === "auto" ? autoKind : cfg.kind;
         if (kindNow !== "prose") mk2("sceneNumbers", "ui.xhub.pdfSceneNums");
         colOpt.append(el("div", "k-hint", t("ui.xhub.pdfFrontNoNum")));
@@ -190810,7 +192237,7 @@ ${pages.join("\n")}
           o2.value = v2;
           selCol.append(o2);
         }
-        selCol.value = cfg.pdf.colorMode === "color" ? "color" : "mono";
+        selCol.value = pdfColorMode(cfg.pdf, kindNow);
         selCol.onchange = () => {
           cfg.pdf.colorMode = selCol.value;
           saveCfg2();
@@ -190818,6 +192245,7 @@ ${pages.join("\n")}
         };
         colOpt.append(el("div", "xhub-row-lbl", t("ui.pdf.colorMode")), selCol);
         if (kindNow !== "prose") colOpt.append(el("div", "k-hint", t("ui.pdf.colorModeHint")));
+        else if (selCol.value === "mono") colOpt.append(el("div", "k-hint", t("ui.xhub.monoGreyImages")));
         const wm = el("input", "k-dlg-input");
         wm.id = "xhub-wm";
         wm.value = cfg.pdf.watermark;
@@ -190842,6 +192270,17 @@ ${pages.join("\n")}
       }
       if (cfg.format === "epub" || cfg.format === "docx") {
         colOpt.append(el("div", "k-hint", t(cfg.format === "epub" ? "ui.xhub.epubHint" : "ui.xhub.docxHint")));
+      }
+      if (cfg.format === "docx" && (cfg.kind === "auto" ? autoKind : cfg.kind) === "screenplay") colOpt.append(firstPageRow());
+      if (cfg.format === "docx") {
+        const c = chk(cfg.docx && cfg.docx.comments);
+        c.id = "xhub-docx-comments";
+        c.onchange = () => {
+          cfg.docx = { ...cfg.docx || {}, comments: c.checked };
+          saveCfg2();
+          refresh2();
+        };
+        colOpt.append(optRow(t("ui.xhub.docxComments"), c, t("ui.xhub.docxCommentsHint")));
       }
       if (cfg.format === "rtf") {
         colOpt.append(el("div", "cmp-sub", t("ui.xhub.rtfOpts")));
@@ -190880,6 +192319,7 @@ ${pages.join("\n")}
         const r = await buildAll(A, cfg, drafts);
         if (gen !== job) return;
         built = r;
+        syncNameCtx();
         const hr = !!(r && String(r.roster || "").trim());
         if (cfg.kind === "auto" && r && r.kind !== autoKind || hr !== hasRoster) {
           if (cfg.kind === "auto" && r) autoKind = r.kind;
@@ -191000,6 +192440,7 @@ ${pages.join("\n")}
       init_export_formats();
       init_ui();
       init_file_url();
+      init_sp_title_pages();
       init_icons();
       init_export_name_ui();
       init_err_text();
@@ -191269,12 +192710,12 @@ ${pages.join("\n")}
     const all = options.scenes || [];
     const picked = sceneIds && sceneIds.length ? all.filter((s) => sceneIds.includes(s.id)) : all;
     if (!picked.length) return { ok: false, holes: [], error: t("ui.aiPlot.notFoundSceneCheck"), code: "no-scenes", batches: 0 };
-    const local = options.includeLocal === false ? [] : localChecks(picked);
+    const local3 = options.includeLocal === false ? [] : localChecks(picked);
     const client = options.client;
-    if (!client) return { ok: !!local.length, holes: sortHoles(local), batches: 0, error: client ? void 0 : t("ui.common.cantSettingsAIClient"), code: "no-client" };
+    if (!client) return { ok: !!local3.length, holes: sortHoles(local3), batches: 0, error: client ? void 0 : t("ui.common.cantSettingsAIClient"), code: "no-client" };
     const titles = Object.fromEntries(picked.map((s) => [s.id, s.title || ""]));
     const batches = batchScenes(picked, options.maxTokensPerBatch || 6e3);
-    const holes = [...local];
+    const holes = [...local3];
     const usage = { input: 0, output: 0, total: 0 };
     let cost = 0, failed = 0, lastError = "";
     for (const group of batches) {
@@ -191724,9 +193165,9 @@ ${pages.join("\n")}
     const names = [profile.name, ...profile.aliases || []].filter(Boolean);
     const appearances = (ids ? all.filter((s) => ids.includes(s.id)) : all.filter((s) => names.some((n2) => String(s.text || "").includes(n2)))).map((s) => ({ sceneId: s.id, title: s.title || "", text: s.text || "", storyDate: s.storyDate || "" }));
     if (!appearances.length) return { ok: false, issues: [], error: tf("ui.aiCharacter.notFoundSceneHas", profile.name), code: "no-scenes" };
-    const local = options.includeLocal === false ? [] : localConsistency(appearances, profile.name, options);
+    const local3 = options.includeLocal === false ? [] : localConsistency(appearances, profile.name, options);
     const client = options.client;
-    if (!client) return { ok: !!local.length, issues: local, error: t("ui.common.cantSettingsAIClient"), code: "no-client", appearances: appearances.length };
+    if (!client) return { ok: !!local3.length, issues: local3, error: t("ui.common.cantSettingsAIClient"), code: "no-client", appearances: appearances.length };
     const built = buildConsistencyPrompt(profile, appearances, options);
     const res = await client.complete({
       prompt: built.prompt,
@@ -191736,18 +193177,18 @@ ${pages.join("\n")}
       temperature: options.temperature ?? 0.2,
       maxTokens: options.maxTokens || 1500
     });
-    if (!res.ok) return { ok: !!local.length, issues: local, error: res.error, code: res.code, appearances: appearances.length };
+    if (!res.ok) return { ok: !!local3.length, issues: local3, error: res.error, code: res.code, appearances: appearances.length };
     if (extractJson(res.text) == null) {
       return {
-        ok: !!local.length,
-        issues: local,
+        ok: !!local3.length,
+        issues: local3,
         code: "unreadable",
         appearances: appearances.length,
         error: t(res.truncated ? "ui.ai.replyCut" : "ui.ai.replyUnreadable")
       };
     }
     const titles = Object.fromEntries(appearances.map((a) => [a.sceneId, a.title]));
-    const issues = sortIssues(dedupe([...local, ...parseConsistency(res.text, { sceneIds: built.sceneIds, titles })]));
+    const issues = sortIssues(dedupe([...local3, ...parseConsistency(res.text, { sceneIds: built.sceneIds, titles })]));
     return { ok: true, issues, usage: res.usage, cost: res.cost, appearances: appearances.length, prompt: built.prompt };
   }
   var ASPECTS, SYSTEM4, SCHEMA2, POLITE_PARTICLES, PRONOUNS, countOf, countWord;
@@ -193437,17 +194878,17 @@ ${s.body}`).join("\n\n");
     return out;
   }
   function selectablePrev(rows, id) {
-    const kids = /* @__PURE__ */ new Set();
+    const kids3 = /* @__PURE__ */ new Set();
     const walk3 = (pid) => {
       for (const r of rows || []) {
-        if (r.prevId === pid && !kids.has(r.id)) {
-          kids.add(r.id);
+        if (r.prevId === pid && !kids3.has(r.id)) {
+          kids3.add(r.id);
           walk3(r.id);
         }
       }
     };
     if (id) walk3(id);
-    return sortScenarios((rows || []).filter((r) => r.id !== id && !kids.has(r.id)));
+    return sortScenarios((rows || []).filter((r) => r.id !== id && !kids3.has(r.id)));
   }
   function transcriptText(sc, nameOf2 = () => "") {
     const rows = sc && sc.turns || [];
@@ -195061,11 +196502,11 @@ ${s.body}`).join("\n\n");
     const src2 = stripHtml(text);
     if (!src2) return [];
     const limit = Number.isFinite(o.limit) ? o.limit : 8;
-    const norm5 = (s) => String(s || "").replace(/\s+/g, "").toLowerCase();
-    const skip = new Set((o.exclude || []).map(norm5).filter(Boolean));
+    const norm6 = (s) => String(s || "").replace(/\s+/g, "").toLowerCase();
+    const skip = new Set((o.exclude || []).map(norm6).filter(Boolean));
     const found2 = /* @__PURE__ */ new Map();
     const add2 = (name5, source, rank) => {
-      const key2 = norm5(name5);
+      const key2 = norm6(name5);
       if (!key2 || skip.has(key2)) return;
       const old = found2.get(key2);
       if (old) {
@@ -197830,9 +199271,9 @@ ${s.body}`).join("\n\n");
         const asRow = el("div", "st-as-row");
         asRow.append(el("span", "st-dim", t("ui.starter.speakAs")));
         const sel2 = el("select", "wiki-input k-dlg-select st-as");
-        const me = el("option", null, t("ui.starter.you"));
-        me.value = "";
-        sel2.append(me);
+        const me2 = el("option", null, t("ui.starter.you"));
+        me2.value = "";
+        sel2.append(me2);
         for (const c of mine) {
           const o = el("option", null, c.name);
           o.value = c.id;
@@ -198755,13 +200196,13 @@ ${s.body}`).join("\n\n");
   // src/tools/thesaurus-ui.js
   async function showThesaurusPopup(word, x, y) {
     if (!word) return;
-    const norm5 = word.trim();
-    if (!norm5) return;
+    const norm6 = word.trim();
+    if (!norm6) return;
     let syns = [], ants = [];
     try {
       const [synRes, antRes] = await Promise.all([
-        getSynonyms(norm5).catch(() => []),
-        getAntonyms(norm5).catch(() => [])
+        getSynonyms(norm6).catch(() => []),
+        getAntonyms(norm6).catch(() => [])
       ]);
       syns = Array.isArray(synRes) ? synRes : synRes?.words || [];
       ants = Array.isArray(antRes) ? antRes : antRes?.words || [];
@@ -198769,7 +200210,7 @@ ${s.body}`).join("\n\n");
       log("warn", t("ui.thes.thesaurusSearchNotOk"), e);
     }
     if (!syns.length && !ants.length) {
-      setStatus(t("ui.thes.notFound") + norm5 + '"');
+      setStatus(t("ui.thes.notFound") + norm6 + '"');
       return;
     }
     const old = document.querySelector(".k-thes-popup");
@@ -198852,323 +200293,6 @@ ${s.body}`).join("\n\n");
     }
   });
 
-  // src/import/import-scrivener.js
-  function parseXml(xml) {
-    const src2 = String(xml || "").replace(/<\?xml[\s\S]*?\?>/g, "").replace(/<!--[\s\S]*?-->/g, "");
-    const root = { tag: "#root", attrs: {}, children: [], text: "" };
-    const stack = [root];
-    const re = /<\s*(\/)?\s*([\w:.-]+)((?:\s+[\w:.-]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/)?\s*>|([^<]+)/g;
-    let m;
-    while (m = re.exec(src2)) {
-      const [, close2, tag3, attrStr, selfClose, textRun] = m;
-      const top = stack[stack.length - 1];
-      if (textRun != null) {
-        top.text += decodeEntities(textRun);
-        continue;
-      }
-      if (close2) {
-        if (stack.length > 1 && stack[stack.length - 1].tag === tag3) stack.pop();
-        continue;
-      }
-      const node = { tag: tag3, attrs: parseAttrs(attrStr), children: [], text: "" };
-      top.children.push(node);
-      if (!selfClose) stack.push(node);
-    }
-    return root;
-  }
-  function parseAttrs(s) {
-    const out = {};
-    for (const m of String(s || "").matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
-      out[m[1]] = decodeEntities(m[2] != null ? m[2] : m[3]);
-    }
-    return out;
-  }
-  function decodeEntities(s) {
-    return String(s).replace(/&(#x?[0-9a-f]+|\w+);/gi, (all, e) => {
-      if (e[0] === "#") return String.fromCodePoint(parseInt(e[1] === "x" || e[1] === "X" ? e.slice(2) : e.slice(1), e[1] === "x" || e[1] === "X" ? 16 : 10));
-      return { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " }[e.toLowerCase()] ?? all;
-    });
-  }
-  function findAll(node, tag3, out = []) {
-    for (const c of node.children || []) {
-      if (c.tag === tag3) out.push(c);
-      findAll(c, tag3, out);
-    }
-    return out;
-  }
-  function firstChild(node, tag3) {
-    return (node.children || []).find((c) => c.tag === tag3) || null;
-  }
-  function rtfToText(rtf) {
-    const src2 = String(rtf || "");
-    let out = "";
-    let i5 = 0;
-    let skipDepth = 0;
-    let depth = 0;
-    let ucSkip = 1;
-    while (i5 < src2.length) {
-      const ch = src2[i5];
-      if (ch === "{") {
-        depth++;
-        i5++;
-        continue;
-      }
-      if (ch === "}") {
-        depth--;
-        if (skipDepth && depth < skipDepth) skipDepth = 0;
-        i5++;
-        continue;
-      }
-      if (ch === "\\") {
-        const ctrl = /^\\([a-zA-Z]+)(-?\d+)?[ ]?/.exec(src2.slice(i5));
-        if (ctrl) {
-          const word = ctrl[1], arg = ctrl[2] ? parseInt(ctrl[2], 10) : null;
-          i5 += ctrl[0].length;
-          if (word === "u" && arg != null) {
-            if (!skipDepth) out += String.fromCharCode(arg < 0 ? arg + 65536 : arg);
-            let skipped = 0;
-            while (skipped < ucSkip && i5 < src2.length) {
-              if (src2[i5] === "\\" && src2[i5 + 1] === "'") {
-                i5 += 4;
-                skipped++;
-                continue;
-              }
-              if (src2[i5] === "{" || src2[i5] === "}" || src2[i5] === "\\") break;
-              i5++;
-              skipped++;
-            }
-            continue;
-          }
-          if (word === "uc") {
-            ucSkip = arg == null ? 1 : arg;
-            continue;
-          }
-          if (word === "par" || word === "line") {
-            if (!skipDepth) out += "\n";
-            continue;
-          }
-          if (word === "tab") {
-            if (!skipDepth) out += "	";
-            continue;
-          }
-          if (SKIP_GROUPS.test(word) && !skipDepth) {
-            skipDepth = depth;
-            continue;
-          }
-          continue;
-        }
-        const esc10 = src2[i5 + 1];
-        if (esc10 === "'") {
-          const hex2 = src2.slice(i5 + 2, i5 + 4);
-          if (!skipDepth) {
-            const code3 = parseInt(hex2, 16);
-            if (code3 >= 32) out += String.fromCharCode(code3);
-          }
-          i5 += 4;
-          continue;
-        }
-        if (esc10 === "*") {
-          skipDepth = depth;
-          i5 += 2;
-          continue;
-        }
-        if (!skipDepth && (esc10 === "\\" || esc10 === "{" || esc10 === "}")) out += esc10;
-        i5 += 2;
-        continue;
-      }
-      if (!skipDepth) out += ch;
-      i5++;
-    }
-    return out.replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-  }
-  function parseBinder(xml) {
-    const doc3 = parseXml(xml);
-    const binder = findAll(doc3, "Binder")[0] || doc3;
-    const walk3 = (node) => (node.children || []).filter((c) => c.tag === "BinderItem").map((item) => {
-      const titleNode = firstChild(item, "Title");
-      const kids = firstChild(item, "Children");
-      const meta2 = firstChild(item, "MetaData");
-      const inc = meta2 ? firstChild(meta2, "IncludeInCompile") : null;
-      return {
-        id: item.attrs.UUID || item.attrs.ID || "",
-        type: item.attrs.Type || "Text",
-        title: (titleNode ? titleNode.text : "").trim(),
-        include: inc ? !/^no$/i.test(inc.text.trim()) : true,
-        // ติ๊ก "Include in Compile" ไว้ไหม
-        children: kids ? walk3(kids) : []
-      };
-    });
-    return walk3(binder);
-  }
-  function mapBinder(binder, opts = {}) {
-    const draftOnly = opts.draftOnly !== false;
-    const roots = draftOnly ? pickDraft(binder) : binder;
-    const chapters = [];
-    let loose = null;
-    const pushScene = (chapter, item) => chapter.scenes.push({ srcId: item.id, title: item.title || t("ui.common.notNamed") });
-    const visit = (items, chapter) => {
-      for (const it of items) {
-        if (opts.onlyCompiled && it.include === false) continue;
-        if (SCRIV_FOLDER.has(it.type) || it.children && it.children.length) {
-          const ch = { title: it.title || t("ui.common.notNamed"), scenes: [] };
-          chapters.push(ch);
-          if (!chapter) loose = null;
-          visit(it.children || [], ch);
-          if (!ch.scenes.length && SCRIV_TEXT.has(it.type)) pushScene(ch, it);
-        } else if (SCRIV_TEXT.has(it.type)) {
-          if (!chapter) {
-            if (!loose) {
-              loose = { title: opts.looseTitle || t("ui.impOrtScrivener.notHasChapter"), scenes: [] };
-              chapters.push(loose);
-            }
-            pushScene(loose, it);
-          } else pushScene(chapter, it);
-        }
-      }
-    };
-    visit(roots, null);
-    const kept = chapters.filter((c) => c.scenes.length);
-    return {
-      sections: [{ title: opts.sectionTitle || DEFAULT_BOOK + " 1", chapters: kept }],
-      counts: { chapters: kept.length, scenes: kept.reduce((n2, c) => n2 + c.scenes.length, 0) }
-    };
-  }
-  function pickDraft(binder) {
-    const draft = binder.find((b) => b.type === "DraftFolder" || /^(draft|manuscript|ต้นฉบับ)$/i.test(b.title));
-    return draft ? draft.children : binder;
-  }
-  async function importScrivener(filePath, options = {}) {
-    const io4 = options.io;
-    if (!io4) return { ok: false, error: t("ui.impOrtScrivener.mustSendIoAdapter"), code: "no-io" };
-    const warnings = [];
-    let files = [];
-    try {
-      files = await io4.listFiles(filePath);
-    } catch {
-      files = [];
-    }
-    const scrivx = files.find((f) => f.toLowerCase().endsWith(".scrivx"));
-    if (!scrivx) return { ok: false, error: t("ui.impOrtScrivener.notFoundFileScrivx"), code: "no-scrivx" };
-    const xml = await io4.readFile(io4.join(filePath, scrivx));
-    const binder = parseBinder(xml);
-    if (!binder.length) return { ok: false, error: t("ui.impOrtScrivener.readOutlineBinderCant"), code: "bad-binder" };
-    const mapped = mapBinder(binder, options);
-    const title2 = options.title || scrivx.replace(/\.scrivx$/i, "");
-    for (const sec2 of mapped.sections) {
-      for (const ch of sec2.chapters) {
-        for (const sc of ch.scenes) {
-          const rtf = await readDocRtf(io4, filePath, sc.srcId);
-          if (rtf == null) {
-            warnings.push(tf("ui.impOrtScrivener.notFoundBody", sc.title, sc.srcId));
-            sc.body = "";
-            continue;
-          }
-          sc.body = rtfToText(rtf);
-        }
-      }
-    }
-    const plan = buildPlan(mapped, title2, options);
-    if (options.dryRun) return { ok: true, plan, counts: mapped.counts, warnings, written: 0, title: title2 };
-    const dest = options.dest;
-    if (!dest) return { ok: false, error: t("ui.impOrtScrivener.cantPickFolderTo"), code: "no-dest", plan, counts: mapped.counts };
-    let written = 0;
-    for (const f of plan.files) {
-      const full = io4.join(dest, ...f.path);
-      if (io4.mkdir) await io4.mkdir(dirOf3(io4, dest, f.path));
-      await io4.writeFile(full, f.content);
-      written++;
-      if (options.onProgress) options.onProgress(written, plan.files.length, f.path.join("/"));
-    }
-    return { ok: true, plan, counts: mapped.counts, warnings, written, title: title2, dest };
-  }
-  function dirOf3(io4, dest, parts) {
-    return io4.join(dest, ...parts.slice(0, -1));
-  }
-  async function readDocRtf(io4, root, id) {
-    const candidates = [
-      ["Files", "Data", id, "content.rtf"],
-      // Scrivener 3
-      ["Files", "Docs", id + ".rtf"],
-      // Scrivener 2
-      ["Files", "Docs", id, "content.rtf"]
-    ];
-    for (const parts of candidates) {
-      const p = io4.join(root, ...parts);
-      try {
-        if (await io4.exists(p)) return await io4.readFile(p);
-      } catch {
-      }
-    }
-    return null;
-  }
-  function buildPlan(mapped, title2, opts = {}) {
-    const files = [];
-    files.push({ path: ["project.khn.json"], content: JSON.stringify({
-      title: title2,
-      type: "killian-project",
-      importedFrom: "scrivener",
-      importedAt: opts.now || null
-    }, null, 2) });
-    const usedSec = [];
-    mapped.sections.forEach((sec2, si) => {
-      const secDir = freeName2(diskBase(sec2.title, DEFAULT_BOOK + " " + (si + 1)), usedSec);
-      usedSec.push(secDir);
-      files.push({ path: [secDir, "section.json"], content: JSON.stringify({
-        guid: "s" + (si + 1),
-        title: sec2.title,
-        order: si + 1,
-        folderName: secDir
-      }, null, 2) });
-      const chapters = [];
-      const scenesMap = {};
-      const usedCh = [];
-      sec2.chapters.forEach((ch, ci) => {
-        const guid3 = `c${si + 1}_${ci + 1}`;
-        const folderName = freeName2(diskBase(ch.title, t("ui.common.chapter")), usedCh);
-        usedCh.push(folderName);
-        chapters.push({ guid: guid3, title: ch.title, order: ci + 1, folderName });
-        const usedSc = [];
-        const names = ch.scenes.map((sc) => {
-          const n2 = freeName2(diskBase(sc.title, "scene"), usedSc, ".md");
-          usedSc.push(n2);
-          return n2;
-        });
-        scenesMap[guid3] = ch.scenes.map((sc, i5) => ({
-          id: `${guid3}_s${i5 + 1}`,
-          title: sc.title,
-          order: i5 + 1,
-          fileName: names[i5]
-        }));
-        ch.scenes.forEach((sc, i5) => {
-          files.push({
-            path: [secDir, "Draft", "default", "Chapters", folderName, names[i5]],
-            content: `---
-title: ${sc.title}
-type: scene
-format: prose
----
-
-${sc.body || ""}
-`
-          });
-        });
-      });
-      files.push({ path: [secDir, "Draft", "default", "draft.json"], content: JSON.stringify({ chapters }, null, 2) });
-      files.push({ path: [secDir, "Draft", "default", "scenes.json"], content: JSON.stringify({ chapters: scenesMap }, null, 2) });
-    });
-    return { files, count: files.length };
-  }
-  var SKIP_GROUPS, SCRIV_TEXT, SCRIV_FOLDER;
-  var init_import_scrivener = __esm({
-    "src/import/import-scrivener.js"() {
-      init_i18n();
-      init_disk_names();
-      SKIP_GROUPS = /^(fonttbl|colortbl|stylesheet|info|pict|\*|listtable|listoverridetable|rsidtbl|generator|xmlnstbl)/;
-      SCRIV_TEXT = /* @__PURE__ */ new Set(["Text", "Document"]);
-      SCRIV_FOLDER = /* @__PURE__ */ new Set(["Folder", "DraftFolder"]);
-    }
-  });
-
   // src/import/import-ui.js
   async function importScrivenerDialog(onOpenProject) {
     const src2 = await kapi.openProjectDialog();
@@ -199232,6 +200356,1262 @@ ${sc.body || ""}
       init_ui();
       init_project_scan();
       makeIo = () => syncIo();
+    }
+  });
+
+  // src/import/import-manuscript.js
+  function descend2(n2, name5, out = []) {
+    for (const c of kids2(n2)) {
+      if (local2(c.tag) === name5) out.push(c);
+      descend2(c, name5, out);
+    }
+    return out;
+  }
+  function docxStyles(xml) {
+    const raw = /* @__PURE__ */ new Map();
+    if (xml) {
+      for (const st of descend2(parseXml(xml), "style")) {
+        if ((attr2(st, "type") || "paragraph") !== "paragraph") continue;
+        const id = attr2(st, "styleId");
+        if (!id) continue;
+        const name5 = String(attr2(child(st, "name"), "val") || "").trim().toLowerCase();
+        const ppr = child(st, "pPr");
+        const ol = attr2(child(ppr, "outlineLvl"), "val");
+        raw.set(id, { name: name5, outline: ol == null ? null : +ol, basedOn: attr2(child(st, "basedOn"), "val") || "" });
+      }
+    }
+    const out = /* @__PURE__ */ new Map();
+    const resolve = (id, seen = /* @__PURE__ */ new Set()) => {
+      if (out.has(id)) return out.get(id);
+      const s = raw.get(id);
+      if (!s || seen.has(id)) return { level: 0, quote: false, title: false };
+      seen.add(id);
+      let level = 0, title2 = false;
+      const hm = /^heading\s*(\d)$/.exec(s.name);
+      if (hm) level = Math.min(6, Math.max(1, +hm[1]));
+      else if (s.name === "title") {
+        level = 1;
+        title2 = true;
+      } else if (Number.isFinite(s.outline) && s.outline >= 0 && s.outline < 9) level = Math.min(6, s.outline + 1);
+      const quote = /quote/.test(s.name);
+      let res = { level, quote, title: title2 };
+      if (!level && !quote && s.basedOn) {
+        const b = resolve(s.basedOn, seen);
+        res = { level: b.level, quote: b.quote, title: b.title };
+      }
+      out.set(id, res);
+      return res;
+    };
+    for (const id of raw.keys()) resolve(id);
+    return out;
+  }
+  function docxNumbering(xml) {
+    const out = /* @__PURE__ */ new Map();
+    if (!xml) return out;
+    const root = parseXml(xml);
+    const abs = /* @__PURE__ */ new Map();
+    for (const a of descend2(root, "abstractNum")) {
+      const lv = /* @__PURE__ */ new Map();
+      for (const l of kids2(a).filter((c) => local2(c.tag) === "lvl")) {
+        const fmt2 = String(attr2(child(l, "numFmt"), "val") || "decimal");
+        lv.set(+(attr2(l, "ilvl") || 0), !/^(bullet|none)$/i.test(fmt2));
+      }
+      abs.set(attr2(a, "abstractNumId"), lv);
+    }
+    for (const n2 of descend2(root, "num")) {
+      const lv = abs.get(attr2(child(n2, "abstractNumId"), "val"));
+      if (lv) out.set(String(attr2(n2, "numId")), lv);
+    }
+    return out;
+  }
+  function docxRels(xml) {
+    const out = /* @__PURE__ */ new Map();
+    if (!xml) return out;
+    for (const r of descend2(parseXml(xml), "Relationship")) {
+      const id = attr2(r, "Id"), target = String(attr2(r, "Target") || "");
+      if (!id || /^external$/i.test(attr2(r, "TargetMode") || "")) continue;
+      const p = target.startsWith("/") ? target.slice(1) : "word/" + target;
+      out.set(id, p.replace(/\/\.\//g, "/"));
+    }
+    return out;
+  }
+  function runMarks(rPr) {
+    const m = [];
+    if (!rPr) return m;
+    if (onOff(child(rPr, "b"))) m.push("strong");
+    if (onOff(child(rPr, "i"))) m.push("em");
+    const u = child(rPr, "u");
+    if (u && !/^none$/i.test(String(attr2(u, "val") || "single"))) m.push("underline");
+    if (onOff(child(rPr, "strike")) || onOff(child(rPr, "dstrike"))) m.push("strike");
+    return m;
+  }
+  function paraPieces(p) {
+    const out = [];
+    const fields = [];
+    const walkRun = (r) => {
+      const marks2 = runMarks(child(r, "rPr"));
+      for (const c of kids2(r)) {
+        const k = local2(c.tag);
+        if (k === "fldChar") {
+          const tp = attr2(c, "fldCharType");
+          if (tp === "begin") fields.push("code");
+          else if (tp === "separate" && fields.length) fields[fields.length - 1] = "result";
+          else if (tp === "end") fields.pop();
+          continue;
+        }
+        if (fields.includes("code")) continue;
+        if (k === "t") out.push({ text: c.text, marks: marks2 });
+        else if (k === "tab") out.push({ text: "	", marks: marks2 });
+        else if (k === "noBreakHyphen") out.push({ text: "-", marks: marks2 });
+        else if (k === "br" || k === "cr") {
+          if (attr2(c, "type") === "page") out.push({ page: true });
+          else if (attr2(c, "type") !== "column") out.push({ br: true });
+        } else if (k === "drawing" || k === "pict" || k === "object" || k === "AlternateContent") {
+          const blip = descend2(c, "blip")[0];
+          const rid = blip ? attr2(blip, "embed") : attr2(descend2(c, "imagedata")[0], "id");
+          if (rid) out.push({ img: rid, alt: String(attr2(descend2(c, "docPr")[0], "descr") || "") });
+        }
+      }
+    };
+    const walk3 = (n2) => {
+      for (const c of kids2(n2)) {
+        const k = local2(c.tag);
+        if (P_SKIP.has(k)) continue;
+        if (k === "r") walkRun(c);
+        else if (P_WRAP.has(k)) walk3(c);
+      }
+    };
+    walk3(p);
+    return out;
+  }
+  function inlineNodes(pieces) {
+    const out = [];
+    const same2 = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
+    for (const pc of pieces) {
+      if (pc.br) {
+        out.push({ type: "hard_break" });
+        continue;
+      }
+      if (pc.text == null || pc.text === "") continue;
+      const last2 = out[out.length - 1];
+      if (last2 && last2.type === "text" && same2(last2._m, pc.marks)) {
+        last2.text += pc.text;
+        continue;
+      }
+      out.push({ type: "text", text: pc.text, _m: pc.marks });
+    }
+    while (out.length && out[0].type === "hard_break") out.shift();
+    while (out.length && out[out.length - 1].type === "hard_break") out.pop();
+    if (out.length && out[0].type === "text") out[0].text = out[0].text.replace(/^[ \t ]+/, "");
+    const z = out[out.length - 1];
+    if (z && z.type === "text") z.text = z.text.replace(/[ \t ]+$/, "");
+    const res = [];
+    for (const n2 of out) {
+      if (n2.type !== "text") {
+        res.push(n2);
+        continue;
+      }
+      if (!n2.text) continue;
+      if (!n2._m.length || !n2.text.trim()) {
+        res.push({ type: "text", text: n2.text });
+        continue;
+      }
+      const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(n2.text);
+      if (m[1]) res.push({ type: "text", text: m[1] });
+      res.push({ type: "text", text: m[2], marks: n2._m.map((type) => ({ type })) });
+      if (m[3]) res.push({ type: "text", text: m[3] });
+    }
+    return res;
+  }
+  function docxToDoc(parts = {}, opts = {}) {
+    const keyPrefix = opts.keyPrefix || "k2img:";
+    const styles = docxStyles(parts.styles);
+    const numbering = docxNumbering(parts.numbering);
+    const rels = docxRels(parts.rels);
+    const root = parseXml(parts.document || "");
+    const body = descend2(root, "body")[0] || root;
+    const content = [];
+    const images = [];
+    const seenImg = /* @__PURE__ */ new Map();
+    const stats = { paragraphs: 0, headings: 0, images: 0, tables: 0 };
+    let list3 = null;
+    const pushBlock = (n2) => {
+      if (n2.type !== "bullet_list" && n2.type !== "ordered_list") list3 = null;
+      content.push(n2);
+    };
+    const figureOf = (pc) => {
+      const path = rels.get(pc.img);
+      if (!path) return null;
+      let key2 = seenImg.get(path);
+      if (!key2) {
+        key2 = keyPrefix + (images.length + 1);
+        seenImg.set(path, key2);
+        images.push({ key: key2, path, alt: pc.alt || "" });
+      }
+      stats.images++;
+      return { type: "figure", attrs: { src: key2, alt: pc.alt || "", md: "" } };
+    };
+    const doPara = (p) => {
+      const pPr = child(p, "pPr");
+      const st = styles.get(attr2(child(pPr, "pStyle"), "val")) || { level: 0, quote: false };
+      let level = st.level;
+      const ol = attr2(child(pPr, "outlineLvl"), "val");
+      if (!level && ol != null && +ol >= 0 && +ol < 9) level = Math.min(6, +ol + 1);
+      const align = JC2[attr2(child(pPr, "jc"), "val")] || null;
+      const pieces = paraPieces(p);
+      const figs = [];
+      const textPieces = [];
+      let pageAfter = false;
+      for (const pc of pieces) {
+        if (pc.img) {
+          const f = figureOf(pc);
+          if (f) figs.push(f);
+        } else if (pc.page) {
+          if (textPieces.some((x) => x.text && x.text.trim())) pageAfter = true;
+          else pushBlock({ type: "page_break" });
+        } else textPieces.push(pc);
+      }
+      const inl = inlineNodes(textPieces);
+      const hasText = !!plainOf(inl);
+      const numPr = child(pPr, "numPr");
+      const numId = numPr ? String(attr2(child(numPr, "numId"), "val") || "") : "";
+      if (hasText) {
+        stats.paragraphs++;
+        const attrs = align ? { align } : {};
+        if (level) {
+          stats.headings++;
+          pushBlock({ type: "heading", attrs: { ...attrs, level }, content: inl.filter((n2) => n2.type !== "hard_break") });
+        } else if (numId && numId !== "0" && numbering.has(numId)) {
+          const ilvl = +(attr2(child(numPr, "ilvl"), "val") || 0);
+          const ordered = !!numbering.get(numId).get(ilvl) || !numbering.get(numId).has(ilvl) && !!numbering.get(numId).get(0);
+          const item = { type: "list_item", content: [{ type: "paragraph", attrs, content: inl }] };
+          if (list3 && list3.numId === numId && list3.ordered === ordered) list3.node.content.push(item);
+          else {
+            const node = { type: ordered ? "ordered_list" : "bullet_list", attrs: ordered ? { order: 1 } : {}, content: [item] };
+            content.push(node);
+            list3 = { node, numId, ordered };
+          }
+        } else if (st.quote) {
+          pushBlock({ type: "blockquote", content: [{ type: "paragraph", attrs, content: inl }] });
+        } else {
+          pushBlock({ type: "paragraph", attrs, content: inl });
+        }
+      } else if (!figs.length && !pieces.some((x) => x.page)) {
+        pushBlock({ type: "paragraph", attrs: {}, content: [] });
+      }
+      for (const f of figs) pushBlock(f);
+      if (pageAfter) pushBlock({ type: "page_break" });
+    };
+    const walkBlocks = (n2) => {
+      for (const c of kids2(n2)) {
+        const k = local2(c.tag);
+        if (k === "p") doPara(c);
+        else if (k === "tbl") {
+          stats.tables++;
+          for (const tc of descend2(c, "tc")) walkBlocks(tc);
+        } else if (k === "sdt" || k === "sdtContent" || k === "customXml" || k === "ins" || k === "moveTo") walkBlocks(c);
+      }
+    };
+    walkBlocks(body);
+    return { content: tidyBlanks(content), images, stats };
+  }
+  function tidyBlanks(content) {
+    const isBlank2 = (n2) => n2 && n2.type === "paragraph" && !plainOf(n2.content);
+    const nonBlank = content.filter((n2) => !isBlank2(n2)).length;
+    let gaps = 0;
+    for (let i5 = 1; i5 < content.length - 1; i5++) if (isBlank2(content[i5]) && !isBlank2(content[i5 - 1]) && !isBlank2(content[i5 + 1])) gaps++;
+    const separator = nonBlank > 2 && gaps >= (nonBlank - 1) * 0.5;
+    const out = [];
+    for (let i5 = 0; i5 < content.length; i5++) {
+      const n2 = content[i5];
+      if (!isBlank2(n2)) {
+        out.push(n2);
+        continue;
+      }
+      let j = i5;
+      while (j + 1 < content.length && isBlank2(content[j + 1])) j++;
+      const run3 = j - i5 + 1;
+      i5 = j;
+      if (!out.length || i5 === content.length - 1) continue;
+      if (separator && run3 === 1) continue;
+      out.push({ type: "paragraph", attrs: {}, content: [] });
+    }
+    return out;
+  }
+  function isChapterLine(text) {
+    const s = String(text || "").replace(/[*_~#]/g, "").trim();
+    if (!s || s.length > CHAPTER_MAX) return false;
+    return CHAPTER_NUM_RE.test(s) || CHAPTER_WORD_RE.test(s);
+  }
+  function isSceneBreakLine(text) {
+    const s = String(text || "").trim();
+    return /^(?:[*＊]\s*){3,}$/.test(s) || /^(?:[-–—_=~]\s*){3,}$/.test(s) || /^(?:[◇◆○●♦✦✧❖⁂§#]\s*){1,5}$/.test(s);
+  }
+  function detectStructure(content) {
+    const hasHeading = content.some((n2) => n2.type === "heading");
+    let detected = 0;
+    const out = content.map((n2) => {
+      if (n2.type !== "paragraph") return n2;
+      const txt = plainOf(n2.content);
+      if (isSceneBreakLine(txt)) return { type: "paragraph", attrs: { align: "center" }, content: [{ type: "text", text: "* * *" }] };
+      if (!hasHeading && isChapterLine(txt)) {
+        detected++;
+        return { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: txt.replace(/[*_~]/g, "").trim() }] };
+      }
+      return n2;
+    });
+    return { content: out, detected };
+  }
+  function mdToImportDoc(text) {
+    const src2 = String(text ?? "").replace(BOM_RE, "").replace(/\r\n?/g, "\n");
+    let body = src2, title2 = "";
+    if (/^---\n/.test(src2)) {
+      try {
+        const p = (0, import_md31.parseMdFile)(src2);
+        body = p.body;
+        title2 = String((p.meta || {}).title || "");
+      } catch {
+      }
+    }
+    const doc3 = (0, import_md31.mdToDoc)(collapseMdParagraphs(body));
+    const content = tidyBlanks(doc3.content || []);
+    return { content, images: [], title: title2, stats: statsOf(content) };
+  }
+  function collapseMdParagraphs(s) {
+    const lines = s.replace(/[ \t]+$/gm, "").split("\n");
+    const out = [];
+    let fence = false;
+    for (let i5 = 0; i5 < lines.length; i5++) {
+      const l = lines[i5];
+      if (/^\s{0,3}(`{3,}|~{3,})/.test(l)) fence = !fence;
+      if (fence || l !== "") {
+        out.push(l);
+        continue;
+      }
+      let j = i5;
+      while (j + 1 < lines.length && lines[j + 1] === "") j++;
+      if (j > i5) out.push("");
+      i5 = j;
+    }
+    return out.join("\n").replace(/^\n+|\n+$/g, "");
+  }
+  function textToImportDoc(text) {
+    const lines = collapseMdParagraphs(String(text ?? "").replace(BOM_RE, "").replace(/\r\n?/g, "\n")).split("\n");
+    const content = lines.map((l) => {
+      const s = l.replace(/^[ \t 　]+/, "");
+      return { type: "paragraph", attrs: {}, content: s ? [{ type: "text", text: s }] : [] };
+    });
+    const c = tidyBlanks(content);
+    return { content: c, images: [], title: "", stats: statsOf(c) };
+  }
+  function statsOf(content) {
+    return {
+      paragraphs: content.filter((n2) => n2.type !== "heading" && n2.type !== "figure" && hasBody([n2])).length,
+      headings: content.filter((n2) => n2.type === "heading").length,
+      images: content.filter((n2) => n2.type === "figure").length,
+      tables: 0
+    };
+  }
+  function titleFromFileName(name5) {
+    const base4 = String(name5 || "").split(/[\\/]/).pop().replace(/\.[^.]+$/, "").trim();
+    if (isChapterLine(base4)) return base4;
+    const s = base4.replace(/^\d{1,4}\s*[-_.)\]]\s*/, "").replace(/[_]+/g, " ").trim();
+    return s || base4;
+  }
+  function naturalCompare(a, b) {
+    return String(a).localeCompare(String(b), void 0, { numeric: true, sensitivity: "base" });
+  }
+  function splitManuscript(docs, opts = {}) {
+    const warnings = [];
+    const list3 = (docs || []).map((d) => {
+      const det = opts.detect === false ? { content: d.content || [], detected: 0 } : detectStructure(d.content || []);
+      return { name: d.name || "", title: d.title || titleFromFileName(d.name), content: det.content };
+    });
+    let mode = SPLIT_MODES.includes(opts.mode) ? opts.mode : "auto";
+    if (mode === "auto") mode = list3.length > 1 ? "file-chapter" : "headings";
+    const chapters = [];
+    if (mode === "file-scene") {
+      const ch = { title: opts.chapterTitle || "", scenes: [] };
+      for (const d of list3) {
+        let content = d.content, title2 = d.title;
+        const first = content.findIndex((n2) => n2.type !== "paragraph" || plainOf(n2.content));
+        if (first >= 0 && content[first].type === "heading") {
+          title2 = plainOf(content[first].content) || title2;
+          content = content.slice(first + 1);
+        }
+        if (hasBody(content)) ch.scenes.push({ title: title2, content });
+        else warnings.push({ code: "empty", name: d.name });
+      }
+      if (ch.scenes.length) chapters.push(ch);
+    } else if (mode === "file-chapter") {
+      for (const d of list3) {
+        const ch = splitByHeadings(d.content, d.title, { fileTitle: true });
+        if (!ch.length) {
+          warnings.push({ code: "empty", name: d.name });
+          continue;
+        }
+        chapters.push({ title: ch[0].title, scenes: ch.flatMap((c) => c.scenes) });
+      }
+    } else {
+      for (const d of list3) {
+        const ch = splitByHeadings(d.content, d.title, {});
+        if (!ch.length) warnings.push({ code: "empty", name: d.name });
+        chapters.push(...ch);
+      }
+      if (chapters.length === 1 && chapters[0].scenes.length === 1 && list3.length === 1 && !list3[0].content.some((n2) => n2.type === "heading")) {
+        warnings.push({ code: "noHeadings", name: list3[0].name });
+      }
+    }
+    const scenes = chapters.flatMap((c) => c.scenes);
+    return {
+      chapters,
+      mode,
+      counts: {
+        chapters: chapters.length,
+        scenes: scenes.length,
+        words: scenes.reduce((n2, s) => n2 + (0, import_md31.countWords)(sceneMd(s.content)), 0),
+        images: scenes.reduce((n2, s) => n2 + s.content.filter((x) => x.type === "figure").length, 0)
+      },
+      warnings
+    };
+  }
+  function splitByHeadings(content, docTitle, { fileTitle } = {}) {
+    const levels = [...new Set(content.filter((n2) => n2.type === "heading").map((n2) => n2.attrs.level))].sort((a, b) => a - b);
+    const L1 = levels[0], L22 = levels[1];
+    const chapters = [];
+    let ch = null, sc = null;
+    const newChapter = (title2) => {
+      ch = { title: title2 || docTitle || "", scenes: [] };
+      chapters.push(ch);
+      sc = null;
+    };
+    const newScene = (title2) => {
+      sc = { title: title2 || ch.title, content: [] };
+      ch.scenes.push(sc);
+    };
+    for (const n2 of content) {
+      if (n2.type === "heading" && n2.attrs.level === L1) {
+        if (fileTitle && ch && !ch.scenes.some((s) => hasBody(s.content)) && !ch._named) {
+          ch.title = plainOf(n2.content) || ch.title;
+          ch._named = true;
+          ch.scenes = [];
+          sc = null;
+          continue;
+        }
+        newChapter(plainOf(n2.content));
+        ch._named = true;
+        continue;
+      }
+      if (!ch) newChapter(docTitle);
+      if (n2.type === "heading" && L22 != null && n2.attrs.level === L22) {
+        newScene(plainOf(n2.content));
+        continue;
+      }
+      if (!sc) newScene("");
+      sc.content.push(n2);
+    }
+    for (const c of chapters) {
+      delete c._named;
+      c.scenes = c.scenes.filter((s) => hasBody(s.content)).map((s) => ({ title: s.title, content: tidyBlanks(s.content) }));
+    }
+    return chapters.filter((c) => c.scenes.length);
+  }
+  function sceneMd(content) {
+    return (0, import_md31.docToMd)({ type: "doc", content: stripPrivate(content || []) });
+  }
+  function stripPrivate(nodes) {
+    return nodes.map((n2) => {
+      const o = { ...n2 };
+      delete o._m;
+      if (o.content) o.content = stripPrivate(o.content);
+      return o;
+    });
+  }
+  function buildBookPlan(structure, opts = {}) {
+    let n2 = 0;
+    const guid3 = opts.guid || (() => "imp" + (++n2).toString(36));
+    const book = opts.bookFolder || diskBase(opts.bookTitle, DEFAULT_BOOK);
+    const files = [];
+    files.push({ path: [book, "section.json"], content: JSON.stringify({
+      guid: guid3(),
+      title: opts.bookTitle || book,
+      order: opts.order || 1,
+      folderName: book,
+      importedFrom: opts.source || "manuscript",
+      importedAt: opts.now || null
+    }, null, 2) });
+    const imgPath = /* @__PURE__ */ new Map();
+    const usedImg = [];
+    for (const [key2, im] of opts.images || /* @__PURE__ */ new Map()) {
+      const base4 = diskBase(im.name || "image", "image");
+      const nm = freeName2(base4, usedImg, "." + String(im.ext || "png").replace(/^\./, ""));
+      usedImg.push(nm);
+      imgPath.set(key2, nm);
+      files.push({ path: ["Images", book, nm], image: key2 });
+    }
+    const fixImages = (nodes) => nodes.map((x) => {
+      if (x.type === "figure" && imgPath.has(x.attrs.src)) {
+        return { ...x, attrs: { ...x.attrs, src: SCENE_TO_ROOT + "Images/" + book + "/" + imgPath.get(x.attrs.src) } };
+      }
+      if (x.type === "figure" && /^k2img:/.test(x.attrs.src)) return null;
+      return x.content ? { ...x, content: fixImages(x.content).filter(Boolean) } : x;
+    }).filter(Boolean);
+    const chapters = [];
+    const scenesMap = {};
+    const usedCh = [];
+    let sceneCount = 0;
+    structure.chapters.forEach((ch, ci) => {
+      const title2 = String(ch.title || "").trim() || (opts.chapterFallback ? opts.chapterFallback(ci) : "Chapter " + (ci + 1));
+      const folderName = freeName2(diskBase(title2, "chapter"), usedCh);
+      usedCh.push(folderName);
+      const cg = guid3();
+      chapters.push({ guid: cg, title: title2, order: ci + 1, status: "Outline", act: "I", date: "", isFavorite: false, folderName });
+      const usedSc = [];
+      scenesMap[cg] = ch.scenes.map((sc, si) => {
+        const st = String(sc.title || "").trim() || title2;
+        const fileName = freeName2(diskBase(st, "scene"), usedSc, ".md");
+        usedSc.push(fileName);
+        const body = sceneMd(fixImages(sc.content));
+        const words = (0, import_md31.countWords)(body);
+        files.push({
+          path: [book, "Draft", "default", "Chapters", folderName, fileName],
+          content: (0, import_md31.dumpMdFile)({ title: st, type: "scene", format: "prose", pov: "", tags: [] }, body + (body ? "\n" : ""))
+        });
+        sceneCount++;
+        return { id: guid3(), title: st, order: si + 1, fileName, chapterGuid: cg, date: "", isFavorite: false, wordCount: words, synopsis: "" };
+      });
+    });
+    files.push({ path: [book, "Draft", "default", "draft.json"], content: JSON.stringify({ chapters }, null, 2) });
+    files.push({ path: [book, "Draft", "default", "scenes.json"], content: JSON.stringify({ chapters: scenesMap }, null, 2) });
+    return { files, chapters: chapters.length, scenes: sceneCount, book };
+  }
+  function imageExtOf(path) {
+    const ext = String(path || "").split(".").pop().toLowerCase();
+    return ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"].includes(ext) ? ext : null;
+  }
+  var import_md31, local2, kids2, child, attr2, onOff, P_WRAP, P_SKIP, JC2, plainOf, CHAPTER_NUM_RE, CHAPTER_WORD_RE, CHAPTER_MAX, BOM_RE, SPLIT_MODES, hasBody, SCENE_TO_ROOT;
+  var init_import_manuscript = __esm({
+    "src/import/import-manuscript.js"() {
+      init_import_scrivener();
+      import_md31 = __toESM(require_md());
+      init_disk_names();
+      local2 = (tag3) => String(tag3 || "").replace(/^[\w.-]+:/, "");
+      kids2 = (n2) => n2 && n2.children || [];
+      child = (n2, name5) => kids2(n2).find((c) => local2(c.tag) === name5) || null;
+      attr2 = (n2, name5) => {
+        if (!n2) return void 0;
+        for (const [k, v2] of Object.entries(n2.attrs || {})) if (local2(k) === name5) return v2;
+        return void 0;
+      };
+      onOff = (n2) => !!n2 && !/^(0|false|off|none)$/i.test(String(attr2(n2, "val") ?? "1"));
+      P_WRAP = /* @__PURE__ */ new Set(["hyperlink", "ins", "smartTag", "sdt", "sdtContent", "customXml", "fldSimple", "moveTo", "dir", "bdo"]);
+      P_SKIP = /* @__PURE__ */ new Set([
+        "pPr",
+        "del",
+        "moveFrom",
+        "proofErr",
+        "bookmarkStart",
+        "bookmarkEnd",
+        "commentRangeStart",
+        "commentRangeEnd",
+        "permStart",
+        "permEnd",
+        "sdtPr",
+        "sdtEndPr",
+        "oMath",
+        "oMathPara"
+      ]);
+      JC2 = { center: "center", right: "right", end: "right", both: "justify", distribute: "justify" };
+      plainOf = (content) => (content || []).map((n2) => n2.type === "text" ? n2.text : n2.type === "hard_break" ? " " : "").join("").trim();
+      CHAPTER_NUM_RE = /^(?:ตอนที่|ตอน|บทที่|ภาคที่|chapter|chap\.?|ch\.|episode|ep\.?|part)\s*[0-9๐-๙]+(?:\s*[:：.\-–—)]|\s|$)/i;
+      CHAPTER_WORD_RE = /^(?:บทนำ|อารัมภบท|ปฐมบท|บทส่งท้าย|ปัจฉิมบท|ตอนพิเศษ|ตอนจบ|prologue|epilogue|interlude|afterword|foreword)(?:\s*[:：.\-–—]|\s|$)/i;
+      CHAPTER_MAX = 80;
+      BOM_RE = new RegExp("^" + String.fromCharCode(65279));
+      SPLIT_MODES = ["auto", "file-chapter", "headings", "file-scene"];
+      hasBody = (nodes) => (nodes || []).some((n2) => n2.type === "figure" || n2.type === "page_break" || (n2.type === "text" ? !!String(n2.text || "").trim() : hasBody(n2.content)));
+      SCENE_TO_ROOT = "../../../../../";
+    }
+  });
+
+  // src/import/import-manuscript-ui.js
+  var import_manuscript_ui_exports = {};
+  __export(import_manuscript_ui_exports, {
+    importManuscriptDialog: () => importManuscriptDialog
+  });
+  async function readSource(path, idx4) {
+    const name5 = baseName4(path);
+    if (/\.doc$/i.test(path)) return { name: name5, warn: { code: "oldDoc", name: name5 } };
+    if (!supported(path)) return { name: name5, warn: { code: "unsupported", name: name5 } };
+    try {
+      if (EXT_DOCX.test(path)) {
+        const zip = await import_jszip4.default.loadAsync(new Uint8Array(await kapi.readBytes(path)));
+        const part = async (p) => {
+          const f = zip.file(p);
+          return f ? f.async("string") : "";
+        };
+        const document2 = await part("word/document.xml");
+        if (!document2) return { name: name5, warn: { code: "readFail", name: name5 } };
+        const r4 = docxToDoc({
+          document: document2,
+          styles: await part("word/styles.xml"),
+          numbering: await part("word/numbering.xml"),
+          rels: await part("word/_rels/document.xml.rels")
+        }, { keyPrefix: `k2img:${idx4}:` });
+        let title2 = "";
+        try {
+          title2 = ((await part("docProps/core.xml")).match(/<dc:title>([^<]*)<\/dc:title>/) || [])[1] || "";
+        } catch {
+        }
+        return { name: name5, title: title2.trim(), content: r4.content, images: r4.images.map((im) => ({ ...im, zip })) };
+      }
+      const text = await kapi.readFile(path);
+      const r = EXT_MD.test(path) ? mdToImportDoc(text) : textToImportDoc(text);
+      return { name: name5, title: r.title || "", content: r.content, images: [] };
+    } catch (e) {
+      log("warn", "manuscript: read failed", { path, err: e });
+      return { name: name5, warn: { code: "readFail", name: name5 } };
+    }
+  }
+  async function importManuscriptDialog(opts = {}) {
+    if (!state.root) {
+      toast(t("ui.manuscript.needProject"), { level: "warn", action: {
+        label: t("ui.manuscript.newProject"),
+        onClick: async () => {
+          const { handleCommand: handleCommand2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+          handleCommand2("new-project");
+        }
+      } });
+      return null;
+    }
+    return new Promise((resolve) => {
+      const S10 = { paths: [], text: "", pasting: false, sources: [], book: "", bookTouched: false, mode: opts.mode || "auto", detect: true, split: null, srcWarn: [] };
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog k-wide k-msimp");
+      box2.append(el("div", "k-dlg-title", t("ui.manuscript.title")));
+      box2.append(el("div", "k-hint", t("ui.manuscript.intro")));
+      const srcRow = el("div", "k-msimp-src");
+      const bFiles = el("button", "cmp-mini", t("ui.manuscript.pickFiles"));
+      const bDir = el("button", "cmp-mini", t("ui.manuscript.pickFolder"));
+      const bPaste = el("button", "cmp-mini", t("ui.manuscript.pasteText"));
+      srcRow.append(bFiles, bDir, bPaste);
+      const srcInfo = el("div", "k-msimp-files");
+      const ta = el("textarea", "k-dlg-input k-dlg-multi k-msimp-paste");
+      ta.rows = 8;
+      ta.placeholder = t("ui.manuscript.pastePh");
+      ta.hidden = true;
+      box2.append(srcRow, srcInfo, ta);
+      const optRow = el("div", "k-row k-msimp-opts");
+      const lBook = el("label", "k-msimp-lbl", t("ui.manuscript.bookName"));
+      const inBook = el("input", "k-dlg-input k-msimp-book");
+      inBook.placeholder = t("ui.manuscript.bookPh");
+      const lMode = el("label", "k-msimp-lbl", t("ui.manuscript.splitLabel"));
+      const selMode = el("select", "k-dlg-select k-msimp-mode");
+      for (const m of SPLIT_MODES) {
+        const o = el("option", null, t(MODE_KEYS2[m]));
+        o.value = m;
+        selMode.append(o);
+      }
+      selMode.value = S10.mode;
+      optRow.append(lBook, inBook, lMode, selMode);
+      const detRow = el("label", "k-msimp-det");
+      const cbDetect = el("input");
+      cbDetect.type = "checkbox";
+      cbDetect.checked = true;
+      detRow.append(cbDetect, el("span", null, t("ui.manuscript.detect")));
+      box2.append(optRow, detRow);
+      const prev = el("div", "k-msimp-preview k-selectable");
+      box2.append(prev);
+      const btns = el("div", "k-dlg-btns");
+      const bCancel = el("button", "k-cancel", t("ui.common.cancel"));
+      const bOk = el("button", "k-ok", t("ui.common.importBtn"));
+      btns.append(bCancel, bOk);
+      box2.append(btns);
+      ov.append(box2);
+      document.body.append(ov);
+      let closed = false;
+      const done3 = (v2) => {
+        if (closed) return;
+        closed = true;
+        ov.remove();
+        resolve(v2);
+      };
+      bCancel.onclick = () => done3(null);
+      const docsForSplit = () => {
+        if (S10.pasting) {
+          const r = textToImportDoc(S10.text);
+          return [{ name: t("ui.manuscript.pasteSource"), title: inBook.value.trim() || t("ui.manuscript.pasteSource"), content: r.content }];
+        }
+        return S10.sources.filter((s) => s.content).map((s) => ({ name: s.name, title: s.title || "", content: s.content }));
+      };
+      const render = () => {
+        const docs = docsForSplit();
+        S10.split = docs.length ? splitManuscript(docs, { mode: S10.mode, detect: S10.detect, chapterTitle: t("ui.common.chapterOne2") }) : null;
+        srcInfo.replaceChildren();
+        if (!S10.pasting) {
+          if (!S10.paths.length) srcInfo.append(el("div", "k-hint", t("ui.manuscript.noSource")));
+          else {
+            srcInfo.append(el("div", "k-msimp-count", tf("ui.manuscript.filesF", S10.paths.length)));
+            const ol = el("ol", "k-msimp-list");
+            for (const p of S10.paths.slice(0, 50)) ol.append(el("li", null, baseName4(p)));
+            if (S10.paths.length > 50) ol.append(el("li", "k-hint", tf("ui.manuscript.moreF", S10.paths.length - 50)));
+            srcInfo.append(ol);
+          }
+        }
+        prev.replaceChildren();
+        const sp = S10.split;
+        const warns = [...S10.srcWarn, ...sp ? sp.warnings : []];
+        const badImg = S10.sources.reduce((n2, s) => n2 + (s.images || []).filter((im) => !imageExtOf(im.path)).length, 0);
+        if (badImg) warns.push({ code: "badImages", n: badImg });
+        if (sp && sp.counts.scenes) {
+          prev.append(el("div", "k-msimp-sum", tf("ui.manuscript.summaryF", sp.counts.chapters, sp.counts.scenes, sp.counts.words) + (sp.counts.images ? " \xB7 " + tf("ui.manuscript.imagesF", sp.counts.images) : "")));
+          const ul = el("ul", "k-msimp-tree");
+          sp.chapters.slice(0, 200).forEach((c, i5) => {
+            const li = el("li");
+            li.append(el("span", "k-msimp-ch", c.title || tf("ui.manuscript.chapterF", i5 + 1)));
+            li.append(el("span", "k-msimp-sc", " \u2014 " + (c.scenes.length === 1 && c.scenes[0].title === c.title ? tf("ui.manuscript.sceneCountF", 1) : c.scenes.map((s) => s.title).slice(0, 6).join(" \xB7 ") + (c.scenes.length > 6 ? " \xB7 " + tf("ui.manuscript.sceneMoreF", c.scenes.length - 6) : ""))));
+            ul.append(li);
+          });
+          if (sp.chapters.length > 200) ul.append(el("li", "k-hint", tf("ui.manuscript.moreChF", sp.chapters.length - 200)));
+          prev.append(ul);
+        } else if (S10.paths.length || S10.text.trim()) {
+          prev.append(el("div", "k-hint", t("ui.manuscript.nothing")));
+        }
+        for (const w of warns) prev.append(el("div", "k-hint k-msimp-warn", warnText(w)));
+        bOk.disabled = !(sp && sp.counts.scenes);
+      };
+      const suggestBook = (title2) => {
+        if (S10.bookTouched) return;
+        inBook.value = title2 || "";
+      };
+      const loadPaths = async (paths, folderTitle) => {
+        S10.pasting = false;
+        ta.hidden = true;
+        S10.paths = [...paths].sort(naturalCompare);
+        S10.sources = [];
+        S10.srcWarn = [];
+        render();
+        try {
+          await withBusyTask(t("ui.manuscript.reading"), async ({ signal, progress }) => {
+            for (let i5 = 0; i5 < S10.paths.length; i5++) {
+              throwIfCancelled(signal);
+              const r = await readSource(S10.paths[i5], i5);
+              if (r.warn) S10.srcWarn.push(r.warn);
+              else S10.sources.push(r);
+              progress(i5 + 1, S10.paths.length);
+            }
+          }, { name: t("ui.manuscript.taskName") });
+        } catch (e) {
+          if (!isCancelled(e)) setStatusError(String(e && e.message || e));
+        }
+        if (closed) return;
+        const one = S10.sources.length === 1 ? S10.sources[0].title || titleFromFileName(S10.sources[0].name) : "";
+        suggestBook(folderTitle || one);
+        render();
+      };
+      bFiles.onclick = async () => {
+        const ps = await kapi.openManuscriptFiles();
+        if (ps && ps.length) await loadPaths(ps, "");
+      };
+      bDir.onclick = async () => {
+        const dir2 = await kapi.openDirDialog();
+        if (!dir2) return;
+        let files = [];
+        try {
+          files = await kapi.listFiles(dir2);
+        } catch {
+          files = [];
+        }
+        const sep = dir2.includes("\\") ? "\\" : "/";
+        const ps = files.filter((f) => supported(f) || /\.doc$/i.test(f)).filter((f) => !/^[~.]/.test(f)).map((f) => dir2.replace(/[\\/]+$/, "") + sep + f);
+        await loadPaths(ps, baseName4(dir2));
+        if (!ps.length) {
+          S10.srcWarn = [{ code: "unsupported", name: baseName4(dir2) }];
+          render();
+        }
+      };
+      bPaste.onclick = () => {
+        S10.pasting = true;
+        S10.paths = [];
+        S10.sources = [];
+        S10.srcWarn = [];
+        ta.hidden = false;
+        ta.focus();
+        render();
+      };
+      let tmr = 0;
+      ta.oninput = () => {
+        S10.text = ta.value;
+        clearTimeout(tmr);
+        tmr = setTimeout(render, 250);
+      };
+      inBook.oninput = () => {
+        S10.bookTouched = !!inBook.value.trim();
+        S10.book = inBook.value.trim();
+      };
+      selMode.onchange = () => {
+        S10.mode = selMode.value;
+        render();
+      };
+      cbDetect.onchange = () => {
+        S10.detect = cbDetect.checked;
+        render();
+      };
+      bOk.onclick = async () => {
+        if (bOk.disabled) return;
+        bOk.disabled = true;
+        const res = await writeBook(S10, inBook.value.trim());
+        if (res) done3(res);
+        else {
+          bOk.disabled = false;
+          render();
+        }
+      };
+      render();
+      (async () => {
+        if (opts.book) {
+          inBook.value = opts.book;
+          S10.bookTouched = true;
+        }
+        if (opts.text != null) {
+          bPaste.onclick();
+          ta.value = opts.text;
+          S10.text = opts.text;
+          render();
+        } else if (opts.paths && opts.paths.length) await loadPaths(opts.paths, opts.folderTitle || "");
+        if (opts.auto && !closed) bOk.onclick();
+      })();
+    });
+  }
+  async function writeBook(S10, wantTitle) {
+    const sp = S10.split;
+    if (!sp || !sp.counts.scenes) return null;
+    const root = state.root;
+    try {
+      return await withBusyTask(t("ui.manuscript.writing"), async ({ signal, progress }) => {
+        const b = await freeBookName(kapi, root, wantTitle || "");
+        let maxOrder2 = 0;
+        for (const nm of await kapi.listDirs(root)) {
+          const sf = await kapi.join(root, nm, "section.json");
+          if (await kapi.exists(sf)) {
+            try {
+              maxOrder2 = Math.max(maxOrder2, (await kapi.readJson(sf)).order || 0);
+            } catch {
+            }
+          }
+        }
+        const imgSrc = /* @__PURE__ */ new Map();
+        const images = /* @__PURE__ */ new Map();
+        for (const s of S10.sources) for (const im of s.images || []) {
+          const ext = imageExtOf(im.path);
+          if (!ext || !im.zip.file(im.path)) continue;
+          imgSrc.set(im.key, im);
+          images.set(im.key, { ext, name: im.alt || baseName4(im.path).replace(/\.[^.]+$/, "") });
+        }
+        const plan = buildBookPlan(sp, {
+          bookTitle: b.title,
+          bookFolder: b.folder,
+          order: maxOrder2 + 1,
+          images,
+          guid: () => crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2),
+          now: (/* @__PURE__ */ new Date()).toISOString(),
+          source: S10.pasting ? "paste" : "manuscript",
+          chapterFallback: (i5) => tf("ui.manuscript.chapterF", i5 + 1)
+        });
+        let n2 = 0;
+        let first = "";
+        for (const f of plan.files) {
+          throwIfCancelled(signal);
+          const full = await kapi.join(root, ...f.path);
+          if (f.image) {
+            const im = imgSrc.get(f.image);
+            await kapi.mkdir(await kapi.join(root, ...f.path.slice(0, -1)));
+            await kapi.writeBytes(full, Array.from(await im.zip.file(im.path).async("uint8array")));
+          } else {
+            await kapi.writeFile(full, f.content);
+            if (!first && /\.md$/i.test(full)) first = full;
+          }
+          progress(++n2, plan.files.length);
+        }
+        if (images.size) {
+          try {
+            const AC = await Promise.resolve().then(() => (init_album_core(), album_core_exports));
+            await AC.syncFlatIndex(kapi, root);
+          } catch {
+          }
+        }
+        logAction("import", "manuscript \u2192 " + plan.book, { chapters: plan.chapters, scenes: plan.scenes, files: plan.files.length });
+        const { buildTree: buildTree3, refreshNetwork: refreshNetwork2, openScene: openScene2 } = await Promise.resolve().then(() => (init_app(), app_exports));
+        await buildTree3();
+        try {
+          refreshNetwork2();
+        } catch {
+        }
+        const msg = tf("ui.manuscript.doneF", b.title, plan.chapters, plan.scenes);
+        setStatus(msg);
+        toast(msg, { level: "ok" });
+        if (first) openScene2(first, "");
+        return { book: plan.book, chapters: plan.chapters, scenes: plan.scenes, firstScene: first };
+      }, { name: t("ui.manuscript.taskName") });
+    } catch (e) {
+      if (!isCancelled(e)) {
+        log("error", "manuscript: write failed", e);
+        setStatusError(tf("ui.manuscript.writeFailF", String(e && e.message || e)));
+      }
+      return null;
+    }
+  }
+  var import_jszip4, EXT_DOCX, EXT_MD, EXT_TXT, supported, baseName4, MODE_KEYS2, WARN_KEYS, warnText;
+  var init_import_manuscript_ui = __esm({
+    "src/import/import-manuscript-ui.js"() {
+      import_jszip4 = __toESM(require_jszip_min());
+      init_core();
+      init_cancel();
+      init_ui();
+      init_disk_sync();
+      init_import_manuscript();
+      EXT_DOCX = /\.docx$/i;
+      EXT_MD = /\.(md|markdown|mdown|mkd)$/i;
+      EXT_TXT = /\.(txt|text)$/i;
+      supported = (p) => EXT_DOCX.test(p) || EXT_MD.test(p) || EXT_TXT.test(p);
+      baseName4 = (p) => String(p || "").split(/[\\/]/).pop();
+      MODE_KEYS2 = {
+        "auto": "ui.manuscript.modeAuto",
+        "file-chapter": "ui.manuscript.modeFileChapter",
+        "headings": "ui.manuscript.modeHeadings",
+        "file-scene": "ui.manuscript.modeFileScene"
+      };
+      WARN_KEYS = {
+        empty: "ui.manuscript.warnEmpty",
+        noHeadings: "ui.manuscript.warnNoHeadings",
+        unsupported: "ui.manuscript.warnUnsupported",
+        oldDoc: "ui.manuscript.warnOldDoc",
+        readFail: "ui.manuscript.warnReadFail",
+        badImages: "ui.manuscript.warnImagesSkipped"
+      };
+      warnText = (w) => tf(WARN_KEYS[w.code] || "ui.manuscript.warnReadFail", w.name ?? w.n ?? "");
+    }
+  });
+
+  // src/comments/docx-comments-ui.js
+  var docx_comments_ui_exports = {};
+  __export(docx_comments_ui_exports, {
+    importDocxCommentsDialog: () => importDocxCommentsDialog
+  });
+  async function readThreads(path) {
+    const zip = await import_jszip5.default.loadAsync(new Uint8Array(await kapi.readBytes(path)));
+    const part = async (p) => {
+      const f = zip.file(p);
+      return f ? f.async("string") : "";
+    };
+    return readDocxComments({
+      document: await part("word/document.xml"),
+      comments: await part("word/comments.xml"),
+      commentsExtended: await part("word/commentsExtended.xml")
+    });
+  }
+  async function sceneTexts(signal, progress) {
+    const out = [];
+    const rows = await collectPlacedScenes();
+    let i5 = 0;
+    for (const r of rows) {
+      throwIfCancelled(signal);
+      let raw = "";
+      try {
+        raw = await kapi.readFile(r.filePath);
+      } catch {
+        continue;
+      }
+      const noBlock = stripComments(raw);
+      let body = noBlock;
+      try {
+        body = (0, import_md32.parseMdFile)(noBlock).body;
+      } catch {
+      }
+      const plain = body.split("\n").map((l) => (0, import_md32.inlinePlainText)(l)).join("\n");
+      out.push({ key: r.filePath, raw: noBlock, plain, comments: parseComments(raw), title: r.title || "" });
+      progress(++i5, rows.length);
+    }
+    return out;
+  }
+  async function importDocxCommentsDialog(opts = {}) {
+    if (!state.root) {
+      setStatus(t("ui.dxc.needProject"));
+      return null;
+    }
+    const path = opts.path || await kapi.openFileDialog("docx");
+    if (!path) return null;
+    let threads, scenes, plan;
+    try {
+      ({ threads, scenes, plan } = await withBusyTask(t("ui.dxc.reading"), async ({ signal, progress }) => {
+        const th = await readThreads(path);
+        if (!th.length) return { threads: th, scenes: [], plan: null };
+        const sc = await sceneTexts(signal, progress);
+        return { threads: th, scenes: sc, plan: planCommentImport(th, sc) };
+      }, { name: t("ui.dxc.taskName") }));
+    } catch (e) {
+      if (isCancelled(e)) return null;
+      log("warn", "docx-comments: read failed", { path, err: e });
+      setStatusError(tf("ui.dxc.readFailF", path.split(/[\\/]/).pop()));
+      return null;
+    }
+    if (!threads.length) {
+      await (opts.auto ? Promise.resolve() : infoBox(t("ui.dxc.none")));
+      return { stats: null, files: 0 };
+    }
+    const st = plan.stats;
+    const titleOf2 = new Map(scenes.map((s) => [s.key, s.title]));
+    const lines = [tf("ui.dxc.sumNewF", st.added)];
+    if (st.replies) lines.push(tf("ui.dxc.sumRepliesF", st.replies));
+    if (st.resolved) lines.push(tf("ui.dxc.sumResolvedF", st.resolved));
+    if (st.same) lines.push(tf("ui.dxc.sumSameF", st.same));
+    if (st.unmatched) lines.push(tf("ui.dxc.sumUnmatchedF", st.unmatched));
+    const go = plan.updates.size > 0 && (opts.auto ? true : await confirmImport(lines, plan, titleOf2));
+    if (!go) {
+      if (!plan.updates.size && !opts.auto) await infoBox(t("ui.dxc.nothingNew"), { detail: unmatchedDetail(plan) || "" });
+      return plan.updates.size ? null : { stats: st, files: 0 };
+    }
+    const store = commentStore();
+    let files = 0;
+    try {
+      for (const [file, comments] of plan.updates) {
+        const { body } = await store.read(file);
+        await store.write(file, body, comments);
+        files++;
+      }
+    } catch (e) {
+      log("error", "docx-comments: write failed", e);
+      setStatusError(tf("ui.dxc.writeFailF", String(e && e.message || e)));
+      return null;
+    }
+    logAction("comments", "import from docx", { path, ...st, files });
+    const msg = tf("ui.dxc.doneF", st.added + st.replies, files);
+    setStatus(msg);
+    toast(msg, { level: "ok" });
+    try {
+      await renderCommentPanel();
+    } catch {
+    }
+    if (st.unmatched && !opts.auto) await infoBox(tf("ui.dxc.unmatchedTitleF", st.unmatched), { detail: unmatchedDetail(plan) });
+    return { stats: st, files };
+  }
+  function unmatchedDetail(plan) {
+    return plan.unmatched.slice(0, 20).map((u) => (u.quote ? "\u201C" + short2(u.quote, 30) + "\u201D \u2014 " : "") + (u.author ? u.author + ": " : "") + short2(u.text)).join("\n");
+  }
+  function confirmImport(lines, plan, titleOf2) {
+    return new Promise((resolve) => {
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog k-dxc");
+      box2.append(el("div", "k-dlg-title", t("ui.dxc.title")));
+      box2.append(el("div", "k-hint", t("ui.dxc.intro")));
+      const ul = el("ul", "k-dxc-sum");
+      for (const l of lines) ul.append(el("li", null, l));
+      box2.append(ul);
+      const sc = el("div", "k-dxc-scenes k-selectable");
+      sc.append(el("div", "cmp-sub", tf("ui.dxc.scenesF", plan.updates.size)));
+      for (const k of [...plan.updates.keys()].slice(0, 30)) sc.append(el("div", null, titleOf2.get(k) || k.split(/[\\/]/).pop()));
+      box2.append(sc);
+      const btns = el("div", "k-dlg-btns");
+      const no = el("button", "k-cancel", t("ui.common.cancel"));
+      const ok2 = el("button", "k-ok", t("ui.dxc.apply"));
+      btns.append(no, ok2);
+      box2.append(btns);
+      ov.append(box2);
+      document.body.append(ov);
+      const done3 = (v2) => {
+        ov.remove();
+        resolve(v2);
+      };
+      no.onclick = () => done3(false);
+      ok2.onclick = () => done3(true);
+    });
+  }
+  var import_jszip5, import_md32, short2;
+  var init_docx_comments_ui = __esm({
+    "src/comments/docx-comments-ui.js"() {
+      import_jszip5 = __toESM(require_jszip_min());
+      init_core();
+      init_cancel();
+      init_ui();
+      import_md32 = __toESM(require_md());
+      init_comment_core();
+      init_docx_comments();
+      init_comment_ui();
+      init_scene_list();
+      short2 = (s, n2 = 60) => {
+        const a = Array.from(String(s || "").replace(/\s+/g, " ").trim());
+        return a.length > n2 ? a.slice(0, n2).join("") + "\u2026" : a.join("");
+      };
+    }
+  });
+
+  // src/project-lock.js
+  function makeLock(me2) {
+    return {
+      machine: String(me2.machine || ""),
+      user: String(me2.user || ""),
+      session: String(me2.session || ""),
+      app: String(me2.app || ""),
+      // หมายเลขโปรเซสของ main — เครื่องเดียวกันตรวจได้ว่ายังรันอยู่ไหม (โปรแกรมเปิดได้ตัวเดียว = ล็อกของโปรเซสที่ตายแล้วคือโปรแกรมที่ล่ม)
+      pid: Number(me2.pid) || 0,
+      since: new Date(me2.since || me2.now).toISOString(),
+      beat: new Date(me2.now).toISOString()
+    };
+  }
+  function lockState(lock, me2, now, staleMs = PROJECT_LOCK_STALE_MS) {
+    if (!lock || typeof lock !== "object" || !lock.session) return { state: "free" };
+    if (lock.session === me2.session) return { state: "mine" };
+    const age = Math.max(0, now - timeOf(lock.beat));
+    const sameMachine = !!lock.machine && lock.machine === me2.machine;
+    if (!timeOf(lock.beat) || age > staleMs) return { state: "stale", other: lock, sameMachine, ageMs: age };
+    if (sameMachine && lock.alive === false) return { state: "stale", other: lock, sameMachine, ageMs: age };
+    return { state: "other", other: lock, sameMachine, ageMs: age };
+  }
+  function syncCopyOf(name5, siblings) {
+    const m = /^(.*?)(\.[^.]+)?$/.exec(String(name5 || ""));
+    const base4 = m[1], ext = m[2] || "";
+    const sib = /* @__PURE__ */ new Map();
+    for (const s of siblings || []) sib.set(String(s).toLowerCase(), String(s));
+    for (const p of PATTERNS) {
+      const r = p.re.exec(base4);
+      if (!r || !r[1]) continue;
+      const of = sib.get((r[1] + ext).toLowerCase());
+      if (of && of.toLowerCase() !== String(name5).toLowerCase()) return { of, app: p.app };
+    }
+    return null;
+  }
+  function machineLabel(m) {
+    return String(m || "").replace(/\.(local|lan|home)$/i, "").trim();
+  }
+  var timeOf, PATTERNS;
+  var init_project_lock = __esm({
+    "src/project-lock.js"() {
+      init_timing();
+      timeOf = (iso) => {
+        const t3 = new Date(iso).getTime();
+        return Number.isFinite(t3) ? t3 : 0;
+      };
+      PATTERNS = [
+        // Dropbox: "ชื่อ (conflicted copy).md" · "ชื่อ (ชื่อเครื่อง's conflicted copy 2024-01-02).md" · ภาษาอื่นของ Dropbox ใช้คำว่า copy/คัดลอก ต่างกัน
+        { app: "dropbox", re: /^(.*?) \([^()]*conflicted copy[^()]*\)$/i },
+        // Syncthing: "ชื่อ.sync-conflict-20240102-123456-ABCDEFG"
+        { app: "syncthing", re: /^(.*?)\.sync-conflict-\d{8}-\d{6}(?:-[A-Z0-9]+)?$/ },
+        // OneDrive: "ชื่อ-ชื่อเครื่อง" · "ชื่อ-ชื่อเครื่อง-2"
+        { app: "onedrive", re: /^(.*)-[A-Za-z0-9][A-Za-z0-9_-]{1,30}?(?:-\d+)?$/ },
+        // Google Drive (สำหรับเดสก์ท็อป): "ชื่อ (1)"
+        { app: "gdrive", re: /^(.*?) \((\d{1,3})\)$/ },
+        // iCloud: "ชื่อ 2"
+        { app: "icloud", re: /^(.*?) (\d{1,3})$/ }
+      ];
+    }
+  });
+
+  // src/project-lock-ui.js
+  var project_lock_ui_exports = {};
+  __export(project_lock_ui_exports, {
+    checkProjectLock: () => checkProjectLock,
+    holdProjectLock: () => holdProjectLock,
+    releaseProjectLock: () => releaseProjectLock
+  });
+  async function me() {
+    if (!L2.me) {
+      try {
+        L2.me = await kapi.lockMe();
+      } catch {
+        L2.me = null;
+      }
+    }
+    return L2.me;
+  }
+  async function checkProjectLock(root) {
+    const m = await me();
+    if (!m) return true;
+    let lock = null;
+    try {
+      lock = await kapi.lockRead(root);
+    } catch {
+      lock = null;
+    }
+    const st = lockState(lock, m, Date.now());
+    L2.staleNote = null;
+    if (st.state === "stale" && !st.sameMachine && st.ageMs < 24 * 3600 * 1e3) L2.staleNote = st.other;
+    if (st.state !== "other") return true;
+    log("info", "project lock: held by " + (st.other.machine || "?"), { root, beat: st.other.beat });
+    const who = machineLabel(st.other.machine) || t("ui.lock.unknownMachine");
+    const title2 = st.sameMachine ? tf("ui.lock.heldSameF", fmtDateTime(st.other.beat)) : tf("ui.lock.heldF", who, fmtDateTime(st.other.beat));
+    const ok2 = await askLock(title2, t("ui.lock.heldWhy"));
+    if (ok2) log("info", "project lock: user opened anyway", { root, other: st.other.machine });
+    return ok2;
+  }
+  function askLock(title2, detail) {
+    return new Promise((resolve) => {
+      const ov = el("div", "k-overlay");
+      const box2 = el("div", "k-dialog k-lockdlg");
+      box2.append(el("div", "k-dlg-title", title2), el("div", "k-hint k-lockdlg-why", detail));
+      const btns = el("div", "k-dlg-btns");
+      const no = el("button", "k-cancel", t("ui.common.cancel"));
+      const yes = el("button", "k-ok", t("ui.lock.openAnyway"));
+      btns.append(no, yes);
+      box2.append(btns);
+      ov.append(box2);
+      document.body.append(ov);
+      const done3 = (v2) => {
+        ov.remove();
+        resolve(v2);
+      };
+      no.onclick = () => done3(false);
+      yes.onclick = () => done3(true);
+      ov.onclick = (e) => {
+        if (e.target === ov) done3(false);
+      };
+      escClose(ov, () => done3(false));
+    });
+  }
+  async function holdProjectLock(root) {
+    const m = await me();
+    if (!m) return;
+    stopBeat();
+    L2.root = root;
+    L2.since = Date.now();
+    const beat = async () => {
+      if (L2.root !== root) return;
+      try {
+        await kapi.lockWrite(root, makeLock({ ...m, now: Date.now(), since: L2.since }));
+      } catch (e) {
+        log("warn", "project lock: write failed", e);
+      }
+    };
+    await beat();
+    L2.timer = setInterval(beat, PROJECT_LOCK_BEAT_MS);
+    if (L2.staleNote) {
+      const o = L2.staleNote;
+      L2.staleNote = null;
+      toast(tf("ui.lock.lastOtherF", machineLabel(o.machine) || t("ui.lock.unknownMachine"), fmtDateTime(o.beat)), { level: "info", ttl: 12e3 });
+    }
+  }
+  function stopBeat() {
+    if (L2.timer) {
+      clearInterval(L2.timer);
+      L2.timer = 0;
+    }
+  }
+  async function releaseProjectLock() {
+    stopBeat();
+    if (!L2.root) return;
+    L2.root = "";
+    try {
+      await kapi.lockRelease();
+    } catch {
+    }
+  }
+  var L2;
+  var init_project_lock_ui = __esm({
+    "src/project-lock-ui.js"() {
+      init_core();
+      init_ui();
+      init_locale();
+      init_project_lock();
+      init_timing();
+      L2 = { root: "", timer: 0, since: 0, me: null };
     }
   });
 
@@ -199413,7 +201793,7 @@ ${sc.body || ""}
     return elements;
   }
   async function parseCeltx(buffer2) {
-    const zip = new import_jszip4.default();
+    const zip = new import_jszip6.default();
     await zip.loadAsync(buffer2);
     let htmlFile = zip.file("script/index.html") || zip.file("script.html");
     if (!htmlFile) {
@@ -199554,7 +201934,7 @@ ${sc.body || ""}
         const { name: name5 } = splitCharacter(text);
         if (name5) chars3.add(name5);
       }
-      if (text) words += (0, import_md31.countWords)(String(text));
+      if (text) words += (0, import_md33.countWords)(String(text));
     }
     return {
       scenes: counts.scene || 0,
@@ -199565,16 +201945,16 @@ ${sc.body || ""}
       counts
     };
   }
-  var import_jszip4, import_md31, SP_IMPORTERS, FDX_TYPE_MAP2, CELTX_TYPE_MAP, ASTX_TYPE_MAP, FADEIN_TYPE_MAP;
+  var import_jszip6, import_md33, SP_IMPORTERS, FDX_TYPE_MAP2, CELTX_TYPE_MAP, ASTX_TYPE_MAP, FADEIN_TYPE_MAP;
   var init_import_sp = __esm({
     "src/import-sp.js"() {
       init_i18n();
       init_fountain();
       init_core();
       init_ui();
-      import_jszip4 = __toESM(require_jszip_min());
+      import_jszip6 = __toESM(require_jszip_min());
       init_import_fountain();
-      import_md31 = __toESM(require_md());
+      import_md33 = __toESM(require_md());
       init_icons();
       init_err_text();
       SP_IMPORTERS = {
@@ -200192,9 +202572,9 @@ ${sc.body || ""}
   }
   function locationReportText(rep) {
     const out = [tf("ui.spReports.reportPlacePlaceScene", rep.locations.length, rep.totalScenes, rep.totalPages), ""];
-    for (const L2 of rep.locations) {
-      out.push(tf("ui.spReports.scenePage2", L2.location, L2.intExt.join("/") || "\u2014", L2.sceneCount, L2.pages));
-      for (const s of L2.scenes) {
+    for (const L3 of rep.locations) {
+      out.push(tf("ui.spReports.scenePage2", L3.location, L3.intExt.join("/") || "\u2014", L3.sceneCount, L3.pages));
+      for (const s of L3.scenes) {
         out.push(tf("ui.spReports.scenePage", pad4(s.n, 4), pad4(s.page, 4), s.heading) + (s.characters.length ? "   [" + s.characters.join(", ") + "]" : ""));
       }
       out.push("");
@@ -200263,7 +202643,7 @@ ${sc.body || ""}
   }
   function validateScreenplay(blocks, opts = {}) {
     const list3 = Array.isArray(blocks) ? blocks : [];
-    const L2 = { ...DEFAULT_LIMITS, ...opts.limits || {} };
+    const L3 = { ...DEFAULT_LIMITS, ...opts.limits || {} };
     const only = Array.isArray(opts.checks) && opts.checks.length ? new Set(opts.checks) : null;
     const errors = [];
     const add2 = (type, i5, el2, msg) => {
@@ -200308,13 +202688,14 @@ ${sc.body || ""}
           add2(SP_ERRORS.UNCLOSED_PARENTHETICAL, i5, el2, tf("ui.spValidator.notCompletePair", text));
         }
       }
-      const lim = L2[el2];
-      if (lim && text.length > lim) {
+      const lim = L3[el2];
+      const n2 = visLen2(text);
+      if (lim && n2 > lim) {
         add2(
           SP_ERRORS.OVERLONG_LINE,
           i5,
           el2,
-          tf("ui.spValidator.longChar", elLabel(el2), text.length, lim)
+          tf("ui.spValidator.longChar", elLabel(el2), n2, lim)
         );
       }
     }
@@ -200339,7 +202720,7 @@ ${sc.body || ""}
     const n2 = Number.isFinite(afterBlock) ? afterBlock : -1;
     return list3.find((e) => e.block > n2) || list3[0];
   }
-  var SP_ERRORS, SP_SEVERITY, DEFAULT_LIMITS, NEED_TEXT, TH_EL, elLabel;
+  var SP_ERRORS, SP_SEVERITY, DEFAULT_LIMITS, visLen2, NEED_TEXT, TH_EL, elLabel;
   var init_sp_validator = __esm({
     "src/sp-validator.js"() {
       init_i18n();
@@ -200364,7 +202745,8 @@ ${sc.body || ""}
         [SP_ERRORS.MISSING_SCENE_HEADING]: "warn",
         [SP_ERRORS.UNCLOSED_PARENTHETICAL]: "error"
       };
-      DEFAULT_LIMITS = { dialogue: 60, action: 70, scene: 70, character: 40 };
+      DEFAULT_LIMITS = { dialogue: 175, action: 240, scene: 70, character: 40 };
+      visLen2 = (s) => String(s || "").replace(new RegExp("\\p{M}", "gu"), "").length;
       NEED_TEXT = ["scene", "character", "dialogue", "parenthetical", "transition", "shot", "act-break"];
       TH_EL = {
         scene: t("ui.spValidator.headScene"),
@@ -200425,7 +202807,7 @@ ${sc.body || ""}
     const list3 = pages && pages.pages || pages || [];
     const wm = { ...DEFAULT_WM, ...opts.wmOptions || {} };
     const wmText = String(opts.watermark || "").trim();
-    const tw = textWidth(f.paper, f.margins);
+    const tw2 = textWidth(f.paper, f.margins);
     const ph = +f.paper.height - f.margins.top - f.margins.bottom;
     const body = list3.map((pg) => {
       const rows = [];
@@ -200444,7 +202826,7 @@ ${sc.body || ""}
       fontFaceCss(opts.fontUrls),
       "*{box-sizing:border-box;}",
       `html,body{margin:0;padding:0;background:#fff;color:#000;font-family:` + withThaiFallback('"Courier Prime","Courier Final Draft","Courier New",monospace') + `;font-size:12pt;line-height:1;}`,
-      `.pg{position:relative;width:${+tw.toFixed(4)}in;min-height:${+ph.toFixed(4)}in;page-break-after:always;break-after:page;overflow:hidden;}`,
+      `.pg{position:relative;width:${+tw2.toFixed(4)}in;min-height:${+ph.toFixed(4)}in;page-break-after:always;break-after:page;overflow:hidden;}`,
       ".pg:last-child{page-break-after:auto;break-after:auto;}",
       ".pg-body{position:relative;z-index:1;}",
       ".pg-num{text-align:right;margin-bottom:1em;}",
@@ -200551,12 +202933,12 @@ ${css}
   }
   function labelNames(issue) {
     const ls = issue && Array.isArray(issue.labels) ? issue.labels : [];
-    return ls.map((l) => norm4(typeof l === "string" ? l : l && l.name)).filter(Boolean);
+    return ls.map((l) => norm5(typeof l === "string" ? l : l && l.name)).filter(Boolean);
   }
   function statusOf3(issue) {
     const ls = labelNames(issue);
     const closed = String(issue && issue.state).toLowerCase() === "closed";
-    const reason = norm4(issue && issue.state_reason);
+    const reason = norm5(issue && issue.state_reason);
     if (has3(ls, "duplicate") || reason === "duplicate") return "duplicate";
     if (closed) return reason === "not-planned" || has3(ls, "wontfix", "invalid", "not-a-bug") ? "wontfix" : "fixed";
     if (has3(ls, "in-progress", "wip", "fixing")) return "progress";
@@ -200651,7 +203033,7 @@ ${css}
     if (!res.ok) return { ok: false, code: "http", status: res.status };
     let arr = null;
     try {
-      arr = JSON.parse(String(res.body || "").replace(BOM_RE, ""));
+      arr = JSON.parse(String(res.body || "").replace(BOM_RE2, ""));
     } catch {
       arr = null;
     }
@@ -200721,16 +203103,16 @@ ${css}
     return clean3(title2, 200).replace(/\s+/g, " ");
   }
   function buildReportBody(r = {}) {
-    const L2 = r.labels || {}, env2 = r.env || {};
+    const L3 = r.labels || {}, env2 = r.env || {};
     const parts = [];
     const sec2 = (head2, text) => {
       const v2 = clean3(text, 6e3);
       if (v2) parts.push("### " + (head2 || "").trim() + "\n" + v2);
     };
-    sec2(L2.what, r.what);
-    sec2(L2.steps, r.steps);
-    sec2(L2.expected, r.expected);
-    parts.push("### " + String(L2.env || "").trim() + "\n" + envLine(env2));
+    sec2(L3.what, r.what);
+    sec2(L3.steps, r.steps);
+    sec2(L3.expected, r.expected);
+    parts.push("### " + String(L3.env || "").trim() + "\n" + envLine(env2));
     parts.push(reportMark(env2, r.kind));
     return parts.join("\n\n");
   }
@@ -200781,7 +203163,7 @@ ${css}
     }
     let d = null;
     try {
-      d = JSON.parse(String(res.body || "").replace(BOM_RE, ""));
+      d = JSON.parse(String(res.body || "").replace(BOM_RE2, ""));
     } catch {
       d = null;
     }
@@ -200860,12 +203242,12 @@ ${css}
     }));
     return { ts: c.ts, bugs };
   }
-  var BOM_RE, BUG_LIST_URL, BUG_PAGE_SIZE, BUG_MAX_PAGES, BUG_STATUSES, BUG_STATUS_KEYS, FEATURE_STATUS_KEYS, BUG_OPEN_STATUSES, norm4, has3, TRUSTED_AUTHORS, HIDDEN_LABELS, REPORT_KINDS, FEATURE_LABELS, RE_MARK, RE_VER_LINE, labelValue, BUG_SORT_KEYS, clean3, markVal, RELAY_CLIENT, RELAY_PATH, RELAY_MAX_BODY, PENDING_MS, PENDING_MAX, MAIL_SUBJECT_PREFIX;
+  var BOM_RE2, BUG_LIST_URL, BUG_PAGE_SIZE, BUG_MAX_PAGES, BUG_STATUSES, BUG_STATUS_KEYS, FEATURE_STATUS_KEYS, BUG_OPEN_STATUSES, norm5, has3, TRUSTED_AUTHORS, HIDDEN_LABELS, REPORT_KINDS, FEATURE_LABELS, RE_MARK, RE_VER_LINE, labelValue, BUG_SORT_KEYS, clean3, markVal, RELAY_CLIENT, RELAY_PATH, RELAY_MAX_BODY, PENDING_MS, PENDING_MAX, MAIL_SUBJECT_PREFIX;
   var init_bug_core = __esm({
     "src/bugs/bug-core.js"() {
       init_timing();
       init_update_check();
-      BOM_RE = new RegExp("^" + String.fromCharCode(65279));
+      BOM_RE2 = new RegExp("^" + String.fromCharCode(65279));
       BUG_LIST_URL = UPDATE_ISSUES_URL;
       BUG_PAGE_SIZE = 100;
       BUG_MAX_PAGES = 5;
@@ -200887,7 +203269,7 @@ ${css}
         wontfix: "ui.bug.stDeclined"
       };
       BUG_OPEN_STATUSES = ["new", "confirmed", "progress", "needinfo"];
-      norm4 = (s) => String(s == null ? "" : s).trim().toLowerCase().replace(/[\s_]+/g, "-");
+      norm5 = (s) => String(s == null ? "" : s).trim().toLowerCase().replace(/[\s_]+/g, "-");
       has3 = (ls, ...names) => names.some((n2) => ls.includes(n2));
       TRUSTED_AUTHORS = ["OWNER", "MEMBER", "COLLABORATOR"];
       HIDDEN_LABELS = ["hidden", "spam", "test"];
@@ -201959,8 +204341,8 @@ ${css}
       return out;
     };
     function scrollToAnchor2(hash2) {
-      const want = String(hash2 || "").toLowerCase();
-      const target = want && [...body.querySelectorAll("[data-anchor]")].find((n2) => n2.dataset.anchor === want);
+      const want2 = String(hash2 || "").toLowerCase();
+      const target = want2 && [...body.querySelectorAll("[data-anchor]")].find((n2) => n2.dataset.anchor === want2);
       if (!target) return false;
       body.scrollTop += target.getBoundingClientRect().top - body.getBoundingClientRect().top - 4;
       return true;
@@ -202063,7 +204445,8 @@ ${css}
     });
     escClose(ov, close2);
     document.body.append(ov);
-    ov.k2ready = go(opts.path && docInfo(opts.path) ? opts.path : docHome(S10.book, S10.lang), { hash: opts.hash || "" });
+    const want = opts.file ? DOC_BOOKS[S10.book].dir + "/" + S10.lang + "/" + opts.file : opts.path;
+    ov.k2ready = go(want && docInfo(want) ? want : docHome(S10.book, S10.lang), { hash: opts.hash || "" });
     setTimeout(() => {
       try {
         body.focus();
@@ -202210,21 +204593,23 @@ ${css}
         if (seen.has(f)) continue;
         let title2 = "";
         try {
-          title2 = (0, import_md32.parseMdFile)((s.texts || {})[c.folderName + "/" + f] || "").meta.title || "";
+          title2 = (0, import_md34.parseMdFile)((s.texts || {})[c.folderName + "/" + f] || "").meta.title || "";
         } catch {
         }
+        const sync = syncCopyOf(f, seen.keys());
         add2({
           type: "orphan-file",
           chGuid: c.guid,
           folder: c.folderName,
           file: f,
           title: String(title2 || f.replace(/\.md$/i, "")),
-          fix: { kind: "attach-row" }
+          fix: { kind: "attach-row" },
+          ...sync ? { syncOf: sync.of, syncApp: sync.app } : {}
         });
       }
     }
     for (const [key2, text] of Object.entries(s.texts || {})) {
-      const r = (0, import_md32.repairFrontmatter)(text);
+      const r = (0, import_md34.repairFrontmatter)(text);
       if (!r.changed) continue;
       const i5 = key2.lastIndexOf("/");
       add2({
@@ -202271,10 +204656,11 @@ ${css}
     for (const it of issues || []) out[it.type] = (out[it.type] || 0) + 1;
     return out;
   }
-  var import_md32, DOCTOR_TYPES, chapterTitleFromFolder;
+  var import_md34, DOCTOR_TYPES, chapterTitleFromFolder;
   var init_project_doctor = __esm({
     "src/project-doctor.js"() {
-      import_md32 = __toESM(require_md());
+      import_md34 = __toESM(require_md());
+      init_project_lock();
       DOCTOR_TYPES = [
         "bad-json",
         "missing-file",
@@ -202314,7 +204700,7 @@ ${css}
       case "ghost-folder":
         return tf(k, it.folder, it.count);
       case "orphan-file":
-        return tf(k, it.file, it.title);
+        return it.syncOf ? tf("ui.doctor.tSyncCopy", it.file, it.syncOf) : tf(k, it.file, it.title);
       case "frontmatter":
         return tf(k, it.file, (it.keys || []).join(", "));
       case "missing-folder":
@@ -202387,7 +204773,7 @@ ${css}
         const p = await kapi.join(chDir, it.folder, it.file);
         if (await kapi.exists(p)) return false;
         await kapi.mkdir(await kapi.join(chDir, it.folder));
-        await kapi.writeFile(p, (0, import_md33.dumpMdFile)({ title: it.title || it.file.replace(/\.md$/i, ""), type: "scene", format: "prose" }, ""));
+        await kapi.writeFile(p, (0, import_md35.dumpMdFile)({ title: it.title || it.file.replace(/\.md$/i, ""), type: "scene", format: "prose" }, ""));
         return true;
       }
       case "attach-row": {
@@ -202416,13 +204802,13 @@ ${css}
           text = await kapi.readFile(await kapi.join(chDir, it.folder, it.file));
         } catch {
         }
-        const { meta: meta2, body } = (0, import_md33.parseMdFile)(text);
+        const { meta: meta2, body } = (0, import_md35.parseMdFile)(text);
         if (row0.title) meta2.title = row0.title;
         const { writeMdKeepingComments: writeMdKeepingComments2 } = await Promise.resolve().then(() => (init_comment_core(), comment_core_exports));
         await writeMdKeepingComments2(
           kapi,
           await kapi.join(chDir, it.folder, name5),
-          (0, import_md33.dumpMdFile)(meta2, body),
+          (0, import_md35.dumpMdFile)(meta2, body),
           await kapi.join(chDir, it.folder, it.file)
         );
         const r = await mutateJson(kapi, sf, (d) => {
@@ -202444,7 +204830,7 @@ ${css}
         const titles = {};
         for (const f of files) {
           try {
-            titles[f] = (0, import_md33.parseMdFile)(await kapi.readFile(await kapi.join(dir2, f))).meta.title || "";
+            titles[f] = (0, import_md35.parseMdFile)(await kapi.readFile(await kapi.join(dir2, f))).meta.title || "";
           } catch {
           }
         }
@@ -202464,7 +204850,7 @@ ${css}
       }
       case "repair-frontmatter": {
         const p = await kapi.join(chDir, it.folder, it.file);
-        const r = (0, import_md33.repairFrontmatter)(await kapi.readFile(p));
+        const r = (0, import_md35.repairFrontmatter)(await kapi.readFile(p));
         if (!r.changed) return false;
         await kapi.writeFile(p, r.text);
         const h = tabHandle(p);
@@ -202695,14 +205081,14 @@ ${css}
     await scan();
     return { ov, scan, close: close2, issues: () => issues, mismatches: () => mismatches };
   }
-  var import_md33, TYPE_KEY, FIX_KEY, nextOrder2, BADGE, BADGE_MIN_GAP;
+  var import_md35, TYPE_KEY, FIX_KEY, nextOrder2, BADGE, BADGE_MIN_GAP;
   var init_project_doctor_ui = __esm({
     "src/project-doctor-ui.js"() {
       init_i18n();
       init_core();
       init_cancel();
       init_ui();
-      import_md33 = __toESM(require_md());
+      import_md35 = __toESM(require_md());
       init_project_doctor();
       init_json_store();
       init_tab_bridge();
@@ -202777,7 +205163,7 @@ ${css}
       await new Promise((r) => setTimeout(r, 800));
       const t3 = state.active;
       check2("\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A prose", !!t3?.editor);
-      const orig = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).body;
+      const orig = (0, import_md36.parseMdFile)(await kapi.readFile(t3.file)).body;
       check2(
         "round-trip \u0E1C\u0E48\u0E32\u0E19 editor \u0E08\u0E23\u0E34\u0E07",
         t3.editor.getMarkdown() === orig,
@@ -202809,13 +205195,13 @@ ${css}
       ));
       t3.editor.cmd("bold");
       await saveTab(t3);
-      const saved = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).body;
+      const saved = (0, import_md36.parseMdFile)(await kapi.readFile(t3.file)).body;
       check2("\u0E2A\u0E31\u0E48\u0E07\u0E2B\u0E19\u0E32 + \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01 \u2192 \u0E44\u0E1F\u0E25\u0E4C .md \u0E21\u0E35 **\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07**", saved.includes("**\u0E04\u0E27\u0E32\u0E21\u0E2B\u0E27\u0E31\u0E07**"), saved);
       t3.editor.cmd("bold");
       await saveTab(t3);
       check2(
         "\u0E01\u0E14\u0E0B\u0E49\u0E33\u0E04\u0E37\u0E19\u0E2A\u0E20\u0E32\u0E1E\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21",
-        (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).body === orig
+        (0, import_md36.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
       {
         const longBody = Array.from(
@@ -202871,8 +205257,8 @@ ${css}
         await saveTab(t3);
         check2(
           "[a78] \u0E04\u0E37\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E09\u0E32\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E14\u0E34\u0E21\u0E04\u0E23\u0E1A",
-          (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
-          (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
+          (0, import_md36.parseMdFile)(await kapi.readFile(t3.file)).body === orig,
+          (0, import_md36.parseMdFile)(await kapi.readFile(t3.file)).body.slice(0, 60)
         );
         activate(t3.file);
         await new Promise((r) => setTimeout(r, 150));
@@ -202926,7 +205312,7 @@ ${css}
       refreshOutline();
       check2("outline \u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E40\u0E2B\u0E47\u0E19\u0E2B\u0E31\u0E27\u0E09\u0E32\u0E01", [...document.querySelectorAll(".ol-item")].some((x) => x.textContent.includes("\u0E15\u0E25\u0E32\u0E14 - \u0E40\u0E22\u0E47\u0E19")));
       activate(t3.file);
-      const fmtOf = async (f) => (0, import_md34.parseMdFile)(await kapi.readFile(f)).meta.format || "prose";
+      const fmtOf = async (f) => (0, import_md36.parseMdFile)(await kapi.readFile(f)).meta.format || "prose";
       check2("\u0E40\u0E23\u0E34\u0E48\u0E21\u0E15\u0E49\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E2B\u0E21\u0E14\u0E19\u0E34\u0E22\u0E32\u0E22", !!t3.editor && !t3.sp && await fmtOf(t3.file) === "prose");
       const answerConvert = async (go, ok2) => {
         const done3 = go();
@@ -202944,7 +205330,7 @@ ${css}
       );
       check2(
         "[87] \u0E15\u0E2D\u0E1A\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01 = \u0E44\u0E21\u0E48\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14 \u0E44\u0E21\u0E48\u0E41\u0E15\u0E30\u0E44\u0E1F\u0E25\u0E4C",
-        !!state.active.editor && !state.active.sp && (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).body === orig
+        !!state.active.editor && !state.active.sp && (0, import_md36.parseMdFile)(await kapi.readFile(t3.file)).body === orig
       );
       await answerConvert(() => switchFormat("screenplay"), true);
       check2(
@@ -202955,7 +205341,7 @@ ${css}
         "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E02\u0E35\u0E22\u0E19 format \u0E25\u0E07 frontmatter (screenplay)",
         await fmtOf(t3.file) === "screenplay"
       );
-      const spDisk87 = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file));
+      const spDisk87 = (0, import_md36.parseMdFile)(await kapi.readFile(t3.file));
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A\u0E42\u0E2B\u0E21\u0E14\u0E41\u0E25\u0E49\u0E27 **\u0E41\u0E1B\u0E25\u0E07\u0E08\u0E23\u0E34\u0E07** \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E22\u0E01\u0E44\u0E1A\u0E15\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E44\u0E1B\u0E43\u0E2B\u0E49\u0E2D\u0E35\u0E01\u0E44\u0E27\u0E22\u0E32\u0E01\u0E23\u0E13\u0E4C\u0E2D\u0E48\u0E32\u0E19",
         !/^>>/m.test(spDisk87.body) && !/^@-/m.test(spDisk87.body),
@@ -202974,7 +205360,7 @@ ${css}
         !!state.active.editor && !state.active.sp
       );
       check2("frontmatter \u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19 prose", await fmtOf(t3.file) === "prose");
-      const backDisk87 = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file));
+      const backDisk87 = (0, import_md36.parseMdFile)(await kapi.readFile(t3.file));
       check2(
         "\u0E2A\u0E25\u0E31\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C",
         backDisk87.body === orig,
@@ -203003,7 +205389,7 @@ ${css}
         t3.editor.setMarkdown(huge);
         await new Promise((r) => setTimeout(r, 500));
         await saveTab(t3);
-        const diskA = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file));
+        const diskA = (0, import_md36.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E22\u0E31\u0E01\u0E29\u0E4C\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E04\u0E23\u0E1A\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27",
           diskA.body.includes(huge),
@@ -203011,7 +205397,7 @@ ${css}
         );
         await answerConvert(() => switchFormat("screenplay"), true);
         await new Promise((r) => setTimeout(r, 500));
-        const diskB = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file));
+        const diskB = (0, import_md36.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E31\u0E14\u0E15\u0E48\u0E2D\u0E1A\u0E25\u0E47\u0E2D\u0E01",
           diskB.body.includes(huge),
@@ -203019,7 +205405,7 @@ ${css}
         );
         await answerConvert(() => switchFormat("prose"), true);
         await new Promise((r) => setTimeout(r, 500));
-        const diskC = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file));
+        const diskC = (0, import_md36.parseMdFile)(await kapi.readFile(t3.file));
         check2(
           "[88-7] \u2605 \u0E41\u0E1B\u0E25\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E19\u0E34\u0E22\u0E32\u0E22\u0E44\u0E14\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E40\u0E1B\u0E4A\u0E30\u0E17\u0E38\u0E01\u0E44\u0E1A\u0E15\u0E4C",
           diskC.body === diskA.body,
@@ -204679,6 +207065,7 @@ ${css}
           );
           ovBtn("\u0E15\u0E32\u0E23\u0E32\u0E07\u0E01\u0E23\u0E34\u0E14").click();
           await wait2(120);
+          for (let i5 = 0; i5 < 30 && !(bodyOf2().querySelector(".map-grid") && bodyOf2().querySelector(".map-grid-size")); i5++) await wait2(100);
           check2(
             "[70-4] \u0E40\u0E1B\u0E34\u0E14\u0E15\u0E32\u0E23\u0E32\u0E07\u0E01\u0E23\u0E34\u0E14 \u2192 \u0E21\u0E35 .map-grid + \u0E0A\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E08\u0E33\u0E19\u0E27\u0E19\u0E0A\u0E48\u0E2D\u0E07",
             !!bodyOf2().querySelector(".map-grid") && !!bodyOf2().querySelector(".map-grid-size")
@@ -207333,7 +209720,7 @@ ${css}
       );
       check2(
         "[25] \u0E41\u0E1B\u0E25\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A frontmatter \u0E44\u0E14\u0E49",
-        (0, import_md34.alignToString)(t3.editor.getAlignMap()) === "0:center"
+        (0, import_md36.alignToString)(t3.editor.getAlignMap()) === "0:center"
       );
       t3.editor.setMarkdown("\u0E0A\u0E34\u0E14\u0E02\u0E27\u0E32\u0E17\u0E14\u0E2A\u0E2D\u0E1A", { 0: "right" });
       selHead(t3.editor.view);
@@ -208296,7 +210683,7 @@ ${css}
       await new Promise((r) => setTimeout(r, 400));
       const spTab = state.active;
       check2("\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E40\u0E1B\u0E47\u0E19 WYSIWYG (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48 textarea)", !!spTab.sp && !spTab.plain);
-      const spOrig = (0, import_md34.parseMdFile)(await kapi.readFile(spTab.file)).body;
+      const spOrig = (0, import_md36.parseMdFile)(await kapi.readFile(spTab.file)).body;
       spTab.sp.setMarkdown(spOrig);
       await new Promise((r) => setTimeout(r, 200));
       const spEls = [];
@@ -208482,7 +210869,7 @@ ${css}
       await saveTab(spTab);
       check2(
         "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E32\u0E21\u0E01\u0E15\u0E34\u0E01\u0E32 v1",
-        (0, import_md34.parseMdFile)(await kapi.readFile(spTab.file)).body.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1E\u0E39\u0E14")
+        (0, import_md36.parseMdFile)(await kapi.readFile(spTab.file)).body.includes("\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E1E\u0E39\u0E14")
       );
       spTab.sp.setElement("character");
       vsp.dispatch(vsp.state.tr.insertText("\u0E22\u0E31\u0E22\u0E41"));
@@ -210257,9 +212644,9 @@ ${css}
           `vis=${frVis.width}x${frVis.height} node=${fr150.width}x${fr150.height}`
         );
         {
-          const kids = frVis._objects;
-          const bottoms = kids.map((k) => k.top + (k.height || 0));
-          const tops = kids.map((k) => k.top);
+          const kids3 = frVis._objects;
+          const bottoms = kids3.map((k) => k.top + (k.height || 0));
+          const tops = kids3.map((k) => k.top);
           const H3 = frVis.height;
           check2(
             "[150-8] \u2605 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E0A\u0E34\u0E49\u0E19\u0E2A\u0E48\u0E27\u0E19\u0E44\u0E2B\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E1F\u0E23\u0E21\u0E25\u0E49\u0E19\u0E40\u0E2B\u0E19\u0E37\u0E2D/\u0E43\u0E15\u0E49\u0E01\u0E25\u0E48\u0E2D\u0E07 (\u0E02\u0E2D\u0E1A\u0E25\u0E48\u0E32\u0E07\u0E08\u0E36\u0E07\u0E44\u0E21\u0E48\u0E2B\u0E32\u0E22)",
@@ -211408,8 +213795,8 @@ ${css}
       const mCh1 = mDj.chapters[0];
       const mFile = (await kapi.listFiles(await kapi.join(state.root, "Memos"), ".md"))[0];
       const mPath = await kapi.join(state.root, "Memos", mFile);
-      const mBody = (0, import_md34.parseMdFile)(await kapi.readFile(mPath)).body.trim() || "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15";
-      await kapi.writeFile(mPath, (0, import_md34.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E49\u0E32\u0E22", type: "memo" }, "\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
+      const mBody = (0, import_md36.parseMdFile)(await kapi.readFile(mPath)).body.trim() || "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15";
+      await kapi.writeFile(mPath, (0, import_md36.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E22\u0E49\u0E32\u0E22", type: "memo" }, "\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"));
       check2("\u0E21\u0E35\u0E42\u0E19\u0E49\u0E15\u0E43\u0E19 Memos \u0E43\u0E2B\u0E49\u0E17\u0E14\u0E2A\u0E2D\u0E1A", await kapi.exists(mPath));
       await moveMemoToChapter(mPath, dP, mCh1, null);
       const mSj1 = await kapi.readJson(await kapi.join(dP, "scenes.json"));
@@ -211423,7 +213810,7 @@ ${css}
         "\u0E44\u0E1F\u0E25\u0E4C\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1A\u0E17\u0E08\u0E23\u0E34\u0E07 + \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01 Memos \u0E41\u0E25\u0E49\u0E27",
         await kapi.exists(await kapi.join(dP, "Chapters", mCh1.folderName, mRow.fileName)) && !await kapi.exists(mPath)
       );
-      const mMeta = (0, import_md34.parseMdFile)(await kapi.readFile(
+      const mMeta = (0, import_md36.parseMdFile)(await kapi.readFile(
         await kapi.join(dP, "Chapters", mCh1.folderName, mRow.fileName)
       )).meta;
       check2("\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E22\u0E49\u0E32\u0E22\u0E40\u0E02\u0E49\u0E32\u0E1A\u0E17\u0E22\u0E31\u0E07\u0E21\u0E35 type: memo \u0E43\u0E19 frontmatter", mMeta.type === "memo");
@@ -211566,7 +213953,7 @@ ${css}
         JSON.stringify(scP2.startPage)
       );
       const scP2File = await kapi.join(dPath, "Chapters", chP.folderName, scP2.fileName);
-      const scP2Fm = (0, import_md34.parseMdFile)(await kapi.readFile(scP2File)).meta;
+      const scP2Fm = (0, import_md36.parseMdFile)(await kapi.readFile(scP2File)).meta;
       check2(
         "\u0E2D\u0E32\u0E23\u0E21\u0E13\u0E4C/\u0E04\u0E27\u0E32\u0E21\u0E02\u0E31\u0E14\u0E41\u0E22\u0E49\u0E07/\u0E42\u0E19\u0E49\u0E15 \u0E0B\u0E34\u0E07\u0E01\u0E4C\u0E25\u0E07 frontmatter .md",
         scP2Fm.emotion === "\u0E2A\u0E34\u0E49\u0E19\u0E2B\u0E27\u0E31\u0E07" && scP2Fm.conflict === "\u0E1B\u0E30\u0E17\u0E30\u0E01\u0E31\u0E1A\u0E1E\u0E48\u0E2D" && scP2Fm.note === "\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E23\u0E30\u0E1A\u0E1A",
@@ -211589,7 +213976,7 @@ ${css}
         scFb.isFlashback === true && scFb.isFlashforward === false,
         JSON.stringify(scFb)
       );
-      const scFbFm = (0, import_md34.parseMdFile)(await kapi.readFile(
+      const scFbFm = (0, import_md36.parseMdFile)(await kapi.readFile(
         await kapi.join(dPath, "Chapters", chP.folderName, scFb.fileName)
       )).meta;
       check2(
@@ -211759,7 +214146,7 @@ ${css}
         await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sj4, null, 2));
         await kapi.writeFile(
           await kapi.join(dPath, "Chapters", chP.folderName, "scene-50.md"),
-          (0, import_md34.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22")
+          (0, import_md36.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22\u0E17\u0E14\u0E2A\u0E2D\u0E1A", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2B\u0E32\u0E09\u0E32\u0E01\u0E22\u0E49\u0E32\u0E22")
         );
         await buildTree2();
         await moveSceneOrder(dPath, chP, { id: "scMove" }, -1);
@@ -211854,7 +214241,7 @@ ${css}
         const scLk = await findRow();
         check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 row.locked=true \u0E43\u0E19 scenes.json", scLk && scLk.locked === true);
         const lkFile = await kapi.join(dPath, "Chapters", chP.folderName, scLk.fileName);
-        check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 frontmatter .md \u0E21\u0E35 locked", (0, import_md34.parseMdFile)(await kapi.readFile(lkFile)).meta.locked === "true");
+        check2("\u0E25\u0E47\u0E2D\u0E01 \u2192 frontmatter .md \u0E21\u0E35 locked", (0, import_md36.parseMdFile)(await kapi.readFile(lkFile)).meta.locked === "true");
         await openScene(lkFile, scLk.title);
         await new Promise((r) => setTimeout(r, 120));
         check2(
@@ -211876,7 +214263,7 @@ ${css}
         const rev0 = parseInt(t3.editor ? t3.meta.revision || 0 : 0, 10) || 0;
         markDirty(t3);
         await saveTab(t3);
-        const fm = (0, import_md34.parseMdFile)(await kapi.readFile(t3.file)).meta;
+        const fm = (0, import_md36.parseMdFile)(await kapi.readFile(t3.file)).meta;
         check2("\u0E40\u0E0B\u0E1F \u2192 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E40\u0E27\u0E2D\u0E23\u0E4C\u0E0A\u0E31\u0E19\u0E41\u0E2D\u0E1B\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49 (appVersion) \u0E25\u0E07 frontmatter", !!fm.appVersion);
         check2("\u0E40\u0E0B\u0E1F \u2192 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E23\u0E2D\u0E1A\u0E41\u0E01\u0E49 (revision) \u0E02\u0E36\u0E49\u0E19", (parseInt(fm.revision, 10) || 0) >= 1, fm.revision);
         const dRows = lineDiff2("a\nb\nc", "a\nx\nc");
@@ -211898,7 +214285,7 @@ ${css}
         const sjc = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
         const chG = chP.guid;
         const secondFile = await kapi.join(dPath, "Chapters", chP.folderName, "cmp2.md");
-        await kapi.writeFile(secondFile, (0, import_md34.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", type: "scene", format: "prose" }, "\u0E02\u0E27\u0E32"));
+        await kapi.writeFile(secondFile, (0, import_md36.dumpMdFile)({ title: "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32", type: "scene", format: "prose" }, "\u0E02\u0E27\u0E32"));
         activate(t3.file);
         await openCompareRight(secondFile, "\u0E09\u0E32\u0E01\u0E40\u0E17\u0E35\u0E22\u0E1A\u0E02\u0E27\u0E32");
         await new Promise((r) => setTimeout(r, 150));
@@ -213116,9 +215503,9 @@ ${css}
           );
         }
         {
-          const L2 = JSON.parse(lay165);
-          pm165.store.floats = L2.f;
-          pm165.store.update(L2.r);
+          const L3 = JSON.parse(lay165);
+          pm165.store.floats = L3.f;
+          pm165.store.update(L3.r);
           renderPanels(true);
           await w165(300);
         }
@@ -213517,12 +215904,12 @@ ${css}
         );
         check2(
           "parseMdFile \u0E15\u0E31\u0E14\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01 (\u0E44\u0E21\u0E48\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02/\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01)",
-          !(0, import_md34.parseMdFile)(rawMig).body.includes("k2-comments")
+          !(0, import_md36.parseMdFile)(rawMig).body.includes("k2-comments")
         );
         check2("\u0E22\u0E49\u0E32\u0E22\u0E0B\u0E49\u0E33\u0E44\u0E21\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E0B\u0E49\u0E33", await migrateSceneComments(dPath) === 0);
         const cstore = commentStore();
         const cmRaw = (await cstore.read(cmFile)).body;
-        const cmQuote = ((0, import_md34.parseMdFile)(rawMig).body.match(/[฀-๿]{6,}/) || ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"])[0];
+        const cmQuote = ((0, import_md36.parseMdFile)(rawMig).body.match(/[฀-๿]{6,}/) || ["\u0E17\u0E14\u0E2A\u0E2D\u0E1A"])[0];
         const cmAt = cmRaw.indexOf(cmQuote);
         check2("\u0E2B\u0E32\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E43\u0E19\u0E09\u0E32\u0E01\u0E40\u0E08\u0E2D (\u0E43\u0E0A\u0E49\u0E1C\u0E39\u0E01\u0E2A\u0E21\u0E2D)", cmAt >= 0, cmQuote);
         const c1 = await cstore.add(cmFile, { start: cmAt, end: cmAt + cmQuote.length }, "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E17\u0E14\u0E2A\u0E2D\u0E1A");
@@ -213825,9 +216212,9 @@ ${css}
         }
         {
           const wrapEl = document.querySelector(".branch-wrap");
-          const kids = [...wrapEl.children];
-          const iAdd = kids.findIndex((k) => k.classList.contains("branch-adder"));
-          const iView = kids.findIndex((k) => k.classList.contains("branch-viewport"));
+          const kids3 = [...wrapEl.children];
+          const iAdd = kids3.findIndex((k) => k.classList.contains("branch-adder"));
+          const iView = kids3.findIndex((k) => k.classList.contains("branch-viewport"));
           check2(
             "\u0E02\u0E49\u0E2D 2: \u0E41\u0E16\u0E1A\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E17\u0E32\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E1A\u0E19 \u0E1C\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E25\u0E48\u0E32\u0E07",
             iAdd >= 0 && iView >= 0 && iAdd < iView,
@@ -214959,8 +217346,8 @@ ${css}
               const cap = sel2.closest(".k-row").getBoundingClientRect().width * 0.7;
               if (need > w + 1 && w < cap - 2) selBad.push(tab.dataset.p + ":" + (sel2.id || "?") + " " + Math.round(w) + "<" + Math.round(need));
             }
-            const tw = document.createTreeWalker(page2, NodeFilter.SHOW_TEXT);
-            for (let n2; n2 = tw.nextNode(); ) {
+            const tw2 = document.createTreeWalker(page2, NodeFilter.SHOW_TEXT);
+            for (let n2; n2 = tw2.nextNode(); ) {
               const v4 = n2.nodeValue.trim();
               const e = n2.parentElement;
               if (!v4 || !THr.test(v4) || !e || !visible(e) || e.closest("option, select, textarea, [contenteditable]")) continue;
@@ -216060,11 +218447,11 @@ ${css}
           {
             repaginateFast(t100);
             await new Promise((r) => setTimeout(r, 400));
-            const L2 = layer();
+            const L3 = layer();
             const nPg = Math.max(1, Math.round(+pn.style.getPropertyValue("--pg-count") || 1));
             note("[100-3] \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E14\u0E2A\u0E2D\u0E1A = " + (t100 && t100.sp ? "\u0E1A\u0E17\u0E2B\u0E19\u0E31\u0E07" : "\u0E19\u0E34\u0E22\u0E32\u0E22") + " \xB7 --pg-count = " + nPg);
-            check2("[100-3] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E21\u0E35\u0E0A\u0E31\u0E49\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07\u0E1B\u0E39\u0E2D\u0E22\u0E39\u0E48", !!L2);
-            const sheets = L2 ? [...L2.children] : [];
+            check2("[100-3] \u2605\u2605 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32: \u0E21\u0E35\u0E0A\u0E31\u0E49\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29\u0E08\u0E23\u0E34\u0E07\u0E1B\u0E39\u0E2D\u0E22\u0E39\u0E48", !!L3);
+            const sheets = L3 ? [...L3.children] : [];
             check2(
               "[100-3] \u2605\u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E41\u0E1C\u0E48\u0E19 = \u0E08\u0E33\u0E19\u0E27\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E23\u0E34\u0E07",
               sheets.length === nPg,
@@ -216114,7 +218501,7 @@ ${css}
               );
               check2(
                 "[100-3] \u2605 \u0E0A\u0E31\u0E49\u0E19\u0E41\u0E1C\u0E48\u0E19\u0E44\u0E21\u0E48\u0E23\u0E31\u0E1A\u0E04\u0E25\u0E34\u0E01 (\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E17\u0E31\u0E1A\u0E44\u0E14\u0E49\u0E15\u0E32\u0E21\u0E1B\u0E01\u0E15\u0E34)",
-                getComputedStyle(L2).pointerEvents === "none"
+                getComputedStyle(L3).pointerEvents === "none"
               );
               {
                 const pmE = pm3();
@@ -216467,7 +218854,7 @@ ${css}
                 );
               }
               const map103 = ed.getAlignMap();
-              note("[103-2] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E08\u0E30\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C: " + (0, import_md34.alignToString)(map103));
+              note("[103-2] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E08\u0E30\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C: " + (0, import_md36.alignToString)(map103));
               check2(
                 "[103-2] \u2605\u2605 \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E40\u0E01\u0E47\u0E1A\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E40\u0E01\u0E47\u0E1A\u0E41\u0E15\u0E48\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E1A\u0E19\u0E2A\u0E38\u0E14)",
                 Object.values(map103).includes("right"),
@@ -217348,7 +219735,7 @@ ${css}
           await kapi.writeFile(await kapi.join(dPath, "scenes.json"), JSON.stringify(sjA, null, 2));
           await kapi.writeFile(
             await kapi.join(dPath, "Chapters", ch3.folderName, "memo-rt.md"),
-            (0, import_md34.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A")
+            (0, import_md36.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A")
           );
           const dst = await moveRowToMemos(dPath, ch3, memoRow);
           check2("\u0E22\u0E49\u0E32\u0E22\u0E2D\u0E2D\u0E01\u0E44\u0E1B MEMO \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E1B\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C Memos", await kapi.exists(dst), String(dst));
@@ -217415,8 +219802,8 @@ ${css}
           const sj4 = await kapi.readJson(await kapi.join(dPath, "scenes.json"));
           const scB = (sj4.chapters[ch4.guid] || [])[0];
           const scFile = await kapi.join(dPath, "Chapters", ch4.folderName, scB.fileName);
-          const { meta: bm, body: bb } = (0, import_md34.parseMdFile)(await kapi.readFile(scFile));
-          await kapi.writeFile(scFile, (0, import_md34.dumpMdFile)(bm, bb + "\n\n\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 \u0E08\u0E30 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E2B\u0E23\u0E37\u0E2D [\u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19] \u0E14\u0E35\n"));
+          const { meta: bm, body: bb } = (0, import_md36.parseMdFile)(await kapi.readFile(scFile));
+          await kapi.writeFile(scFile, (0, import_md36.dumpMdFile)(bm, bb + "\n\n\u0E40\u0E02\u0E32\u0E25\u0E31\u0E07\u0E40\u0E25 \u0E08\u0E30 [\u0E44\u0E1B\u0E15\u0E25\u0E32\u0E14] \u0E2B\u0E23\u0E37\u0E2D [\u0E01\u0E25\u0E31\u0E1A\u0E1A\u0E49\u0E32\u0E19] \u0E14\u0E35\n"));
           await updateSceneRow(dPath, scB.id, (r) => {
             delete r.choices;
           });
@@ -221647,7 +224034,7 @@ ${css}
           const ttlCS = getComputedStyle(ttl);
           check2(
             '[97] "Cast of Characters" \u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01 \u0E2D\u0E22\u0E39\u0E48\u0E01\u0E25\u0E32\u0E07\u0E2B\u0E19\u0E49\u0E32 \u0E02\u0E35\u0E14\u0E40\u0E2A\u0E49\u0E19\u0E43\u0E15\u0E49',
-            ttl.textContent === "Cast of Characters" && ttlCS.textAlign === "center" && ttlCS.textDecorationLine.includes("underline"),
+            ttl.textContent === t("ui.spFormat.castTitle") && ttlCS.textAlign === "center" && ttlCS.textDecorationLine.includes("underline"),
             ttl.textContent + " | " + ttlCS.textAlign + " | " + ttlCS.textDecorationLine
           );
           check2("[97] \u0E2B\u0E19\u0E49\u0E32\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02\u0E2B\u0E19\u0E49\u0E32", !rp.querySelector(".page-number, .k-page-no"));
@@ -221674,6 +224061,17 @@ ${css}
           nameEl.dispatchEvent(new Event("input"));
           detEl.textContent = "\u0E19\u0E31\u0E01\u0E2A\u0E37\u0E1A\u0E27\u0E31\u0E22 40";
           detEl.dispatchEvent(new Event("input"));
+          {
+            const rng = document.createRange();
+            rng.selectNodeContents(nameEl);
+            const nb = rng.getBoundingClientRect(), pb2 = rp.getBoundingClientRect();
+            check2(
+              "[trial-2] \u2605 \u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E23\u0E30\u0E14\u0E32\u0E29 (\u0E44\u0E21\u0E48\u0E2B\u0E25\u0E38\u0E14\u0E0B\u0E49\u0E32\u0E22)",
+              nb.width > 0 && nb.left >= pb2.left - 1 && nb.right <= pb2.right + 1,
+              Math.round(nb.left) + " vs " + Math.round(pb2.left)
+            );
+            check2("[trial-2] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E21\u0E48\u0E23\u0E31\u0E1A text-indent \u0E02\u0E2D\u0E07\u0E41\u0E16\u0E27", parseFloat(getComputedStyle(nameEl).textIndent) === 0, getComputedStyle(nameEl).textIndent);
+          }
           const sceneBody = rp.querySelector('.roster-sec[data-k="scene"] .roster-sec-body');
           check2(
             "[97] \u0E21\u0E35\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D Scene + Time (\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E2D\u0E32/\u0E44\u0E21\u0E48\u0E40\u0E2D\u0E32\u0E44\u0E14\u0E49)",
@@ -221698,7 +224096,7 @@ ${css}
           );
           check2("[97] \u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E01\u0E47\u0E1A Scene \u0E17\u0E35\u0E48\u0E01\u0E23\u0E2D\u0E01", rJson.scene === "\u0E01\u0E23\u0E38\u0E07\u0E40\u0E17\u0E1E\u0E2F 2025");
           check2('[97] \u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E43\u0E2A\u0E48\u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C/\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01"', rJson.includeInExport === true);
-          const chkScene = [...rTab.pane.querySelectorAll(".roster-chk")].find((l) => l.textContent.includes("Scene")).querySelector("input");
+          const chkScene = [...rTab.pane.querySelectorAll(".roster-chk")].find((l) => l.textContent.includes(t("ui.spFormat.rosterScene"))).querySelector("input");
           chkScene.click();
           await new Promise((r) => setTimeout(r, 60));
           check2(
@@ -221726,7 +224124,7 @@ ${css}
             const exp1 = await compileDraftText(d0.dPath);
             check2(
               "[97] \u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E09\u0E1A\u0E31\u0E1A\u0E23\u0E48\u0E32\u0E07\u0E23\u0E27\u0E21 \u2192 \u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E15\u0E31\u0E27\u0E25\u0E30\u0E04\u0E23\u0E19\u0E33\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07",
-              exp1.includes("Cast of Characters") && exp1.includes("Donald Bradleyson"),
+              exp1.includes(t("ui.spFormat.castTitle")) && exp1.includes("Donald Bradleyson"),
               exp1.slice(0, 120)
             );
             rTab.roster.includeInExport = false;
@@ -221734,7 +224132,7 @@ ${css}
             const exp2 = await compileDraftText(d0.dPath);
             check2(
               '[97] \u0E1B\u0E34\u0E14\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E43\u0E2A\u0E48\u0E15\u0E2D\u0E19\u0E1E\u0E34\u0E21\u0E1E\u0E4C/\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01" \u2192 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E2B\u0E19\u0E49\u0E32\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01',
-              !exp2.includes("Cast of Characters")
+              !exp2.includes(t("ui.spFormat.castTitle"))
             );
             check2("[97] \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E04\u0E23\u0E1A\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E40\u0E14\u0E34\u0E21", exp2.includes("# ") && exp2.length > 20);
             rTab.roster.includeInExport = true;
@@ -223959,8 +226357,8 @@ ${css}
                   const bU = pick2(getComputedStyle(pm97.querySelector("ul > li > p"), "::before"));
                   const bO = pick2(getComputedStyle(pm97.querySelector("ol > li > p"), "::before"));
                   cases++;
-                  const same = mkU.content.includes("\u2022") && bU.content.includes("\u2022") && mkU.fontSize === bU.fontSize && mkU.fontFamily === bU.fontFamily && mkO.fontSize === bO.fontSize && mkO.fontFamily === bO.fontFamily;
-                  if (!same) bad.push(font + "/" + size + ": " + mkU.content + " vs " + bU.content + " \xB7 " + mkU.fontSize + " vs " + bU.fontSize);
+                  const same2 = mkU.content.includes("\u2022") && bU.content.includes("\u2022") && mkU.fontSize === bU.fontSize && mkU.fontFamily === bU.fontFamily && mkO.fontSize === bO.fontSize && mkO.fontFamily === bO.fontFamily;
+                  if (!same2) bad.push(font + "/" + size + ": " + mkU.content + " vs " + bU.content + " \xB7 " + mkU.fontSize + " vs " + bU.fontSize);
                   if (cases === 1) {
                     note("[132r3-3] \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07: ::marker " + mkU.content + " " + mkU.fontSize + " \xB7 ::before " + bU.content + " " + bU.fontSize);
                   }
@@ -229106,7 +231504,7 @@ ${css}
           const r = e.getBoundingClientRect();
           return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
         };
-        const same = (a, b) => a && b && Math.abs(a.x - b.x) <= 2 && Math.abs(a.y - b.y) <= 2 && Math.abs(a.w - b.w) <= 2 && Math.abs(a.h - b.h) <= 2;
+        const same2 = (a, b) => a && b && Math.abs(a.x - b.x) <= 2 && Math.abs(a.y - b.y) <= 2 && Math.abs(a.w - b.w) <= 2 && Math.abs(a.h - b.h) <= 2;
         showPanel("notes", { prefer: "float" });
         await wait62(240);
         showPanel("comments", { prefer: "float" });
@@ -229123,12 +231521,12 @@ ${css}
         const box2 = gBox();
         check2(
           "[66r11] \u0E40\u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E2D\u0E37\u0E48\u0E19 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A",
-          same(box0, box1),
+          same2(box0, box1),
           `${JSON.stringify(box0)} \u2192 ${JSON.stringify(box1)}`
         );
         check2(
           "[66r11] \u0E1B\u0E34\u0E14\u0E41\u0E1C\u0E07\u0E2D\u0E37\u0E48\u0E19 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E25\u0E2D\u0E22\u0E01\u0E47\u0E44\u0E21\u0E48\u0E02\u0E22\u0E31\u0E1A",
-          same(box0, box2),
+          same2(box0, box2),
           `${JSON.stringify(box0)} \u2192 ${JSON.stringify(box2)}`
         );
         const tab0 = document.querySelector(".k-float-group .k-tab-bar .k-tab");
@@ -229141,7 +231539,7 @@ ${css}
         }
         check2(
           "[66r11] \u0E25\u0E32\u0E01\u0E2B\u0E31\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E43\u0E19\u0E01\u0E25\u0E38\u0E48\u0E21 \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21\u0E44\u0E21\u0E48\u0E22\u0E49\u0E32\u0E22\u0E17\u0E35\u0E48\u0E15\u0E32\u0E21",
-          same(box0, gBox()),
+          same2(box0, gBox()),
           `${JSON.stringify(box0)} \u2192 ${JSON.stringify(gBox())}`
         );
         hidePanel("comments");
@@ -232472,8 +234870,8 @@ ${css}
           /"ตลาดนี้ยังเหมือนเดิมทุกอย่าง"/.test(after79),
           after79.slice(0, 300)
         );
-        const bodyBefore79 = (0, import_md34.parseMdFile)(before79).body.split("\n");
-        const bodyAfter79 = (0, import_md34.parseMdFile)(after79).body.split("\n");
+        const bodyBefore79 = (0, import_md36.parseMdFile)(before79).body.split("\n");
+        const bodyAfter79 = (0, import_md36.parseMdFile)(after79).body.split("\n");
         check2(
           "[79-2] \u0E41\u0E01\u0E49\u0E41\u0E25\u0E49\u0E27\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E41\u0E04\u0E48\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2D\u0E37\u0E48\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30",
           bodyAfter79.length === bodyBefore79.length && bodyAfter79.filter((l, i5) => l !== bodyBefore79[i5]).length === 1,
@@ -232720,11 +235118,11 @@ ${css}
         const seps79 = [...$("#toolbar").querySelectorAll("span.sep")];
         const visSeps = seps79.filter((s) => getComputedStyle(s).display !== "none");
         check2("[79-5] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2A\u0E49\u0E19\u0E04\u0E31\u0E48\u0E19\u0E2A\u0E2D\u0E07\u0E2D\u0E31\u0E19\u0E15\u0E34\u0E14\u0E01\u0E31\u0E19\u0E2B\u0E25\u0E31\u0E07\u0E0B\u0E48\u0E2D\u0E19\u0E17\u0E31\u0E49\u0E07\u0E01\u0E25\u0E38\u0E48\u0E21", (() => {
-          const kids = [...$("#toolbar").children].filter((k) => getComputedStyle(k).display !== "none");
-          for (let i5 = 1; i5 < kids.length; i5++) {
-            if (kids[i5].classList.contains("sep") && kids[i5 - 1].classList.contains("sep")) return false;
+          const kids3 = [...$("#toolbar").children].filter((k) => getComputedStyle(k).display !== "none");
+          for (let i5 = 1; i5 < kids3.length; i5++) {
+            if (kids3[i5].classList.contains("sep") && kids3[i5 - 1].classList.contains("sep")) return false;
           }
-          return !kids.length || !kids[0].classList.contains("sep");
+          return !kids3.length || !kids3[0].classList.contains("sep");
         })(), visSeps.length + " \u0E40\u0E2A\u0E49\u0E19");
         const ovTb = toolbarDialog();
         await wait79(120);
@@ -234015,8 +236413,8 @@ ${css}
                   }
                 };
                 c.querySelectorAll("img").forEach((im) => hit(im.getBoundingClientRect(), "img"));
-                const tw = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
-                for (let n2 = tw.nextNode(); n2; n2 = tw.nextNode()) {
+                const tw2 = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
+                for (let n2 = tw2.nextNode(); n2; n2 = tw2.nextNode()) {
                   rg149.selectNodeContents(n2);
                   for (const r of rg149.getClientRects()) hit(r, n2.textContent.slice(0, 14));
                 }
@@ -234216,7 +236614,7 @@ ${css}
             tX.editor.cmd("align", "right");
             await new Promise((r) => setTimeout(r, 200));
             const mapX = tX.editor.getAlignMap();
-            note("[132-X1] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E16\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48: " + (0, import_md34.alignToString)(mapX));
+            note("[132-X1] \u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 align \u0E17\u0E35\u0E48\u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E16\u0E37\u0E2D\u0E2D\u0E22\u0E39\u0E48: " + (0, import_md36.alignToString)(mapX));
             check2(
               "[132-X1] \u2605 \u0E15\u0E31\u0E49\u0E07\u0E01\u0E32\u0E23\u0E08\u0E31\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E14\u0E49\u0E17\u0E31\u0E49\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E25\u0E30\u0E02\u0E49\u0E2D\u0E43\u0E19\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23",
               Object.values(mapX).includes("center") && Object.values(mapX).includes("right"),
@@ -237165,7 +239563,7 @@ ${css}
           let fmF = {};
           for (let i5 = 0; i5 < 30; i5++) {
             try {
-              fmF = (0, import_md34.parseMdFile)(await kapi.readFile(row4.dataset.path)).meta;
+              fmF = (0, import_md36.parseMdFile)(await kapi.readFile(row4.dataset.path)).meta;
             } catch {
               fmF = {};
             }
@@ -237195,7 +239593,7 @@ ${css}
           );
           check2(
             "[170] \u2605\u2605 \u0E41\u0E01\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07 \u2192 \u0E44\u0E1F\u0E25\u0E4C\u0E22\u0E49\u0E32\u0E22\u0E15\u0E32\u0E21\u0E0A\u0E37\u0E48\u0E2D (\u0E17\u0E32\u0E07\u0E40\u0E01\u0E48\u0E32\u0E44\u0E21\u0E48\u0E40\u0E2B\u0E25\u0E37\u0E2D \xB7 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E14\u0E34\u0E21)",
-            !!rowN && rowN.fileName === "\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07120.md" && !await kapi.exists(tmp120.path) && (0, import_md34.parseMdFile)(await kapi.readFile(await kapi.join(row4._ctx.dPath, "Chapters", row4._ctx.ch.folderName, rowN.fileName))).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D120"),
+            !!rowN && rowN.fileName === "\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E41\u0E1C\u0E07120.md" && !await kapi.exists(tmp120.path) && (0, import_md36.parseMdFile)(await kapi.readFile(await kapi.join(row4._ctx.dPath, "Chapters", row4._ctx.ch.folderName, rowN.fileName))).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D120"),
             JSON.stringify(rowN && rowN.fileName)
           );
           const pb22 = $("#props-body");
@@ -237254,7 +239652,7 @@ ${css}
           await buildTree2();
           const row4 = scRows120()[0];
           const f120 = row4.dataset.path;
-          const wantTitle = (0, import_md34.parseMdFile)(await kapi.readFile(f120)).meta.title;
+          const wantTitle = (0, import_md36.parseMdFile)(await kapi.readFile(f120)).meta.title;
           if (state.tabs.has(f120)) {
             state.tabs.get(f120).dirty = false;
             closeTab(f120);
@@ -237640,8 +240038,8 @@ ${css}
             );
             check2(
               "[a124-20] \u0E15\u0E31\u0E27\u0E40\u0E25\u0E02\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E15\u0E31\u0E27\u0E19\u0E31\u0E1A\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30",
-              !!ctx124 && ctx124.row.wordCount === (0, import_md34.countWords)(tb2.editor.getMarkdown()),
-              ctx124 && ctx124.row.wordCount + " vs " + (0, import_md34.countWords)(tb2.editor.getMarkdown())
+              !!ctx124 && ctx124.row.wordCount === (0, import_md36.countWords)(tb2.editor.getMarkdown()),
+              ctx124 && ctx124.row.wordCount + " vs " + (0, import_md36.countWords)(tb2.editor.getMarkdown())
             );
             check2(
               '[a124-21] \u0E41\u0E16\u0E1A\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E40\u0E25\u0E34\u0E01\u0E04\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48 "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01" \u0E2B\u0E25\u0E31\u0E07\u0E01\u0E14 Ctrl+S',
@@ -237830,11 +240228,11 @@ ${css}
                 "\u0E44\u0E1F\u0E25\u0E4C=" + (after124.turns || []).length + " \u0E08\u0E2D=" + nDom124
               );
               const row124 = document.querySelector("#starter-body .st-turn");
-              const kids = row124 ? [...row124.children].map((n2) => n2.className.split(" ")[0]) : [];
+              const kids3 = row124 ? [...row124.children].map((n2) => n2.className.split(" ")[0]) : [];
               check2(
                 '[a124-41] \u2605 \u0E23\u0E39\u0E1B\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 "\u0E40\u0E2B\u0E19\u0E37\u0E2D" \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21 (\u0E15\u0E32\u0E21\u0E17\u0E35\u0E48 CHANGELOG \u0E1B\u0E23\u0E30\u0E01\u0E32\u0E28\u0E44\u0E27\u0E49)',
-                kids.indexOf("st-turn-img") >= 0 && kids.indexOf("st-turn-img") < kids.indexOf("st-turn-text"),
-                kids.join(",")
+                kids3.indexOf("st-turn-img") >= 0 && kids3.indexOf("st-turn-img") < kids3.indexOf("st-turn-text"),
+                kids3.join(",")
               );
             }
           }
@@ -237950,8 +240348,8 @@ ${css}
             "[a125-15] \u0E21\u0E35\u0E15\u0E31\u0E27\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D (\u0E16\u0E32\u0E21\u0E40\u0E21\u0E37\u0E48\u0E2D auto-sync \u0E1B\u0E34\u0E14)",
             typeof handleEntityRenamed === "function"
           );
-          const same = await handleEntityRenamed("x", "\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21", "\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21");
-          check2("[a125-16] \u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19 = \u0E44\u0E21\u0E48\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E25\u0E22 (\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E16\u0E32\u0E21)", same === "none", same);
+          const same2 = await handleEntityRenamed("x", "\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21", "\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21");
+          check2("[a125-16] \u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19 = \u0E44\u0E21\u0E48\u0E17\u0E33\u0E2D\u0E30\u0E44\u0E23\u0E40\u0E25\u0E22 (\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E16\u0E32\u0E21)", same2 === "none", same2);
         }
         {
           check2(
@@ -238067,7 +240465,7 @@ ${css}
           if (rvFile) {
             activate(rvFile);
             const rvTab = state.tabs.get(rvFile);
-            const onDisk = (0, import_md34.parseMdFile)(await kapi.readFile(rvFile)).body;
+            const onDisk = (0, import_md36.parseMdFile)(await kapi.readFile(rvFile)).body;
             const MARK = "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E41\u0E25\u0E49\u0E27\u0E08\u0E30\u0E01\u0E14\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01";
             rvTab.sp.setMarkdown(onDisk + "\n\n" + MARK);
             markDirty(rvTab);
@@ -238386,7 +240784,7 @@ ${css}
           activate(fN);
           await w140(200);
         }
-        const diskBody140 = (0, import_md34.parseMdFile)(await kapi.readFile(tN.file)).body || "";
+        const diskBody140 = (0, import_md36.parseMdFile)(await kapi.readFile(tN.file)).body || "";
         tN.editor.setMarkdown(diskBody140);
         await w140(300);
         refreshOutline();
@@ -238407,7 +240805,7 @@ ${css}
           for (const pth of bookPaths) {
             let fm = {};
             try {
-              fm = (0, import_md34.parseMdFile)(await kapi.readFile(pth)).meta || {};
+              fm = (0, import_md36.parseMdFile)(await kapi.readFile(pth)).meta || {};
             } catch {
               continue;
             }
@@ -238738,8 +241136,8 @@ ${css}
           const acts = document.querySelector(".k-home-dlg .home-actions");
           if (acts) {
             const ar = acts.getBoundingClientRect();
-            const kids = [...acts.children].filter((n2) => getComputedStyle(n2).display !== "none");
-            const over = kids.filter((n2) => n2.getBoundingClientRect().right > ar.right + 1);
+            const kids3 = [...acts.children].filter((n2) => getComputedStyle(n2).display !== "none");
+            const over = kids3.filter((n2) => n2.getBoundingClientRect().right > ar.right + 1);
             check2(
               "[a127-5] \u2605\u2605 \u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E41\u0E16\u0E1A\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E44\u0E21\u0E48\u0E25\u0E49\u0E19\u0E2D\u0E2D\u0E01\u0E19\u0E2D\u0E01\u0E01\u0E23\u0E2D\u0E1A",
               over.length === 0,
@@ -238966,9 +241364,9 @@ ${css}
             for (const n2 of made) {
               const vis = pb154.renderer.rebuildNode(n2);
               const r = vis._objects[0].getBoundingRect(true, true);
-              const L2 = r.left + vis.width / 2, T3 = r.top + vis.height / 2;
-              if (L2 < -0.6 || T3 < -0.6 || L2 + r.width > vis.width + 0.6 || T3 + r.height > vis.height + 0.6 || L2 + r.width < vis.width - 0.6 || T3 + r.height < vis.height - 0.6) {
-                bad.push(`${n2.type}[${L2.toFixed(1)},${T3.toFixed(1)},${(L2 + r.width).toFixed(1)},${(T3 + r.height).toFixed(1)}/${vis.width}x${vis.height}]`);
+              const L3 = r.left + vis.width / 2, T3 = r.top + vis.height / 2;
+              if (L3 < -0.6 || T3 < -0.6 || L3 + r.width > vis.width + 0.6 || T3 + r.height > vis.height + 0.6 || L3 + r.width < vis.width - 0.6 || T3 + r.height < vis.height - 0.6) {
+                bad.push(`${n2.type}[${L3.toFixed(1)},${T3.toFixed(1)},${(L3 + r.width).toFixed(1)},${(T3 + r.height).toFixed(1)}/${vis.width}x${vis.height}]`);
               }
             }
             check2("[154-2] \u2605\u2605 \u0E1E\u0E37\u0E49\u0E19\u0E01\u0E32\u0E23\u0E4C\u0E14\u0E17\u0E38\u0E01\u0E0A\u0E19\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E01\u0E23\u0E2D\u0E1A\u0E01\u0E25\u0E38\u0E48\u0E21\u0E1E\u0E2D\u0E14\u0E35 (\u0E02\u0E2D\u0E1A\u0E02\u0E27\u0E32/\u0E25\u0E48\u0E32\u0E07\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E04\u0E0A\u0E40\u0E09\u0E37\u0E2D\u0E19)", bad.length === 0, bad.join(" "));
@@ -239239,7 +241637,7 @@ ${css}
         });
         await kapi.remove(await kapi.join(dirA, s1.fileName));
         const s3 = await SO.addScene(dPath2, chA, "\u0E09\u0E32\u0E01156\u0E2A\u0E32\u0E21", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E32\u0E21" });
-        const body2 = (0, import_md34.parseMdFile)(await kapi.readFile(await kapi.join(dirA, s2.fileName))).body;
+        const body2 = (0, import_md36.parseMdFile)(await kapi.readFile(await kapi.join(dirA, s2.fileName))).body;
         check2(
           "[156-1] \u2605\u2605 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E09\u0E32\u0E01\u0E2B\u0E25\u0E31\u0E07\u0E40\u0E23\u0E35\u0E22\u0E07\u0E25\u0E33\u0E14\u0E31\u0E1A\u0E43\u0E2B\u0E21\u0E48 \u0E44\u0E21\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A\u0E44\u0E1F\u0E25\u0E4C\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E40\u0E14\u0E34\u0E21",
           body2 === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E2D\u0E07" && s3.fileName !== s2.fileName,
@@ -239260,7 +241658,7 @@ ${css}
           const syn = "\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E41\u0E23\u0E01\n\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E2A\u0E2D\u0E07\n---\nnote: \u0E41\u0E17\u0E23\u0E01";
           await writeSceneMeta(f3, { synopsis: syn, pov: "\u0E21\u0E32\u0E19\u0E35" });
           const m3 = await readSceneMeta(f3);
-          const p3 = (0, import_md34.parseMdFile)(await kapi.readFile(f3));
+          const p3 = (0, import_md36.parseMdFile)(await kapi.readFile(f3));
           check2("[156-2] \u2605\u2605 \u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E48\u0E2D\u0E2B\u0E25\u0E32\u0E22\u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E44\u0E1B-\u0E01\u0E25\u0E31\u0E1A\u0E04\u0E23\u0E1A", m3.synopsis === syn && m3.pov === "\u0E21\u0E32\u0E19\u0E35", JSON.stringify(m3.synopsis));
           check2("[156-2] \u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E1B\u0E19\u0E40\u0E21\u0E17\u0E32\u0E14\u0E32\u0E17\u0E32", p3.body === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E32\u0E21", JSON.stringify(p3.body));
         }
@@ -239328,7 +241726,7 @@ ${css}
           const n2 = await closeTabsUnderPath(dirA, { save: true });
           check2(
             "[156-6] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E43\u0E15\u0E49\u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E1A\u0E17 + \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19",
-            !state.tabs.has(f3) && (0, import_md34.parseMdFile)(await kapi.readFile(f3)).body === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E01\u0E49\u0E04\u0E49\u0E32\u0E07156",
+            !state.tabs.has(f3) && (0, import_md36.parseMdFile)(await kapi.readFile(f3)).body === "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E01\u0E49\u0E04\u0E49\u0E32\u0E07156",
             JSON.stringify(n2)
           );
           check2("[156-6] \u2605 \u0E44\u0E21\u0E48\u0E44\u0E1B\u0E1B\u0E34\u0E14\u0E41\u0E17\u0E47\u0E1A\u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E2D\u0E37\u0E48\u0E19", state.tabs.has(fB));
@@ -239354,9 +241752,9 @@ ${css}
         {
           await openScene(f4, null);
           const tb2 = state.tabs.get(f4);
-          const metaNow = () => kapi.readFile(f4).then((s) => (0, import_md34.parseMdFile)(s).meta);
-          const diskBodyNow = async () => (0, import_md34.parseMdFile)(await kapi.readFile(f4)).body;
-          await kapi.writeFile(f4, (0, import_md34.dumpMdFile)(await metaNow(), "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E2D\u0E37\u0E48\u0E19156"));
+          const metaNow = () => kapi.readFile(f4).then((s) => (0, import_md36.parseMdFile)(s).meta);
+          const diskBodyNow = async () => (0, import_md36.parseMdFile)(await kapi.readFile(f4)).body;
+          await kapi.writeFile(f4, (0, import_md36.dumpMdFile)(await metaNow(), "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E2D\u0E37\u0E48\u0E19156"));
           tb2.editor.setMarkdown("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A156");
           markDirty(tb2);
           window.__k2conflictChoice = "skip";
@@ -239388,7 +241786,7 @@ ${css}
           const r32 = await saveTab(tb2);
           check2("[156-7] \u2605 \u0E41\u0E01\u0E49\u0E41\u0E04\u0E48\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34\u0E43\u0E19\u0E2B\u0E31\u0E27\u0E44\u0E1F\u0E25\u0E4C \u0E44\u0E21\u0E48\u0E16\u0E37\u0E2D\u0E27\u0E48\u0E32\u0E0A\u0E19\u0E01\u0E31\u0E19", r32 !== false && await diskBodyNow() === "\u0E2B\u0E25\u0E31\u0E07\u0E04\u0E38\u0E13\u0E2A\u0E21\u0E1A\u0E31\u0E15\u0E34156");
           delete window.__k2conflictChoice;
-          await kapi.writeFile(f4, (0, import_md34.dumpMdFile)(await metaNow(), "\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E43\u0E2B\u0E21\u0E48156"));
+          await kapi.writeFile(f4, (0, import_md36.dumpMdFile)(await metaNow(), "\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E43\u0E2B\u0E21\u0E48156"));
           const n2 = await checkTabsAgainstDisk({ force: true });
           check2(
             "[156-7] \u2605 \u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E17\u0E35\u0E48\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07: \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07\u0E42\u0E2B\u0E25\u0E14\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E32\u0E01\u0E14\u0E34\u0E2A\u0E01\u0E4C",
@@ -239399,7 +241797,7 @@ ${css}
         }
         {
           const D = await Promise.resolve().then(() => (init_project_doctor_ui(), project_doctor_ui_exports));
-          await kapi.writeFile(await kapi.join(dirA, "orphan156.md"), (0, import_md34.dumpMdFile)({ title: "\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32156" }, "x"));
+          await kapi.writeFile(await kapi.join(dirA, "orphan156.md"), (0, import_md36.dumpMdFile)({ title: "\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E33\u0E1E\u0E23\u0E49\u0E32156" }, "x"));
           await JS.mutateJson(kapi, sf, (d) => {
             d.chapters[chA.guid].push({ id: "dup156", title: "\u0E0B\u0E49\u0E33156", order: 99, fileName: s2.fileName, chapterGuid: chA.guid });
           });
@@ -239439,10 +241837,10 @@ ${css}
               "[156-9] \u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23 EPUB \u0E41\u0E25\u0E30 DOCX \u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07",
               !!document.querySelector('.xhub-fmt[data-fmt="epub"]') && !!document.querySelector('.xhub-fmt[data-fmt="docx"]')
             );
-            const JSZip5 = (await Promise.resolve().then(() => __toESM(require_jszip_min()))).default;
+            const JSZip7 = (await Promise.resolve().then(() => __toESM(require_jszip_min()))).default;
             await hub.setFormat("epub");
             const e = await hub.ebook();
-            const z = await JSZip5.loadAsync(e.bytes);
+            const z = await JSZip7.loadAsync(e.bytes);
             const opf = await z.file("OEBPS/content.opf").async("string");
             check2("[156-9] \u2605 EPUB: mimetype \u0E40\u0E1B\u0E47\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E23\u0E01 + \u0E21\u0E35 spine", Object.keys(z.files)[0] === "mimetype" && /<spine/.test(opf));
             const names = Object.keys(z.files).filter((n2) => /text\/s\d+\.xhtml$/.test(n2));
@@ -239454,9 +241852,45 @@ ${css}
             );
             await hub.setFormat("docx");
             const dx = await hub.ebook();
-            const zd = await JSZip5.loadAsync(dx.bytes);
+            const zd = await JSZip7.loadAsync(dx.bytes);
             const docXml = await zd.file("word/document.xml").async("string");
             check2("[156-9] \u2605 DOCX: \u0E21\u0E35 document.xml + styles.xml + \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01", !!zd.file("word/styles.xml") && ["\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E43\u0E2B\u0E21\u0E48156", "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E2D\u0E07", "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E41\u0E01\u0E49\u0E04\u0E49\u0E32\u0E07156"].some((s) => docXml.includes(s)));
+            await hub.setFormat("pdf");
+            hub.close();
+          }
+        }
+        {
+          const hub = await openExportHub();
+          const was25 = ((state.settings || {}).spPageNumbers || {}).firstPage !== false;
+          try {
+            hub.cfg.scope = "draft";
+            hub.cfg.draft = dPath2;
+            hub.cfg.kind = "screenplay";
+            await hub.setFormat("pdf");
+            await new Promise((r) => setTimeout(r, 250));
+            const cb = document.querySelector("#xhub-first-page");
+            check2('[trial-25] \u0E28\u0E39\u0E19\u0E22\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C "\u0E43\u0E2A\u0E48\u0E40\u0E25\u0E02\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01" (\u0E04\u0E48\u0E32\u0E15\u0E32\u0E21\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C)', !!cb && cb.checked === was25, cb && cb.checked);
+            cb.checked = false;
+            cb.dispatchEvent(new Event("change"));
+            await new Promise((r) => setTimeout(r, 250));
+            check2(
+              "[trial-25] \u2605 \u0E1B\u0E25\u0E14\u0E15\u0E34\u0E4A\u0E01\u0E43\u0E19\u0E28\u0E39\u0E19\u0E22\u0E4C\u0E2A\u0E48\u0E07\u0E2D\u0E2D\u0E01 = \u0E04\u0E48\u0E32\u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E08\u0E23\u0E34\u0E07 (\u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32)",
+              state.settings.spPageNumbers.firstPage === false
+            );
+            await hub.setFormat("docx");
+            await new Promise((r) => setTimeout(r, 250));
+            const cb2 = document.querySelector("#xhub-first-page");
+            check2("[trial-25] DOCX \u0E02\u0E2D\u0E07\u0E1A\u0E17\u0E20\u0E32\u0E1E\u0E22\u0E19\u0E15\u0E23\u0E4C\u0E21\u0E35\u0E2A\u0E27\u0E34\u0E15\u0E0A\u0E4C\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19", !!cb2 && !cb2.checked);
+            const JSZip25 = (await Promise.resolve().then(() => __toESM(require_jszip_min()))).default;
+            const z25 = await JSZip25.loadAsync((await hub.ebook()).bytes);
+            const d25 = await z25.file("word/document.xml").async("string");
+            check2("[trial-25] \u2605 DOCX \u0E02\u0E2D\u0E07\u0E1A\u0E17: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E02\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01 (titlePg) + \u0E41\u0E1A\u0E1A\u0E2D\u0E31\u0E01\u0E29\u0E23\u0E1A\u0E17", /<w:titlePg\/>/.test(d25) && /Courier/.test(await z25.file("word/styles.xml").async("string")));
+            setFirstPageNumber(true);
+            const z25b = await JSZip25.loadAsync((await hub.ebook()).bytes);
+            check2("[trial-25] \u0E15\u0E34\u0E4A\u0E01\u0E01\u0E25\u0E31\u0E1A = \u0E21\u0E35\u0E40\u0E25\u0E02\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01 (\u0E44\u0E21\u0E48\u0E21\u0E35 titlePg)", !/<w:titlePg\/>/.test(await z25b.file("word/document.xml").async("string")));
+          } finally {
+            setFirstPageNumber(was25);
+            hub.cfg.kind = "auto";
             await hub.setFormat("pdf");
             hub.close();
           }
@@ -239469,7 +241903,7 @@ ${css}
           const r = await R2.runProjectReplace("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E2A\u0E2D\u0E07", "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156", {}, { docs });
           check2(
             "[156-10] \u2605 \u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E17\u0E31\u0E49\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E40\u0E02\u0E35\u0E22\u0E19\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E1B\u0E34\u0E14",
-            r.count === 1 && (0, import_md34.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156",
+            r.count === 1 && (0, import_md36.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156",
             JSON.stringify(r)
           );
           await openScene(fr, null);
@@ -239481,11 +241915,11 @@ ${css}
           await R2.runProjectReplace("\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156", "\u0E23\u0E2D\u0E1A\u0E2A\u0E2D\u0E07156", {}, { docs: docs2 });
           check2(
             "[156-10] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E17\u0E35\u0E48\u0E21\u0E35\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07: \u0E41\u0E01\u0E49\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C",
-            tr22.editor.getMarkdown().includes("\u0E23\u0E2D\u0E1A\u0E2A\u0E2D\u0E07156") && tr22.dirty && (0, import_md34.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156"
+            tr22.editor.getMarkdown().includes("\u0E23\u0E2D\u0E1A\u0E2A\u0E2D\u0E07156") && tr22.dirty && (0, import_md36.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156"
           );
           closeTab(fr, { discard: true });
           const r32 = await R2.runProjectReplace("\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156", "\u0E44\u0E21\u0E48\u0E04\u0E27\u0E23\u0E40\u0E01\u0E34\u0E14", {}, { docs: [{ ...docs[0], locked: true, body: "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156" }] });
-          check2("[156-10] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E25\u0E47\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48", r32.count === 0 && (0, import_md34.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156");
+          check2("[156-10] \u0E09\u0E32\u0E01\u0E17\u0E35\u0E48\u0E25\u0E47\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48", r32.count === 0 && (0, import_md36.parseMdFile)(await kapi.readFile(fr)).body === "\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E41\u0E25\u0E49\u0E27156");
           const ui = await R2.openProjectReplace("");
           check2("[156-10] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E41\u0E17\u0E19\u0E17\u0E35\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49", !!document.querySelector(".k-replace"));
           ui.close();
@@ -239908,12 +242342,12 @@ ${css}
           const tp = await trashOf(a.fileName);
           check2(
             "[159-H1] \u2605\u2605 \u0E02\u0E2D\u0E07\u0E43\u0E19\u0E16\u0E31\u0E07\u0E02\u0E22\u0E30\u0E04\u0E37\u0E2D\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07 (\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E22\u0E49\u0E32\u0E22)",
-            !!tp && (0, import_md34.parseMdFile)(await kapi.readFile(tp)).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"),
+            !!tp && (0, import_md36.parseMdFile)(await kapi.readFile(tp)).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"),
             tp
           );
           await restoreFromTrash(tp, tp.split(/[\\/]/).pop());
           const back = (await rows159(ch.guid)).find((r) => r.id === a.id);
-          check2("[159-H1] \u2605\u2605 \u0E01\u0E39\u0E49\u0E08\u0E32\u0E01\u0E16\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07", !!back && (0, import_md34.parseMdFile)(await kapi.readFile(await kapi.join(dir2, back.fileName))).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"));
+          check2("[159-H1] \u2605\u2605 \u0E01\u0E39\u0E49\u0E08\u0E32\u0E01\u0E16\u0E31\u0E07\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E17\u0E35\u0E48\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07", !!back && (0, import_md36.parseMdFile)(await kapi.readFile(await kapi.join(dir2, back.fileName))).body.includes("\u0E1E\u0E34\u0E21\u0E1E\u0E4C\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E25\u0E1A159"));
           await saveAllTabs(true);
         }
         {
@@ -239921,7 +242355,7 @@ ${css}
           const fc = await kapi.join(dir2, c.fileName);
           await openScene(fc, null);
           const tc = state.tabs.get(fc);
-          await kapi.writeFile(fc, (0, import_md34.dumpMdFile)((0, import_md34.parseMdFile)(await kapi.readFile(fc)).meta, "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159"));
+          await kapi.writeFile(fc, (0, import_md36.dumpMdFile)((0, import_md36.parseMdFile)(await kapi.readFile(fc)).meta, "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159"));
           tc.editor.setMarkdown("\u0E07\u0E32\u0E19\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A159");
           markDirty(tc);
           window.__k2conflictChoice = "skip";
@@ -239933,7 +242367,7 @@ ${css}
             "[159-H2] \u2605\u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E44\u0E21\u0E48\u0E1C\u0E48\u0E32\u0E19 (\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E43\u0E19\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E0A\u0E19) = \u0E41\u0E17\u0E47\u0E1A\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07",
             state.tabs.has(fc) && tc.dirty && tc.editor.getMarkdown().includes("\u0E07\u0E32\u0E19\u0E43\u0E19\u0E41\u0E17\u0E47\u0E1A159")
           );
-          check2("[159-H2] \u0E44\u0E1F\u0E25\u0E4C\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E31\u0E1A", (0, import_md34.parseMdFile)(await kapi.readFile(fc)).body === "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159");
+          check2("[159-H2] \u0E44\u0E1F\u0E25\u0E4C\u0E1A\u0E19\u0E14\u0E34\u0E2A\u0E01\u0E4C\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E17\u0E31\u0E1A", (0, import_md36.parseMdFile)(await kapi.readFile(fc)).body === "\u0E41\u0E01\u0E49\u0E08\u0E32\u0E01\u0E17\u0E35\u0E48\u0E2D\u0E37\u0E48\u0E19159");
           window.__k2conflictChoice = "overwrite";
           closeTab(fc, { ask: true });
           await until159(() => [...document.querySelectorAll(".k-dialog button")].some((x) => x.textContent === t("ui.app.closeTabSave")));
@@ -239972,7 +242406,7 @@ ${css}
           const newF = y.f.replace("\u0E23\u0E48\u0E32\u0E07\u0E40\u0E14\u0E34\u0E21159", "\u0E23\u0E48\u0E32\u0E07\u0E43\u0E2B\u0E21\u0E48159");
           check2(
             "[159-H3] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E43\u0E15\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E1B\u0E34\u0E14 + \u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E2B\u0E21\u0E48",
-            !state.tabs.has(y.f) && (0, import_md34.parseMdFile)(await kapi.readFile(newF)).body.includes("\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D159")
+            !state.tabs.has(y.f) && (0, import_md36.parseMdFile)(await kapi.readFile(newF)).body.includes("\u0E04\u0E49\u0E32\u0E07\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D159")
           );
           await saveAllTabs(true);
           check2("[159-H3] \u2605\u2605 \u0E23\u0E48\u0E32\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A", !await kapi.exists(y.p));
@@ -239996,7 +242430,7 @@ ${css}
             raw1.includes("k2-comments") && raw1.includes("\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E32\u0E22159"),
             raw1.slice(-160)
           );
-          check2("[159-H4] \u0E2A\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07 + diskBody \u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19", !state.active.dirty && state.active.diskBody === (0, import_md34.parseMdFile)(raw1).body);
+          check2("[159-H4] \u0E2A\u0E25\u0E31\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E17\u0E47\u0E1A\u0E44\u0E21\u0E48\u0E04\u0E49\u0E32\u0E07 + diskBody \u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E17\u0E35\u0E48\u0E40\u0E02\u0E35\u0E22\u0E19", !state.active.dirty && state.active.diskBody === (0, import_md36.parseMdFile)(raw1).body);
           await switchFormat("prose");
           check2("[159-H4] \u2605 \u0E2A\u0E25\u0E31\u0E1A\u0E01\u0E25\u0E31\u0E1A\u0E22\u0E31\u0E07\u0E21\u0E35\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C", (await kapi.readFile(fe)).includes("\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E2B\u0E49\u0E32\u0E21\u0E2B\u0E32\u0E22159"));
           closeTab(fe, { discard: true });
@@ -240189,7 +242623,7 @@ ${css}
           const srcRow = (await rows159(ch.guid)).find((r) => r.id === m2.id);
           check2(
             "[159-M2] \u2605 \u0E41\u0E17\u0E47\u0E1A\u0E04\u0E49\u0E32\u0E07\u0E16\u0E39\u0E01\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E48\u0E2D\u0E19\u0E04\u0E31\u0E14\u0E25\u0E2D\u0E01 (\u0E44\u0E1F\u0E25\u0E4C\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14)",
-            (0, import_md34.parseMdFile)(await kapi.readFile(fm2)).body.includes("\u0E2A\u0E34\u0E1A") && !tm2.dirty
+            (0, import_md36.parseMdFile)(await kapi.readFile(fm2)).body.includes("\u0E2A\u0E34\u0E1A") && !tm2.dirty
           );
           check2("[159-M2] \u2605\u2605 \u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E33\u0E43\u0E19\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E01\u0E48\u0E32", !!srcRow && srcRow.wordCount >= 5, JSON.stringify(srcRow && srcRow.wordCount));
           const neRows = ne ? await rows159(ne.guid) : [];
@@ -240198,7 +242632,7 @@ ${css}
           const neFile = ne && neRow ? await kapi.join(dPath2, "Chapters", ne.folderName, neRow.fileName) : "";
           check2(
             "[159-M2] \u0E2A\u0E33\u0E40\u0E19\u0E32\u0E1A\u0E17\u0E44\u0E14\u0E49\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 + id \u0E43\u0E2B\u0E21\u0E48 + \u0E41\u0E16\u0E27\u0E04\u0E23\u0E1A\u0E40\u0E17\u0E48\u0E32\u0E15\u0E49\u0E19\u0E17\u0E32\u0E07",
-            !!ne && !!neRow && neRow.id !== m2.id && neRows.length === srcRows.length && (0, import_md34.parseMdFile)(await kapi.readFile(neFile)).body.includes("\u0E2A\u0E34\u0E1A"),
+            !!ne && !!neRow && neRow.id !== m2.id && neRows.length === srcRows.length && (0, import_md36.parseMdFile)(await kapi.readFile(neFile)).body.includes("\u0E2A\u0E34\u0E1A"),
             JSON.stringify([neRows.length, srcRows.length, neRow && neRow.fileName])
           );
           closeTab(fm2, { discard: true });
@@ -240268,7 +242702,7 @@ ${css}
           f1 = await kapi.join(dir2, p1.fileName);
           check2(
             "[160-P0-1] \u2605 \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D\u0E09\u0E32\u0E01 (setSceneTitle) \u2014 \u0E40\u0E18\u0E23\u0E14\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48",
-            await hasCmt(f1) && (0, import_md34.parseMdFile)(await kapi.readFile(f1)).meta.title === "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E23\u0E2D\u0E14160\u0E43\u0E2B\u0E21\u0E48",
+            await hasCmt(f1) && (0, import_md36.parseMdFile)(await kapi.readFile(f1)).meta.title === "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E23\u0E2D\u0E14160\u0E43\u0E2B\u0E21\u0E48",
             (await kapi.readFile(f1)).slice(-120)
           );
           await SO.setSceneMeta(dPath2, ch, { ...p1, title: "\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E23\u0E2D\u0E14160\u0E43\u0E2B\u0E21\u0E48" }, { synopsis: "\u0E22\u0E48\u0E2D160", pov: "\u0E17\u0E2D\u0E23\u0E48\u0E32" });
@@ -240291,7 +242725,7 @@ ${css}
             const memoDir = await kapi.join(state.root, "Memos");
             await kapi.mkdir(memoDir);
             const mf = await kapi.join(memoDir, "\u0E42\u0E19\u0E49\u0E15\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C160.md");
-            await kapi.writeFile(mf, (0, import_md34.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15160", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15160") + CMT160);
+            await kapi.writeFile(mf, (0, import_md36.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15160", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15160") + CMT160);
             await TA.setMemoFields(mf, { flag: true });
             check2("[160-P0-1] \u2605 \u0E41\u0E01\u0E49\u0E18\u0E07\u0E42\u0E19\u0E49\u0E15 (setMemoFields) \u2014 \u0E40\u0E18\u0E23\u0E14\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48", await hasCmt(mf));
             await kapi.remove(mf);
@@ -240302,7 +242736,7 @@ ${css}
           const t23 = state.tabs.get(f2);
           t23.editor.setMarkdown("\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07160");
           markDirty(t23);
-          await kapi.writeFile(f2, (0, import_md34.dumpMdFile)((0, import_md34.parseMdFile)(await kapi.readFile(f2)).meta, "\u0E41\u0E01\u0E49\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"));
+          await kapi.writeFile(f2, (0, import_md36.dumpMdFile)((0, import_md36.parseMdFile)(await kapi.readFile(f2)).meta, "\u0E41\u0E01\u0E49\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"));
           window.__k2conflictChoice = "skip";
           try {
             const pDel3 = deleteToTrash(f2, "\u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E44\u0E21\u0E48\u0E25\u0E1A160");
@@ -240381,8 +242815,8 @@ ${css}
           {
             const p14 = await SO.addScene(dPath2, ch, "\u0E41\u0E17\u0E47\u0E01\u0E19\u0E2D\u0E01160", { silent: true, body: "\u0E40\u0E19\u0E37\u0E49\u0E2D" });
             const f14 = await kapi.join(dir2, p14.fileName);
-            const pm2 = (0, import_md34.parseMdFile)(await kapi.readFile(f14));
-            await kapi.writeFile(f14, (0, import_md34.dumpMdFile)({ ...pm2.meta, tags: ["\u0E41\u0E17\u0E47\u0E01\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"], pov: "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E19\u0E2D\u0E01160" }, pm2.body));
+            const pm2 = (0, import_md36.parseMdFile)(await kapi.readFile(f14));
+            await kapi.writeFile(f14, (0, import_md36.dumpMdFile)({ ...pm2.meta, tags: ["\u0E41\u0E17\u0E47\u0E01\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"], pov: "\u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07\u0E19\u0E2D\u0E01160" }, pm2.body));
             const TP = await Promise.resolve().then(() => (init_tag_pane(), tag_pane_exports));
             const counts = await TP.getTagCounts();
             check2("[160-P1-14] \u2605 \u0E41\u0E1C\u0E07\u0E41\u0E17\u0E47\u0E01\u0E40\u0E2B\u0E47\u0E19\u0E41\u0E17\u0E47\u0E01\u0E17\u0E35\u0E48\u0E41\u0E01\u0E49\u0E43\u0E19 .md \u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21", (counts["\u0E41\u0E17\u0E47\u0E01\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21160"] || 0) >= 1, JSON.stringify(counts).slice(0, 160));
@@ -240544,7 +242978,7 @@ ${css}
             markDirty(tb2);
             return tb2;
           };
-          const conflict161 = async (f) => kapi.writeFile(f, (0, import_md34.dumpMdFile)((0, import_md34.parseMdFile)(await kapi.readFile(f)).meta, "\u0E41\u0E01\u0E49\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161"));
+          const conflict161 = async (f) => kapi.writeFile(f, (0, import_md36.dumpMdFile)((0, import_md36.parseMdFile)(await kapi.readFile(f)).meta, "\u0E41\u0E01\u0E49\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161"));
           const byTitle161 = async (prefix2) => (await rows159(ch.guid)).filter((r) => String(r.title).startsWith(prefix2));
           const a1 = await mk161("\u0E27\u0E32\u0E07\u0E04\u0E49\u0E32\u0E07161", "\u0E10\u0E32\u0E19161");
           await withCmt161(a1.file);
@@ -240728,7 +243162,7 @@ ${css}
             const job = RU.computeBookFlow(sec161);
             const saw = await Promise.race([reachedP.then(() => true), w161(15e3).then(() => false)]);
             const longBody = Array.from({ length: 140 }, (_2, i5) => "\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E22\u0E32\u0E27161 " + i5 + " " + "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E14\u0E31\u0E19\u0E2B\u0E19\u0E49\u0E32 ".repeat(8)).join("\n\n");
-            await kapi.writeFile(g1, (0, import_md34.dumpMdFile)((0, import_md34.parseMdFile)(await kapi.readFile(g1)).meta, longBody));
+            await kapi.writeFile(g1, (0, import_md36.dumpMdFile)((0, import_md36.parseMdFile)(await kapi.readFile(g1)).meta, longBody));
             RU.bumpBookFlow();
             if (release2) release2();
             window.__k2flowHold = null;
@@ -240775,7 +243209,7 @@ ${css}
             CP.invalidateChatRag();
             const e0 = CP.chatRagEpoch();
             const pBuild = CP.collectRelevant("zqnew161", { maxChars: 2e4 });
-            await kapi.writeFile(h2, (0, import_md34.dumpMdFile)((0, import_md34.parseMdFile)(await kapi.readFile(h2)).meta, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 zqlast161 zqlast161"));
+            await kapi.writeFile(h2, (0, import_md36.dumpMdFile)((0, import_md36.parseMdFile)(await kapi.readFile(h2)).meta, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14 zqlast161 zqlast161"));
             CP.invalidateChatRag();
             await pBuild;
             check2(
@@ -240994,8 +243428,8 @@ ${css}
           await new Promise((r) => setTimeout(r, 300));
           check2("[161-P1] \u2605 \u0E41\u0E1C\u0E07\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 \u2192 \u0E2A\u0E25\u0E31\u0E1A\u0E41\u0E17\u0E47\u0E1A\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07\u0E44\u0E21\u0E48\u0E40\u0E14\u0E49\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E40\u0E2D\u0E07", !isPanelOpen("props"));
           {
-            const raw = (0, import_md34.parseMdFile)(await kapi.readFile(fA));
-            await kapi.writeFile(fA, (0, import_md34.dumpMdFile)({ ...raw.meta, synopsis: "\u0E22\u0E48\u0E2D\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161", pov: "\u0E04\u0E32\u0E2A\u0E0B\u0E35\u0E48161" }, raw.body));
+            const raw = (0, import_md36.parseMdFile)(await kapi.readFile(fA));
+            await kapi.writeFile(fA, (0, import_md36.dumpMdFile)({ ...raw.meta, synopsis: "\u0E22\u0E48\u0E2D\u0E19\u0E2D\u0E01\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21161", pov: "\u0E04\u0E32\u0E2A\u0E0B\u0E35\u0E48161" }, raw.body));
             showPanel("props-panel");
             activate(fA);
             await until159(() => nameNow() === "\u0E41\u0E1C\u0E07\u0E15\u0E32\u0E21\u0E01161", 5e3);
@@ -241315,7 +243749,7 @@ ${css}
               inp.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
               check2(
                 "[161-K1] \u2605 Enter \u0E43\u0E19\u0E0A\u0E48\u0E2D\u0E07 = \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E21\u0E48 (\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 + frontmatter)",
-                await until159(async () => ((await rows159(ch.guid)).find((r) => r.id === kB.id) || {}).title === "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48", 5e3) && (0, import_md34.parseMdFile)(await kapi.readFile(await kapi.join(dir2, "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48.md"))).meta.title === "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48"
+                await until159(async () => ((await rows159(ch.guid)).find((r) => r.id === kB.id) || {}).title === "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48", 5e3) && (0, import_md36.parseMdFile)(await kapi.readFile(await kapi.join(dir2, "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48.md"))).meta.title === "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48"
               );
               const fBold = fB;
               fB = await kapi.join(dir2, "\u0E04\u0E35\u0E22\u0E4C\u0E02161\u0E43\u0E2B\u0E21\u0E48.md");
@@ -241529,7 +243963,7 @@ ${css}
             );
             check2(
               "[162-W1-4] \u2605\u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E02\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E44\u0E1F\u0E25\u0E4C\u0E43\u0E19\u0E16\u0E31\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E15\u0E31\u0E27\u0E40\u0E2D\u0E07 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E43\u0E04\u0E23\u0E16\u0E39\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19\u0E17\u0E31\u0E1A)",
-              (0, import_md34.parseMdFile)(await kapi.readFile(t1)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E01\u0E2D162") && (0, import_md34.parseMdFile)(await kapi.readFile(t23)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E02\u0E2D162")
+              (0, import_md36.parseMdFile)(await kapi.readFile(t1)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E01\u0E2D162") && (0, import_md36.parseMdFile)(await kapi.readFile(t23)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E02\u0E2D162")
             );
             check2(
               "[162-W1-4] \u2605 \u0E43\u0E1A\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19\u0E02\u0E2D\u0E07\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07\u0E2D\u0E22\u0E39\u0E48\u0E04\u0E23\u0E1A",
@@ -241709,7 +244143,7 @@ ${css}
             const memoDir = await kapi.join(state.root, "Memos");
             await kapi.mkdir(memoDir);
             const mf = await kapi.join(memoDir, "\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22162.md");
-            await kapi.writeFile(mf, (0, import_md34.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22162", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15162"));
+            await kapi.writeFile(mf, (0, import_md36.dumpMdFile)({ title: "\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22162", type: "memo" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15162"));
             const okm = await moveMemoToChapter(mf, dPath2, ch, null);
             const rowM = (await rows159(ch.guid)).find((r) => r.title === "\u0E42\u0E19\u0E49\u0E15\u0E22\u0E49\u0E32\u0E22162");
             check2(
@@ -241720,7 +244154,7 @@ ${css}
             const back = await moveRowToMemos(dPath2, ch, rowM);
             check2(
               "[162-W1-3] \u2605\u2605 \u0E22\u0E49\u0E32\u0E22\u0E01\u0E25\u0E31\u0E1A\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E19\u0E49\u0E15: \u0E44\u0E1F\u0E25\u0E4C\u0E1B\u0E25\u0E32\u0E22\u0E17\u0E32\u0E07\u0E21\u0E35\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E04\u0E23\u0E1A \xB7 \u0E41\u0E16\u0E27\u0E2B\u0E25\u0E38\u0E14\u0E08\u0E32\u0E01\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19",
-              !!back && await kapi.exists(back) && (0, import_md34.parseMdFile)(await kapi.readFile(back)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15162") && !(await rows159(ch.guid)).some((r) => r.id === rowM.id),
+              !!back && await kapi.exists(back) && (0, import_md36.parseMdFile)(await kapi.readFile(back)).body.includes("\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E42\u0E19\u0E49\u0E15162") && !(await rows159(ch.guid)).some((r) => r.id === rowM.id),
               String(back)
             );
             await kapi.remove(back).catch(() => {
@@ -241749,13 +244183,13 @@ ${css}
               const before14 = snaps14.find((s) => s.label === t("panel.beforeRestore"));
               check2(
                 '[162-W1-14] \u2605\u2605 \u0E20\u0E32\u0E1E "\u0E01\u0E48\u0E2D\u0E19\u0E01\u0E39\u0E49\u0E04\u0E37\u0E19" \u0E21\u0E35\u0E07\u0E32\u0E19\u0E17\u0E35\u0E48\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E2D\u0E22\u0E39\u0E48\u0E14\u0E49\u0E27\u0E22 (\u0E40\u0E14\u0E34\u0E21\u0E16\u0E39\u0E01\u0E17\u0E34\u0E49\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46)',
-                !!before14 && (0, import_md34.parseMdFile)(await kapi.readFile(before14.path)).body.includes("\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07162"),
+                !!before14 && (0, import_md36.parseMdFile)(await kapi.readFile(before14.path)).body.includes("\u0E07\u0E32\u0E19\u0E04\u0E49\u0E32\u0E07162"),
                 before14 ? (await kapi.readFile(before14.path)).slice(0, 120) : JSON.stringify(snaps14.map((s) => s.label))
               );
               await until159(() => !state.tabs.get(f14) || !state.tabs.get(f14).dirty, 6e3);
               check2(
                 "[162-W1-14] \u2605 \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E43\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E40\u0E1B\u0E47\u0E19\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32\u0E41\u0E25\u0E49\u0E27",
-                (0, import_md34.parseMdFile)(await kapi.readFile(f14)).body.includes("\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32162")
+                (0, import_md36.parseMdFile)(await kapi.readFile(f14)).body.includes("\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32162")
               );
             }
             document.querySelectorAll(".k-overlay").forEach((n2) => n2.remove());
@@ -243013,14 +245447,14 @@ ${css}
           await wBH(300);
           const cBH = (a, b) => {
             const p = (s) => s.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number);
-            const L2 = (c) => {
+            const L3 = (c) => {
               const f = (v4) => {
                 v4 /= 255;
                 return v4 <= 0.03928 ? v4 / 12.92 : ((v4 + 0.055) / 1.055) ** 2.4;
               };
               return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
             };
-            const x = L2(p(a)), y = L2(p(b));
+            const x = L3(p(a)), y = L3(p(b));
             return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
           };
           const logo = document.getElementById("tb-logo");
@@ -243091,7 +245525,7 @@ ${css}
             !!onDisk && onDisk.baseline === ORIG && /[\\/]OnSet[\\/]/.test(recO.path),
             recO && recO.path
           );
-          const mdAfterMark = (0, import_md34.parseMdFile)(await kapi.readFile(fileO)).body;
+          const mdAfterMark = (0, import_md36.parseMdFile)(await kapi.readFile(fileO)).body;
           check2("[164-O] \u0E44\u0E1F\u0E25\u0E4C .md \u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30\u0E15\u0E2D\u0E19\u0E15\u0E34\u0E14\u0E18\u0E07", mdAfterMark === ORIG);
           await untilO(() => !!rowNow() && !!rowNow().querySelector(".tree-onset"));
           check2("[164-O] \u2605 \u0E41\u0E16\u0E27\u0E09\u0E32\u0E01\u0E43\u0E19 Explorer \u0E21\u0E35\u0E1B\u0E49\u0E32\u0E22 !", !!rowNow() && !!rowNow().querySelector(".tree-onset"));
@@ -243167,7 +245601,7 @@ ${css}
             tabBodyText(tabO).slice(0, 80)
           );
           await saveTab(tabO);
-          const diskO = (0, import_md34.parseMdFile)(await kapi.readFile(fileO)).body;
+          const diskO = (0, import_md36.parseMdFile)(await kapi.readFile(fileO)).body;
           check2("[164-O] \u2605\u2605 \u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E23\u0E30\u0E2B\u0E27\u0E48\u0E32\u0E07\u0E14\u0E39\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21 = \u0E40\u0E02\u0E35\u0E22\u0E19\u0E09\u0E1A\u0E31\u0E1A\u0E41\u0E01\u0E49\u0E44\u0E02\u0E25\u0E07\u0E44\u0E1F\u0E25\u0E4C", diskO === revisedMd, diskO.slice(0, 80));
           check2("[164-O] \u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E0B\u0E39\u0E21\u0E44\u0E21\u0E48\u0E1E\u0E32\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E09\u0E1A\u0E31\u0E1A\u0E40\u0E14\u0E34\u0E21", onsetBeforeCommand("zoom") === false && tabO._onset.view === "original");
           await handleCommand("save");
@@ -244942,38 +247376,38 @@ ${css}
           const dCold = await mk2("k2cold", false), dHot = await mk2("k2hot", true);
           const restart0 = APPX.pluginsNeedRestart().filter((n2) => n2 === "k2cold" || n2 === "k2hot").length;
           await APPX.reloadPlugins();
-          const L2 = () => globalThis.__k2life || {};
+          const L3 = () => globalThis.__k2life || {};
           check2(
             "[169-X] \u0E15\u0E34\u0E14\u0E15\u0E31\u0E49\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E41\u0E25\u0E49\u0E27\u0E42\u0E2B\u0E25\u0E14\u0E44\u0E14\u0E49 (\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E02\u0E2D\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15 \xB7 \u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E23\u0E34\u0E48\u0E21\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E43\u0E2B\u0E21\u0E48)",
-            APPX.pluginList().loaded.some((p) => p.name === "k2cold") && (L2().k2cold || {}).runs === 1 && (L2().k2hot || {}).runs === 1 && APPX.pluginsNeedRestart().filter((n2) => n2 === "k2cold" || n2 === "k2hot").length === restart0,
-            JSON.stringify(L2())
+            APPX.pluginList().loaded.some((p) => p.name === "k2cold") && (L3().k2cold || {}).runs === 1 && (L3().k2hot || {}).runs === 1 && APPX.pluginsNeedRestart().filter((n2) => n2 === "k2cold" || n2 === "k2hot").length === restart0,
+            JSON.stringify(L3())
           );
-          check2("[169-X] \u0E41\u0E1C\u0E07\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E16\u0E39\u0E01\u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19", !!PUI.getPanelManager().registry.get(L2().k2cold.panel), L2().k2cold.panel);
+          check2("[169-X] \u0E41\u0E1C\u0E07\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E16\u0E39\u0E01\u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19", !!PUI.getPanelManager().registry.get(L3().k2cold.panel), L3().k2cold.panel);
           await APPX.reloadPlugins();
-          check2("[169-X] \u2605 \u0E42\u0E2B\u0E25\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E42\u0E14\u0E22\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19 = \u0E44\u0E21\u0E48\u0E23\u0E31\u0E19\u0E42\u0E04\u0E49\u0E14\u0E0B\u0E49\u0E33 (\u0E40\u0E14\u0E34\u0E21\u0E23\u0E31\u0E19\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27\u0E0B\u0E49\u0E33\u0E17\u0E31\u0E49\u0E07\u0E0A\u0E38\u0E14\u0E17\u0E38\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07)", L2().k2cold.runs === 1 && L2().k2hot.runs === 1, JSON.stringify(L2()));
+          check2("[169-X] \u2605 \u0E42\u0E2B\u0E25\u0E14\u0E43\u0E2B\u0E21\u0E48\u0E42\u0E14\u0E22\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19 = \u0E44\u0E21\u0E48\u0E23\u0E31\u0E19\u0E42\u0E04\u0E49\u0E14\u0E0B\u0E49\u0E33 (\u0E40\u0E14\u0E34\u0E21\u0E23\u0E31\u0E19\u0E17\u0E38\u0E01\u0E15\u0E31\u0E27\u0E0B\u0E49\u0E33\u0E17\u0E31\u0E49\u0E07\u0E0A\u0E38\u0E14\u0E17\u0E38\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07)", L3().k2cold.runs === 1 && L3().k2hot.runs === 1, JSON.stringify(L3()));
           APPX.pluginBus.emit("k2life:ping", {});
-          check2("[169-X] \u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E16\u0E36\u0E07\u0E15\u0E31\u0E27\u0E23\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19 (\u0E0A\u0E38\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E44\u0E21\u0E48\u0E0B\u0E49\u0E2D\u0E19)", L2().k2cold.pings === 1 && L2().k2hot.pings === 1);
+          check2("[169-X] \u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E16\u0E36\u0E07\u0E15\u0E31\u0E27\u0E23\u0E31\u0E1A\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19 (\u0E0A\u0E38\u0E14\u0E40\u0E14\u0E35\u0E22\u0E27 \u0E44\u0E21\u0E48\u0E0B\u0E49\u0E2D\u0E19)", L3().k2cold.pings === 1 && L3().k2hot.pings === 1);
           await kapi.writeFile(await kapi.join(dHot, "main.js"), await kapi.readFile(await kapi.join(dHot, "main.js")) + "\n// edited");
           await APPX.reloadPlugins();
           check2(
             '[169-X] \u2605 \u0E41\u0E01\u0E49\u0E44\u0E1F\u0E25\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E42\u0E2B\u0E25\u0E14\u0E43\u0E2B\u0E21\u0E48 = \u0E23\u0E31\u0E19\u0E43\u0E2B\u0E21\u0E48 \u0E41\u0E25\u0E30\u0E15\u0E31\u0E27\u0E40\u0E01\u0E48\u0E32\u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01 onUnload("reload")',
-            L2().k2hot.runs === 2 && L2().k2hot.unload === "reload" && L2().k2cold.runs === 1,
-            JSON.stringify(L2())
+            L3().k2hot.runs === 2 && L3().k2hot.unload === "reload" && L3().k2cold.runs === 1,
+            JSON.stringify(L3())
           );
           APPX.pluginBus.emit("k2life:ping", {});
-          check2("[169-X] \u2605 \u0E15\u0E31\u0E27\u0E23\u0E31\u0E1A\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E02\u0E2D\u0E07\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E19\u0E41\u0E25\u0E49\u0E27 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01\u0E2A\u0E2D\u0E07\u0E0A\u0E38\u0E14)", L2().k2hot.pings === 2, String(L2().k2hot.pings));
-          const pidCold = L2().k2cold.panel, pidHot = L2().k2hot.panel;
+          check2("[169-X] \u2605 \u0E15\u0E31\u0E27\u0E23\u0E31\u0E1A\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E02\u0E2D\u0E07\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E19\u0E41\u0E25\u0E49\u0E27 (\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01\u0E2A\u0E2D\u0E07\u0E0A\u0E38\u0E14)", L3().k2hot.pings === 2, String(L3().k2hot.pings));
+          const pidCold = L3().k2cold.panel, pidHot = L3().k2hot.panel;
           APPX.setPluginDisabled("k2cold", true);
           APPX.setPluginDisabled("k2hot", true);
           await APPX.reloadPlugins();
-          check2('[169-X] \u0E1B\u0E34\u0E14\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19 \u2192 onUnload("remove") \u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01', L2().k2cold.unload === "remove" && L2().k2hot.unload === "remove", JSON.stringify(L2()));
+          check2('[169-X] \u0E1B\u0E34\u0E14\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19 \u2192 onUnload("remove") \u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01', L3().k2cold.unload === "remove" && L3().k2hot.unload === "remove", JSON.stringify(L3()));
           check2(
             "[169-X] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E41\u0E1C\u0E07\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E16\u0E39\u0E01\u0E16\u0E2D\u0E19\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19 (\u0E40\u0E14\u0E34\u0E21\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49\u0E08\u0E19\u0E01\u0E27\u0E48\u0E32\u0E08\u0E30\u0E40\u0E23\u0E34\u0E48\u0E21\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E43\u0E2B\u0E21\u0E48)",
             !PUI.getPanelManager().registry.get(pidCold) && !PUI.getPanelManager().registry.get(pidHot)
           );
-          const before = { c: L2().k2cold.pings, h: L2().k2hot.pings };
+          const before = { c: L3().k2cold.pings, h: L3().k2hot.pings };
           APPX.pluginBus.emit("k2life:ping", {});
-          check2("[169-X] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E15\u0E31\u0E27\u0E23\u0E31\u0E1A\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01\u0E2D\u0E35\u0E01", L2().k2cold.pings === before.c && L2().k2hot.pings === before.h);
+          check2("[169-X] \u2605 \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E15\u0E31\u0E27\u0E23\u0E31\u0E1A\u0E40\u0E2B\u0E15\u0E38\u0E01\u0E32\u0E23\u0E13\u0E4C\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E40\u0E23\u0E35\u0E22\u0E01\u0E2D\u0E35\u0E01", L3().k2cold.pings === before.c && L3().k2hot.pings === before.h);
           check2("[169-X] \u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27\u0E04\u0E33\u0E2A\u0E31\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E1B\u0E25\u0E31\u0E4A\u0E01\u0E2D\u0E34\u0E19\u0E2B\u0E32\u0E22", !APPX.pluginList().commands.some((c) => c.plugin === "k2cold" || c.plugin === "k2hot"));
           const need = APPX.pluginsNeedRestart();
           check2(
@@ -245029,8 +247463,8 @@ ${css}
         };
         const rootN = state.root;
         const jn = (...a) => kapi.join(...a);
-        const bodyOf2 = async (p) => (0, import_md34.parseMdFile)(await kapi.readFile(p)).body;
-        const metaOf2 = async (p) => (0, import_md34.parseMdFile)(await kapi.readFile(p)).meta;
+        const bodyOf2 = async (p) => (0, import_md36.parseMdFile)(await kapi.readFile(p)).body;
+        const metaOf2 = async (p) => (0, import_md36.parseMdFile)(await kapi.readFile(p)).meta;
         document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
         await APn.syncDiskNames({ force: true });
         const bk0 = await DSn.freeBookName(kapi, rootN);
@@ -245288,7 +247722,7 @@ ${css}
         await kapi.writeFile(await jn(oldSec, "section.json"), JSON.stringify({ guid: "old170", title: "\u0E40\u0E25\u0E48\u0E21\u0E40\u0E01\u0E48\u0E32170", order: 99 }, null, 2));
         await kapi.writeFile(await jn(oldDr, "draft.json"), JSON.stringify({ chapters: [{ guid: "oc170", title: "\u0E1A\u0E17\u0E40\u0E01\u0E48\u0E32170", order: 1, folderName: "01 - \u0E1A\u0E17\u0E40\u0E01\u0E48\u0E32170" }] }, null, 2));
         await kapi.writeFile(await jn(oldDr, "scenes.json"), JSON.stringify({ chapters: { oc170: [{ id: "os170", title: "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07170", order: 1, fileName: "scene-01.md" }] } }, null, 2));
-        await kapi.writeFile(await jn(oldDr, "Chapters", "01 - \u0E1A\u0E17\u0E40\u0E01\u0E48\u0E32170", "scene-01.md"), (0, import_md34.dumpMdFile)({ title: "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07170", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E01\u0E48\u0E32170"));
+        await kapi.writeFile(await jn(oldDr, "Chapters", "01 - \u0E1A\u0E17\u0E40\u0E01\u0E48\u0E32170", "scene-01.md"), (0, import_md36.dumpMdFile)({ title: "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07170", type: "scene", format: "prose" }, "\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E40\u0E01\u0E48\u0E32170"));
         check2(
           "[170-N] \u2605\u2605 \u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E23\u0E38\u0E48\u0E19\u0E40\u0E01\u0E48\u0E32: \u0E0A\u0E37\u0E48\u0E2D\u0E44\u0E1F\u0E25\u0E4C\u0E44\u0E21\u0E48\u0E15\u0E23\u0E07\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07 \u2260 \u0E16\u0E39\u0E01\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E0A\u0E37\u0E48\u0E2D \u2014 \u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30",
           (await APn.syncDiskNames({ force: true })).length === 0 && (await kapi.readJson(await jn(oldDr, "scenes.json"))).chapters.oc170[0].fileName === "scene-01.md" && (await kapi.readJson(await jn(oldDr, "scenes.json"))).chapters.oc170[0].title === "\u0E0A\u0E37\u0E48\u0E2D\u0E08\u0E23\u0E34\u0E07170"
@@ -246244,7 +248678,7 @@ ${css}
           "3. \u0E40\u0E25\u0E02169"
         ];
         for (let i5 = 1; i5 <= 60; i5++) linesBH.push("\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48 " + i5 + " \u2014 \u0E04\u0E48\u0E33\u0E04\u0E37\u0E19\u0E19\u0E31\u0E49\u0E19\u0E17\u0E2D\u0E23\u0E48\u0E32\u0E22\u0E37\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E17\u0E35\u0E48\u0E15\u0E25\u0E32\u0E14\u0E40\u0E01\u0E48\u0E32\u0E22\u0E32\u0E21\u0E04\u0E48\u0E33 \u0E25\u0E21\u0E1E\u0E31\u0E14\u0E40\u0E2D\u0E32\u0E01\u0E25\u0E34\u0E48\u0E19\u0E02\u0E19\u0E21\u0E1B\u0E31\u0E07\u0E2D\u0E1A\u0E43\u0E2B\u0E21\u0E48\u0E25\u0E2D\u0E22\u0E21\u0E32\u0E08\u0E32\u0E01\u0E23\u0E49\u0E32\u0E19 \u0E40\u0E02\u0E32\u0E40\u0E14\u0E34\u0E19\u0E15\u0E32\u0E21\u0E41\u0E21\u0E27\u0E14\u0E33\u0E44\u0E1B\u0E15\u0E32\u0E21\u0E15\u0E23\u0E2D\u0E01\u0E41\u0E04\u0E1A \u0E46 \u0E17\u0E35\u0E48\u0E21\u0E37\u0E14\u0E2A\u0E19\u0E34\u0E17 \u0E40\u0E2A\u0E35\u0E22\u0E07\u0E1D\u0E35\u0E40\u0E17\u0E49\u0E32\u0E01\u0E49\u0E2D\u0E07\u0E2A\u0E30\u0E17\u0E49\u0E2D\u0E19\u0E01\u0E31\u0E1A\u0E1C\u0E19\u0E31\u0E07\u0E2D\u0E34\u0E10\u0E40\u0E01\u0E48\u0E32");
-        await kapi.writeFile(probeBH, (0, import_md34.dumpMdFile)({ title: "\u0E40\u0E17\u0E2A\u0E1E\u0E34\u0E21\u0E1E\u0E4C169", type: "scene", format: "prose" }, linesBH.join("\n")));
+        await kapi.writeFile(probeBH, (0, import_md36.dumpMdFile)({ title: "\u0E40\u0E17\u0E2A\u0E1E\u0E34\u0E21\u0E1E\u0E4C169", type: "scene", format: "prose" }, linesBH.join("\n")));
         await openScene(probeBH, null);
         const okTabBH = await untilBH(() => state.tabs.has(probeBH) && state.active && state.active.file === probeBH && !!state.active.editor);
         check2("[169-BH] \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E17\u0E14\u0E2A\u0E2D\u0E1A (\u0E19\u0E34\u0E22\u0E32\u0E22 60 \u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32) \u0E44\u0E14\u0E49", okTabBH);
@@ -246480,7 +248914,7 @@ ${css}
         closeMenu();
         const U5 = await Promise.resolve().then(() => (init_ui(), ui_exports));
         const probe5 = await kapi.join(state.root, "k2test-170bh5.md");
-        await kapi.writeFile(probe5, (0, import_md34.dumpMdFile)(
+        await kapi.writeFile(probe5, (0, import_md36.dumpMdFile)(
           { title: "\u0E40\u0E17\u0E2A\u0E04\u0E49\u0E19\u0E2B\u0E32170", type: "scene", format: "prose" },
           "\u0E04\u0E33\u0E19\u0E33\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\n\u0E21\u0E35\u0E19\u0E32\u0E23\u0E49\u0E2D\u0E22\u0E40\u0E08\u0E47\u0E14\u0E2A\u0E34\u0E1A\u0E40\u0E14\u0E34\u0E19\u0E40\u0E02\u0E49\u0E32\u0E21\u0E32\u0E0A\u0E49\u0E32 \u0E46\n\u201C\u0E21\u0E35\u0E19\u0E32\u0E23\u0E49\u0E2D\u0E22\u0E40\u0E08\u0E47\u0E14\u0E2A\u0E34\u0E1A\u201D \u0E40\u0E02\u0E32\u0E40\u0E23\u0E35\u0E22\u0E01\n\u0E08\u0E1A\u0E09\u0E32\u0E01"
         ));
@@ -246589,6 +249023,337 @@ ${css}
         document.querySelectorAll(".k-overlay").forEach((o) => o.remove());
         check2("[170-BH5] \u0E40\u0E01\u0E47\u0E1A\u0E01\u0E27\u0E32\u0E14: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E41\u0E17\u0E47\u0E1A/\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E02\u0E2D\u0E07\u0E40\u0E17\u0E2A\u0E04\u0E49\u0E32\u0E07", !state.tabs.has(probe5) && !document.querySelector(".k-overlay"));
       }
+      {
+        const wIM = (ms) => new Promise((r) => setTimeout(r, ms));
+        const { importManuscriptDialog: impIM } = await Promise.resolve().then(() => (init_import_manuscript_ui(), import_manuscript_ui_exports));
+        const EIM = await Promise.resolve().then(() => (init_export_ebook(), export_ebook_exports));
+        const JSZipIM = (await Promise.resolve().then(() => __toESM(require_jszip_min()))).default;
+        const cvIM = document.createElement("canvas");
+        cvIM.width = 2;
+        cvIM.height = 1;
+        const pngIM = Uint8Array.from(atob(cvIM.toDataURL("image/png").split(",")[1]), (c) => c.charCodeAt(0));
+        const srcIM = "# \u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 1\n## \u0E23\u0E49\u0E32\u0E19\u0E40\u0E1A\u0E40\u0E01\u0E2D\u0E23\u0E35\u0E48\n\u0E42\u0E17\u0E23\u0E30\u0E40\u0E1B\u0E34\u0E14\u0E23\u0E49\u0E32\u0E19\u0E41\u0E15\u0E48\u0E40\u0E0A\u0E49\u0E32 **\u0E2B\u0E19\u0E31\u0E01\u0E21\u0E32\u0E01**\n![\u0E1B\u0E01\u0E40\u0E25\u0E48\u0E21](cover.png)\n## \u0E01\u0E25\u0E32\u0E07\u0E04\u0E37\u0E19\n\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E2A\u0E2D\u0E07\n# \u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 2\n\u0E40\u0E19\u0E37\u0E49\u0E2D\u0E15\u0E2D\u0E19\u0E2A\u0E2D\u0E07";
+        const pkgIM = EIM.buildDocx(srcIM, { title: "IM170", images: /* @__PURE__ */ new Map([["cover.png", pngIM]]) });
+        const zIM = new JSZipIM();
+        for (const f of pkgIM.files) zIM.file(f.path, f.data);
+        const docxIM = await kapi.join(state.root, "..", "k2-im170-test.docx");
+        await kapi.writeBytes(docxIM, Array.from(await zIM.generateAsync({ type: "uint8array" })));
+        const bookIM = await kapi.join(state.root, "ImportTest170");
+        const book2IM = await kapi.join(state.root, "ImportTest170 2");
+        const pasteIM = await kapi.join(state.root, "PasteTest170");
+        const albumIM = await kapi.join(state.root, "Images", "ImportTest170");
+        for (const p of [bookIM, book2IM, pasteIM, albumIM]) await kapi.remove(p).catch(() => {
+        });
+        try {
+          const pDlg = impIM({ paths: [docxIM] });
+          let ovIM = null;
+          for (let i5 = 0; i5 < 60 && !(ovIM = document.querySelector(".k-msimp")); i5++) await wIM(50);
+          for (let i5 = 0; i5 < 60 && !(ovIM && ovIM.querySelector(".k-msimp-sum")); i5++) await wIM(50);
+          const sumIM = ovIM && ovIM.querySelector(".k-msimp-sum");
+          check2(
+            "[170-IM] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E19\u0E33\u0E40\u0E02\u0E49\u0E32\u0E40\u0E1B\u0E34\u0E14 + \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E1A\u0E2D\u0E01\u0E08\u0E33\u0E19\u0E27\u0E19\u0E1A\u0E17/\u0E09\u0E32\u0E01\u0E08\u0E32\u0E01 .docx \u0E08\u0E23\u0E34\u0E07 (2 \u0E1A\u0E17 3 \u0E09\u0E32\u0E01)",
+            !!sumIM && sumIM.textContent.includes(tf("ui.manuscript.summaryF", 2, 3, 0).split(" \xB7 ")[0]) && ovIM.querySelectorAll(".k-msimp-tree > li").length === 2,
+            sumIM && sumIM.textContent
+          );
+          check2("[170-IM] \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E15\u0E31\u0E49\u0E07\u0E15\u0E49\u0E19 = \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E43\u0E19 .docx", ovIM.querySelector(".k-msimp-book").value === "IM170", ovIM.querySelector(".k-msimp-book").value);
+          const selIM = ovIM.querySelector(".k-msimp-mode");
+          check2("[170-IM] \u0E27\u0E34\u0E18\u0E35\u0E41\u0E1A\u0E48\u0E07\u0E21\u0E35\u0E2A\u0E35\u0E48\u0E41\u0E1A\u0E1A", selIM.options.length === 4);
+          selIM.value = "file-scene";
+          selIM.dispatchEvent(new Event("change"));
+          check2("[170-IM] \u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19\u0E27\u0E34\u0E18\u0E35\u0E41\u0E1A\u0E48\u0E07 \u2192 \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E27\u0E32\u0E14\u0E43\u0E2B\u0E21\u0E48 (\u0E44\u0E1F\u0E25\u0E4C\u0E25\u0E30\u0E09\u0E32\u0E01 = 1 \u0E1A\u0E17)", ovIM.querySelectorAll(".k-msimp-tree > li").length === 1);
+          const okIM = [...ovIM.querySelectorAll(":scope > .k-dlg-btns > .k-ok")];
+          check2("[170-IM] \u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E25\u0E31\u0E01\u0E15\u0E31\u0E27\u0E40\u0E14\u0E35\u0E22\u0E27\u0E2D\u0E22\u0E39\u0E48\u0E02\u0E27\u0E32\u0E2A\u0E38\u0E14\u0E02\u0E2D\u0E07\u0E41\u0E16\u0E27\u0E1B\u0E38\u0E48\u0E21", okIM.length === 1 && okIM[0] === ovIM.querySelector(".k-dlg-btns").lastElementChild);
+          ovIM.querySelector(".k-dlg-btns .k-cancel").click();
+          check2("[170-IM] \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01 = \u0E04\u0E37\u0E19 null \u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E40\u0E25\u0E48\u0E21", await pDlg === null && !await kapi.exists(bookIM));
+          const rIM = await impIM({ paths: [docxIM], book: "ImportTest170", auto: true });
+          check2("[170-IM] \u0E19\u0E33\u0E40\u0E02\u0E49\u0E32\u0E41\u0E25\u0E49\u0E27\u0E44\u0E14\u0E49 2 \u0E1A\u0E17 3 \u0E09\u0E32\u0E01", !!rIM && rIM.chapters === 2 && rIM.scenes === 3, rIM);
+          const secIM = await kapi.readJson(await kapi.join(bookIM, "section.json"));
+          check2("[170-IM] section.json: \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21 = \u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C", secIM.title === "ImportTest170" && secIM.folderName === "ImportTest170");
+          const dIM = await kapi.join(bookIM, "Draft", "default");
+          const drIM = await kapi.readJson(await kapi.join(dIM, "draft.json"));
+          const scIM = await kapi.readJson(await kapi.join(dIM, "scenes.json"));
+          check2("[170-IM] \u0E1A\u0E17\u0E40\u0E23\u0E35\u0E22\u0E07\u0E15\u0E32\u0E21\u0E15\u0E49\u0E19\u0E09\u0E1A\u0E31\u0E1A", drIM.chapters.map((c) => c.title).join("|") === "\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 1|\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 2", drIM.chapters.map((c) => c.title));
+          const ch1IM = drIM.chapters[0];
+          const rowsIM = scIM.chapters[ch1IM.guid] || [];
+          check2("[170-IM] \u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E23\u0E30\u0E14\u0E31\u0E1A 2 = \u0E09\u0E32\u0E01", rowsIM.map((r) => r.title).join("|") === "\u0E23\u0E49\u0E32\u0E19\u0E40\u0E1A\u0E40\u0E01\u0E2D\u0E23\u0E35\u0E48|\u0E01\u0E25\u0E32\u0E07\u0E04\u0E37\u0E19", rowsIM.map((r) => r.title));
+          const f1IM = await kapi.join(dIM, "Chapters", ch1IM.folderName, rowsIM[0].fileName);
+          const txtIM = await kapi.readFile(f1IM);
+          check2("[170-IM] \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01: \u0E15\u0E31\u0E27\u0E2B\u0E19\u0E32\u0E15\u0E34\u0E14\u0E21\u0E32 \xB7 \u0E23\u0E39\u0E1B\u0E2D\u0E49\u0E32\u0E07\u0E2D\u0E31\u0E25\u0E1A\u0E31\u0E49\u0E21\u0E02\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E21", txtIM.includes("\u0E42\u0E17\u0E23\u0E30\u0E40\u0E1B\u0E34\u0E14\u0E23\u0E49\u0E32\u0E19\u0E41\u0E15\u0E48\u0E40\u0E0A\u0E49\u0E32 **\u0E2B\u0E19\u0E31\u0E01\u0E21\u0E32\u0E01**") && txtIM.includes("](../../../../../Images/ImportTest170/"), txtIM);
+          const imgsIM = (await kapi.listFiles(albumIM).catch(() => [])).filter((f) => !/\.json$/i.test(f));
+          check2("[170-IM] \u0E23\u0E39\u0E1B\u0E16\u0E39\u0E01\u0E41\u0E15\u0E01\u0E25\u0E07\u0E04\u0E25\u0E31\u0E07\u0E23\u0E39\u0E1B (\u0E2D\u0E31\u0E25\u0E1A\u0E31\u0E49\u0E21\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21)", imgsIM.length === 1 && /\.png$/i.test(imgsIM[0]), imgsIM);
+          check2("[170-IM] \u0E40\u0E1B\u0E34\u0E14\u0E09\u0E32\u0E01\u0E41\u0E23\u0E01\u0E43\u0E2B\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35", state.tabs.has(rIM.firstScene) && state.active && state.active.file === rIM.firstScene);
+          const edIM = state.tabs.get(rIM.firstScene);
+          check2("[170-IM] \u0E15\u0E31\u0E27\u0E41\u0E01\u0E49\u0E44\u0E02\u0E2D\u0E48\u0E32\u0E19\u0E44\u0E1F\u0E25\u0E4C\u0E17\u0E35\u0E48\u0E19\u0E33\u0E40\u0E02\u0E49\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32 + \u0E23\u0E39\u0E1B", !!edIM && !!edIM.editor && edIM.editor.view.state.doc.textContent.includes("\u0E2B\u0E19\u0E31\u0E01\u0E21\u0E32\u0E01") && !!edIM.editor.view.dom.querySelector("figure, img"));
+          await wIM(100);
+          check2(
+            "[170-IM] \u0E40\u0E25\u0E48\u0E21\u0E43\u0E2B\u0E21\u0E48\u0E02\u0E36\u0E49\u0E19\u0E43\u0E19 Explorer",
+            [...document.querySelectorAll("#tree .sec-title")].some((h) => h.textContent.includes("ImportTest170")),
+            [...document.querySelectorAll("#tree .sec-title")].map((h) => h.textContent).join("|").slice(0, 160)
+          );
+          check2("[170-IM] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E1B\u0E34\u0E14\u0E40\u0E2D\u0E07\u0E2B\u0E25\u0E31\u0E07\u0E19\u0E33\u0E40\u0E02\u0E49\u0E32", !document.querySelector(".k-msimp"));
+          const r2IM = await impIM({ paths: [docxIM], book: "ImportTest170", auto: true });
+          check2('[170-IM] \u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E25\u0E48\u0E21\u0E0B\u0E49\u0E33 \u2192 \u0E42\u0E1F\u0E25\u0E40\u0E14\u0E2D\u0E23\u0E4C\u0E43\u0E2B\u0E21\u0E48 "ImportTest170 2" (\u0E40\u0E25\u0E48\u0E21\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30)', !!r2IM && r2IM.book === "ImportTest170 2" && (await kapi.readJson(await kapi.join(book2IM, "section.json"))).title === "ImportTest170 2" && await kapi.readFile(f1IM) === txtIM, r2IM);
+          const r3IM = await impIM({ text: "\u0E04\u0E33\u0E19\u0E33\n\n\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 1 \u0E40\u0E23\u0E34\u0E48\u0E21\n\n\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E19\u0E36\u0E48\u0E07\n\n\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E2D\u0E07\n\n\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 2\n\n\u0E08\u0E1A", book: "PasteTest170", auto: true });
+          const dr3IM = await kapi.readJson(await kapi.join(pasteIM, "Draft", "default", "draft.json"));
+          check2('[170-IM] \u0E27\u0E32\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21: "\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 N" \u0E16\u0E39\u0E01\u0E41\u0E1A\u0E48\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E1A\u0E17 (\u0E04\u0E33\u0E19\u0E33 = \u0E1A\u0E17\u0E41\u0E23\u0E01)', !!r3IM && dr3IM.chapters.map((c) => c.title).join("|") === "PasteTest170|\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 1 \u0E40\u0E23\u0E34\u0E48\u0E21|\u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 2", dr3IM.chapters.map((c) => c.title));
+          const sc3IM = await kapi.readJson(await kapi.join(pasteIM, "Draft", "default", "scenes.json"));
+          const c3IM = dr3IM.chapters[1];
+          const b3IM = await kapi.readFile(await kapi.join(pasteIM, "Draft", "default", "Chapters", c3IM.folderName, sc3IM.chapters[c3IM.guid][0].fileName));
+          check2("[170-IM] \u0E27\u0E32\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21: \u0E1A\u0E23\u0E23\u0E17\u0E31\u0E14\u0E27\u0E48\u0E32\u0E07\u0E04\u0E31\u0E48\u0E19\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E44\u0E21\u0E48\u0E01\u0E25\u0E32\u0E22\u0E40\u0E1B\u0E47\u0E19\u0E22\u0E48\u0E2D\u0E2B\u0E19\u0E49\u0E32\u0E27\u0E48\u0E32\u0E07", /ย่อหน้าหนึ่ง\nย่อหน้าสอง\n?$/.test(b3IM), b3IM);
+          const rootIM = state.root;
+          state.root = null;
+          const r4IM = await impIM({ text: "x", auto: true });
+          state.root = rootIM;
+          const tIM = [...document.querySelectorAll("#k-toasts .k-toast")].pop();
+          check2("[170-IM] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C: \u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14\u0E01\u0E25\u0E48\u0E2D\u0E07 + \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E2D\u0E22\u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E1B\u0E38\u0E48\u0E21\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C", r4IM === null && !document.querySelector(".k-msimp") && !!tIM && tIM.textContent.includes(t("ui.manuscript.needProject")) && !!tIM.querySelector(".k-toast-act"));
+          if (tIM) tIM.remove();
+        } finally {
+          for (const p of [bookIM, book2IM, pasteIM]) await closeTabsUnderPath(p, { save: false }).catch(() => {
+          });
+          for (const p of [bookIM, book2IM, pasteIM, albumIM, docxIM]) await kapi.remove(p).catch(() => {
+          });
+          document.querySelectorAll(".k-msimp").forEach((n2) => n2.closest(".k-overlay")?.remove());
+          await buildTree2();
+        }
+        check2("[170-IM] \u0E40\u0E01\u0E47\u0E1A\u0E01\u0E27\u0E32\u0E14: \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E25\u0E48\u0E21/\u0E41\u0E17\u0E47\u0E1A\u0E02\u0E2D\u0E07\u0E40\u0E17\u0E2A\u0E04\u0E49\u0E32\u0E07", !await kapi.exists(bookIM) && ![...state.tabs.keys()].some((k) => k.includes("ImportTest170") || k.includes("PasteTest170")));
+      }
+      {
+        const wD = (ms) => new Promise((r) => setTimeout(r, ms));
+        const { importManuscriptDialog: impD } = await Promise.resolve().then(() => (init_import_manuscript_ui(), import_manuscript_ui_exports));
+        const { importDocxCommentsDialog: importDocxCommentsDialog2 } = await Promise.resolve().then(() => (init_docx_comments_ui(), docx_comments_ui_exports));
+        const { commentStore: csD } = await Promise.resolve().then(() => (init_comment_ui(), comment_ui_exports));
+        const { parseComments: pcD } = await Promise.resolve().then(() => (init_comment_core(), comment_core_exports));
+        const JSZipD = (await Promise.resolve().then(() => __toESM(require_jszip_min()))).default;
+        const bookD = await kapi.join(state.root, "DxcTest170");
+        const docxD = await kapi.join(state.root, "..", "k2-dxc170-test.docx");
+        await kapi.remove(bookD).catch(() => {
+        });
+        let hubD = null;
+        try {
+          const rD = await impD({ text: "\u0E42\u0E17\u0E23\u0E30\u0E40\u0E1B\u0E34\u0E14\u0E23\u0E49\u0E32\u0E19\u0E41\u0E15\u0E48\u0E40\u0E0A\u0E49\u0E32\n\u0E1D\u0E19\u0E15\u0E01\u0E2B\u0E19\u0E31\u0E01\u0E21\u0E32\u0E01\u0E17\u0E31\u0E49\u0E07\u0E04\u0E37\u0E19", book: "DxcTest170", auto: true });
+          check2("[170-DXC] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E2A\u0E23\u0E49\u0E32\u0E07\u0E40\u0E25\u0E48\u0E21\u0E17\u0E14\u0E2A\u0E2D\u0E1A\u0E44\u0E14\u0E49", !!rD && !!rD.firstScene, rD);
+          const fD = rD.firstScene;
+          if (state.tabs.has(fD)) closeTab(fD, { discard: true });
+          const store = csD();
+          const raw0 = await kapi.readFile(fD);
+          const at = raw0.indexOf("\u0E41\u0E15\u0E48\u0E40\u0E0A\u0E49\u0E32");
+          const c1 = await store.add(fD, { start: at, end: at + "\u0E41\u0E15\u0E48\u0E40\u0E0A\u0E49\u0E32".length, quote: "\u0E41\u0E15\u0E48\u0E40\u0E0A\u0E49\u0E32" }, "\u0E40\u0E0A\u0E49\u0E32\u0E44\u0E1B\u0E44\u0E2B\u0E21170", { author: "\u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19170" });
+          await store.reply(fD, c1.id, "\u0E15\u0E31\u0E49\u0E07\u0E43\u0E08\u0E04\u0E23\u0E31\u0E1A170", { author: "\u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19170" });
+          const c2 = await store.add(fD, null, "\u0E1B\u0E34\u0E14\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27170", { author: "\u0E19\u0E31\u0E01\u0E40\u0E02\u0E35\u0E22\u0E19170" });
+          await store.resolve(fD, c2.id, true);
+          const dPathD = await kapi.join(bookD, "Draft", "default");
+          hubD = await openExportHub();
+          hubD.cfg.scope = "draft";
+          hubD.cfg.draft = dPathD;
+          await hubD.setFormat("docx");
+          const cbD = document.querySelector("#xhub-docx-comments");
+          check2('[170-DXC] \u0E15\u0E31\u0E27\u0E40\u0E25\u0E37\u0E2D\u0E01 "\u0E41\u0E19\u0E1A\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C" \u0E02\u0E36\u0E49\u0E19\u0E40\u0E09\u0E1E\u0E32\u0E30 DOCX', !!cbD && !cbD.checked);
+          const plainD = await JSZipD.loadAsync((await hubD.ebook()).bytes);
+          check2("[170-DXC] \u0E44\u0E21\u0E48\u0E15\u0E34\u0E4A\u0E01 = \u0E44\u0E21\u0E48\u0E21\u0E35 comments.xml (\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E17\u0E38\u0E01\u0E2D\u0E22\u0E48\u0E32\u0E07)", !plainD.file("word/comments.xml"));
+          cbD.checked = true;
+          cbD.dispatchEvent(new Event("change"));
+          await wD(100);
+          const exD = await hubD.ebook();
+          const zD = await JSZipD.loadAsync(exD.bytes);
+          const cxD = zD.file("word/comments.xml") ? await zD.file("word/comments.xml").async("string") : "";
+          const docD = await zD.file("word/document.xml").async("string");
+          check2("[170-DXC] \u2605 \u0E15\u0E34\u0E4A\u0E01\u0E41\u0E25\u0E49\u0E27: comments.xml \u0E21\u0E35\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C + \u0E04\u0E33\u0E15\u0E2D\u0E1A (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E18\u0E23\u0E14\u0E17\u0E35\u0E48\u0E1B\u0E34\u0E14\u0E41\u0E25\u0E49\u0E27)", cxD.includes("\u0E40\u0E0A\u0E49\u0E32\u0E44\u0E1B\u0E44\u0E2B\u0E21170") && cxD.includes("\u0E15\u0E31\u0E49\u0E07\u0E43\u0E08\u0E04\u0E23\u0E31\u0E1A170") && !cxD.includes("\u0E1B\u0E34\u0E14\u0E44\u0E1B\u0E41\u0E25\u0E49\u0E27170"), cxD.slice(0, 300));
+          check2('[170-DXC] \u0E0A\u0E48\u0E27\u0E07\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E25\u0E49\u0E2D\u0E21 "\u0E41\u0E15\u0E48\u0E40\u0E0A\u0E49\u0E32" \u0E43\u0E19\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23', /commentRangeStart w:id="0"\/>(?:<[^>]+>)*<w:r>(?:<w:rPr>.*?<\/w:rPr>)?<w:t xml:space="preserve">แต่เช้า/.test(docD), docD.slice(docD.indexOf("\u0E42\u0E17\u0E23\u0E30") - 50, docD.indexOf("\u0E42\u0E17\u0E23\u0E30") + 400));
+          check2("[170-DXC] \u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E20\u0E32\u0E22\u0E43\u0E19\u0E2B\u0E25\u0E38\u0E14\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C", ![57536, 57537, 57538].some((c) => docD.includes(String.fromCharCode(c))));
+          check2("[170-DXC] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E1C\u0E25\u0E1A\u0E2D\u0E01\u0E08\u0E33\u0E19\u0E27\u0E19\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C", /2/.test(exD.note) && exD.note.includes(tf("ui.xhub.doneDocxComments", 2)), exD.note);
+          check2("[170-DXC] \u0E44\u0E1F\u0E25\u0E4C\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E15\u0E30 (\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22)", !(await kapi.readFile(fD)).split("").some((ch) => ch >= String.fromCharCode(57536) && ch <= String.fromCharCode(57538)));
+          cbD.checked = false;
+          cbD.dispatchEvent(new Event("change"));
+          await wD(50);
+          hubD.close();
+          hubD = null;
+          let cx2 = cxD;
+          let ex = await zD.file("word/commentsExtended.xml").async("string");
+          const p0 = (cx2.match(/<w:comment w:id="0"[\s\S]*?w14:paraId="([0-9A-F]+)"/) || [])[1];
+          cx2 = cx2.replace("</w:comments>", '<w:comment w:id="9" w:author="\u0E1A\u0E01.170" w:date="2026-10-05T10:00:00Z"><w:p w14:paraId="0BBB0001"><w:r><w:t>\u0E2A\u0E32\u0E22\u0E2B\u0E19\u0E48\u0E2D\u0E22170</w:t></w:r></w:p></w:comment><w:comment w:id="10" w:author="\u0E1A\u0E01.170" w:date="2026-10-05T10:05:00Z"><w:p w14:paraId="0BBB0002"><w:r><w:t>\u0E1D\u0E19\u0E41\u0E23\u0E07\u0E44\u0E1B170</w:t></w:r></w:p></w:comment></w:comments>');
+          ex = ex.replace("</w15:commentsEx>", `<w15:commentEx w15:paraId="0BBB0001" w15:paraIdParent="${p0}" w15:done="0"/><w15:commentEx w15:paraId="0BBB0002" w15:done="0"/></w15:commentsEx>`);
+          const doc22 = docD.replace("\u0E1D\u0E19\u0E15\u0E01", '</w:t></w:r><w:commentRangeStart w:id="10"/><w:r><w:t xml:space="preserve">\u0E1D\u0E19\u0E15\u0E01</w:t></w:r><w:commentRangeEnd w:id="10"/><w:r><w:commentReference w:id="10"/></w:r><w:r><w:t xml:space="preserve">');
+          zD.file("word/comments.xml", cx2);
+          zD.file("word/commentsExtended.xml", ex);
+          zD.file("word/document.xml", doc22);
+          await kapi.writeBytes(docxD, Array.from(await zD.generateAsync({ type: "uint8array" })));
+          const rIn = await importDocxCommentsDialog2({ path: docxD, auto: true });
+          check2("[170-DXC] \u2605 \u0E23\u0E31\u0E1A\u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C: \u0E43\u0E2B\u0E21\u0E48 1 \xB7 \u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E43\u0E2B\u0E21\u0E48 1 \xB7 \u0E25\u0E07\u0E09\u0E32\u0E01\u0E40\u0E14\u0E35\u0E22\u0E27", !!rIn && rIn.files === 1 && rIn.stats.added === 1 && rIn.stats.replies === 1 && rIn.stats.unmatched === 0, rIn && rIn.stats);
+          const after = pcD(await kapi.readFile(fD));
+          const t1 = after.find((c) => c.text === "\u0E40\u0E0A\u0E49\u0E32\u0E44\u0E1B\u0E44\u0E2B\u0E21170");
+          const tn = after.find((c) => c.text === "\u0E1D\u0E19\u0E41\u0E23\u0E07\u0E44\u0E1B170");
+          check2("[170-DXC] \u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E02\u0E2D\u0E07 \u0E1A\u0E01. \u0E15\u0E48\u0E2D\u0E17\u0E49\u0E32\u0E22\u0E40\u0E18\u0E23\u0E14\u0E40\u0E14\u0E34\u0E21 (\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E40\u0E14\u0E34\u0E21\u0E44\u0E21\u0E48\u0E0B\u0E49\u0E33)", t1 && t1.replies.map((r) => r.text).join("|") === "\u0E15\u0E31\u0E49\u0E07\u0E43\u0E08\u0E04\u0E23\u0E31\u0E1A170|\u0E2A\u0E32\u0E22\u0E2B\u0E19\u0E48\u0E2D\u0E22170", t1 && t1.replies);
+          check2('[170-DXC] \u0E04\u0E2D\u0E21\u0E40\u0E21\u0E19\u0E15\u0E4C\u0E43\u0E2B\u0E21\u0E48\u0E1C\u0E39\u0E01 "\u0E1D\u0E19\u0E15\u0E01" + \u0E1C\u0E39\u0E49\u0E40\u0E02\u0E35\u0E22\u0E19\u0E08\u0E32\u0E01 Word', tn && tn.anchor && tn.anchor.quote === "\u0E1D\u0E19\u0E15\u0E01" && tn.author === "\u0E1A\u0E01.170", tn);
+          check2("[170-DXC] \u0E40\u0E19\u0E37\u0E49\u0E2D\u0E09\u0E32\u0E01\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E25\u0E35\u0E48\u0E22\u0E19", (await kapi.readFile(fD)).includes("\u0E42\u0E17\u0E23\u0E30\u0E40\u0E1B\u0E34\u0E14\u0E23\u0E49\u0E32\u0E19\u0E41\u0E15\u0E48\u0E40\u0E0A\u0E49\u0E32\n\u0E1D\u0E19\u0E15\u0E01\u0E2B\u0E19\u0E31\u0E01\u0E21\u0E32\u0E01\u0E17\u0E31\u0E49\u0E07\u0E04\u0E37\u0E19"));
+          const rAgain = await importDocxCommentsDialog2({ path: docxD, auto: true });
+          check2("[170-DXC] \u0E19\u0E33\u0E40\u0E02\u0E49\u0E32\u0E44\u0E1F\u0E25\u0E4C\u0E40\u0E14\u0E34\u0E21\u0E0B\u0E49\u0E33 = \u0E44\u0E21\u0E48\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2D\u0E30\u0E44\u0E23", !!rAgain && rAgain.files === 0 && rAgain.stats.added === 0 && rAgain.stats.replies === 0, rAgain && rAgain.stats);
+          const LK = await Promise.resolve().then(() => (init_project_lock_ui(), project_lock_ui_exports));
+          const me2 = await kapi.lockMe();
+          check2("[170-LOCK] main \u0E1A\u0E2D\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07 + \u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19", !!me2 && !!me2.machine && !!me2.session, me2);
+          const mine = await kapi.lockRead(state.root);
+          check2("[170-LOCK] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E41\u0E25\u0E49\u0E27\u0E21\u0E35\u0E44\u0E1F\u0E25\u0E4C\u0E25\u0E47\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E19\u0E35\u0E49", !!mine && mine.session === me2.session && mine.machine === me2.machine, mine);
+          const lockF = await kapi.join(state.root, ".k2lock.json");
+          const otherLock = (ageMs) => JSON.stringify({ machine: "DESKTOP-K2TEST", user: "x", session: "other-session-170", app: "2", since: new Date(Date.now() - ageMs).toISOString(), beat: new Date(Date.now() - ageMs).toISOString() });
+          await kapi.writeFile(lockF, otherLock(30 * 1e3));
+          const pA = LK.checkProjectLock(state.root);
+          let ovL = null;
+          for (let i5 = 0; i5 < 40 && !(ovL = [...document.querySelectorAll(".k-overlay")].pop()); i5++) await wD(50);
+          check2("[170-LOCK] \u2605 \u0E2D\u0E35\u0E01\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E22\u0E31\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E22\u0E39\u0E48 = \u0E16\u0E32\u0E21\u0E01\u0E48\u0E2D\u0E19 (\u0E1A\u0E2D\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07)", !!ovL && ovL.textContent.includes("DESKTOP-K2TEST"), ovL && ovL.textContent.slice(0, 120));
+          ovL.querySelector(".k-cancel").click();
+          check2("[170-LOCK] \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01 = \u0E44\u0E21\u0E48\u0E40\u0E1B\u0E34\u0E14", await pA === false);
+          const pB = LK.checkProjectLock(state.root);
+          for (let i5 = 0; i5 < 40 && !(ovL = [...document.querySelectorAll(".k-overlay")].pop()); i5++) await wD(50);
+          const okL = ovL && ovL.querySelector(":scope .k-dlg-btns > .k-ok");
+          check2('[170-LOCK] \u0E1B\u0E38\u0E48\u0E21 "\u0E40\u0E1B\u0E34\u0E14\u0E15\u0E48\u0E2D\u0E17\u0E35\u0E48\u0E19\u0E35\u0E48" \u0E40\u0E1B\u0E47\u0E19\u0E1B\u0E38\u0E48\u0E21\u0E2B\u0E25\u0E31\u0E01\u0E02\u0E27\u0E32\u0E2A\u0E38\u0E14', !!okL && okL === ovL.querySelector(".k-dlg-btns").lastElementChild && okL.textContent === t("ui.lock.openAnyway"));
+          okL.click();
+          check2("[170-LOCK] \u0E40\u0E1B\u0E34\u0E14\u0E15\u0E48\u0E2D = true", await pB === true);
+          await kapi.writeFile(lockF, otherLock(60 * 60 * 1e3));
+          const nToast = document.querySelectorAll("#k-toasts .k-toast").length;
+          check2("[170-LOCK] \u0E25\u0E47\u0E2D\u0E01\u0E2B\u0E21\u0E14\u0E2D\u0E32\u0E22\u0E38 = \u0E40\u0E1B\u0E34\u0E14\u0E44\u0E14\u0E49\u0E40\u0E25\u0E22 \u0E44\u0E21\u0E48\u0E16\u0E32\u0E21", await LK.checkProjectLock(state.root) === true && !document.querySelector(".k-overlay"));
+          await LK.holdProjectLock(state.root);
+          const tL = [...document.querySelectorAll("#k-toasts .k-toast")].find((x) => x.textContent.includes("DESKTOP-K2TEST"));
+          check2("[170-LOCK] ...\u0E41\u0E15\u0E48\u0E1A\u0E2D\u0E01\u0E40\u0E1A\u0E32 \u0E46 \u0E27\u0E48\u0E32\u0E04\u0E23\u0E31\u0E49\u0E07\u0E25\u0E48\u0E32\u0E2A\u0E38\u0E14\u0E40\u0E1B\u0E34\u0E14\u0E17\u0E35\u0E48\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E44\u0E2B\u0E19", !!tL, nToast + " \u2192 " + [...document.querySelectorAll("#k-toasts .k-toast")].map((x) => x.textContent).join(" | ").slice(0, 200));
+          if (tL) tL.remove();
+          check2("[170-LOCK] \u0E16\u0E37\u0E2D\u0E25\u0E47\u0E2D\u0E01\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E1B\u0E47\u0E19\u0E02\u0E2D\u0E07\u0E40\u0E0B\u0E2A\u0E0A\u0E31\u0E19\u0E19\u0E35\u0E49", (await kapi.lockRead(state.root) || {}).session === me2.session);
+          await LK.releaseProjectLock();
+          check2("[170-LOCK] \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E25\u0E47\u0E2D\u0E01 = \u0E44\u0E1F\u0E25\u0E4C\u0E2B\u0E32\u0E22", !await kapi.exists(lockF));
+          await LK.holdProjectLock(state.root);
+          check2("[170-LOCK] \u0E16\u0E37\u0E2D\u0E43\u0E2B\u0E21\u0E48\u0E44\u0E14\u0E49", (await kapi.lockRead(state.root) || {}).session === me2.session);
+          await kapi.writeFile(lockF, otherLock(30 * 1e3));
+          await kapi.lockRelease();
+          check2("[170-LOCK] \u2605 \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E25\u0E47\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E25\u0E1A\u0E25\u0E47\u0E2D\u0E01\u0E02\u0E2D\u0E07\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2D\u0E37\u0E48\u0E19", (await kapi.lockRead(state.root) || {}).session === "other-session-170");
+          await LK.holdProjectLock(state.root);
+          const { ZIP_SKIP_ROOT_FILES: ZIP_SKIP_ROOT_FILES2 } = await Promise.resolve().then(() => (init_export_zip(), export_zip_exports));
+          check2("[170-LOCK] \u0E25\u0E47\u0E2D\u0E01\u0E44\u0E21\u0E48\u0E15\u0E34\u0E14\u0E44\u0E1B\u0E01\u0E31\u0E1A ZIP \u0E02\u0E2D\u0E07\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C", ZIP_SKIP_ROOT_FILES2.includes(".k2lock.json"));
+          const DrD = await Promise.resolve().then(() => (init_project_doctor_ui(), project_doctor_ui_exports));
+          const dirD = fD.replace(/[\\/][^\\/]*$/, "");
+          const baseD = fD.split(/[\\/]/).pop();
+          const copyD = await kapi.join(dirD, baseD.replace(/\.md$/, "") + " (conflicted copy).md");
+          await kapi.writeFile(copyD, "---\ntitle: copy\ntype: scene\n---\n\u0E09\u0E1A\u0E31\u0E1A\u0E2D\u0E35\u0E01\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\n");
+          const isD = (await DrD.scanProject()).filter((x) => x.type === "orphan-file" && copyD.endsWith(x.file));
+          check2("[170-LOCK] \u2605 \u0E15\u0E31\u0E27\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E38\u0E02\u0E20\u0E32\u0E1E: \u0E2A\u0E33\u0E40\u0E19\u0E32 Dropbox = \u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E33\u0E40\u0E19\u0E32\u0E02\u0E2D\u0E07\u0E09\u0E32\u0E01\u0E44\u0E2B\u0E19", isD.length === 1 && isD[0].syncOf === baseD && DrD.describeIssue(isD[0]) === tf("ui.doctor.tSyncCopy", isD[0].file, baseD), isD[0] && DrD.describeIssue(isD[0]));
+          await kapi.remove(copyD).catch(() => {
+          });
+          await handleCommand("sync-guide");
+          let dv = null;
+          for (let i5 = 0; i5 < 60 && !((dv = document.querySelector(".k-docs-ov .k-docs-body")) && dv.textContent.includes("Dropbox")); i5++) await wD(50);
+          check2("[170-LOCK] \u0E40\u0E21\u0E19\u0E39\u0E0A\u0E48\u0E27\u0E22\u0E40\u0E2B\u0E25\u0E37\u0E2D \u2192 \u0E43\u0E0A\u0E49\u0E2B\u0E25\u0E32\u0E22\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07 \u0E40\u0E1B\u0E34\u0E14\u0E04\u0E39\u0E48\u0E21\u0E37\u0E2D\u0E1A\u0E17 17", !!dv && dv.textContent.includes(".k2lock.json"), dv && dv.textContent.slice(0, 80));
+          document.querySelectorAll(".k-docs-ov").forEach((n2) => n2.remove());
+        } finally {
+          if (hubD) {
+            try {
+              const cb = document.querySelector("#xhub-docx-comments");
+              if (cb && cb.checked) {
+                cb.checked = false;
+                cb.dispatchEvent(new Event("change"));
+              }
+              hubD.close();
+            } catch {
+            }
+          }
+          await closeTabsUnderPath(bookD, { save: false }).catch(() => {
+          });
+          for (const p of [bookD, docxD]) await kapi.remove(p).catch(() => {
+          });
+          document.querySelectorAll(".k-overlay").forEach((n2) => n2.remove());
+          await buildTree2();
+        }
+        check2("[170-DXC] \u0E40\u0E01\u0E47\u0E1A\u0E01\u0E27\u0E32\u0E14", !await kapi.exists(bookD));
+      }
+      {
+        const wS = (ms) => new Promise((r) => setTimeout(r, ms));
+        const AS = await Promise.resolve().then(() => (init_app(), app_exports));
+        const P8 = await Promise.resolve().then(() => (init_project(), project_exports));
+        const shown = (id) => {
+          const b = document.getElementById(id);
+          return !!b && !b.classList.contains("tb-hidden") && !b.hidden && b.offsetWidth > 0;
+        };
+        const tbBefore = JSON.stringify(state.settings.toolbar || null);
+        const fmtBefore = JSON.stringify(state.settings.fmtbar || null);
+        const openBefore = ["tree", "outline", "props", "kanban", "dashboard"].filter((p) => isPanelOpen(p));
+        const kanbanBtnBefore = shown("tb-kanban");
+        try {
+          check2("[170-SM] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E40\u0E23\u0E34\u0E48\u0E21\u0E08\u0E32\u0E01\u0E42\u0E2B\u0E21\u0E14\u0E1B\u0E01\u0E15\u0E34", !state.settings.simpleMode && !document.body.classList.contains("k-simple"));
+          await AS.handleCommand("toggle-simple-mode");
+          await wS(150);
+          check2("[170-SM] \u2605 \u0E40\u0E1B\u0E34\u0E14\u0E42\u0E2B\u0E21\u0E14: body.k-simple + \u0E04\u0E48\u0E32\u0E23\u0E30\u0E14\u0E31\u0E1A\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49", document.body.classList.contains("k-simple") && state.settings.simpleMode === true && (await kapi.readGlobalSettings()).simpleMode === true);
+          const tbIds = ["tb-tree-panel", "tb-settings", "tb-kanban", "tb-timeline"];
+          const tbState = () => tbIds.map((id) => {
+            const b = document.getElementById(id);
+            return id + ":" + (b ? b.className + "/" + b.offsetWidth : "none");
+          }).join(" ");
+          await (await Promise.resolve().then(() => (init_toolbar_ui(), toolbar_ui_exports))).layoutToolbarOverflow();
+          check2("[170-SM] \u0E41\u0E16\u0E1A\u0E2B\u0E25\u0E31\u0E01\u0E40\u0E2B\u0E25\u0E37\u0E2D\u0E1B\u0E38\u0E48\u0E21\u0E1E\u0E37\u0E49\u0E19\u0E10\u0E32\u0E19 (Explorer \xB7 \u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32) \xB7 \u0E1B\u0E38\u0E48\u0E21\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E17\u0E32\u0E07\u0E16\u0E39\u0E01\u0E0B\u0E48\u0E2D\u0E19", shown("tb-tree-panel") && shown("tb-settings") && !shown("tb-kanban") && !shown("tb-timeline"), tbState() + " win=" + innerWidth);
+          check2('[170-SM] \u0E1B\u0E38\u0E48\u0E21 "\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14" \u0E01\u0E14\u0E44\u0E14\u0E49\u0E41\u0E21\u0E49\u0E44\u0E21\u0E48\u0E21\u0E35\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E40\u0E1B\u0E34\u0E14 (\u0E44\u0E21\u0E48\u0E15\u0E34\u0E14 .dis)', !document.getElementById("tb-simple-exit").classList.contains("dis"));
+          const ovfItems = (await Promise.resolve().then(() => (init_toolbar_ui(), toolbar_ui_exports))).toolbarOverflowItems();
+          check2("[170-SM] \u0E40\u0E21\u0E19\u0E39 \xBB \u0E21\u0E35\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E42\u0E2B\u0E21\u0E14\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E07\u0E48\u0E32\u0E22\u0E0B\u0E48\u0E2D\u0E19 (\u0E01\u0E14\u0E43\u0E0A\u0E49\u0E44\u0E14\u0E49\u0E42\u0E14\u0E22\u0E44\u0E21\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E42\u0E2B\u0E21\u0E14)", ovfItems.some((it) => it && it.text && it.text === (document.getElementById("tb-kanban").getAttribute("title") || "").split("\n")[0].trim()));
+          check2('[170-SM] \u0E1B\u0E38\u0E48\u0E21 "\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14" \u0E21\u0E2D\u0E07\u0E40\u0E2B\u0E47\u0E19 + \u0E21\u0E35\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21', shown("tb-simple-exit") && document.getElementById("tb-simple-exit").textContent.trim() === t("ui.simple.exitLabel"));
+          check2("[170-SM] \u0E1B\u0E38\u0E48\u0E21\u0E40\u0E1B\u0E34\u0E14/\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01/\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C\u0E22\u0E31\u0E07\u0E2D\u0E22\u0E39\u0E48 (\u0E1B\u0E38\u0E48\u0E21\u0E17\u0E35\u0E48\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E04\u0E38\u0E21)", shown("open-btn") && shown("search-all-btn"));
+          check2("[170-SM] \u2605 \u0E04\u0E48\u0E32\u0E41\u0E16\u0E1A\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E02\u0E2D\u0E07\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E41\u0E01\u0E49", JSON.stringify(state.settings.toolbar || null) === tbBefore && JSON.stringify(state.settings.fmtbar || null) === fmtBefore);
+          check2(
+            "[170-SM] \u0E41\u0E1C\u0E07: \u0E40\u0E2B\u0E25\u0E37\u0E2D Explorer + \u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23",
+            isPanelOpen("tree") && !isPanelOpen("props") && !isPanelOpen("kanban") && !isPanelOpen("dashboard"),
+            ["tree", "props", "kanban", "dashboard"].map((p) => p + ":" + isPanelOpen(p)).join(" ")
+          );
+          check2("[170-SM] \u0E40\u0E27\u0E34\u0E23\u0E4C\u0E01\u0E2A\u0E40\u0E1B\u0E0B\u0E17\u0E35\u0E48\u0E08\u0E14\u0E44\u0E27\u0E49\u0E44\u0E21\u0E48\u0E42\u0E1C\u0E25\u0E48\u0E43\u0E19\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E02\u0E2D\u0E07\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49", !(await Promise.resolve().then(() => (init_panel_ui(), panel_ui_exports))).listWorkspaces().some((w) => String(w.name).startsWith("__k2")));
+          if (kapi.menuItemState) {
+            let ms = [];
+            for (let i5 = 0; i5 < 40; i5++) {
+              ms = await kapi.menuItemState(["view-simple-mode"]);
+              if (ms[0] && ms[0].checked) break;
+              await wS(50);
+            }
+            check2("[170-SM] \u0E40\u0E21\u0E19\u0E39 \u0E21\u0E38\u0E21\u0E21\u0E2D\u0E07 \u2192 \u0E42\u0E2B\u0E21\u0E14\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E07\u0E48\u0E32\u0E22 \u0E15\u0E34\u0E4A\u0E01\u0E2D\u0E22\u0E39\u0E48", !!ms[0] && ms[0].exists && ms[0].checked === true, JSON.stringify(ms));
+          }
+          const tS = [...document.querySelectorAll("#k-toasts .k-toast")].pop();
+          check2("[170-SM] \u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E25\u0E2D\u0E22\u0E1A\u0E2D\u0E01\u0E27\u0E48\u0E32\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E2D\u0E37\u0E48\u0E19\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E40\u0E21\u0E19\u0E39 + \u0E1B\u0E38\u0E48\u0E21\u0E2D\u0E2D\u0E01", !!tS && tS.textContent.includes(t("ui.simple.onToast")) && !!tS.querySelector(".k-toast-act"));
+          if (tS) tS.remove();
+          document.getElementById("tb-simple-exit").click();
+          for (let i5 = 0; i5 < 40 && state.settings.simpleMode; i5++) await wS(50);
+          await wS(150);
+          check2('[170-SM] \u2605 \u0E01\u0E14 "\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E21\u0E37\u0E2D\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14" = \u0E2D\u0E2D\u0E01\u0E08\u0E32\u0E01\u0E42\u0E2B\u0E21\u0E14', !state.settings.simpleMode && !document.body.classList.contains("k-simple") && !shown("tb-simple-exit"));
+          check2("[170-SM] \u2605 \u0E1B\u0E38\u0E48\u0E21\u0E01\u0E25\u0E31\u0E1A\u0E21\u0E32\u0E15\u0E32\u0E21\u0E04\u0E48\u0E32\u0E02\u0E2D\u0E07\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49", shown("tb-kanban") === kanbanBtnBefore && shown("tb-tree-panel"));
+          const openAfter = ["tree", "outline", "props", "kanban", "dashboard"].filter((p) => isPanelOpen(p));
+          check2("[170-SM] \u2605 \u0E40\u0E25\u0E22\u0E4C\u0E40\u0E2D\u0E32\u0E15\u0E4C\u0E41\u0E1C\u0E07\u0E01\u0E25\u0E31\u0E1A\u0E40\u0E2B\u0E21\u0E37\u0E2D\u0E19\u0E01\u0E48\u0E2D\u0E19\u0E40\u0E02\u0E49\u0E32\u0E42\u0E2B\u0E21\u0E14", JSON.stringify(openAfter) === JSON.stringify(openBefore), openBefore.join(",") + " \u2192 " + openAfter.join(","));
+          const parent = await kapi.join(state.root, "..");
+          const made = [];
+          try {
+            const rW = await P8.createProjectFromTemplate(parent, "k2-tpl-web170", "webnovel");
+            made.push(rW);
+            const secW = (await kapi.listDirs(rW)).filter((d) => !["Images", "Memos", "Recycle", "Research", "Wiki"].includes(d));
+            const drW = await kapi.readJson(await kapi.join(rW, secW[0], "Draft", "default", "draft.json"));
+            check2("[170-SM] \u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15\u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E27\u0E47\u0E1A: \u0E15\u0E2D\u0E19\u0E17\u0E35\u0E48 1\u20133", drW.chapters.map((c) => c.title).join("|") === [1, 2, 3].map((n2) => tf("ui.project.episodeF", n2)).join("|"), drW.chapters.map((c) => c.title));
+            const rV = await P8.createProjectFromTemplate(parent, "k2-tpl-vn170", "vn");
+            made.push(rV);
+            const secs = [];
+            for (const d of await kapi.listDirs(rV)) {
+              const sj4 = await kapi.join(rV, d, "section.json");
+              if (await kapi.exists(sj4)) secs.push(await kapi.readJson(sj4));
+            }
+            secs.sort((a, b) => a.order - b.order);
+            check2("[170-SM] \u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15 VN: \u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E01 + \u0E40\u0E2A\u0E49\u0E19\u0E17\u0E32\u0E07 A \u0E40\u0E1B\u0E47\u0E19\u0E2A\u0E2D\u0E07\u0E40\u0E25\u0E48\u0E21", secs.map((x) => x.title).join("|") === t("ui.project.vnCommon") + "|" + tf("ui.project.vnRouteF", "A"), secs.map((x) => x.title));
+            check2("[170-SM] \u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15 VN: \u0E21\u0E35\u0E2B\u0E21\u0E27\u0E14 Wiki \u0E2A\u0E34\u0E48\u0E07\u0E02\u0E2D\u0E07", await kapi.exists(await kapi.join(rV, "Wiki", "items")));
+            const pT = P8.showTemplateDialog({ allowBlank: true });
+            await wS(80);
+            const cards = [...document.querySelectorAll(".k-newproj-card")].map((c) => c.dataset.tpl);
+            check2("[170-SM] \u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15\u0E21\u0E35\u0E19\u0E34\u0E22\u0E32\u0E22\u0E40\u0E27\u0E47\u0E1A + VN", cards.includes("webnovel") && cards.includes("vn") && cards[0] === P8.BLANK_TEMPLATE, cards.join(","));
+            [...document.querySelectorAll(".k-overlay")].pop().querySelector(".k-cancel").click();
+            check2("[170-SM] \u0E22\u0E01\u0E40\u0E25\u0E34\u0E01\u0E01\u0E25\u0E48\u0E2D\u0E07\u0E40\u0E17\u0E21\u0E40\u0E1E\u0E25\u0E15 = null", await pT === null);
+          } finally {
+            for (const r of made) if (r) await kapi.remove(r).catch(() => {
+            });
+            await kapi.removeRecent?.(made[0]).catch?.(() => {
+            });
+          }
+          const HU = await Promise.resolve().then(() => (init_home_ui(), home_ui_exports));
+          const hov = await HU.showHomeDialog({ startup: true });
+          check2("[170-SM] \u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02: \u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E41\u0E1A\u0E1A\u0E15\u0E2D\u0E19\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E0B\u0E48\u0E2D\u0E19\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\u0E02\u0E49\u0E32\u0E07\u0E2B\u0E25\u0E31\u0E07", document.body.contains(hov) && document.body.classList.contains("k-home-only"));
+          check2("[170-SM] \u2605 \u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01\u0E17\u0E38\u0E01\u0E43\u0E1A\u0E44\u0E14\u0E49\u0E08\u0E32\u0E01\u0E17\u0E32\u0E07\u0E40\u0E1B\u0E34\u0E14\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C (\u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E40\u0E09\u0E1E\u0E32\u0E30\u0E1B\u0E38\u0E48\u0E21\u0E1A\u0E19\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E23\u0E01)", HU.closeHomeDialogs() === 1 && !document.body.contains(hov) && !document.body.classList.contains("k-home-only"));
+        } finally {
+          if (state.settings.simpleMode) await AS.setSimpleMode(false);
+          document.querySelectorAll("#k-toasts .k-toast").forEach((n2) => n2.remove());
+        }
+      }
       check2(
         "[100-5] \u2605\u2605 \u0E17\u0E31\u0E49\u0E07\u0E23\u0E2D\u0E1A\u0E44\u0E21\u0E48\u0E21\u0E35\u0E15\u0E31\u0E27\u0E27\u0E32\u0E14\u0E41\u0E1C\u0E07\u0E15\u0E31\u0E27\u0E44\u0E2B\u0E19\u0E1E\u0E31\u0E07\u0E40\u0E07\u0E35\u0E22\u0E1A \u0E46 \u0E40\u0E25\u0E22",
         (state._panelDrawErrors || 0) === 0,
@@ -246607,7 +249372,7 @@ ${css}
     await kapi.writeFile("/tmp/k2result.txt", out.join("\n"));
     document.title = out[out.length - 1] === "ALL OK" ? "TESTOK" : "TESTFAIL";
   }
-  var import_md34;
+  var import_md36;
   var init_selftest = __esm({
     "src/selftest.js"() {
       init_core();
@@ -246660,7 +249425,7 @@ ${css}
       init_section_ops();
       init_session_notes();
       init_album_core();
-      import_md34 = __toESM(require_md());
+      import_md36 = __toESM(require_md());
       init_focus_mode();
       init_visual_tags();
       init_ui();
@@ -247241,6 +250006,7 @@ ${css}
     scheduleLineGutter: () => scheduleLineGutter,
     screenplayTerms: () => screenplayTerms,
     scriptMeta: () => scriptMeta,
+    sectionCoverInfo: () => sectionCoverInfo,
     sectionCoverUrl: () => sectionCoverUrl,
     sectionPathOfFile: () => sectionPathOfFile,
     seedTabView: () => seedTabView,
@@ -247249,6 +250015,7 @@ ${css}
     setAppLanguage: () => setAppLanguage,
     setAutoFitWidth: () => setAutoFitWidth,
     setElementBadge: () => setElementBadge,
+    setFirstPageNumber: () => setFirstPageNumber,
     setFmtbarAlign: () => setFmtbarAlign,
     setFmtbarOpacity: () => setFmtbarOpacity,
     setLayoutPageCount: () => setLayoutPageCount,
@@ -247262,6 +250029,7 @@ ${css}
     setRowMemo: () => setRowMemo,
     setSceneLock: () => setSceneLock,
     setSceneStoryDate: () => setSceneStoryDate,
+    setSimpleMode: () => setSimpleMode,
     setSpThaiFont: () => setSpThaiFont,
     setSpView: () => setSpView,
     setSummaryBar: () => setSummaryBar,
@@ -247780,13 +250548,13 @@ ${css}
     g.style.top = Math.round(pr.top - hr.top) + "px";
     g.style.height = Math.round(pr.height) + "px";
     const counts = lnCountsOf(t3);
-    const kids = [...pmEl.children].filter((e) => e.nodeType === 1 && !e.classList.contains("ed-page-break") && !e.classList.contains("sp-page-break") && !e.classList.contains("ProseMirror-gapcursor"));
+    const kids3 = [...pmEl.children].filter((e) => e.nodeType === 1 && !e.classList.contains("ed-page-break") && !e.classList.contains("sp-page-break") && !e.classList.contains("ProseMirror-gapcursor"));
     const frag = document.createDocumentFragment();
     const zoom = parseFloat(getComputedStyle(pmEl.parentElement).zoom) || 1;
     let n2 = 0;
     let lineNo = 1;
-    for (let i5 = 0; i5 < kids.length; i5++) {
-      const kid = kids[i5];
+    for (let i5 = 0; i5 < kids3.length; i5++) {
+      const kid = kids3[i5];
       const span = counts && counts[i5] > 0 ? counts[i5] : 1;
       const start = lineNo;
       lineNo += span;
@@ -247841,9 +250609,9 @@ ${css}
       }
       const br = box2.getBoundingClientRect();
       const frag = document.createDocumentFragment();
-      const kids = pm2.children;
-      for (let i5 = 0; i5 < kids.length; i5++) {
-        const r = kids[i5].getBoundingClientRect();
+      const kids3 = pm2.children;
+      for (let i5 = 0; i5 < kids3.length; i5++) {
+        const r = kids3[i5].getBoundingClientRect();
         if (!r.height) continue;
         const d = el("div", "wiki-ln-no", String(i5 + 1));
         d.style.top = Math.round(r.top - br.top) + "px";
@@ -248164,6 +250932,30 @@ ${css}
       applyZoomVars();
     });
   }
+  async function setSimpleMode(on2, { layout = true } = {}) {
+    const want = on2 === void 0 ? !state.settings.simpleMode : !!on2;
+    await saveGlobalSetting("simpleMode", want);
+    if (state.settings.simpleLayoutPending) await saveGlobalSetting("simpleLayoutPending", false);
+    if (state.root) saveProjectMetaSoon();
+    if (layout) {
+      try {
+        want ? enterSimpleLayout(SIMPLE_WS) : leaveSimpleLayout(SIMPLE_WS);
+      } catch (e) {
+        log("warn", "simple mode: layout", e);
+      }
+    }
+    applyToolbarConfig();
+    refreshToolbar();
+    syncMenuToggles();
+    logAction("view", "simple mode " + (want ? "on" : "off"));
+    if (want) toast(t("ui.simple.onToast"), {
+      level: "info",
+      ttl: 9e3,
+      action: { label: t("ui.simple.exitLabel"), onClick: () => setSimpleMode(false) }
+    });
+    else setStatus(t("ui.simple.offStatus"));
+    return want;
+  }
   function setAutoFitWidth(on2, { save = true, was = !!state.settings.autoFitWidth } = {}) {
     const v2 = on2 === void 0 ? !was : !!on2;
     state.settings.autoFitWidth = v2;
@@ -248210,8 +251002,8 @@ ${css}
     const mid = clamp7(maxX / 2);
     if (!(r > l)) return mid;
     if (l >= mid - 1 && r <= mid + cw + 1) return mid;
-    const tw = r - l;
-    if (tw <= cw) return clamp7(l - (cw - tw) / 2);
+    const tw2 = r - l;
+    if (tw2 <= cw) return clamp7(l - (cw - tw2) / 2);
     return clamp7(l - Math.min(24, (cw - 0) * 0.05));
   }
   function textColumnX(p) {
@@ -248699,6 +251491,16 @@ ${css}
     syncMenuToggles();
     setStatus(cur.show ? tf("ui.app.pageNumOpenRightMargin", cur.right, cur.top) : t("ui.app.pageNumClose"));
     return cur.show;
+  }
+  function setFirstPageNumber(on2) {
+    const cur = { ...PAGE_NUMBER_DEFAULTS, ...state.settings.spPageNumbers || {} };
+    cur.firstPage = !!on2;
+    state.settings.spPageNumbers = cur;
+    applyPageVars();
+    refreshSpView();
+    updatePageNumberHint();
+    saveProjectMetaSoon();
+    return cur.firstPage;
   }
   function currentStartPage(tab) {
     const t22 = tab || state.active;
@@ -249203,13 +252005,13 @@ ${css}
         "dim",
         tf("ui.app.placeScenePage", data2.locations.length, data2.totalScenes, data2.totalPages)
       ));
-      for (const L2 of data2.locations) {
+      for (const L3 of data2.locations) {
         const g = el("div", "k-report-group");
         const h = el("div", "k-report-ghead");
-        h.append(el("b", null, L2.location));
-        h.append(el("span", "dim", tf("ui.app.scenePage", L2.intExt.join("/") || "\u2014", L2.sceneCount, L2.pages)));
+        h.append(el("b", null, L3.location));
+        h.append(el("span", "dim", tf("ui.app.scenePage", L3.intExt.join("/") || "\u2014", L3.sceneCount, L3.pages)));
         g.append(h);
-        for (const s of L2.scenes) {
+        for (const s of L3.scenes) {
           const row4 = el("div", "k-report-row");
           row4.append(el("span", "k-report-no", t("ui.app.scene3") + s.n));
           row4.append(el("span", "k-report-pg", t("ui.common.page2") + s.page));
@@ -249579,6 +252381,8 @@ ${css}
     state.active = null;
     state.root = null;
     applyWindowTitle("");
+    if (!PANEL_WIN) releaseProjectLock().catch(() => {
+    });
     resetJsonGuard();
     _noWrite.clear();
     _mapsSig = "";
@@ -249603,6 +252407,16 @@ ${css}
     scheduleCount();
     try {
       syncDocsEmpty();
+    } catch {
+    }
+    try {
+      renderCrumbs().catch(() => {
+      });
+    } catch {
+    }
+    try {
+      syncPropsToActive().catch(() => {
+      });
     } catch {
     }
     return true;
@@ -249669,6 +252483,7 @@ ${css}
       const probe = await kapi.readJson(await kapi.join(root, "project.khn.json"));
       if (!probe || typeof probe !== "object" || Array.isArray(probe)) throw new Error("project.khn.json: not a project file");
     }
+    if (!PANEL_WIN && !await checkProjectLock(root)) return;
     if (!await closeProjectIfAny()) return;
     setBusy(t("ui.app.busyReadDataProject"));
     const meta2 = await kapi.readJson(await kapi.join(root, "project.khn.json"));
@@ -249680,6 +252495,13 @@ ${css}
     applyWikiCats();
     applyWindowTitle(state.title);
     await kapi.pushRecent(root);
+    if (!PANEL_WIN) holdProjectLock(root).catch(() => {
+    });
+    try {
+      const { closeHomeDialogs: closeHomeDialogs2 } = await Promise.resolve().then(() => (init_home_ui(), home_ui_exports));
+      closeHomeDialogs2();
+    } catch {
+    }
     try {
       if (await kapi.exists(await kapi.join(root, "languages", langFileName(i18n.lang)))) {
         setBusy(t("ui.app.busyLoadLang"));
@@ -249751,7 +252573,16 @@ ${css}
     const _restored = await restoreSessionTabs(_sess);
     if (!_restored) await restoreOpenTabs();
     if (!sessionOff()) startSessionWatch();
-    if (!state.tabs.size) {
+    if (state.settings.simpleLayoutPending && state.settings.simpleMode && !sessionOff()) {
+      try {
+        enterSimpleLayout(SIMPLE_WS);
+      } catch (e) {
+        log("warn", "simple layout", e);
+      }
+      saveGlobalSetting("simpleLayoutPending", false).catch(() => {
+      });
+    }
+    if (!state.tabs.size && !state.settings.simpleMode) {
       state._autoDash = !isPanelOpen("dashboard");
       openDashboard();
     }
@@ -249886,6 +252717,19 @@ ${css}
     setSplashActive(true);
     splashProgress(t("ui.splash.settings"), 8);
     setBusy(t("ui.app.busyStartApp"));
+    let rawG = null;
+    try {
+      rawG = await kapi.readGlobalSettings();
+    } catch {
+      rawG = null;
+    }
+    if (simpleByDefault(rawG)) {
+      try {
+        await mergeGlobalSettings({ simpleMode: true, simpleLayoutPending: true, autoFitWidth: true });
+      } catch (e) {
+        log("warn", "boot simple mode", e);
+      }
+    }
     const g = await bootGlobalSettings();
     state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
     try {
@@ -250163,7 +253007,7 @@ ${css}
     for (const tab of hits) {
       if (!tab.editor && !tab.sp && !tab.plain) continue;
       try {
-        const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(tab.file));
+        const { meta: meta2, body } = (0, import_md37.parseMdFile)(await kapi.readFile(tab.file));
         if (body === tab.body) continue;
         tab.meta = meta2;
         tab.body = body;
@@ -250865,7 +253709,7 @@ ${css}
           }
           let meta2 = {}, body = "";
           try {
-            const parsed = (0, import_md35.parseMdFile)(await kapi.readFile(it.file));
+            const parsed = (0, import_md37.parseMdFile)(await kapi.readFile(it.file));
             meta2 = parsed.meta;
             body = parsed.body;
           } catch {
@@ -251170,9 +254014,9 @@ ${css}
     const inp = el("input", "k-row-rename props-name-input");
     inp.value = old;
     inp.setAttribute("aria-label", t("ui.props.renameHint"));
-    const kids = [...row4.childNodes];
+    const kids3 = [...row4.childNodes];
     const hold = document.createDocumentFragment();
-    kids.forEach((n2) => hold.appendChild(n2));
+    kids3.forEach((n2) => hold.appendChild(n2));
     row4.appendChild(inp);
     row4.draggable = false;
     let done3 = false;
@@ -252657,7 +255501,7 @@ ${css}
         raw = await kapi.readFile(p);
       } catch {
       }
-      const meta2 = (0, import_md35.parseMdFile)(raw).meta || {};
+      const meta2 = (0, import_md37.parseMdFile)(raw).meta || {};
       memoRows.push({
         f,
         p,
@@ -253493,11 +256337,11 @@ ${css}
     return out;
   }
   async function addEntityRelation(file, rel) {
-    const same = (r4) => (r4.targetName || r4.target) === rel.targetName;
+    const same2 = (r4) => (r4.targetName || r4.target) === rel.targetName;
     const t3 = state.tabs.get(file);
     if (t3 && t3.wiki && t3.wiki.dirty) {
       const rs = t3.wiki.e.relationships = t3.wiki.e.relationships || [];
-      if (rs.some(same)) return false;
+      if (rs.some(same2)) return false;
       rs.push(rel);
       t3.wiki.render();
       t3.wiki.markDirty();
@@ -253505,7 +256349,7 @@ ${css}
     }
     const r = await mutateJson(kapi, file, (d) => {
       d.relationships = Array.isArray(d.relationships) ? d.relationships : [];
-      if (d.relationships.some(same)) return false;
+      if (d.relationships.some(same2)) return false;
       d.relationships.push(rel);
     });
     if (r.changed && t3 && t3.wiki) await t3.wiki.reloadIfExists();
@@ -253720,7 +256564,7 @@ ${css}
     const mt = state.tabs.get(memoPath);
     if (!await flushTabForMove(mt)) return false;
     if (mt) closeTab(memoPath, { discard: true });
-    const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(memoPath));
+    const { meta: meta2, body } = (0, import_md37.parseMdFile)(await kapi.readFile(memoPath));
     const title2 = meta2.title || (memoPath.split(/[\\/]/).pop() || "memo").replace(/\.md$/i, "");
     const sf = await kapi.join(dPath, "scenes.json");
     const d = await kapi.readJson(sf);
@@ -253728,7 +256572,7 @@ ${css}
     const fileName = await freeSceneFileName(dPath, ch.folderName, title2, new Set(list3.map((x) => x.fileName)));
     await writeKeepingComments(
       await kapi.join(dPath, "Chapters", ch.folderName, fileName),
-      (0, import_md35.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body),
+      (0, import_md37.dumpMdFile)({ ...meta2, title: title2, type: "memo" }, body),
       memoPath
     );
     const row4 = { id: guid(), title: title2, order: list3.length + 1, fileName, type: "memo" };
@@ -253760,8 +256604,8 @@ ${css}
       dst = await kapi.join(memoDir, base4 + (n2 ? "-" + n2 : "") + ".md");
       n2++;
     } while (await kapi.exists(dst));
-    const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(src2));
-    await writeKeepingComments(dst, (0, import_md35.dumpMdFile)({ ...meta2, title: sc.title, type: "memo" }, body), src2);
+    const { meta: meta2, body } = (0, import_md37.parseMdFile)(await kapi.readFile(src2));
+    await writeKeepingComments(dst, (0, import_md37.dumpMdFile)({ ...meta2, title: sc.title, type: "memo" }, body), src2);
     const sf = await kapi.join(dPath, "scenes.json");
     await mutateJson(kapi, sf, (d) => {
       d.chapters = d.chapters || {};
@@ -253785,10 +256629,10 @@ ${css}
     if (!row4) return false;
     try {
       const file = await kapi.join(dPath, "Chapters", ch.folderName, row4.fileName);
-      const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md37.parseMdFile)(await kapi.readFile(file));
       if (on2) meta2.type = "memo";
       else delete meta2.type;
-      await writeKeepingComments(file, (0, import_md35.dumpMdFile)(meta2, body));
+      await writeKeepingComments(file, (0, import_md37.dumpMdFile)(meta2, body));
       await syncOpenTabMeta(file);
     } catch {
     }
@@ -254711,7 +257555,7 @@ ${css}
         const abs = await kapi.join(memoDir, f);
         let title2 = f.replace(/\.md$/i, "");
         try {
-          title2 = (0, import_md35.parseMdFile)(await kapi.readFile(abs)).meta.title || title2;
+          title2 = (0, import_md37.parseMdFile)(await kapi.readFile(abs)).meta.title || title2;
         } catch {
         }
         out.push({
@@ -255238,6 +258082,8 @@ ${css}
         // [60r3 ข้อ 6]
         autoFitWidth: !!state.settings.autoFitWidth,
         // [alpha.164 · รอบต่อ 3] เมนู มุมมอง → ซูม
+        simpleMode: !!state.settings.simpleMode,
+        // [alpha.170 · ข้อ 8]
         // [alpha.61 ข้อ 1] ลำดับเปิดโปรแกรม — เมนูไฟล์ / เมนูมุมมอง
         openLastProject: state.settings.openLastProject === true,
         showHomeAlways: state.settings.showHomeOnStartup === true,
@@ -255369,10 +258215,10 @@ ${css}
     const row4 = res.changed ? res.result : null;
     const file = await kapi.join(dPath, "Chapters", ch.folderName, (row4 || sc).fileName);
     try {
-      const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(file));
+      const { meta: meta2, body } = (0, import_md37.parseMdFile)(await kapi.readFile(file));
       if (locked) meta2.locked = "true";
       else delete meta2.locked;
-      await writeKeepingComments(file, (0, import_md35.dumpMdFile)(meta2, body));
+      await writeKeepingComments(file, (0, import_md37.dumpMdFile)(meta2, body));
     } catch {
     }
     const openTab = state.tabs.get(file);
@@ -255531,7 +258377,7 @@ ${css}
     if (stale2()) return;
     let vmeta = {};
     try {
-      vmeta = (0, import_md35.parseMdFile)(await kapi.readFile(file0)).meta;
+      vmeta = (0, import_md37.parseMdFile)(await kapi.readFile(file0)).meta;
     } catch {
     }
     if (stale2()) return;
@@ -255742,7 +258588,7 @@ ${css}
       const aiCtx = async () => {
         let mdBody = "";
         try {
-          mdBody = (0, import_md35.parseMdFile)(await kapi.readFile(file0)).body || "";
+          mdBody = (0, import_md37.parseMdFile)(await kapi.readFile(file0)).body || "";
         } catch {
         }
         return { body: mdBody, title: row4.title || "" };
@@ -255788,18 +258634,22 @@ ${css}
     backScroll();
   }
   async function sectionCoverUrl(dPath) {
+    return (await sectionCoverInfo(dPath)).url;
+  }
+  async function sectionCoverInfo(dPath) {
+    const none2 = { url: "", full: false, on: true };
     try {
       const secPath = String(dPath || "").replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, "");
-      if (!secPath || secPath === String(dPath)) return "";
+      if (!secPath || secPath === String(dPath)) return none2;
       const sf = await kapi.join(secPath, "section.json");
-      if (!await kapi.exists(sf)) return "";
-      const rel = (await kapi.readJson(sf)).cover;
-      if (!rel) return "";
-      const abs = await kapi.resolve(secPath, rel);
-      return await kapi.exists(abs) ? kapi.toFileURL(abs) : "";
+      if (!await kapi.exists(sf)) return none2;
+      const bc = normBookCover(await kapi.readJson(sf));
+      if (!bc.image) return { ...none2, on: bc.on };
+      const abs = await kapi.resolve(secPath, bc.image);
+      return { url: await kapi.exists(abs) ? kapi.toFileURL(abs) : "", full: bc.full, on: bc.on };
     } catch (e) {
       log("warn", t("ui.app.coverBookReadNot"), e);
-      return "";
+      return none2;
     }
   }
   async function rosterTextForDraft(dPath) {
@@ -255812,7 +258662,7 @@ ${css}
     }
   }
   function dumpAlignComments(body, map2) {
-    return (0, import_md35.docToMd)((0, import_md35.mdToDoc)(String(body || ""), map2), { alignComments: true });
+    return (0, import_md37.docToMd)((0, import_md37.mdToDoc)(String(body || ""), map2), { alignComments: true });
   }
   async function buildDraftModel(dPath, title2) {
     let book = "";
@@ -255848,13 +258698,13 @@ ${css}
         const file = await kapi.join(dPath, "Chapters", ch.folderName, sc.fileName);
         let body = "", meta2 = {};
         try {
-          ({ meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(file)));
+          ({ meta: meta2, body } = (0, import_md37.parseMdFile)(await kapi.readFile(file)));
         } catch {
           continue;
         }
         if (meta2 && meta2.align) {
           try {
-            const map2 = (0, import_md35.alignFromString)(meta2.align);
+            const map2 = (0, import_md37.alignFromString)(meta2.align);
             if (map2 && Object.keys(map2).length) {
               body = dumpAlignComments(body, map2);
             }
@@ -255885,7 +258735,7 @@ ${css}
           // — คนละตัวสร้างกันคนละใบ (pdf-lib vs HTML→PDF) ถ้าเดาผิดได้ไฟล์ที่ใช้ไม่ได้
           format: (meta2 && meta2.format) === "screenplay" ? "screenplay" : "prose",
           type: isMemo ? "memo" : "scene",
-          words: (0, import_md35.countWords)(body || "")
+          words: (0, import_md37.countWords)(body || "")
         });
       }
       model.chapters.push(c);
@@ -256947,6 +259797,7 @@ ${css}
     const tp = templateOf(templateId);
     const map2 = {};
     for (const f of tp?.fields || []) map2[f.key] = f.label || f.key;
+    for (const f of tp?.customPropertyDefs || []) if (!(f.key in map2)) map2[f.key] = f.label || f.key;
     return map2;
   }
   function templateOf(templateId) {
@@ -257324,7 +260175,7 @@ ${css}
         if (si >= 0) return { dPath, ch, row: list3[si], chapterNo: ci + 1, sceneNo: si + 1 };
       }
     } catch (e) {
-      log("warn", "sceneCtx failed", e);
+      log(/ENOENT/.test(String(e && e.message || e)) ? "debug" : "warn", "sceneCtx failed", e);
     }
     return null;
   }
@@ -257427,8 +260278,8 @@ ${css}
     if (!cols.length) {
       const mc = rows.find((r) => String(r[0] == null ? "" : r[0]).trim() === "meta.code");
       const code3 = mc ? String(mc[1] == null ? "" : mc[1]).trim() : "";
-      const norm5 = /^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(code3) ? code3.split("-")[0].toLowerCase() + (code3.includes("-") ? "-" + code3.split("-")[1].toUpperCase() : "") : "";
-      cols.push([1, norm5 || i18n.lang || "th"]);
+      const norm6 = /^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i.test(code3) ? code3.split("-")[0].toLowerCase() + (code3.includes("-") ? "-" + code3.split("-")[1].toUpperCase() : "") : "";
+      cols.push([1, norm6 || i18n.lang || "th"]);
     }
     const body = hasHead ? rows.slice(1) : rows;
     const res = { keys: [], skipped: 0, langs: [], added: 0, changed: 0 };
@@ -257635,7 +260486,7 @@ ${css}
     await W(await kapi.join(dr, "scenes.json"), { chapters: { [ch.guid]: [sc] } });
     await kapi.writeFile(
       await kapi.join(dr, "Chapters", ch.folderName, sc.fileName),
-      (0, import_md35.dumpMdFile)({ title: sc.title, type: "scene", format: "prose", pov: "", tags: [] }, "")
+      (0, import_md37.dumpMdFile)({ title: sc.title, type: "scene", format: "prose", pov: "", tags: [] }, "")
     );
     for (const d of [
       "Images",
@@ -257750,11 +260601,11 @@ ${css}
     });
   }
   async function renameMemo(file) {
-    const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(file));
+    const { meta: meta2, body } = (0, import_md37.parseMdFile)(await kapi.readFile(file));
     const title2 = await ask(t("ui.app.nameMemoNew"), { value: meta2.title || "" });
     if (!title2) return;
     meta2.title = title2;
-    await writeKeepingComments(file, (0, import_md35.dumpMdFile)(meta2, body));
+    await writeKeepingComments(file, (0, import_md37.dumpMdFile)(meta2, body));
     const t3 = state.tabs.get(file);
     if (t3) {
       t3.title = title2;
@@ -257807,7 +260658,7 @@ ${css}
     const dir2 = await kapi.join(state.root, "Memos");
     await kapi.mkdir(dir2);
     const file = await kapi.join(dir2, safeName(title2) + "-" + Date.now().toString(36) + ".md");
-    await kapi.writeFile(file, (0, import_md35.dumpMdFile)({ title: title2, type: "memo" }, ""));
+    await kapi.writeFile(file, (0, import_md37.dumpMdFile)({ title: title2, type: "memo" }, ""));
     await buildTree2();
     openScene(file, title2);
   }
@@ -257838,7 +260689,7 @@ ${css}
   async function openSceneNow(file, title2) {
     if (state.tabs.has(file)) return activate(file);
     const raw = await kapi.readFile(file);
-    const { meta: meta2, body } = (0, import_md35.parseMdFile)(raw);
+    const { meta: meta2, body } = (0, import_md37.parseMdFile)(raw);
     title2 = title2 || meta2.title || file.split(/[\\/]/).pop().replace(/\.md$/i, "");
     const pane = el("div", "pane");
     const ws = el("div", "workspace");
@@ -257912,7 +260763,7 @@ ${css}
         // ล็อก / ดูฉบับเดิม = แก้ไม่ได้
       });
       try {
-        tab.sp.applyAlignMap((0, import_md35.alignFromString)(tab.meta.align));
+        tab.sp.applyAlignMap((0, import_md37.alignFromString)(tab.meta.align));
       } catch {
       }
       pane.addEventListener("click", () => {
@@ -257926,7 +260777,7 @@ ${css}
         markdown: body,
         // [alpha.58r บั๊ก 25] จัดหน้าย่อหน้าเก็บใน frontmatter (`align: [3:center]`) → .md สะอาด
         // ยังอ่านไฟล์เก่าที่ใช้ <!--align:x--> ได้เสมอ · ตั้งเป็น 'comment' ใน settings ถ้าอยากได้แบบเดิม
-        alignMap: (0, import_md35.alignFromString)(tab.meta.align),
+        alignMap: (0, import_md37.alignFromString)(tab.meta.align),
         alignComments: state.settings.mdAlignStyle === "comment",
         onChange: () => {
           markDirty(tab);
@@ -258020,10 +260871,10 @@ ${css}
       delete tab.meta.spMap;
       delete tab.meta.spHash;
     }
-    if (conv.align && Object.keys(conv.align).length) tab.meta.align = "[" + (0, import_md35.alignToString)(conv.align) + "]";
+    if (conv.align && Object.keys(conv.align).length) tab.meta.align = "[" + (0, import_md37.alignToString)(conv.align) + "]";
     mountEditor(tab, dir2, body);
     tab.meta.modified = (/* @__PURE__ */ new Date()).toISOString();
-    await writeKeepingComments(tab.file, (0, import_md35.dumpMdFile)(tab.meta, body));
+    await writeKeepingComments(tab.file, (0, import_md37.dumpMdFile)(tab.meta, body));
     tab.diskBody = body;
     tab.dirty = false;
     tab.tabBtn.querySelector(".tab-title").textContent = tab.title;
@@ -258510,7 +261361,7 @@ ${css}
       if (!tab.file || !/\.md$/i.test(tab.file) || !tab.editor && !tab.sp) continue;
       let disk;
       try {
-        disk = (0, import_md35.parseMdFile)(await kapi.readFile(tab.file)).body;
+        disk = (0, import_md37.parseMdFile)(await kapi.readFile(tab.file)).body;
       } catch {
         continue;
       }
@@ -258575,7 +261426,7 @@ ${css}
       const base4 = tab.diskBody !== void 0 ? tab.diskBody : tab.body;
       let diskNow;
       try {
-        diskNow = (0, import_md35.parseMdFile)(await kapi.readFile(tab.file)).body;
+        diskNow = (0, import_md37.parseMdFile)(await kapi.readFile(tab.file)).body;
       } catch {
         diskNow = await kapi.exists(tab.file).catch(() => true) ? base4 : null;
       }
@@ -258593,12 +261444,12 @@ ${css}
     }
     tab.body = body;
     if (tab.editor && state.settings.mdAlignStyle !== "comment") {
-      const am = (0, import_md35.alignToString)(tab.editor.getAlignMap());
+      const am = (0, import_md37.alignToString)(tab.editor.getAlignMap());
       if (am) tab.meta.align = "[" + am + "]";
       else delete tab.meta.align;
     }
     if (tab.sp) {
-      const am = (0, import_md35.alignToString)(tab.sp.getAlignMap());
+      const am = (0, import_md37.alignToString)(tab.sp.getAlignMap());
       if (am) tab.meta.align = "[" + am + "]";
       else delete tab.meta.align;
     }
@@ -258607,7 +261458,7 @@ ${css}
     tab.meta.revision = String((parseInt(tab.meta.revision, 10) || 0) + 1);
     const tSave = performance.now();
     try {
-      await writeKeepingComments(tab.file, (0, import_md35.dumpMdFile)(tab.meta, body));
+      await writeKeepingComments(tab.file, (0, import_md37.dumpMdFile)(tab.meta, body));
     } catch (e) {
       log("error", "save: write failed", { file: tab.file, code: e && e.code, error: e && e.message });
       throw e;
@@ -258673,7 +261524,7 @@ ${css}
     try {
       const ctx2 = await sceneCtx(tab.file);
       if (!ctx2 || !ctx2.row || ctx2.row.type === "memo") return;
-      const n2 = (0, import_md35.countWords)(body || "");
+      const n2 = (0, import_md37.countWords)(body || "");
       if ((ctx2.row.wordCount || 0) === n2) return;
       await updateSceneRow(ctx2.dPath, ctx2.row.id, (r) => {
         r.wordCount = n2;
@@ -258970,7 +261821,7 @@ ${css}
           const t3 = state.tabs.get(file);
           if (t3 && (t3.editor || t3.sp)) return (t3.editor || t3.sp).getMarkdown();
         }
-        return (0, import_md35.parseMdFile)(await kapi.readFile(key2 === "__cur__" ? file : key2)).body;
+        return (0, import_md37.parseMdFile)(await kapi.readFile(key2 === "__cur__" ? file : key2)).body;
       } catch {
         return t("ui.app.readCant");
       }
@@ -259032,7 +261883,7 @@ ${css}
     const t22 = state.tabs.get(file);
     if (!t22 || !t22.meta) return false;
     try {
-      t22.meta = (0, import_md35.parseMdFile)(await kapi.readFile(file)).meta;
+      t22.meta = (0, import_md37.parseMdFile)(await kapi.readFile(file)).meta;
     } catch (e) {
       log("warn", t("ui.props.writeMetaFail"), e);
     }
@@ -259048,6 +261899,7 @@ ${css}
       return f === k || f.startsWith(k + "/");
     });
     let closed = 0, skipped = 0;
+    const going = new Set(hits.map((t22) => t22.file));
     for (const t22 of hits) {
       if (save && t22.dirty) {
         let r;
@@ -259063,7 +261915,8 @@ ${css}
           continue;
         }
       }
-      closeTab(t22.file, { discard: true });
+      closeTab(t22.file, { discard: true, skip: going });
+      going.delete(t22.file);
       closed++;
     }
     return closeResult(closed, skipped);
@@ -259126,7 +261979,7 @@ ${css}
   function closedTabsForTest() {
     return _closedTabs.slice();
   }
-  function closeTab(file, { discard = false, ask: ask2 = false } = {}) {
+  function closeTab(file, { discard = false, ask: ask2 = false, skip = null } = {}) {
     const t3 = state.tabs.get(file);
     if (!t3) return;
     const done3 = () => {
@@ -259144,7 +261997,9 @@ ${css}
         t3.floatWin.remove();
         t3.floatWin = null;
       }
-      const next = neighborAfterClose([...state.tabs.keys()], file, state.active ? state.active.file : null);
+      const act0 = state.active ? state.active.file : null;
+      const pool3 = skip ? [...state.tabs.keys()].filter((k) => k === file || k === act0 || !skip.has(k)) : [...state.tabs.keys()];
+      const next = neighborAfterClose(pool3, file, act0);
       state.tabs.delete(file);
       _closedTabs = pushClosed(_closedTabs, file, state.root);
       closeTabInSplit(file);
@@ -259240,12 +262095,12 @@ ${css}
         }
       },
       async reloadFromDisk() {
-        const { meta: meta2, body } = (0, import_md35.parseMdFile)(await kapi.readFile(t3.file));
+        const { meta: meta2, body } = (0, import_md37.parseMdFile)(await kapi.readFile(t3.file));
         t3.meta = meta2;
         t3.body = body;
         t3.diskBody = body;
         if (t3.editor) {
-          t3.editor.setMarkdown(body, (0, import_md35.alignFromString)(meta2.align));
+          t3.editor.setMarkdown(body, (0, import_md37.alignFromString)(meta2.align));
           try {
             refreshMentions(t3.editor.view);
           } catch {
@@ -259253,7 +262108,7 @@ ${css}
         } else {
           t3.sp.setMarkdown(body);
           try {
-            t3.sp.applyAlignMap((0, import_md35.alignFromString)(meta2.align));
+            t3.sp.applyAlignMap((0, import_md37.alignFromString)(meta2.align));
           } catch {
           }
         }
@@ -259288,6 +262143,7 @@ ${css}
     const base4 = String(oldPath || "").replace(/[\\/]+$/, "");
     const { real, pseudo } = _tabsUnder(base4);
     const rels = real.map((t22) => t22.file.slice(base4.length));
+    const order0 = [...state.tabs.keys()];
     const act = state.active;
     const activeRel = act && real.includes(act) ? act.file.slice(base4.length) : null;
     const keepActive = act && !real.includes(act) && !pseudo.includes(act) ? act.file : "";
@@ -259326,6 +262182,12 @@ ${css}
       } catch (e) {
         log("warn", "tab: reopen after rename failed", { file: dest + rel, error: e && e.message });
       }
+    }
+    const relOf4 = new Map(real.map((t22) => [t22.file, dest + t22.file.slice(base4.length)]));
+    try {
+      reorderTabs(order0.map((k) => relOf4.get(k) || k).filter((k) => state.tabs.has(k)));
+    } catch (e) {
+      log("warn", "tab: reorder after rename failed", e);
     }
     if (activeRel != null && state.tabs.has(dest + activeRel)) activate(dest + activeRel);
     else if (keepActive && state.tabs.has(keepActive)) activate(keepActive);
@@ -259452,10 +262314,10 @@ ${css}
     if (!t3) return;
     if (!await confirmBox(t("ui.app.cancelChangeAllTab"), t("ui.common.revertBtn"))) return;
     const content = await kapi.readFile(file);
-    const { meta: meta2, body } = (0, import_md35.parseMdFile)(content);
+    const { meta: meta2, body } = (0, import_md37.parseMdFile)(content);
     t3.diskBody = body;
     if (t3.editor) {
-      t3.editor.setMarkdown(body, (0, import_md35.alignFromString)(meta2.align));
+      t3.editor.setMarkdown(body, (0, import_md37.alignFromString)(meta2.align));
       refreshMentions(t3.editor.view);
     } else if (t3.sp) {
       const dir2 = file.replace(/[\\/][^\\/]*$/, "");
@@ -259488,7 +262350,7 @@ ${css}
         // ล็อกฉากอยู่ = revert แล้วต้องยังล็อกเหมือนเดิม
       });
       try {
-        t3.sp.applyAlignMap((0, import_md35.alignFromString)(t3.meta.align));
+        t3.sp.applyAlignMap((0, import_md37.alignFromString)(t3.meta.align));
       } catch {
       }
       t3.sp.view.dom.classList.add("on");
@@ -259711,7 +262573,7 @@ ${css}
     if (!state.tabs.has(key2)) {
       let body = "";
       try {
-        body = (0, import_md35.parseMdFile)(await kapi.readFile(snap2.path)).body;
+        body = (0, import_md37.parseMdFile)(await kapi.readFile(snap2.path)).body;
       } catch {
         body = t("ui.app.readFileVersionCant");
       }
@@ -260701,7 +263563,7 @@ ${css}
         return;
       }
       const body = t3.editor ? t3.editor.getMarkdown() : t3.sp ? t3.sp.getText() : t3.plain.value;
-      let txt = tf("ui.app.wordChar", fmtNum((0, import_md35.countWords)(body)), fmtNum(body.length));
+      let txt = tf("ui.app.wordChar", fmtNum((0, import_md37.countWords)(body)), fmtNum(body.length));
       if (t3.sp) {
         txt += state.settings.spAutoPaginate ? _spPageText : repaginateNow(t3);
         try {
@@ -261320,7 +264182,7 @@ ${css}
       }
       if (!body) {
         try {
-          const f = (0, import_md35.parseMdFile)(await kapi.readFile(r.path));
+          const f = (0, import_md37.parseMdFile)(await kapi.readFile(r.path));
           body = f.body || "";
           fmt2 = fmt2 || f.meta.format || "";
         } catch {
@@ -261424,7 +264286,11 @@ ${css}
     return true;
   }
   function openFind(toReplace = false) {
-    $("#findbar").classList.add("on");
+    const fb = $("#findbar");
+    const tb2 = $("#toolbar");
+    const top = tb2 && tb2.offsetParent ? tb2.getBoundingClientRect().bottom : $("#titlebar") ? $("#titlebar").getBoundingClientRect().bottom : 0;
+    fb.style.top = Math.max(0, Math.round(top) + 6) + "px";
+    fb.classList.add("on");
     const box2 = toReplace ? $("#find-r") : $("#find-q");
     box2.focus();
     box2.select();
@@ -262276,7 +265142,7 @@ ${css}
         const p = await kapi.saveAsDialog((t3.title || t("ui.common.notNamed")) + ".md");
         if (p) {
           const srcMd = t3.file && !String(t3.file).startsWith("::") && /\.md$/i.test(t3.file) ? t3.file : null;
-          await writeKeepingComments(p, (0, import_md35.dumpMdFile)(t3.meta || {}, body), srcMd);
+          await writeKeepingComments(p, (0, import_md37.dumpMdFile)(t3.meta || {}, body), srcMd);
           setStatus(tf("ui.app.saveAsDone", p));
         }
         break;
@@ -262642,6 +265508,14 @@ ${css}
       case "import-scrivener":
         importScrivenerDialog((p) => openProjectFromUi(p));
         break;
+      // [alpha.170 · นำเข้าต้นฉบับ] Word · Markdown · ข้อความ → เล่มใหม่ (ผลสำรวจผู้ใช้ข้อ 3)
+      case "import-manuscript":
+        await importManuscriptDialog();
+        break;
+      // [alpha.170 · คอมเมนต์ไปกลับกับ Word] (ผลสำรวจผู้ใช้ข้อ 6)
+      case "import-docx-comments":
+        await importDocxCommentsDialog();
+        break;
       // [alpha.60 ข้อ 62-66] นำเข้าบทภาพยนตร์จาก 5 รูปแบบ (Fountain · FDX · Celtx · Fade In · Adobe Story)
       case "import-script": {
         const canReplace = (tb2) => !!(tb2 && tb2.sp && !tb2.locked);
@@ -262815,6 +265689,10 @@ ${css}
         setAutoFitWidth();
         break;
       // [alpha.164 · รอบต่อ 3 · งาน 3]
+      case "toggle-simple-mode":
+        await setSimpleMode();
+        break;
+      // [alpha.170 · ข้อ 8] เมนู มุมมอง · ปุ่ม "เครื่องมือทั้งหมด"
       case "ui-scale":
         bumpUIScale(a[0]);
         break;
@@ -262858,6 +265736,12 @@ ${css}
       case "extension-guide": {
         const { openDocs: openDocs2 } = await Promise.resolve().then(() => (init_docs_ui(), docs_ui_exports));
         openDocs2("extension");
+        break;
+      }
+      // [alpha.170 · ใช้หลายเครื่อง] คู่มือบท 17 (Google Drive · iCloud · Dropbox · OneDrive) — ผลสำรวจผู้ใช้ข้อ 2
+      case "sync-guide": {
+        const { openDocs: openDocs2 } = await Promise.resolve().then(() => (init_docs_ui(), docs_ui_exports));
+        openDocs2("manual", { file: "17-several-computers.md" });
         break;
       }
       case "support":
@@ -263528,10 +266412,10 @@ ${css}
     if (floatBar && host2 && floatBar.style.display !== "none") {
       const hr = host2.getBoundingClientRect();
       if (hr.width) {
-        const kids = [...floatBar.children].filter((k) => k.getClientRects().length > 0 && !k.classList.contains("k-fmt-br"));
+        const kids3 = [...floatBar.children].filter((k) => k.getClientRects().length > 0 && !k.classList.contains("k-fmt-br"));
         const fcs = getComputedStyle(floatBar);
         const chrome2 = (parseFloat(fcs.paddingLeft) || 0) + (parseFloat(fcs.paddingRight) || 0) + (parseFloat(fcs.borderLeftWidth) || 0) + (parseFloat(fcs.borderRightWidth) || 0);
-        const widths = kids.map((k) => {
+        const widths = kids3.map((k) => {
           const m = getComputedStyle(k);
           return k.getBoundingClientRect().width + (parseFloat(m.marginLeft) || 0) + (parseFloat(m.marginRight) || 0);
         });
@@ -264967,13 +267851,13 @@ ${css}
     });
     searchInp.focus();
   }
-  var import_md35, import_text_color4, tr3, pageScale, autosaveTimer, _twSettingSeen, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _projectFontFiles, projectFontFiles, _typeSoundBound, _userScale, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJobs, FLOW_RETRY_MS, FLOW_RETRY_MAX, _flowRetry, _cursorPageRaf, _spErrors, SP_REPORTS, OPENING_PROJ, SP_CASE_LABELS, _globalWriteChain, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, treeArchive_C, isArchivedRow, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, TREE_SUB_IDS, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _docsEmptyObs, _treeJob, _healAt, _plannerRowObs, _noWrite, _mapsSig, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, propsSync_C, propsItem_C, _propsGen, _propsLast, propsFlush_C, SECTION_STATUSES, livePlugins, pluginRestart, liveFlat, plugins, pluginBus, PLUGIN_TRUST_KEY, _plugLoadQ, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, OPENING_C, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _diskCheckAt, _branchPlanApi, _fpApi, _closedTabs, _diskBusy, _baseName, _tabRealPath, _nameSyncAt, _nameSyncRun, _reservedWarned, crumbs_C, FMTS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, _navPageOf, _navPageKey, navWholeBook, LOG_STICK_PX, logView, _logSeq, LOG_DAY, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, LOCK_EDIT_CMDS, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY2, _fmtHostH, _fmtBarH, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, _tipPend, _tipLastHide, _tipHeld, _tipDismissed, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen, SCENE_COUNT;
+  var import_md37, import_text_color4, tr3, pageScale, autosaveTimer, _twSettingSeen, LN_GUTTER_ID, _lnJob, _lnCache, _lnBound, _langFontUrls, _projectFontFiles, projectFontFiles, _typeSoundBound, _userScale, _lastPaneW, spViewMode, _mzCache, _mzEpoch, _pagDone, _fontJob, _imgJob, _geoJob, _spViewJob, _gapJob, _flowJobs, FLOW_RETRY_MS, FLOW_RETRY_MAX, _flowRetry, _cursorPageRaf, _spErrors, SP_REPORTS, OPENING_PROJ, SP_CASE_LABELS, _globalWriteChain, SCENE_PANEL_DRAW, _mainSyncBound, SESSION_SAVE_MS, SESSION_TICK_MS, _sessTimer, _sessTick, _sessLast, _sessRestoring, sessionOff, treeScope, treeArchive_C, isArchivedRow, _treeBuilding, _treeQueued, _treeSwapping, _thCmp, treeSel, treeSelAnchor, treeClip, TREE_SUB_IDS, _treeWaiters, INV_C, netInst, FLOAT_Z_MIN, FLOAT_Z_MAX, _floatZ, plannerInst, _docsEmptyObs, _treeJob, _healAt, _plannerRowObs, _noWrite, _mapsSig, mapsState_C, _menuTogSig, _readEsc, APP_VERSION, propsTarget_C, propsSync_C, propsItem_C, _propsGen, _propsLast, propsFlush_C, SECTION_STATUSES, livePlugins, pluginRestart, liveFlat, plugins, pluginBus, PLUGIN_TRUST_KEY, _plugLoadQ, galInst, TPL_CATS, FIELD_TYPES, _cmMigrated, OPENING_C, uniqList, notIgnored, TERM_TTL, _termCache, imgURLBase, _rowStateSig, _diskCheckAt, _branchPlanApi, _fpApi, _closedTabs, _diskBusy, _baseName, _tabRealPath, _nameSyncAt, _nameSyncRun, _reservedWarned, crumbs_C, FMTS, ALWAYS_ON_TB, _smartJob, countJob, _countRunAt, repaginateJob, _pageHud, _paperGrowRO, _padTuneUntil, _spPadTuneUntil, _fastPageJob, _spPageText, outlineJob, navShowBeats, navTrunc, NAV_UI_KEY, navUI, navCmt, navRows, navCtx, _navPageOf, _navPageKey, navWholeBook, LOG_STICK_PX, logView, _logSeq, LOG_DAY, _logTimer, DEV_HISTORY_KEY, CREDITS, FEATURE_PANELS, _featInFlight, LOCK_EDIT_CMDS, QUIET_CMDS, _caseCycle, _syncMod, _hoverHint, LS_TS_KEY2, _fmtHostH, _fmtBarH, _floatKeepRO, _floatKeepJob, lastWikiField, floatBar, fmtBarDrag, _mousePt, _mouseInEd, ED_ZONE, _fmtTween, _tbCtxBound, TIP_GAP, _tipEl, _tipHost, _tipSaved, _tipJob, _tipKt, _tipPend, _tipLastHide, _tipHeld, _tipDismissed, FAB_DRAG_SLOP, FAB_STAGGER, fabOpen, SCENE_COUNT;
   var init_app = __esm({
     "src/app.js"() {
       init_i18n_html();
       init_i18n();
       init_editor();
-      import_md35 = __toESM(require_md());
+      import_md37 = __toESM(require_md());
       init_convert();
       init_prose_format();
       init_prose_view();
@@ -265131,6 +268015,10 @@ ${css}
       init_starter_ui();
       init_thesaurus_ui();
       init_import_ui();
+      init_import_manuscript_ui();
+      init_docx_comments_ui();
+      init_project_lock_ui();
+      init_simple_mode();
       init_import_sp();
       init_sp_compare();
       init_ai_bridge();
@@ -265365,7 +268253,7 @@ ${css}
         sceneCtx: (f) => sceneCtx(f),
         openScene: (f, title2) => openScene(f, title2),
         buildTree: () => buildTree2(),
-        alignFromString: import_md35.alignFromString,
+        alignFromString: import_md37.alignFromString,
         tabBodyText: (tab) => tabBodyText(tab),
         afterSwap: (tab) => {
           if (state.active !== tab) return;
@@ -265420,6 +268308,9 @@ ${css}
         "open-btn",
         "save-all-btn",
         "search-all-btn",
+        // [alpha.170 · ข้อ 8] ทางออกของโหมดเรียบง่าย — ต้องกดได้ทั้งที่ยังไม่เปิดเอกสาร (หน้าแรก/โปรเจกต์ว่าง)
+        "tb-simple-exit",
+        "tb-settings",
         "tb-close",
         "tb-close-all",
         "tb-focus",

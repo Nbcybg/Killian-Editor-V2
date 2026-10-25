@@ -153,7 +153,22 @@ function badThaiSpans(run, known) {
   const near = reachBackward(run, known);
   let a = Math.min(far, near), b = Math.max(far, near);
   if (b <= a) { a = 0; b = run.length; }
-  return [[a, b]];
+  return [snapThaiSpan(run, a, b)];
+}
+
+// [trial 2026-10-25 ข้อ 23] ★ ขอบของช่วงที่ขีดแดงต้องอยู่ "ระหว่างพยางค์" — เดิมได้ "ัดดี…" (เริ่มที่ไม้หันอากาศ)
+// เพราะตัวตัดคำกินพยัญชนะตัวหน้าไปเป็นคำของตัวเองได้ · สระบน/ล่าง วรรณยุกต์ (combining mark) ต้องติดกับพยัญชนะ
+// ตัวหน้าของมันเสมอ และสระหน้า (เ แ โ ใ ไ) ต้องติดกับพยัญชนะที่ตามหลัง
+const CH = (n) => String.fromCharCode(n);   // ช่วงอักขระไทยเขียนเป็นเลข — กันเครื่องมือแก้ไฟล์แปลง escape เป็นอักขระจริง
+const TH_MARK = new RegExp('[' + CH(0x0E31) + CH(0x0E34) + '-' + CH(0x0E3A) + CH(0x0E47) + '-' + CH(0x0E4E) + ']');
+const TH_LEAD = new RegExp('[' + CH(0x0E40) + '-' + CH(0x0E44) + ']');
+export function snapThaiSpan(run, a, b) {
+  let s = Math.max(0, a), e = Math.min(run.length, b);
+  while (s > 0 && TH_MARK.test(run[s])) s--;            // ขยายซ้ายไปถึงพยัญชนะของเครื่องหมาย
+  if (s > 0 && TH_LEAD.test(run[s - 1])) s--;          // สระหน้าของพยัญชนะตัวแรก
+  while (e < run.length && TH_MARK.test(run[e])) e++;  // ขยายขวาให้เครื่องหมายท้ายติดมาด้วย
+  if (e > s && TH_LEAD.test(run[e - 1]) && e < run.length) e++;   // สระหน้าค้างท้าย = พาพยัญชนะของมันมาด้วย
+  return [s, e];
 }
 
 // ---- ตรวจข้อความ → [{start, end, word}] (offset ในสตริง) ----

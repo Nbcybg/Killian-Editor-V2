@@ -210,7 +210,7 @@ import { APP_VERSION, CREDITS, FEATURE_PANELS, INV_C, aboutDialog, activate, act
          syncSceneMetaFromFiles, syncTypeSound, syncWorkspaceWidths, tabBodyText, tb, templateEditModal,
          toggleContinueds, toggleElementCaps, toggleFabMenu, toggleFloatTab, toggleFmtbarAlign,
          toggleFmtbarLock, toggleFocus, toggleMarkdownCodes, toggleOpenLastProject, togglePageGuides,
-         togglePageNumbers, toggleProseIndent, toggleReading, toggleSceneNumbers, toggleShowFormat,
+         togglePageNumbers, setFirstPageNumber, toggleProseIndent, toggleReading, toggleSceneNumbers, toggleShowFormat,
          toggleShowHomeAlways, toggleSpCase, toggleSpErrorMarks, toggleSpThaiFont, toggleTheme, tr,
          treeCopy, treeDeleteSelected, treeDuplicate, treePaste, treeSelectClick, treeSelectOnly,
          treeSortMode, trustProjectPlugins, tuneProsePagePadsLoop, tweenFmtBar, typeSoundMode, uiLayout,
@@ -1986,6 +1986,8 @@ export async function runTest(projectPath) {
         check('[70-4] ยังไม่เปิด → ไม่มีโอเวอร์เลย์บนผืนแผนที่',
               !bodyOf().querySelector('.map-grid') && !bodyOf().querySelector('.map-compass'));
         ovBtn('ตารางกริด').click(); await wait(120);
+        // [release.3] รอจนวาดเสร็จจริง (เพดาน 3 วิ) — รอเวลาตายตัวแดงสุ่มตอนเครื่องหนัก (กฎข้อ 18)
+        for (let i = 0; i < 30 && !(bodyOf().querySelector('.map-grid') && bodyOf().querySelector('.map-grid-size')); i++) await wait(100);
         check('[70-4] เปิดตารางกริด → มี .map-grid + ช่องตั้งจำนวนช่อง',
               !!bodyOf().querySelector('.map-grid') && !!bodyOf().querySelector('.map-grid-size'));
         {
@@ -16702,7 +16704,7 @@ export async function runTest(projectPath) {
         const ttl = rp.querySelector('.roster-title');
         const ttlCS = getComputedStyle(ttl);
         check('[97] "Cast of Characters" เป็นบรรทัดแรก อยู่กลางหน้า ขีดเส้นใต้',
-              ttl.textContent === 'Cast of Characters' && ttlCS.textAlign === 'center' &&
+              ttl.textContent === tt('ui.spFormat.castTitle') && ttlCS.textAlign === 'center' &&
               ttlCS.textDecorationLine.includes('underline'),
               ttl.textContent + ' | ' + ttlCS.textAlign + ' | ' + ttlCS.textDecorationLine);
         check('[97] หน้ารายชื่อไม่มีเลขหน้า', !rp.querySelector('.page-number, .k-page-no'));
@@ -16723,6 +16725,14 @@ export async function runTest(projectPath) {
               parseFloat(rowCS.marginBottom) > parseFloat(rowCS.fontSize), rowCS.marginBottom);
         nameEl.textContent = 'Donald Bradleyson'; nameEl.dispatchEvent(new Event('input'));
         detEl.textContent = 'นักสืบวัย 40'; detEl.dispatchEvent(new Event('input'));
+        // [trial 2026-10-25 ข้อ 2] ชื่อต้องอยู่บนกระดาษ — inline-block เคยรับ text-indent ติดลบของแถว แล้วชื่อไปอยู่นอกกระดาษด้านซ้าย
+        {
+          const rng = document.createRange(); rng.selectNodeContents(nameEl);
+          const nb = rng.getBoundingClientRect(), pb = rp.getBoundingClientRect();
+          check('[trial-2] ★ ชื่อตัวละครอยู่ในกระดาษ (ไม่หลุดซ้าย)', nb.width > 0 && nb.left >= pb.left - 1 && nb.right <= pb.right + 1,
+                Math.round(nb.left) + ' vs ' + Math.round(pb.left));
+          check('[trial-2] กล่องชื่อไม่รับ text-indent ของแถว', parseFloat(getComputedStyle(nameEl).textIndent) === 0, getComputedStyle(nameEl).textIndent);
+        }
         const sceneBody = rp.querySelector('.roster-sec[data-k="scene"] .roster-sec-body');
         check('[97] มีหัวข้อ Scene + Time (ผู้ใช้เลือกเอา/ไม่เอาได้)',
               !!rp.querySelector('.roster-sec[data-k="scene"]') && !!rp.querySelector('.roster-sec[data-k="time"]'));
@@ -16742,7 +16752,7 @@ export async function runTest(projectPath) {
         check('[97] มีสวิตช์ "ใส่ตอนพิมพ์/ส่งออก"', rJson.includeInExport === true);
         // ปิดหัวข้อ Scene แล้วต้องหายจากหน้า
         const chkScene = [...rTab.pane.querySelectorAll('.roster-chk')]
-          .find((l) => l.textContent.includes('Scene')).querySelector('input');
+          .find((l) => l.textContent.includes(tt('ui.spFormat.rosterScene'))).querySelector('input');
         chkScene.click();
         await new Promise((r) => setTimeout(r, 60));
         check('[97] ปิดหัวข้อ Scene → หายจากหน้ารายชื่อ',
@@ -16763,14 +16773,14 @@ export async function runTest(projectPath) {
                 (await rosterTextForDraft(d0.dPath)).slice(0, 60));
           const exp1 = await compileDraftText(d0.dPath);
           check('[97] ส่งออกฉบับร่างรวม → มีหน้ารายชื่อตัวละครนำหน้าเนื้อเรื่อง',
-                exp1.includes('Cast of Characters') && exp1.includes('Donald Bradleyson'),
+                exp1.includes(tt('ui.spFormat.castTitle')) && exp1.includes('Donald Bradleyson'),
                 exp1.slice(0, 120));
           // ปิดสวิตช์ "ใส่ตอนพิมพ์/ส่งออก" แล้วต้องหายไป
           rTab.roster.includeInExport = false;
           await saveRosterTab(rTab);
           const exp2 = await compileDraftText(d0.dPath);
           check('[97] ปิดสวิตช์ "ใส่ตอนพิมพ์/ส่งออก" → ไม่มีหน้ารายชื่อในไฟล์ที่ส่งออก',
-                !exp2.includes('Cast of Characters'));
+                !exp2.includes(tt('ui.spFormat.castTitle')));
           check('[97] ปิดแล้วเนื้อเรื่องยังส่งออกครบเหมือนเดิม', exp2.includes('# ') && exp2.length > 20);
           rTab.roster.includeInExport = true;
           await saveRosterTab(rTab);
@@ -31789,6 +31799,40 @@ export async function runTest(projectPath) {
           }
         }
 
+        // ── [trial-25] "ใส่เลขบนหน้าแรกด้วย" เป็นตัวเลือกในศูนย์ส่งออก = ค่าเดียวของโปรเจกต์ (ตั้งค่า → เลขหน้า) ──
+        {
+          const hub = await openExportHub();
+          const was25 = ((state.settings || {}).spPageNumbers || {}).firstPage !== false;
+          try {
+            hub.cfg.scope = 'draft'; hub.cfg.draft = dPath; hub.cfg.kind = 'screenplay';
+            await hub.setFormat('pdf');
+            await new Promise((r) => setTimeout(r, 250));
+            const cb = document.querySelector('#xhub-first-page');
+            check('[trial-25] ศูนย์ส่งออกมีสวิตช์ "ใส่เลขบนหน้าแรก" (ค่าตามโปรเจกต์)', !!cb && cb.checked === was25, cb && cb.checked);
+            cb.checked = false; cb.dispatchEvent(new Event('change'));
+            await new Promise((r) => setTimeout(r, 250));
+            check('[trial-25] ★ ปลดติ๊กในศูนย์ส่งออก = ค่าของโปรเจกต์เปลี่ยนจริง (ตัวเดียวกับกล่องตั้งค่า)',
+                  state.settings.spPageNumbers.firstPage === false);
+            await hub.setFormat('docx');
+            await new Promise((r) => setTimeout(r, 250));
+            const cb2 = document.querySelector('#xhub-first-page');
+            check('[trial-25] DOCX ของบทภาพยนตร์มีสวิตช์เดียวกัน', !!cb2 && !cb2.checked);
+            const JSZip25 = (await import('jszip')).default;
+            const z25 = await JSZip25.loadAsync((await hub.ebook()).bytes);
+            const d25 = await z25.file('word/document.xml').async('string');
+            check('[trial-25] ★ DOCX ของบท: ไม่มีเลขบนหน้าแรก (titlePg) + แบบอักษรบท', /<w:titlePg\/>/.test(d25)
+                  && /Courier/.test(await z25.file('word/styles.xml').async('string')));
+            setFirstPageNumber(true);
+            const z25b = await JSZip25.loadAsync((await hub.ebook()).bytes);
+            check('[trial-25] ติ๊กกลับ = มีเลขบนหน้าแรก (ไม่มี titlePg)', !/<w:titlePg\/>/.test(await z25b.file('word/document.xml').async('string')));
+          } finally {
+            setFirstPageNumber(was25);
+            hub.cfg.kind = 'auto';
+            await hub.setFormat('pdf');
+            hub.close();
+          }
+        }
+
         // ── [156-10] ค้นหา-แทนที่ทั้งโปรเจกต์ ──
         {
           const R = await import('./project-replace-ui.js');
@@ -37684,6 +37728,332 @@ export async function runTest(projectPath) {
         invalidateSearchIndex();
         document.querySelectorAll('.k-overlay').forEach((o) => o.remove());
         check('[170-BH5] เก็บกวาด: ไม่มีแท็บ/กล่องของเทสค้าง', !state.tabs.has(probe5) && !document.querySelector('.k-overlay'));
+      }
+
+      // ══ [170-IM] นำเข้าต้นฉบับ (Word · Markdown · ข้อความ) → เล่มใหม่ ══
+      // ผลสำรวจผู้ใช้ข้อ 3: ย้ายงานเก่าเข้ามาไม่ได้ · ไฟล์ .docx สร้างจากตัวส่งออกของโปรแกรมเอง (มีรูป) แล้วนำเข้าผ่านกล่องจริง
+      {
+        const wIM = (ms) => new Promise((r) => setTimeout(r, ms));
+        const { importManuscriptDialog: impIM } = await import('./import/import-manuscript-ui.js');
+        const EIM = await import('./export-ebook.js');
+        const JSZipIM = (await import('jszip')).default;
+        // รูป PNG 2×1 จริง (ตัวส่งออกอ่านขนาดจากหัวไฟล์)
+        const cvIM = document.createElement('canvas'); cvIM.width = 2; cvIM.height = 1;
+        const pngIM = Uint8Array.from(atob(cvIM.toDataURL('image/png').split(',')[1]), (c) => c.charCodeAt(0));
+        const srcIM = '# ตอนที่ 1\n## ร้านเบเกอรี่\nโทระเปิดร้านแต่เช้า **หนักมาก**\n![ปกเล่ม](cover.png)\n## กลางคืน\nเนื้อฉากสอง\n# ตอนที่ 2\nเนื้อตอนสอง';
+        const pkgIM = EIM.buildDocx(srcIM, { title: 'IM170', images: new Map([['cover.png', pngIM]]) });
+        const zIM = new JSZipIM();
+        for (const f of pkgIM.files) zIM.file(f.path, f.data);
+        const docxIM = await kapi.join(state.root, '..', 'k2-im170-test.docx');
+        await kapi.writeBytes(docxIM, Array.from(await zIM.generateAsync({ type: 'uint8array' })));
+        const bookIM = await kapi.join(state.root, 'ImportTest170');
+        const book2IM = await kapi.join(state.root, 'ImportTest170 2');
+        const pasteIM = await kapi.join(state.root, 'PasteTest170');
+        const albumIM = await kapi.join(state.root, 'Images', 'ImportTest170');
+        for (const p of [bookIM, book2IM, pasteIM, albumIM]) await kapi.remove(p).catch(() => {});
+        try {
+          // ── (ก) กล่องจริง: เลือกไฟล์ → ตัวอย่าง → เปลี่ยนวิธีแบ่ง → ยกเลิก = ไม่เขียนอะไร ──
+          const pDlg = impIM({ paths: [docxIM] });
+          let ovIM = null;
+          for (let i = 0; i < 60 && !(ovIM = document.querySelector('.k-msimp')); i++) await wIM(50);
+          for (let i = 0; i < 60 && !(ovIM && ovIM.querySelector('.k-msimp-sum')); i++) await wIM(50);
+          const sumIM = ovIM && ovIM.querySelector('.k-msimp-sum');
+          check('[170-IM] กล่องนำเข้าเปิด + ตัวอย่างบอกจำนวนบท/ฉากจาก .docx จริง (2 บท 3 ฉาก)',
+                !!sumIM && sumIM.textContent.includes(ttf('ui.manuscript.summaryF', 2, 3, 0).split(' · ')[0]) && ovIM.querySelectorAll('.k-msimp-tree > li').length === 2,
+                sumIM && sumIM.textContent);
+          check('[170-IM] ชื่อเล่มตั้งต้น = ชื่อเรื่องใน .docx', ovIM.querySelector('.k-msimp-book').value === 'IM170', ovIM.querySelector('.k-msimp-book').value);
+          const selIM = ovIM.querySelector('.k-msimp-mode');
+          check('[170-IM] วิธีแบ่งมีสี่แบบ', selIM.options.length === 4);
+          selIM.value = 'file-scene'; selIM.dispatchEvent(new Event('change'));
+          check('[170-IM] เปลี่ยนวิธีแบ่ง → ตัวอย่างวาดใหม่ (ไฟล์ละฉาก = 1 บท)', ovIM.querySelectorAll('.k-msimp-tree > li').length === 1);
+          const okIM = [...ovIM.querySelectorAll(':scope > .k-dlg-btns > .k-ok')];
+          check('[170-IM] ปุ่มหลักตัวเดียวอยู่ขวาสุดของแถวปุ่ม', okIM.length === 1 && okIM[0] === ovIM.querySelector('.k-dlg-btns').lastElementChild);
+          ovIM.querySelector('.k-dlg-btns .k-cancel').click();
+          check('[170-IM] ยกเลิก = คืน null และไม่สร้างเล่ม', (await pDlg) === null && !(await kapi.exists(bookIM)));
+
+          // ── (ข) นำเข้าจริง ──
+          const rIM = await impIM({ paths: [docxIM], book: 'ImportTest170', auto: true });
+          check('[170-IM] นำเข้าแล้วได้ 2 บท 3 ฉาก', !!rIM && rIM.chapters === 2 && rIM.scenes === 3, rIM);
+          const secIM = await kapi.readJson(await kapi.join(bookIM, 'section.json'));
+          check('[170-IM] section.json: ชื่อเล่ม = โฟลเดอร์', secIM.title === 'ImportTest170' && secIM.folderName === 'ImportTest170');
+          const dIM = await kapi.join(bookIM, 'Draft', 'default');
+          const drIM = await kapi.readJson(await kapi.join(dIM, 'draft.json'));
+          const scIM = await kapi.readJson(await kapi.join(dIM, 'scenes.json'));
+          check('[170-IM] บทเรียงตามต้นฉบับ', drIM.chapters.map((c) => c.title).join('|') === 'ตอนที่ 1|ตอนที่ 2', drIM.chapters.map((c) => c.title));
+          const ch1IM = drIM.chapters[0];
+          const rowsIM = scIM.chapters[ch1IM.guid] || [];
+          check('[170-IM] หัวข้อระดับ 2 = ฉาก', rowsIM.map((r) => r.title).join('|') === 'ร้านเบเกอรี่|กลางคืน', rowsIM.map((r) => r.title));
+          const f1IM = await kapi.join(dIM, 'Chapters', ch1IM.folderName, rowsIM[0].fileName);
+          const txtIM = await kapi.readFile(f1IM);
+          check('[170-IM] เนื้อฉาก: ตัวหนาติดมา · รูปอ้างอัลบั้มของเล่ม', txtIM.includes('โทระเปิดร้านแต่เช้า **หนักมาก**') && txtIM.includes('](../../../../../Images/ImportTest170/'), txtIM);
+          const imgsIM = (await kapi.listFiles(albumIM).catch(() => [])).filter((f) => !/\.json$/i.test(f));   // album.json = ดัชนีของคลังรูป
+          check('[170-IM] รูปถูกแตกลงคลังรูป (อัลบั้มชื่อเล่ม)', imgsIM.length === 1 && /\.png$/i.test(imgsIM[0]), imgsIM);
+          check('[170-IM] เปิดฉากแรกให้ทันที', state.tabs.has(rIM.firstScene) && state.active && state.active.file === rIM.firstScene);
+          const edIM = state.tabs.get(rIM.firstScene);
+          check('[170-IM] ตัวแก้ไขอ่านไฟล์ที่นำเข้าเป็นย่อหน้า + รูป', !!edIM && !!edIM.editor
+                && edIM.editor.view.state.doc.textContent.includes('หนักมาก') && !!edIM.editor.view.dom.querySelector('figure, img'));
+          await wIM(100);
+          check('[170-IM] เล่มใหม่ขึ้นใน Explorer', [...document.querySelectorAll('#tree .sec-title')].some((h) => h.textContent.includes('ImportTest170')),
+                [...document.querySelectorAll('#tree .sec-title')].map((h) => h.textContent).join('|').slice(0, 160));
+          check('[170-IM] กล่องปิดเองหลังนำเข้า', !document.querySelector('.k-msimp'));
+
+          // ── (ค) ชื่อซ้ำ = ต่อเลขทั้งชื่อเล่มและโฟลเดอร์ ──
+          const r2IM = await impIM({ paths: [docxIM], book: 'ImportTest170', auto: true });
+          check('[170-IM] ชื่อเล่มซ้ำ → โฟลเดอร์ใหม่ "ImportTest170 2" (เล่มเดิมไม่ถูกแตะ)', !!r2IM && r2IM.book === 'ImportTest170 2'
+                && (await kapi.readJson(await kapi.join(book2IM, 'section.json'))).title === 'ImportTest170 2'
+                && (await kapi.readFile(f1IM)) === txtIM, r2IM);
+
+          // ── (ง) วางข้อความแบบนิยายเว็บ ──
+          const r3IM = await impIM({ text: 'คำนำ\n\nตอนที่ 1 เริ่ม\n\nย่อหน้าหนึ่ง\n\nย่อหน้าสอง\n\nตอนที่ 2\n\nจบ', book: 'PasteTest170', auto: true });
+          const dr3IM = await kapi.readJson(await kapi.join(pasteIM, 'Draft', 'default', 'draft.json'));
+          check('[170-IM] วางข้อความ: "ตอนที่ N" ถูกแบ่งเป็นบท (คำนำ = บทแรก)', !!r3IM && dr3IM.chapters.map((c) => c.title).join('|') === 'PasteTest170|ตอนที่ 1 เริ่ม|ตอนที่ 2', dr3IM.chapters.map((c) => c.title));
+          const sc3IM = await kapi.readJson(await kapi.join(pasteIM, 'Draft', 'default', 'scenes.json'));
+          const c3IM = dr3IM.chapters[1];
+          const b3IM = await kapi.readFile(await kapi.join(pasteIM, 'Draft', 'default', 'Chapters', c3IM.folderName, sc3IM.chapters[c3IM.guid][0].fileName));
+          check('[170-IM] วางข้อความ: บรรทัดว่างคั่นย่อหน้าไม่กลายเป็นย่อหน้าว่าง', /ย่อหน้าหนึ่ง\nย่อหน้าสอง\n?$/.test(b3IM), b3IM);
+
+          // ── (จ) ไม่มีโปรเจกต์ = บอกให้เปิดก่อน (ไม่เปิดกล่อง) ──
+          const rootIM = state.root;
+          state.root = null;
+          const r4IM = await impIM({ text: 'x', auto: true });
+          state.root = rootIM;
+          const tIM = [...document.querySelectorAll('#k-toasts .k-toast')].pop();
+          check('[170-IM] ไม่มีโปรเจกต์: ไม่เปิดกล่อง + ข้อความลอยพร้อมปุ่มสร้างโปรเจกต์', r4IM === null && !document.querySelector('.k-msimp')
+                && !!tIM && tIM.textContent.includes(tt('ui.manuscript.needProject')) && !!tIM.querySelector('.k-toast-act'));
+          if (tIM) tIM.remove();
+        } finally {
+          for (const p of [bookIM, book2IM, pasteIM]) await closeTabsUnderPath(p, { save: false }).catch(() => {});
+          for (const p of [bookIM, book2IM, pasteIM, albumIM, docxIM]) await kapi.remove(p).catch(() => {});
+          document.querySelectorAll('.k-msimp').forEach((n) => n.closest('.k-overlay')?.remove());
+          await buildTree();
+        }
+        check('[170-IM] เก็บกวาด: ไม่มีเล่ม/แท็บของเทสค้าง', !(await kapi.exists(bookIM)) && ![...state.tabs.keys()].some((k) => k.includes('ImportTest170') || k.includes('PasteTest170')));
+      }
+
+      // ══ [170-DXC] คอมเมนต์ไปกลับกับ Word (ผลสำรวจผู้ใช้ข้อ 6) · [170-LOCK] ใช้หลายเครื่อง (ข้อ 2) ══
+      {
+        const wD = (ms) => new Promise((r) => setTimeout(r, ms));
+        const { importManuscriptDialog: impD } = await import('./import/import-manuscript-ui.js');
+        const { importDocxCommentsDialog } = await import('./comments/docx-comments-ui.js');
+        const { commentStore: csD } = await import('./comments/comment-ui.js');
+        const { parseComments: pcD } = await import('./comments/comment-core.js');
+        const JSZipD = (await import('jszip')).default;
+        const bookD = await kapi.join(state.root, 'DxcTest170');
+        const docxD = await kapi.join(state.root, '..', 'k2-dxc170-test.docx');
+        await kapi.remove(bookD).catch(() => {});
+        let hubD = null;
+        try {
+          // ── เตรียม: เล่มทดสอบ 1 ฉาก + คอมเมนต์ (เปิด · มีคำตอบ · ปิดแล้ว) ──
+          const rD = await impD({ text: 'โทระเปิดร้านแต่เช้า\nฝนตกหนักมากทั้งคืน', book: 'DxcTest170', auto: true });
+          check('[170-DXC] เงื่อนไข: สร้างเล่มทดสอบได้', !!rD && !!rD.firstScene, rD);
+          const fD = rD.firstScene;
+          if (state.tabs.has(fD)) closeTab(fD, { discard: true });
+          const store = csD();
+          const raw0 = await kapi.readFile(fD);
+          const at = raw0.indexOf('แต่เช้า');
+          const c1 = await store.add(fD, { start: at, end: at + 'แต่เช้า'.length, quote: 'แต่เช้า' }, 'เช้าไปไหม170', { author: 'นักเขียน170' });
+          await store.reply(fD, c1.id, 'ตั้งใจครับ170', { author: 'นักเขียน170' });
+          const c2 = await store.add(fD, null, 'ปิดไปแล้ว170', { author: 'นักเขียน170' });
+          await store.resolve(fD, c2.id, true);
+          const dPathD = await kapi.join(bookD, 'Draft', 'default');
+
+          // ── ขาออก: ศูนย์ส่งออก → DOCX + ติ๊ก "แนบคอมเมนต์" ──
+          hubD = await openExportHub();
+          hubD.cfg.scope = 'draft'; hubD.cfg.draft = dPathD;
+          await hubD.setFormat('docx');
+          const cbD = document.querySelector('#xhub-docx-comments');
+          check('[170-DXC] ตัวเลือก "แนบคอมเมนต์" ขึ้นเฉพาะ DOCX', !!cbD && !cbD.checked);
+          const plainD = await JSZipD.loadAsync((await hubD.ebook()).bytes);
+          check('[170-DXC] ไม่ติ๊ก = ไม่มี comments.xml (ไฟล์เดิมทุกอย่าง)', !plainD.file('word/comments.xml'));
+          cbD.checked = true; cbD.dispatchEvent(new Event('change'));
+          await wD(100);
+          const exD = await hubD.ebook();
+          const zD = await JSZipD.loadAsync(exD.bytes);
+          const cxD = zD.file('word/comments.xml') ? await zD.file('word/comments.xml').async('string') : '';
+          const docD = await zD.file('word/document.xml').async('string');
+          check('[170-DXC] ★ ติ๊กแล้ว: comments.xml มีคอมเมนต์ + คำตอบ (ไม่มีเธรดที่ปิดแล้ว)', cxD.includes('เช้าไปไหม170') && cxD.includes('ตั้งใจครับ170') && !cxD.includes('ปิดไปแล้ว170'), cxD.slice(0, 300));
+          check('[170-DXC] ช่วงคอมเมนต์ล้อม "แต่เช้า" ในเอกสาร', /commentRangeStart w:id="0"\/>(?:<[^>]+>)*<w:r>(?:<w:rPr>.*?<\/w:rPr>)?<w:t xml:space="preserve">แต่เช้า/.test(docD), docD.slice(docD.indexOf('โทระ') - 50, docD.indexOf('โทระ') + 400));
+          check('[170-DXC] ไม่มีเครื่องหมายภายในหลุดเข้าไฟล์', ![0xE0C0, 0xE0C1, 0xE0C2].some((c) => docD.includes(String.fromCharCode(c))));
+          check('[170-DXC] ข้อความผลบอกจำนวนคอมเมนต์', /2/.test(exD.note) && exD.note.includes(ttf('ui.xhub.doneDocxComments', 2)), exD.note);
+          check('[170-DXC] ไฟล์ฉากไม่ถูกแตะ (ไม่มีเครื่องหมาย)', !(await kapi.readFile(fD)).split('').some((ch) => ch >= String.fromCharCode(0xE0C0) && ch <= String.fromCharCode(0xE0C2)));
+          cbD.checked = false; cbD.dispatchEvent(new Event('change'));
+          await wD(50);
+          hubD.close(); hubD = null;
+
+          // ── บก. แก้ใน Word: ตอบเธรดเดิม + คอมเมนต์ใหม่ที่ "ฝนตก" ──
+          let cx = cxD;
+          let ex = await zD.file('word/commentsExtended.xml').async('string');
+          const p0 = (cx.match(/<w:comment w:id="0"[\s\S]*?w14:paraId="([0-9A-F]+)"/) || [])[1];
+          cx = cx.replace('</w:comments>', '<w:comment w:id="9" w:author="บก.170" w:date="2026-10-05T10:00:00Z"><w:p w14:paraId="0BBB0001"><w:r><w:t>สายหน่อย170</w:t></w:r></w:p></w:comment>'
+            + '<w:comment w:id="10" w:author="บก.170" w:date="2026-10-05T10:05:00Z"><w:p w14:paraId="0BBB0002"><w:r><w:t>ฝนแรงไป170</w:t></w:r></w:p></w:comment></w:comments>');
+          ex = ex.replace('</w15:commentsEx>', `<w15:commentEx w15:paraId="0BBB0001" w15:paraIdParent="${p0}" w15:done="0"/><w15:commentEx w15:paraId="0BBB0002" w15:done="0"/></w15:commentsEx>`);
+          const doc2 = docD.replace('ฝนตก', '</w:t></w:r><w:commentRangeStart w:id="10"/><w:r><w:t xml:space="preserve">ฝนตก</w:t></w:r><w:commentRangeEnd w:id="10"/><w:r><w:commentReference w:id="10"/></w:r><w:r><w:t xml:space="preserve">');
+          zD.file('word/comments.xml', cx); zD.file('word/commentsExtended.xml', ex); zD.file('word/document.xml', doc2);
+          await kapi.writeBytes(docxD, Array.from(await zD.generateAsync({ type: 'uint8array' })));
+
+          // ── ขาเข้า ──
+          const rIn = await importDocxCommentsDialog({ path: docxD, auto: true });
+          check('[170-DXC] ★ รับคอมเมนต์: ใหม่ 1 · คำตอบใหม่ 1 · ลงฉากเดียว', !!rIn && rIn.files === 1 && rIn.stats.added === 1 && rIn.stats.replies === 1 && rIn.stats.unmatched === 0, rIn && rIn.stats);
+          const after = pcD(await kapi.readFile(fD));
+          const t1 = after.find((c) => c.text === 'เช้าไปไหม170');
+          const tn = after.find((c) => c.text === 'ฝนแรงไป170');
+          check('[170-DXC] คำตอบของ บก. ต่อท้ายเธรดเดิม (คำตอบเดิมไม่ซ้ำ)', t1 && t1.replies.map((r) => r.text).join('|') === 'ตั้งใจครับ170|สายหน่อย170', t1 && t1.replies);
+          check('[170-DXC] คอมเมนต์ใหม่ผูก "ฝนตก" + ผู้เขียนจาก Word', tn && tn.anchor && tn.anchor.quote === 'ฝนตก' && tn.author === 'บก.170', tn);
+          check('[170-DXC] เนื้อฉากไม่เปลี่ยน', (await kapi.readFile(fD)).includes('โทระเปิดร้านแต่เช้า\nฝนตกหนักมากทั้งคืน'));
+          const rAgain = await importDocxCommentsDialog({ path: docxD, auto: true });
+          check('[170-DXC] นำเข้าไฟล์เดิมซ้ำ = ไม่เพิ่มอะไร', !!rAgain && rAgain.files === 0 && rAgain.stats.added === 0 && rAgain.stats.replies === 0, rAgain && rAgain.stats);
+
+          // ══ [170-LOCK] ══
+          const LK = await import('./project-lock-ui.js');
+          const me = await kapi.lockMe();
+          check('[170-LOCK] main บอกชื่อเครื่อง + เซสชัน', !!me && !!me.machine && !!me.session, me);
+          const mine = await kapi.lockRead(state.root);
+          check('[170-LOCK] ★ เปิดโปรเจกต์แล้วมีไฟล์ล็อกของเซสชันนี้', !!mine && mine.session === me.session && mine.machine === me.machine, mine);
+          const lockF = await kapi.join(state.root, '.k2lock.json');
+          const otherLock = (ageMs) => JSON.stringify({ machine: 'DESKTOP-K2TEST', user: 'x', session: 'other-session-170', app: '2', since: new Date(Date.now() - ageMs).toISOString(), beat: new Date(Date.now() - ageMs).toISOString() });
+          await kapi.writeFile(lockF, otherLock(30 * 1000));
+          const pA = LK.checkProjectLock(state.root);
+          let ovL = null;
+          for (let i = 0; i < 40 && !(ovL = [...document.querySelectorAll('.k-overlay')].pop()); i++) await wD(50);
+          check('[170-LOCK] ★ อีกเครื่องยังเปิดอยู่ = ถามก่อน (บอกชื่อเครื่อง)', !!ovL && ovL.textContent.includes('DESKTOP-K2TEST'), ovL && ovL.textContent.slice(0, 120));
+          ovL.querySelector('.k-cancel').click();
+          check('[170-LOCK] ยกเลิก = ไม่เปิด', (await pA) === false);
+          const pB = LK.checkProjectLock(state.root);
+          for (let i = 0; i < 40 && !(ovL = [...document.querySelectorAll('.k-overlay')].pop()); i++) await wD(50);
+          const okL = ovL && ovL.querySelector(':scope .k-dlg-btns > .k-ok');
+          check('[170-LOCK] ปุ่ม "เปิดต่อที่นี่" เป็นปุ่มหลักขวาสุด', !!okL && okL === ovL.querySelector('.k-dlg-btns').lastElementChild && okL.textContent === tt('ui.lock.openAnyway'));
+          okL.click();
+          check('[170-LOCK] เปิดต่อ = true', (await pB) === true);
+          await kapi.writeFile(lockF, otherLock(60 * 60 * 1000));
+          const nToast = document.querySelectorAll('#k-toasts .k-toast').length;
+          check('[170-LOCK] ล็อกหมดอายุ = เปิดได้เลย ไม่ถาม', (await LK.checkProjectLock(state.root)) === true && !document.querySelector('.k-overlay'));
+          await LK.holdProjectLock(state.root);
+          const tL = [...document.querySelectorAll('#k-toasts .k-toast')].find((x) => x.textContent.includes('DESKTOP-K2TEST'));
+          check('[170-LOCK] ...แต่บอกเบา ๆ ว่าครั้งล่าสุดเปิดที่เครื่องไหน', !!tL, nToast + ' → ' + [...document.querySelectorAll('#k-toasts .k-toast')].map((x) => x.textContent).join(' | ').slice(0, 200));
+          if (tL) tL.remove();
+          check('[170-LOCK] ถือล็อกกลับเป็นของเซสชันนี้', ((await kapi.lockRead(state.root)) || {}).session === me.session);
+          await LK.releaseProjectLock();
+          check('[170-LOCK] ปล่อยล็อก = ไฟล์หาย', !(await kapi.exists(lockF)));
+          await LK.holdProjectLock(state.root);
+          check('[170-LOCK] ถือใหม่ได้', ((await kapi.lockRead(state.root)) || {}).session === me.session);
+          await kapi.writeFile(lockF, otherLock(30 * 1000));
+          await kapi.lockRelease();
+          check('[170-LOCK] ★ ปล่อยล็อกไม่ลบล็อกของเครื่องอื่น', ((await kapi.lockRead(state.root)) || {}).session === 'other-session-170');
+          await LK.holdProjectLock(state.root);
+          const { ZIP_SKIP_ROOT_FILES } = await import('./export-zip.js');
+          check('[170-LOCK] ล็อกไม่ติดไปกับ ZIP ของโปรเจกต์', ZIP_SKIP_ROOT_FILES.includes('.k2lock.json'));
+
+          // สำเนาจากตัวซิงก์ → ตัวตรวจสุขภาพบอกว่าเป็นสำเนาของฉากไหน
+          const DrD = await import('./project-doctor-ui.js');
+          const dirD = fD.replace(/[\\/][^\\/]*$/, '');
+          const baseD = fD.split(/[\\/]/).pop();
+          const copyD = await kapi.join(dirD, baseD.replace(/\.md$/, '') + ' (conflicted copy).md');
+          await kapi.writeFile(copyD, '---\ntitle: copy\ntype: scene\n---\nฉบับอีกเครื่อง\n');
+          const isD = (await DrD.scanProject()).filter((x) => x.type === 'orphan-file' && copyD.endsWith(x.file));
+          check('[170-LOCK] ★ ตัวตรวจสุขภาพ: สำเนา Dropbox = บอกว่าเป็นสำเนาของฉากไหน', isD.length === 1 && isD[0].syncOf === baseD
+                && DrD.describeIssue(isD[0]) === ttf('ui.doctor.tSyncCopy', isD[0].file, baseD), isD[0] && DrD.describeIssue(isD[0]));
+          await kapi.remove(copyD).catch(() => {});
+
+          // คู่มือบท 17 จากเมนูช่วยเหลือ
+          await handleCommand('sync-guide');
+          let dv = null;
+          for (let i = 0; i < 60 && !((dv = document.querySelector('.k-docs-ov .k-docs-body')) && dv.textContent.includes('Dropbox')); i++) await wD(50);
+          check('[170-LOCK] เมนูช่วยเหลือ → ใช้หลายเครื่อง เปิดคู่มือบท 17', !!dv && dv.textContent.includes('.k2lock.json'), dv && dv.textContent.slice(0, 80));
+          document.querySelectorAll('.k-docs-ov').forEach((n) => n.remove());
+        } finally {
+          if (hubD) { try { const cb = document.querySelector('#xhub-docx-comments'); if (cb && cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); } hubD.close(); } catch {} }
+          await closeTabsUnderPath(bookD, { save: false }).catch(() => {});
+          for (const p of [bookD, docxD]) await kapi.remove(p).catch(() => {});
+          document.querySelectorAll('.k-overlay').forEach((n) => n.remove());
+          await buildTree();
+        }
+        check('[170-DXC] เก็บกวาด', !(await kapi.exists(bookD)));
+      }
+
+      // ══ [170-SM] โหมดเรียบง่าย + เทมเพลตนิยายเว็บ/VN (ผลสำรวจผู้ใช้ข้อ 8) ══
+      {
+        const wS = (ms) => new Promise((r) => setTimeout(r, ms));
+        const AS = await import('./app.js');
+        const P8 = await import('./project.js');
+        const shown = (id) => { const b = document.getElementById(id); return !!b && !b.classList.contains('tb-hidden') && !b.hidden && b.offsetWidth > 0; };
+        const tbBefore = JSON.stringify(state.settings.toolbar || null);
+        const fmtBefore = JSON.stringify(state.settings.fmtbar || null);
+        const openBefore = ['tree', 'outline', 'props', 'kanban', 'dashboard'].filter((p) => isPanelOpen(p));
+        const kanbanBtnBefore = shown('tb-kanban');
+        try {
+          check('[170-SM] เงื่อนไข: เริ่มจากโหมดปกติ', !state.settings.simpleMode && !document.body.classList.contains('k-simple'));
+          await AS.handleCommand('toggle-simple-mode');
+          await wS(150);
+          check('[170-SM] ★ เปิดโหมด: body.k-simple + ค่าระดับผู้ใช้', document.body.classList.contains('k-simple') && state.settings.simpleMode === true
+                && (await kapi.readGlobalSettings()).simpleMode === true);
+          const tbIds = ['tb-tree-panel', 'tb-settings', 'tb-kanban', 'tb-timeline'];
+          const tbState = () => tbIds.map((id) => { const b = document.getElementById(id); return id + ':' + (b ? b.className + '/' + b.offsetWidth : 'none'); }).join(' ');
+          await (await import('./toolbar/toolbar-ui.js')).layoutToolbarOverflow();
+          check('[170-SM] แถบหลักเหลือปุ่มพื้นฐาน (Explorer · ตั้งค่า) · ปุ่มเฉพาะทางถูกซ่อน', shown('tb-tree-panel') && shown('tb-settings') && !shown('tb-kanban') && !shown('tb-timeline'), tbState() + ' win=' + innerWidth);
+          check('[170-SM] ปุ่ม "เครื่องมือทั้งหมด" กดได้แม้ไม่มีเอกสารเปิด (ไม่ติด .dis)', !document.getElementById('tb-simple-exit').classList.contains('dis'));
+          const ovfItems = (await import('./toolbar/toolbar-ui.js')).toolbarOverflowItems();
+          check('[170-SM] เมนู » มีปุ่มที่โหมดเรียบง่ายซ่อน (กดใช้ได้โดยไม่ต้องออกจากโหมด)', ovfItems.some((it) => it && it.text && it.text === (document.getElementById('tb-kanban').getAttribute('title') || '').split('\n')[0].trim()));
+          check('[170-SM] ปุ่ม "เครื่องมือทั้งหมด" มองเห็น + มีข้อความ', shown('tb-simple-exit') && document.getElementById('tb-simple-exit').textContent.trim() === tt('ui.simple.exitLabel'));
+          check('[170-SM] ปุ่มเปิด/บันทึก/ค้นหาโปรเจกต์ยังอยู่ (ปุ่มที่โปรแกรมคุม)', shown('open-btn') && shown('search-all-btn'));
+          check('[170-SM] ★ ค่าแถบเครื่องมือของผู้ใช้ไม่ถูกแก้', JSON.stringify(state.settings.toolbar || null) === tbBefore && JSON.stringify(state.settings.fmtbar || null) === fmtBefore);
+          check('[170-SM] แผง: เหลือ Explorer + เอกสาร', isPanelOpen('tree') && !isPanelOpen('props') && !isPanelOpen('kanban') && !isPanelOpen('dashboard'),
+                ['tree', 'props', 'kanban', 'dashboard'].map((p) => p + ':' + isPanelOpen(p)).join(' '));
+          check('[170-SM] เวิร์กสเปซที่จดไว้ไม่โผล่ในรายชื่อของผู้ใช้', !(await import('./panels/panel-ui.js')).listWorkspaces().some((w) => String(w.name).startsWith('__k2')));
+          if (kapi.menuItemState) {
+            let ms = [];
+            for (let i = 0; i < 40; i++) { ms = await kapi.menuItemState(['view-simple-mode']); if (ms[0] && ms[0].checked) break; await wS(50); }
+            check('[170-SM] เมนู มุมมอง → โหมดเรียบง่าย ติ๊กอยู่', !!ms[0] && ms[0].exists && ms[0].checked === true, JSON.stringify(ms));
+          }
+          const tS = [...document.querySelectorAll('#k-toasts .k-toast')].pop();
+          check('[170-SM] ข้อความลอยบอกว่าเครื่องมืออื่นอยู่ในเมนู + ปุ่มออก', !!tS && tS.textContent.includes(tt('ui.simple.onToast')) && !!tS.querySelector('.k-toast-act'));
+          if (tS) tS.remove();
+          // ออกด้วยปุ่มบนแถบ
+          document.getElementById('tb-simple-exit').click();
+          for (let i = 0; i < 40 && state.settings.simpleMode; i++) await wS(50);
+          await wS(150);
+          check('[170-SM] ★ กด "เครื่องมือทั้งหมด" = ออกจากโหมด', !state.settings.simpleMode && !document.body.classList.contains('k-simple') && !shown('tb-simple-exit'));
+          check('[170-SM] ★ ปุ่มกลับมาตามค่าของผู้ใช้', shown('tb-kanban') === kanbanBtnBefore && shown('tb-tree-panel'));
+          const openAfter = ['tree', 'outline', 'props', 'kanban', 'dashboard'].filter((p) => isPanelOpen(p));
+          check('[170-SM] ★ เลย์เอาต์แผงกลับเหมือนก่อนเข้าโหมด', JSON.stringify(openAfter) === JSON.stringify(openBefore), openBefore.join(',') + ' → ' + openAfter.join(','));
+
+          // ── เทมเพลต ──
+          const parent = await kapi.join(state.root, '..');
+          const made = [];
+          try {
+            const rW = await P8.createProjectFromTemplate(parent, 'k2-tpl-web170', 'webnovel');
+            made.push(rW);
+            const secW = (await kapi.listDirs(rW)).filter((d) => !['Images', 'Memos', 'Recycle', 'Research', 'Wiki'].includes(d));
+            const drW = await kapi.readJson(await kapi.join(rW, secW[0], 'Draft', 'default', 'draft.json'));
+            check('[170-SM] เทมเพลตนิยายเว็บ: ตอนที่ 1–3', drW.chapters.map((c) => c.title).join('|') === [1, 2, 3].map((n) => ttf('ui.project.episodeF', n)).join('|'), drW.chapters.map((c) => c.title));
+            const rV = await P8.createProjectFromTemplate(parent, 'k2-tpl-vn170', 'vn');
+            made.push(rV);
+            const secs = [];
+            for (const d of await kapi.listDirs(rV)) {
+              const sj = await kapi.join(rV, d, 'section.json');
+              if (await kapi.exists(sj)) secs.push(await kapi.readJson(sj));
+            }
+            secs.sort((a, b) => a.order - b.order);
+            check('[170-SM] เทมเพลต VN: เส้นทางหลัก + เส้นทาง A เป็นสองเล่ม', secs.map((x) => x.title).join('|') === tt('ui.project.vnCommon') + '|' + ttf('ui.project.vnRouteF', 'A'), secs.map((x) => x.title));
+            check('[170-SM] เทมเพลต VN: มีหมวด Wiki สิ่งของ', await kapi.exists(await kapi.join(rV, 'Wiki', 'items')));
+            const pT = P8.showTemplateDialog({ allowBlank: true });
+            await wS(80);
+            const cards = [...document.querySelectorAll('.k-newproj-card')].map((c) => c.dataset.tpl);
+            check('[170-SM] กล่องเลือกเทมเพลตมีนิยายเว็บ + VN', cards.includes('webnovel') && cards.includes('vn') && cards[0] === P8.BLANK_TEMPLATE, cards.join(','));
+            [...document.querySelectorAll('.k-overlay')].pop().querySelector('.k-cancel').click();
+            check('[170-SM] ยกเลิกกล่องเทมเพลต = null', (await pT) === null);
+          } finally {
+            for (const r of made) if (r) await kapi.remove(r).catch(() => {});
+            await kapi.removeRecent?.(made[0]).catch?.(() => {});
+          }
+          // ── [alpha.170] หน้าแรกค้างทับเมื่อเปิดโปรเจกต์จากเมนู (เจอตอนลองแอปจริง) ──
+          const HU = await import('./home-ui.js');
+          const hov = await HU.showHomeDialog({ startup: true });
+          check('[170-SM] เงื่อนไข: หน้าแรกแบบตอนเปิดโปรแกรมซ่อนโปรแกรมข้างหลัง', document.body.contains(hov) && document.body.classList.contains('k-home-only'));
+          check('[170-SM] ★ ปิดหน้าแรกทุกใบได้จากทางเปิดโปรเจกต์ (ไม่ใช่เฉพาะปุ่มบนหน้าแรก)', HU.closeHomeDialogs() === 1 && !document.body.contains(hov) && !document.body.classList.contains('k-home-only'));
+        } finally {
+          if (state.settings.simpleMode) await AS.setSimpleMode(false);
+          document.querySelectorAll('#k-toasts .k-toast').forEach((n) => n.remove());
+        }
       }
 
       // ══ [alpha.100] ★★ ตาข่ายจับ "error เงียบ" ของทั้งรอบ ══

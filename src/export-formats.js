@@ -91,6 +91,49 @@ export function exportPageNumberFmt(fmt) {
   return { ...f, pageNumbers: { ...PAGE_NUMBER_DEFAULTS, ...(f.pageNumbers || {}) } };
 }
 
+/**
+ * [trial 2026-10-25 ข้อ 6ก] บรรทัด "เล่ม" ใต้ชื่อเรื่องบนหน้าปกนิยาย
+ *
+ * ผู้ใช้เจอ: ส่งออกเล่ม 2 ของชุดสองเล่ม แล้วปกเขียนแค่ชื่อโปรเจกต์ — ไม่มีอะไรบอกว่าเป็นเล่มไหน
+ * กติกา: ชื่อเล่มที่ซ้ำกับชื่อเรื่อง/ชื่อตั้งต้น (`Book N`) ของโปรเจกต์เล่มเดียว = ไม่ต้องมีบรรทัดนี้ ·
+ * ชื่อเล่มที่ขึ้นต้นด้วยชื่อเรื่อง ("ชื่อเรื่อง เล่มที่ 1 …") ตัดส่วนที่ซ้ำออก
+ * @returns {string} '' = ไม่ใส่บรรทัดเล่ม
+ */
+export function coverBookLine(book, title, bookCount = 1) {
+  const b = String(book || '').trim();
+  const tl = String(title || '').trim();
+  if (!b || b === tl) return '';
+  if ((+bookCount || 1) <= 1 && /^Book \d+$/i.test(b)) return '';
+  if (tl && b.startsWith(tl)) {
+    const rest = b.slice(tl.length).replace(/^[\s:·—–-]+/, '').trim();
+    return rest;
+  }
+  return b;
+}
+
+/**
+ * [trial 2026-10-25 ข้อ 19] `[title]` ของชื่อไฟล์ส่งออก = "ของที่ส่งออก" ไม่ใช่ชื่อโปรเจกต์เสมอ
+ * ผู้ใช้เจอ: ส่งออกฉากเดียว/เล่ม 2 แล้วกล่องบันทึกเสนอชื่อโปรเจกต์ทุกครั้ง (ไฟล์ทับกันเอง)
+ * ฉากที่เปิด = ชื่อฉาก · ทั้งเล่มในโปรเจกต์ที่มีหลายเล่ม = ชื่อเล่ม · เล่มเดียว = ชื่อโปรเจกต์ (เหมือนเดิม)
+ * @returns {{title:string, book:string}} ค่าที่ทับบริบทของโค้ดสั้น
+ */
+export function exportNameFields(scope, { title = '', project = '', book = '', books = 1 } = {}) {
+  if (scope === 'tab') return { title: String(title || project || ''), book: String(book || '') };
+  const many = (+books || 1) > 1 && String(book || '').trim();
+  return { title: many ? String(book) : String(project || title || ''), book: String(book || '') };
+}
+
+/**
+ * [trial 2026-10-25 ข้อ 13] โหมดสีของ PDF ตามชนิดเอกสาร — ค่าเริ่มต้น 'auto' = นิยายสี · บทภาพยนตร์ขาวดำ
+ * (เดิมขาวดำทั้งคู่: รูปประกอบในนิยายกลายเป็นภาพเทาทั้งเล่มโดยไม่มีอะไรเตือน) · ผู้ใช้เลือกเอง = ตามที่เลือก
+ * @returns {'mono'|'color'}
+ */
+export function pdfColorMode(pdf, kind) {
+  const m = pdf && pdf.colorMode;
+  if (m === 'color' || m === 'mono') return m;
+  return kind === 'screenplay' ? 'mono' : 'color';
+}
+
 /** ค่าเริ่มต้นของกล่องส่งออก */
 export function defaultHubSettings() {
   return {
@@ -102,11 +145,13 @@ export function defaultHubSettings() {
     // titlePages = หน้าปก (บทหนัง = หน้าปกของบท · นิยาย = รูปปกจาก "จัดการเล่ม")
     // roster     = หน้ารายชื่อตัวละคร — ทั้งคู่เป็น "หน้าหน้าเล่ม" ที่ **ไม่นับเลขหน้า**
     // [alpha.132 ข้อ 3+4] เลขหน้ากับเลขฉากเป็นคนละสวิตช์ · โหมดสี/ขาวดำ
-    // (ค่าเริ่มต้นขาวดำตามธรรมเนียมบทถ่ายทำ — ตรงกับกล่องส่งออก PDF ของบท)
+    // (ค่าเริ่มต้น 'auto' — บทภาพยนตร์ขาวดำตามธรรมเนียมบทถ่ายทำ · นิยายสี: ดู pdfColorMode())
     pdf: { toc: true, titlePages: true, roster: true, headers: true,
-           pageNumbers: true, sceneNumbers: true, colorMode: 'mono', watermark: '' },
+           pageNumbers: true, sceneNumbers: true, colorMode: 'auto', watermark: '' },
     html: { wysiwyg: true },
     rtf: { fontPt: 12 },
+    // [alpha.170 · คอมเมนต์ไปกลับกับ Word] แนบคอมเมนต์ที่ยังเปิดอยู่ของฉากไปในไฟล์ Word (ส่งให้ บก. ตอบ)
+    docx: { comments: false },
   };
 }
 
@@ -121,12 +166,13 @@ export function normalizeHub(saved) {
   out.workflow = typeof s.workflow === 'string' ? s.workflow : '';
   out.pdf = { ...d.pdf, ...(s.pdf || {}) };
   out.pdf.watermark = String(out.pdf.watermark || '');
-  // ค่าที่บันทึกไว้ก่อนมีฟีเจอร์นี้ไม่มีสองฟิลด์นี้ → ตกกลับเป็นค่าเริ่มต้น (เลขฉากเปิด · ขาวดำ)
+  // ค่าที่บันทึกไว้ก่อนมีฟีเจอร์นี้ไม่มีสองฟิลด์นี้ → ตกกลับเป็นค่าเริ่มต้น (เลขฉากเปิด · สีตามชนิดเอกสาร)
   out.pdf.sceneNumbers = s.pdf && 'sceneNumbers' in s.pdf ? !!s.pdf.sceneNumbers : d.pdf.sceneNumbers;
-  out.pdf.colorMode = out.pdf.colorMode === 'color' ? 'color' : 'mono';
+  out.pdf.colorMode = out.pdf.colorMode === 'color' || out.pdf.colorMode === 'mono' ? out.pdf.colorMode : 'auto';
   out.html = { ...d.html, ...(s.html || {}) };
   out.rtf = { ...d.rtf, ...(s.rtf || {}) };
   out.rtf.fontPt = num(out.rtf.fontPt, 12);
+  out.docx = { comments: !!(s.docx && s.docx.comments) };
   return out;
 }
 

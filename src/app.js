@@ -146,7 +146,7 @@ import { openBookReader, closeBookReader, isBookReaderOpen, bookReaderPages, boo
          bookReaderPage,
          gotoPage as readerGotoPage, computeBookFlow, cachedStartPage, bumpBookFlow,
          bookFlowKey, bookFlowReady, staleStartPage } from './read-ui.js';
-import { isPageFlowContinue, explicitStartPage, pageAtPos } from './book-flow.js';
+import { isPageFlowContinue, explicitStartPage, pageAtPos, normBookCover } from './book-flow.js';
 import { restoreFromTrash, deleteToTrash, purgeRecycle, listPurgeable } from './recycle.js';
 import { trashPathFor } from './trash-path.js';          // [alpha.162 · W1-4] ชื่อในถังไม่ชนกัน
 import { openDashboard, renderDashboard } from './dashboard.js';
@@ -221,6 +221,7 @@ import { initPanelSystem, getPanelManager, togglePanelDialog, showPanel, hidePan
          makePanelButton, panelEmpty,        // [alpha.162 · W2] ปุ่ม/สถานะว่างของแผงมาจากของกลางชุดเดียว
          isPanelOpen, resetPanelSystem, PANEL_DEFS, panelId, setPanelShowHook,
          onPanelLayoutChange, panelDesc, setPanelCloseGuard,
+         enterSimpleLayout, leaveSimpleLayout,   // [alpha.170 · ข้อ 8] โหมดเรียบง่าย
          // [alpha.66r3] เวิร์กสเปซ + ระบบจัดการพื้นที่
          toggleSpace, panelsHidden, hiddenMode, workspaceMenu, workspaceMenuItems, toggleSide, sideHidden,
          listWorkspaces, saveWorkspace, applyWorkspace, deleteWorkspace,
@@ -313,6 +314,10 @@ import { renderAIHubPanel } from './ai-hub-ui.js';
 import { renderStarterPanel, openStoryStarter, flushStarter } from './starter/starter-ui.js';
 import { showThesaurusPopup, initThesaurus } from './tools/thesaurus-ui.js';
 import { importScrivenerDialog } from './import/import-ui.js';
+import { importManuscriptDialog } from './import/import-manuscript-ui.js';   // [alpha.170] นำเข้าต้นฉบับ Word/Markdown/ข้อความ
+import { importDocxCommentsDialog } from './comments/docx-comments-ui.js';   // [alpha.170] รับคอมเมนต์จากไฟล์ Word
+import { checkProjectLock, holdProjectLock, releaseProjectLock } from './project-lock-ui.js';   // [alpha.170] ตัวล็อกโปรเจกต์ข้ามเครื่อง
+import { SIMPLE_WS, simpleByDefault } from './simple-mode.js';   // [alpha.170 · ข้อ 8] โหมดเรียบง่าย
 // [alpha.60 ข้อ 62-66] นำเข้าบทภาพยนตร์จาก 5 รูปแบบ
 import { importScreenplayDialog, importSummary, elementsToMarkdown } from './import-sp.js';
 // [alpha.60 ข้อ 74] เปรียบเทียบบทภาพยนตร์
@@ -1336,6 +1341,31 @@ export function autoFitWidthRestore() {
  * ค่าระดับผู้ใช้ → `saveGlobalSetting` คู่กับ `saveProjectMetaSoon` (กฎ W3) · กล่องตั้งค่าบันทึกเอง ส่ง `save:false`
  * @param {boolean} [on]  ไม่ส่ง = สลับ
  */
+/**
+ * ══ [alpha.170 · ข้อ 8] โหมดเรียบง่าย — ทางเดียวของทุกทางเข้า (เมนู มุมมอง · ปุ่ม "เครื่องมือทั้งหมด" · คำสั่ง) ══
+ * เปิด: จดเลย์เอาต์แผงไว้ แล้วเหลือ Explorer + เอกสาร · แถบเครื่องมือ/แถบรูปแบบเหลือปุ่มพื้นฐาน (ตัวกรองซ้อน — simple-mode.js)
+ * ปิด: คืนเลย์เอาต์ที่จดไว้ · ปุ่มกลับมาตามค่าที่ผู้ใช้ตั้ง · เมนูระบบมีครบทุกคำสั่งตลอด
+ * @param {boolean} [on] ไม่ส่ง = สลับ
+ */
+export async function setSimpleMode(on, { layout = true } = {}) {
+  const want = on === undefined ? !state.settings.simpleMode : !!on;
+  await saveGlobalSetting('simpleMode', want);
+  if (state.settings.simpleLayoutPending) await saveGlobalSetting('simpleLayoutPending', false);
+  if (state.root) saveProjectMetaSoon();
+  if (layout) {
+    try { want ? enterSimpleLayout(SIMPLE_WS) : leaveSimpleLayout(SIMPLE_WS); }
+    catch (e) { log('warn', 'simple mode: layout', e); }
+  }
+  applyToolbarConfig();
+  refreshToolbar();
+  syncMenuToggles();
+  logAction('view', 'simple mode ' + (want ? 'on' : 'off'));
+  if (want) toast(tt('ui.simple.onToast'), { level: 'info', ttl: 9000,
+    action: { label: tt('ui.simple.exitLabel'), onClick: () => setSimpleMode(false) } });
+  else setStatus(tt('ui.simple.offStatus'));
+  return want;
+}
+
 export function setAutoFitWidth(on, { save = true, was = !!state.settings.autoFitWidth } = {}) {
   const v = on === undefined ? !was : !!on;
   state.settings.autoFitWidth = v;
@@ -2103,6 +2133,21 @@ export function togglePageNumbers(on) {
   saveProjectMetaSoon(); syncMenuToggles();
   setStatus(cur.show ? ttf('ui.app.pageNumOpenRightMargin', cur.right, cur.top) : tt('ui.app.pageNumClose'));
   return cur.show;
+}
+
+/**
+ * [trial 2026-10-25 ข้อ 25] "ใส่เลขบนหน้าแรกด้วย" — ค่าเดียวของโปรเจกต์ (`spPageNumbers.firstPage`)
+ * ทางเดียวของทุกที่ที่สลับค่านี้นอกกล่องตั้งค่า (ศูนย์ส่งออก) · ปิด = หน้าที่เลขจริงเป็น 1 ไม่พิมพ์เลข (ธรรมเนียมฮอลลีวูด)
+ */
+export function setFirstPageNumber(on) {
+  const cur = { ...PAGE_NUMBER_DEFAULTS, ...(state.settings.spPageNumbers || {}) };
+  cur.firstPage = !!on;
+  state.settings.spPageNumbers = cur;
+  applyPageVars();
+  refreshSpView();
+  updatePageNumberHint();
+  saveProjectMetaSoon();
+  return cur.firstPage;
 }
 
 /**
@@ -3035,6 +3080,7 @@ async function closeProjectIfAny() {
   }
   state.tabs.clear(); state.active = null; state.root = null;
   applyWindowTitle('');                 // [alpha.169] ปิดผลงานแล้วแถบชื่อต้องไม่ค้างชื่อเรื่องเดิม
+  if (!PANEL_WIN) releaseProjectLock().catch(() => {});    // [alpha.170 · ใช้หลายเครื่อง] ปล่อยล็อกของเซสชันนี้
   resetJsonGuard(); _noWrite.clear(); _mapsSig = '';   // [alpha.168] ความจำของไฟล์เสีย/ลายเซ็นแผนที่เป็นของโปรเจกต์เดิม
   // ล้างดัชนี/เอนจินที่ผูกกับโปรเจกต์เดิม — ไม่งั้นโปรเจกต์ใหม่จะเห็นข้อมูล/คีย์ของเก่า
   resetAutoLink(); resetTaskEngine(); clearKeyCache(); clearKeysCache(); resetAI(); resetSplitSystem(); resetKanban();
@@ -3046,6 +3092,10 @@ async function closeProjectIfAny() {
   $('#tree').innerHTML = ''; $('#outline').innerHTML = '';
   refreshToolbar(); scheduleCount();
   try { syncDocsEmpty(); } catch {}                  // [alpha.169] ปิดโปรเจกต์ = กลับไปสถานะ "ยังไม่ได้เปิดโปรเจกต์"
+  // [trial 2026-10-25 ข้อ 10] แถบที่อยู่เอกสาร + แผงคุณสมบัติยังถือชื่อของแท็บในโปรเจกต์เดิม (state.active เพิ่งเป็น null
+  // โดยไม่ผ่าน closeTab) → เปิดโปรเจกต์ใหม่แล้วเห็นชื่อ "เทศกาลโคมริมคลอง" ค้างอยู่บนหัว
+  try { renderCrumbs().catch(() => {}); } catch {}
+  try { syncPropsToActive().catch(() => {}); } catch {}
   return true;
 }
 
@@ -3115,6 +3165,8 @@ async function loadProjectInner(root) {
     const probe = await kapi.readJson(await kapi.join(root, 'project.khn.json'));
     if (!probe || typeof probe !== 'object' || Array.isArray(probe)) throw new Error('project.khn.json: not a project file');
   }
+  // [alpha.170 · ใช้หลายเครื่อง] อีกเครื่องยังเปิดโปรเจกต์นี้ค้างอยู่ (ล็อกถูกซิงก์มาด้วย) = ถามก่อนปิดของเดิม
+  if (!PANEL_WIN && !(await checkProjectLock(root))) return;
   if (!(await closeProjectIfAny())) return;
   setBusy(tt('ui.app.busyReadDataProject'));
   const meta = await kapi.readJson(await kapi.join(root, 'project.khn.json'));
@@ -3126,6 +3178,9 @@ async function loadProjectInner(root) {
   // [alpha.137] #projname ถูกลบทิ้ง — ชื่อโปรเจกต์อยู่กลางแถบชื่อหน้าต่างที่เดียว · [alpha.169] + เลขรุ่น (win-title.js)
   applyWindowTitle(state.title);
   await kapi.pushRecent(root);
+  if (!PANEL_WIN) holdProjectLock(root).catch(() => {});   // [alpha.170 · ใช้หลายเครื่อง] บอกเครื่องอื่นว่าเปิดอยู่ที่นี่
+  // [alpha.170] เปิดโปรเจกต์จากทางไหนก็ตาม (เมนู · ลากโฟลเดอร์ · เปิดด้วยไฟล์) = หน้าแรกที่ค้างอยู่ต้องปิด ไม่งั้นบังกล่องที่ตามมา
+  try { const { closeHomeDialogs } = await import('./home-ui.js'); closeHomeDialogs(); } catch {}
   // ---- คำแปลเฉพาะผลงาน (<ผลงาน>/languages/k2_<ภาษา>.csv) ----
   // [alpha.170 · ภาษา] ผลงาน **ไม่เปลี่ยนภาษาของโปรแกรม** อีกแล้ว (ภาษาเป็นค่าระดับผู้ใช้ — setAppLanguage ทางเดียว)
   // เหลือแค่ชั้นคำแปลที่ผู้ใช้แก้ไว้ในโฟลเดอร์ผลงาน: มีไฟล์ของภาษาที่ใช้อยู่ = โหลดซ้อนทับ
@@ -3198,7 +3253,12 @@ async function loadProjectInner(root) {
   if (!_restored) await restoreOpenTabs();
   if (!sessionOff()) startSessionWatch();
   // [alpha.168 · bug hunt] จำว่าแดชบอร์ดใบนี้ "โปรแกรมเปิดให้เอง" — เปิดเอกสารแรกแล้วพับเก็บ (ดู autoCloseDashboard)
-  if (!state.tabs.size) { state._autoDash = !isPanelOpen('dashboard'); openDashboard(); }
+  // [alpha.170 · ข้อ 8] โหมดเรียบง่าย: ไม่เปิดแดชบอร์ดให้เอง · ผู้ใช้ใหม่ที่ยังไม่ได้จัดแผง = จัดเป็น Explorer + เอกสารครั้งแรก
+  if (state.settings.simpleLayoutPending && state.settings.simpleMode && !sessionOff()) {
+    try { enterSimpleLayout(SIMPLE_WS); } catch (e) { log('warn', 'simple layout', e); }
+    saveGlobalSetting('simpleLayoutPending', false).catch(() => {});
+  }
+  if (!state.tabs.size && !state.settings.simpleMode) { state._autoDash = !isPanelOpen('dashboard'); openDashboard(); }
   initThesaurus().catch(() => {});                   // Thesaurus engine
   ensureAutoLink().catch(() => {});                  // Backlinks index
   if (state.settings.autoSync) setAutoSync(true);    // auto-task: คืนสถานะที่ผู้ใช้เปิดไว้
@@ -3364,6 +3424,14 @@ export async function bootSequence() {
   setSplashActive(true);
   splashProgress(tt('ui.splash.settings'), 8);
   setBusy(tt('ui.app.busyStartApp'));
+  // [alpha.170 · ข้อ 8] ผู้ใช้ใหม่จริง ๆ (ไฟล์ตั้งค่าผู้ใช้ยังว่าง) = เริ่มที่โหมดเรียบง่าย · ผู้ใช้เดิมหน้าตาไม่เปลี่ยนเอง
+  let rawG = null;
+  try { rawG = await kapi.readGlobalSettings(); } catch { rawG = null; }
+  if (simpleByDefault(rawG)) {
+    // [trial 2026-10-25 ข้อ 8] + ซูมพอดีความกว้าง: เปิดฉากข้างแผงที่ผนึกแล้วกระดาษกว้างกว่าช่อง = ข้อความถูกตัดขอบขวา
+    // (ผู้ใช้เดิมไม่ถูกแตะ — ค่านี้ตั้งเฉพาะไฟล์ตั้งค่าผู้ใช้ที่ยังว่าง)
+    try { await mergeGlobalSettings({ simpleMode: true, simpleLayoutPending: true, autoFitWidth: true }); } catch (e) { log('warn', 'boot simple mode', e); }
+  }
   const g = await bootGlobalSettings();
   // ค่ายังไม่มีโปรเจกต์ → ยัดลง state.settings ไว้ก่อน เพื่อให้เมนู/สวิตช์อ่านค่าถูกตั้งแต่วินาทีแรก
   state.settings = { ...DEFAULT_SETTINGS, ...g, ...state.settings };
@@ -8045,6 +8113,7 @@ export function syncMenuToggles() {
       lineBand: state.settings.a11yLineBand === true,
       markdownCodes: showMarkdownCodes(),            // [60r3 ข้อ 6]
       autoFitWidth: !!state.settings.autoFitWidth,  // [alpha.164 · รอบต่อ 3] เมนู มุมมอง → ซูม
+      simpleMode: !!state.settings.simpleMode,      // [alpha.170 · ข้อ 8]
       // [alpha.61 ข้อ 1] ลำดับเปิดโปรแกรม — เมนูไฟล์ / เมนูมุมมอง
       openLastProject: state.settings.openLastProject === true,
       showHomeAlways: state.settings.showHomeOnStartup === true,
@@ -8555,16 +8624,25 @@ const propsFlush_C = { fn: null };
  * @returns {Promise<string>} '' = เล่มนี้ยังไม่ได้ตั้งรูปปก
  */
 export async function sectionCoverUrl(dPath) {
+  return (await sectionCoverInfo(dPath)).url;
+}
+/**
+ * [trial 2026-10-25 ข้อ 6] ปกเล่มครบชุด — รูป + สวิตช์ "ใช้ภาพเต็มหน้า" (`coverFull`) + "มีหน้าปก" (`coverOn`)
+ * ค่าเดียวกับที่โหมดอ่านทั้งเล่มใช้ (`normBookCover`) · เดิมส่งออกอ่านแค่รูป → ติ๊กเต็มหน้าแล้ว PDF ยังเป็นรูปเล็กมีขอบ
+ * @returns {Promise<{url:string, full:boolean, on:boolean}>}
+ */
+export async function sectionCoverInfo(dPath) {
+  const none = { url: '', full: false, on: true };
   try {
     const secPath = String(dPath || '').replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, '');
-    if (!secPath || secPath === String(dPath)) return '';
+    if (!secPath || secPath === String(dPath)) return none;
     const sf = await kapi.join(secPath, 'section.json');
-    if (!(await kapi.exists(sf))) return '';
-    const rel = (await kapi.readJson(sf)).cover;
-    if (!rel) return '';
-    const abs = await kapi.resolve(secPath, rel);
-    return (await kapi.exists(abs)) ? kapi.toFileURL(abs) : '';
-  } catch (e) { log('warn', tt('ui.app.coverBookReadNot'), e); return ''; }
+    if (!(await kapi.exists(sf))) return none;
+    const bc = normBookCover(await kapi.readJson(sf));
+    if (!bc.image) return { ...none, on: bc.on };
+    const abs = await kapi.resolve(secPath, bc.image);
+    return { url: (await kapi.exists(abs)) ? kapi.toFileURL(abs) : '', full: bc.full, on: bc.on };
+  } catch (e) { log('warn', tt('ui.app.coverBookReadNot'), e); return none; }
 }
 
 export async function rosterTextForDraft(dPath) {
@@ -9610,6 +9688,8 @@ export function fieldLabels(templateId) {
   const tp = templateOf(templateId);
   const map = {};
   for (const f of tp?.fields || []) map[f.key] = f.label || f.key;
+  // [trial 2026-10-25 ข้อ 17] ช่องข้อมูลเพิ่มของเทมเพลต (Allegiance · Hometown …) ก็มีป้ายไทย — เดิมหน้า Wiki โชว์คีย์อังกฤษ
+  for (const f of tp?.customPropertyDefs || []) if (!(f.key in map)) map[f.key] = f.label || f.key;
   return map;
 }
 /** [alpha.71 ข้อ 4] เทมเพลตตาม id — หัวการ์ด Wiki อ่านบล็อก profile จากตัวนี้ (ไม่ฮาร์ดโค้ดชื่อ field) */
@@ -9894,7 +9974,10 @@ export async function sceneCtx(file) {
       const si = list.findIndex((s) => s.fileName === fname);
       if (si >= 0) return { dPath, ch, row: list[si], chapterNo: ci + 1, sceneNo: si + 1 };
     }
-  } catch (e) { log('warn', 'sceneCtx failed', e); }
+  } catch (e) {
+    // [trial 2026-10-25 ข้อ 9] ทางเก่าระหว่างย้าย/เปลี่ยนชื่อโฟลเดอร์ (งานที่ค้างคิวอยู่ถามหลังย้ายเสร็จ) = ปกติ ไม่ใช่คำเตือน
+    log(/ENOENT/.test(String((e && e.message) || e)) ? 'debug' : 'warn', 'sceneCtx failed', e);
+  }
   return null;
 }
 
@@ -11603,6 +11686,9 @@ export async function closeTabsUnderPath(dir, { save = true } = {}) {
     return f === k || f.startsWith(k + '/');
   });
   let closed = 0, skipped = 0;
+  // [trial 2026-10-25 ข้อ 9] ปิดทั้งชุด = ห้ามกระโดดไปเปิด "แท็บข้าง ๆ ที่กำลังจะถูกปิดต่อ" ทีละใบ
+  // (แต่ละครั้งที่สลับแท็บ แผงคุณสมบัติอ่าน draft.json ของทางเก่า — หลังย้ายโฟลเดอร์ได้ ENOENT รัว ๆ ใน log)
+  const going = new Set(hits.map((t2) => t2.file));
   for (const t2 of hits) {
     if (save && t2.dirty) {
       // [alpha.159] บันทึกไม่ผ่าน (คืน false = ผู้ใช้ยกเลิกในกล่องชนกับดิสก์ · throw = เขียนไม่ได้)
@@ -11612,7 +11698,8 @@ export async function closeTabsUnderPath(dir, { save = true } = {}) {
       catch (e) { log('error', tt('ui.app.saveBeforeCloseFail') + (t2.title || t2.file), e); r = false; }
       if (r === false || t2.dirty) { setStatus(tt('ui.app.saveCancelledKeepTab')); skipped++; continue; }
     }
-    closeTab(t2.file, { discard: true });
+    closeTab(t2.file, { discard: true, skip: going });
+    going.delete(t2.file);
     closed++;
   }
   return closeResult(closed, skipped);
@@ -11698,7 +11785,7 @@ export async function reopenClosedTab() {
 }
 export function closedTabsForTest() { return _closedTabs.slice(); }
 
-export function closeTab(file, { discard = false, ask = false } = {}) {
+export function closeTab(file, { discard = false, ask = false, skip = null } = {}) {
   const t = state.tabs.get(file);
   if (!t) return;
   const done = () => {
@@ -11709,7 +11796,10 @@ export function closeTab(file, { discard = false, ask = false } = {}) {
     if (t.floatWin) { t.floatWin.remove(); t.floatWin = null; }
     // [alpha.161 · K2] ★ เดิม `[...keys].pop()` = แท็บท้ายแถวเสมอ (ปิดแท็บกลางแล้วกระโดดไปท้าย ·
     // ปิดแท็บที่ไม่ได้เลือกก็ยังแย่งโฟกัส) → เพื่อนบ้านขวา/ซ้าย · ปิดแท็บอื่น = แท็บที่เลือกอยู่ไม่เปลี่ยน
-    const next = neighborAfterClose([...state.tabs.keys()], file, state.active ? state.active.file : null);
+    // skip = แท็บที่ผู้เรียกกำลังจะปิดต่อในชุดเดียวกัน — ไม่ใช่ "เพื่อนบ้าน" ที่ควรถูกเปิดขึ้นมา
+    const act0 = state.active ? state.active.file : null;
+    const pool = skip ? [...state.tabs.keys()].filter((k) => k === file || k === act0 || !skip.has(k)) : [...state.tabs.keys()];
+    const next = neighborAfterClose(pool, file, act0);
     state.tabs.delete(file);
     _closedTabs = pushClosed(_closedTabs, file, state.root);   // [alpha.162 · W4 ข้อ 11]
     closeTabInSplit(file);                               // ปิดไฟล์ที่แสดงอยู่ในช่องไหน → ยุบช่องนั้นด้วย
@@ -11854,6 +11944,7 @@ async function movePathWithTabsNow(oldPath, fn) {
   const base = String(oldPath || '').replace(/[\\/]+$/, '');
   const { real, pseudo } = _tabsUnder(base);
   const rels = real.map((t2) => t2.file.slice(base.length));
+  const order0 = [...state.tabs.keys()];            // [trial 2026-10-25 ข้อ 9] ลำดับบนแถบก่อนย้าย — เปิดกลับแล้วต้องอยู่ที่เดิม
   const act = state.active;
   const activeRel = act && real.includes(act) ? act.file.slice(base.length) : null;
   const keepActive = act && !real.includes(act) && !pseudo.includes(act) ? act.file : '';
@@ -11875,6 +11966,9 @@ async function movePathWithTabsNow(oldPath, fn) {
   for (const rel of rels) {
     try { await openTabAt(dest + rel); } catch (e) { log('warn', 'tab: reopen after rename failed', { file: dest + rel, error: e && e.message }); }
   }
+  // [trial 2026-10-25 ข้อ 9] แท็บที่เปิดกลับไปต่อท้ายแถบทั้งหมด = แท็บอยู่ผิดที่ (แถบยาวแล้วเหมือน "หาย")
+  const relOf = new Map(real.map((t2) => [t2.file, dest + t2.file.slice(base.length)]));
+  try { reorderTabs(order0.map((k) => relOf.get(k) || k).filter((k) => state.tabs.has(k))); } catch (e) { log('warn', 'tab: reorder after rename failed', e); }
   if (activeRel != null && state.tabs.has(dest + activeRel)) activate(dest + activeRel);
   else if (keepActive && state.tabs.has(keepActive)) activate(keepActive);
   if (err) throw err;
@@ -12499,6 +12593,8 @@ const ALWAYS_ON_TB = new Set([
   // = เปิดโปรแกรมมาโดยยังไม่มีโปรเจกต์ → ปุ่มที่ใช้ "เปิดโปรเจกต์" นั่นแหละกดไม่ได้ (ทางตัน)
   // นี่คือบั๊ก #11 ตัวเดิมเป๊ะ ที่เคยแก้ให้ปุ่มแผงไปแล้ว แต่สามปุ่มนี้ตกสำรวจมาตลอด
   'open-btn', 'save-all-btn', 'search-all-btn',
+  // [alpha.170 · ข้อ 8] ทางออกของโหมดเรียบง่าย — ต้องกดได้ทั้งที่ยังไม่เปิดเอกสาร (หน้าแรก/โปรเจกต์ว่าง)
+  'tb-simple-exit', 'tb-settings',
   'tb-close', 'tb-close-all', 'tb-focus', 'tb-typewriter', 'tb-linenum', 'tb-quickopen',
   'tb-gallery', 'tb-sp-elem',
   'tb-tree-panel', 'tb-outline-panel', 'tb-props-panel', 'tb-search-panel',
@@ -14277,7 +14373,13 @@ function drawRemoteOutline(box) {
  * เดิมไม่มีคำสั่งแทนที่เลย — ช่องมีอยู่แล้วในแถบค้นหา แต่ไปถึงได้ทางเดียวคือกด Ctrl+F แล้ว Tab
  */
 function openFind(toReplace = false) {
-  $('#findbar').classList.add('on');
+  // [trial 2026-10-25 ข้อ 21] แถบลอยเหนือเอกสาร (เดิมแทรกในเลย์เอาต์ = ทุกแผงถูกดันลง 44px แล้วเด้งกลับตอนปิด)
+  // วางใต้ขอบล่างของแถบเครื่องมือจริง ณ ตอนเปิด — แถบเครื่องมือซ่อน/พับได้ จึงคิดใหม่ทุกครั้ง
+  const fb = $('#findbar');
+  const tb = $('#toolbar');
+  const top = tb && tb.offsetParent ? tb.getBoundingClientRect().bottom : ($('#titlebar') ? $('#titlebar').getBoundingClientRect().bottom : 0);
+  fb.style.top = Math.max(0, Math.round(top) + 6) + 'px';
+  fb.classList.add('on');
   const box = toReplace ? $('#find-r') : $('#find-q');
   box.focus(); box.select();
 }
@@ -15356,6 +15458,10 @@ export async function handleCommand(ch, ...a) {
     case 'backup-now': autoBackupNow(); break;
     case 'new-from-template': newProjectFromTemplate(); break;
     case 'import-scrivener': importScrivenerDialog((p) => openProjectFromUi(p)); break;
+    // [alpha.170 · นำเข้าต้นฉบับ] Word · Markdown · ข้อความ → เล่มใหม่ (ผลสำรวจผู้ใช้ข้อ 3)
+    case 'import-manuscript': await importManuscriptDialog(); break;
+    // [alpha.170 · คอมเมนต์ไปกลับกับ Word] (ผลสำรวจผู้ใช้ข้อ 6)
+    case 'import-docx-comments': await importDocxCommentsDialog(); break;
     // [alpha.60 ข้อ 62-66] นำเข้าบทภาพยนตร์จาก 5 รูปแบบ (Fountain · FDX · Celtx · Fade In · Adobe Story)
     case 'import-script': {
       // [alpha.124 ข้อ 29] `mode` มาจากกล่องพรีวิว: 'new' = สร้างฉากใหม่ (ค่าเริ่มต้น)
@@ -15489,6 +15595,7 @@ export async function handleCommand(ch, ...a) {
       else bumpPageScale(a[0]);
       break;
     case 'auto-fit-width': setAutoFitWidth(); break;   // [alpha.164 · รอบต่อ 3 · งาน 3]
+    case 'toggle-simple-mode': await setSimpleMode(); break;   // [alpha.170 · ข้อ 8] เมนู มุมมอง · ปุ่ม "เครื่องมือทั้งหมด"
     case 'ui-scale': bumpUIScale(a[0]); break;
     // [alpha.81 ข้อ 9] ทางส่งออกทั้งหมดรวมอยู่ในกล่องเดียว — เมนู ไฟล์ → ส่งออก… (Ctrl+Shift+E)
     case 'export-hub': await openExportHub(); break;
@@ -15506,6 +15613,8 @@ export async function handleCommand(ch, ...a) {
     // [alpha.170] คู่มือในโปรแกรม (มากับตัวโปรแกรม · ภาษาตั้งต้นอังกฤษ) — เมนู ช่วยเหลือ · กล่อง "เกี่ยวกับ"
     case 'user-manual': { const { openDocs } = await import('./docs-ui.js'); openDocs('manual'); break; }
     case 'extension-guide': { const { openDocs } = await import('./docs-ui.js'); openDocs('extension'); break; }
+    // [alpha.170 · ใช้หลายเครื่อง] คู่มือบท 17 (Google Drive · iCloud · Dropbox · OneDrive) — ผลสำรวจผู้ใช้ข้อ 2
+    case 'sync-guide': { const { openDocs } = await import('./docs-ui.js'); openDocs('manual', { file: '17-several-computers.md' }); break; }
     case 'support': openSupportPage(); break;
     // [alpha.135] เมนู ช่วยเหลือ → ตรวจหาอัปเดต… (ไม่เงียบ — บอกผลทุกกรณี)
     case 'check-update': await checkForUpdates({ silent: false }); break;

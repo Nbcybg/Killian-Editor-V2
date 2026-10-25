@@ -338,6 +338,10 @@ export function proseExportCss(fmt, paper, margins, opts = {}) {
   if (!f.indentAfterHeading) out.push('h1+p,h2+p,h3+p,h4+p,h5+p,h6+p{text-indent:0}');
   // [alpha.150] กฎคู่แฝดของสีเน้นข้อความ (ดู proseCss)
   out.push('mark{color:#1a1815;border-radius:2px;padding:0 .06em}');
+  // [trial 2026-10-25 ข้อ 14] ★ หัวข้อห้ามค้างบรรทัดสุดท้ายของหน้า — กฎคู่แฝดของ `keepNext` ใน blockRules()
+  // (prose-measure.js: มุมมองจัดหน้า/โหมดอ่านลากหัวข้อตามย่อหน้าไปหน้าใหม่อยู่แล้ว แต่ PDF ที่ Chromium ตัดหน้าเอง
+  //  ไม่เคยได้กฎนี้ → "งานเทศกาลโคม" โดดเดี่ยวท้ายหน้า 12 เนื้อเริ่มหน้าถัดไป)
+  out.push('h1,h2,h3,h4,h5,h6{break-after:avoid;page-break-after:avoid;break-inside:avoid;page-break-inside:avoid}');
   f.headings.forEach((h, i) => {
     out.push(`h${i + 1}{font-size:${+h.size.toFixed(3)}em;font-weight:${h.bold ? 700 : 400};` +
              (h.italic ? 'font-style:italic;' : '') +

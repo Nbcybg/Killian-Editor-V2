@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0--alpha.release.2-ff6640"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0--alpha.release.3-ff6640"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-452f5e">
   <img alt="Electron" src="https://img.shields.io/badge/Electron-43-1e1250">
   <img alt="Languages" src="https://img.shields.io/badge/UI%20languages-7-ffc55c">
@@ -19,33 +19,49 @@
 ## ดาวน์โหลด
 
 <p align="center">
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.2/Killian2-2.0.0-alpha.release.2-win-x64-portable.exe"><img alt="ดาวน์โหลดสำหรับ Windows" src="https://img.shields.io/badge/Windows-x64%20%C2%B7%20portable%20.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.2/Killian2-2.0.0-alpha.release.2-mac-arm64.dmg"><img alt="ดาวน์โหลดสำหรับ macOS (Apple Silicon)" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%C2%B7%20.dmg-1e1250?style=for-the-badge&logo=apple&logoColor=white"></a>
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.2/Killian2-2.0.0-alpha.release.2-mac-x64.dmg"><img alt="ดาวน์โหลดสำหรับ macOS (Intel)" src="https://img.shields.io/badge/macOS-Intel%20%C2%B7%20.dmg-452f5e?style=for-the-badge&logo=apple&logoColor=white"></a>
-  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.2/Killian2-2.0.0-alpha.release.2-linux-x64.AppImage"><img alt="ดาวน์โหลดสำหรับ Linux" src="https://img.shields.io/badge/Linux-x64%20%C2%B7%20AppImage-ff6640?style=for-the-badge&logo=linux&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.3/Killian2-2.0.0-alpha.release.3-win-x64-portable.exe"><img alt="ดาวน์โหลดสำหรับ Windows" src="https://img.shields.io/badge/Windows-x64%20%C2%B7%20portable%20.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.3/Killian2-2.0.0-alpha.release.3-mac-arm64.dmg"><img alt="ดาวน์โหลดสำหรับ macOS (Apple Silicon)" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%C2%B7%20.dmg-1e1250?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.3/Killian2-2.0.0-alpha.release.3-mac-x64.dmg"><img alt="ดาวน์โหลดสำหรับ macOS (Intel)" src="https://img.shields.io/badge/macOS-Intel%20%C2%B7%20.dmg-452f5e?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/download/v2.0.0-alpha.release.3/Killian2-2.0.0-alpha.release.3-linux-x64.AppImage"><img alt="ดาวน์โหลดสำหรับ Linux" src="https://img.shields.io/badge/Linux-x64%20%C2%B7%20AppImage-ff6640?style=for-the-badge&logo=linux&logoColor=white"></a>
 </p>
 
-<p align="center"><b>รุ่น 2.0.0-alpha.release.2</b> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/tag/v2.0.0-alpha.release.2">หน้ารุ่นนี้</a> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases">ทุกรุ่น</a></p>
+<p align="center"><b>รุ่น 2.0.0-alpha.release.3</b> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases/tag/v2.0.0-alpha.release.3">หน้ารุ่นนี้</a> · <a href="https://github.com/Nbcybg/Killian-Editor-V2/releases">ทุกรุ่น</a></p>
 
 | ระบบ | ไฟล์ | เปิดครั้งแรก |
 |---|---|---|
-| **Windows 10/11** (x64) | `Killian2-2.0.0-alpha.release.2-win-x64-portable.exe` | ไม่ต้องติดตั้ง ดับเบิลคลิกเปิดได้เลย · ถ้า SmartScreen เตือนว่าไม่รู้จักผู้เผยแพร่ ให้กด **More info → Run anyway** |
-| **macOS 12 ขึ้นไป** — Apple Silicon (M1–M4) | `Killian2-2.0.0-alpha.release.2-mac-arm64.dmg` | ลาก *Killian 2* ไปไว้ใน Applications · ตัวโปรแกรมยังไม่ผ่านการรับรองของ Apple: เปิดครั้งแรกด้วย **คลิกขวา → Open** หรือบน macOS 15 ไปที่ **System Settings → Privacy & Security → Open Anyway** |
-| **macOS 12 ขึ้นไป** — Intel | `Killian2-2.0.0-alpha.release.2-mac-x64.dmg` | เหมือนข้างบน · ไม่แน่ใจว่าเครื่องเป็นแบบไหน: **เมนู Apple → About This Mac** ถ้าเขียนว่า "Chip: Apple M…" คือ Apple Silicon |
-| **Linux** (x64) | `Killian2-2.0.0-alpha.release.2-linux-x64.AppImage` | `chmod +x Killian2-2.0.0-alpha.release.2-linux-x64.AppImage` แล้วเปิดได้เลย · บางดิสโทรต้องติดตั้ง `libfuse2` ก่อน |
+| **Windows 10/11** (x64) | `Killian2-2.0.0-alpha.release.3-win-x64-portable.exe` | ไม่ต้องติดตั้ง ดับเบิลคลิกเปิดได้เลย · ถ้า SmartScreen เตือนว่าไม่รู้จักผู้เผยแพร่ ให้กด **More info → Run anyway** |
+| **macOS 12 ขึ้นไป** — Apple Silicon (M1–M4) | `Killian2-2.0.0-alpha.release.3-mac-arm64.dmg` | ลาก *Killian 2* ไปไว้ใน Applications · ตัวโปรแกรมยังไม่ผ่านการรับรองของ Apple: เปิดครั้งแรกด้วย **คลิกขวา → Open** หรือบน macOS 15 ไปที่ **System Settings → Privacy & Security → Open Anyway** |
+| **macOS 12 ขึ้นไป** — Intel | `Killian2-2.0.0-alpha.release.3-mac-x64.dmg` | เหมือนข้างบน · ไม่แน่ใจว่าเครื่องเป็นแบบไหน: **เมนู Apple → About This Mac** ถ้าเขียนว่า "Chip: Apple M…" คือ Apple Silicon |
+| **Linux** (x64) | `Killian2-2.0.0-alpha.release.3-linux-x64.AppImage` | `chmod +x Killian2-2.0.0-alpha.release.3-linux-x64.AppImage` แล้วเปิดได้เลย · บางดิสโทรต้องติดตั้ง `libfuse2` ก่อน |
+
+ตัวโปรแกรม **ยังไม่ได้ลงนาม (code sign)** Windows และ macOS จึงเตือนตอนเปิดครั้งแรก ระบบสร้างตัวโปรแกรมตั้งค่าการลงนามไว้แล้ว และจะลงนามเองเมื่อได้ใบรับรอง ระหว่างนี้ดู [ทำไมถึงขึ้นคำเตือน และวิธีตรวจไฟล์ที่โหลดด้วยค่า SHA-256](docs/manual/th/01-getting-started.md#ทำไม-windows-หรือ-macos-ถึงขึ้นคำเตือน-และวิธีตรวจไฟล์)
 
 งานเขียนเก็บเป็นไฟล์ Markdown + JSON ธรรมดาในโฟลเดอร์ที่คุณเลือกเอง ย้ายเครื่องหรือเปลี่ยนรุ่นคือก๊อปโฟลเดอร์ไปเท่านั้น · โปรแกรมเช็กรุ่นใหม่จากหน้านี้ (**ช่วยเหลือ → ตรวจหาอัปเดต**) และต่อเน็ตเฉพาะตอนที่คุณสั่งหรือเปิดการตรวจอัตโนมัติไว้
 
 ---
 
-## มีอะไรใหม่ใน 2.0.0-alpha.release.2
+## มีอะไรใหม่ใน 2.0.0-alpha.release.3
 
-> รุ่นแก้บั๊ก · ที่นี่แสดงเฉพาะรุ่นนี้รุ่นเดียว ประวัติทั้งหมดอยู่ใน [CHANGELOG.md](CHANGELOG.md) และในโปรแกรมที่ **ช่วยเหลือ → บันทึกการเปลี่ยนแปลง (Changelog)** · สรุปรายรุ่นของ README ฉบับเดิมอยู่ที่ [docs/release-notes-archive.th.md](docs/release-notes-archive.th.md)
+> ที่นี่แสดงเฉพาะรุ่นนี้รุ่นเดียว ประวัติทั้งหมดอยู่ใน [CHANGELOG.md](CHANGELOG.md) และในโปรแกรมที่ **ช่วยเหลือ → บันทึกการเปลี่ยนแปลง (Changelog)** · สรุปรายรุ่นของ README ฉบับเดิมอยู่ที่ [docs/release-notes-archive.th.md](docs/release-notes-archive.th.md)
 
-- **แผงลอยรวมกลุ่มกับแผงที่ผนึกได้แล้ว** — ลากแผงลอยโดยจับที่ชื่อแผง ไปปล่อยบนหัวแผงหรือแถบแท็บของแผงที่ผนึก = เข้าเป็นแท็บของแผงนั้น · เดิมปล่อยบนหัวแผงแล้วกลายเป็นแยกช่องด้านบน แผงลอยจึงรวมกลุ่มได้แค่กับแผงลอยด้วยกัน
-- **กลุ่มลอยทั้งกลุ่มเข้ากลุ่มแท็บที่ผนึกได้** — ลากกลุ่มลอยโดยจับที่ว่างของแถบแท็บ ไปปล่อยบนหัวแผงหรือแท็บของแผงที่ผนึก = ทุกแผงในกลุ่มเข้าเป็นแท็บ เรียงตามเดิม และเปิดแท็บเดิมไว้ · เดิมปล่อยแล้วไม่มีอะไรเกิดขึ้น
+**ของใหม่**
+- **นำเข้าต้นฉบับ** (**ไฟล์ → นำเข้าต้นฉบับ…**) — Word (.docx) · Markdown · ข้อความ ทีละหลายไฟล์ / ทั้งโฟลเดอร์ / วางข้อความ · ดูโครงบทก่อน แล้วได้เป็นเล่มใหม่ (หัวข้อของ Word = บท)
+- **คอมเมนต์ไปกลับกับ Word** — ส่งออก DOCX แบบ "แนบคอมเมนต์ที่ยังเปิดอยู่" ให้ บก. ตอบใน Word แล้ว **รับคอมเมนต์จากไฟล์ Word** กลับเข้าฉากที่ถูกต้อง
+- **ใช้หลายเครื่อง** — โปรเจกต์ที่เปิดค้างอยู่บนอีกเครื่องจะถูกเตือนก่อนแก้ · ไฟล์สำเนาจากตัวซิงก์คลาวด์ขึ้นในตัวตรวจสุขภาพโปรเจกต์
+- **โหมดเรียบง่าย** (**มุมมอง → โหมดเรียบง่าย**) — แถบเครื่องมือที่โล่งขึ้นสำหรับผู้ใช้ใหม่ (เปิดให้เฉพาะคนที่เพิ่งติดตั้งครั้งแรก) + เทมเพลตนิยายเว็บ · นิยายภาพ (VN)
 
-รวมทุกอย่างของ 2.0.0-alpha.release.1 ไว้แล้ว
+**แก้หลังทดลองใช้จริง (เขียนนิยายสองเรื่อง + บทภาพยนตร์หนึ่งเรื่องตั้งแต่ศูนย์)**
+- กล่องเลือกแบบตั้งต้นและกล่องถามชื่อเคยเปิด *ใต้* หน้าแรก — "สร้างโปรเจกต์ใหม่" เหมือนกดแล้วไม่มีอะไร · ตอนนี้ขึ้นข้างบน
+- **โปรเจกต์บทภาพยนตร์:** ฉากใหม่เป็นบทภาพยนตร์ ไม่ใช่นิยาย · **DOCX ของบทภาพยนตร์** เป็นรูปแบบบทจริง (Courier · เยื้องชื่อตัวละคร/บทพูด · เลขหน้า · หน้าปก) ไม่ใช่เอกสารแบบนิยาย
+- **ปกนิยาย:** PDF บอกเล่มในโปรเจกต์ที่มีหลายเล่ม · ใช้หน้าปกที่แต่งเอง · ทำตาม "ใช้ภาพเต็มหน้า" · DOCX ของนิยายมีปก หน้าชื่อเรื่อง และหน้ารายชื่อตัวละครด้วย · PDF นิยายเป็นภาพสีโดยปริยาย (บทภาพยนตร์ยังขาวดำ) · หัวบทไม่ค้างท้ายหน้าอีก
+- **"ใส่เลขบนหน้าแรกด้วย"** เป็นตัวเลือกในกล่องส่งออกแล้ว (PDF · DOCX ของบทภาพยนตร์) — ปิด = หน้าแรกไม่มีเลขตามธรรมเนียมฮอลลีวูด
+- ชื่อในหน้ารายชื่อตัวละครกลับมาอยู่บนกระดาษ · สารานุกรมไม่ทับกันในแผงแคบและโชว์ป้ายช่องข้อมูลภาษาไทย · ไฮไลต์ชื่อ Wiki ทั้งคำ ("ลลิตา" ไม่ใช่แค่ "ลลิ")
+- โปรเจกต์ใหม่ใช้ค่าตั้งของคุณ (นิยายในหน้าจอไทยเริ่มที่ A4) · ผู้ใช้ใหม่ได้ "ซูมพอดีความกว้าง"
+- เปลี่ยนชื่อเล่ม/บทแล้วแท็บอยู่ที่เดิม · สลับโปรเจกต์แล้วไม่มีของโปรเจกต์เก่าค้างบนจอ
+- AI: โปรเจกต์ใหม่ใช้ผู้ให้บริการ "ของฉัน" ที่บันทึกไว้ให้เอง · ยังไม่ได้ตั้งค่า = บอกในช่องแชท · ทดสอบการเชื่อมต่อบอกชื่อ header ที่ขาดและข้อความของเซิร์ฟเวอร์
+- แก้ย่อย: แถบค้นหาลอยไม่ดันหน้าลง · เลือกรูปได้หลายไฟล์และไม่ซ้ำรูปเดิม · ขีดแดงคำไทยครบพยางค์ · ตัวตรวจบทภาพยนตร์ไม่เตือนย่อหน้าบรรยายปกติ · ชื่อไฟล์ส่งออกตามสิ่งที่ส่งออก · Word ใช้ฟอนต์ไทยจริงกับข้อความไทย
+
+รวมทุกอย่างของ 2.0.0-alpha.release.2 ไว้แล้ว
 
 ---
 
@@ -81,15 +97,15 @@ K2 ทำงานบน **Windows, macOS และ Linux**
 
 | | ขั้นต่ำ | แนะนำ |
 |---|---|---|
-| **ระบบปฏิบัติการ** | Windows 10 64-bit · macOS 12 (Monterey) บน Mac ชิป Intel หรือ Apple Silicon ผ่าน Rosetta 2 · Linux x64 | Windows 10 / 11 64-bit · macOS 14 ขึ้นไป · Linux เดสก์ท็อปรุ่นปัจจุบัน |
+| **ระบบปฏิบัติการ** | Windows 10 64-bit · macOS 12 (Monterey) ทั้งชิป Intel และ Apple Silicon · Linux x64 | Windows 10 / 11 64-bit · macOS 14 ขึ้นไป · Linux เดสก์ท็อปรุ่นปัจจุบัน |
 | **CPU** | 2 คอร์ ~2 GHz | 4 คอร์ขึ้นไป |
 | **RAM** | 4 GB | 8 GB (โปรเจกต์ใหญ่ · เปิดหลายแผงพร้อมกัน) |
 | **พื้นที่ดิสก์** | ว่าง ~500 MB บน Windows · ~600 MB บน macOS + พื้นที่เก็บงาน | SSD · ว่าง 2 GB ขึ้นไป |
 | **หน้าจอ** | 1366 × 768 | 1920 × 1080 ขึ้นไป |
 | **การ์ดจอ** | ไม่บังคับ | รองรับ WebGL (Story Network โหมด 3D และโมเดล 3 มิติ) |
 
-- **ตัวที่แจก:** Windows x64 (portable `.exe` ~92 MB ไม่ต้องติดตั้ง) และ macOS **Intel x64** (`.dmg` ~143 MB · ~330 MB เมื่อคัดลอกลง Applications) ไม่มีรุ่น ARM หรือ 32-bit — Mac ชิป Apple Silicon รันผ่าน Rosetta 2
-- **Linux:** ยังไม่มีตัวแพ็กสำเร็จ — รันจากซอร์ส (ดู [การ build](#การ-build))
+- **ตัวที่แจก:** Windows x64 (portable `.exe` ~92 MB ไม่ต้องติดตั้ง) · macOS **Intel x64** และ **Apple Silicon arm64** (`.dmg` แยกกัน · ตัว Intel ~143 MB · ~330 MB เมื่อคัดลอกลง Applications) · Linux **x64** (`.AppImage`) ไม่มีรุ่น 32-bit
+- **Linux:** ตัว AppImage ต้องมี `libfuse2` ในบางดิสโทร หรือรันจากซอร์สก็ได้ (ดู [การ build](#การ-build))
 - ตัวพกพาแตกตัวเองลงโฟลเดอร์ชั่วคราวทุกครั้งที่เปิด (~380 MB) จึงควรเผื่อที่ว่างของไดรฟ์ที่เก็บ `%TEMP%`
 - Windows 7 / 8 / 8.1 **ไม่รองรับ** (Electron 43 เลิกรองรับแล้ว)
 - ใช้เน็ตเฉพาะการเรียก AI ตรวจอัปเดต และรายงานบั๊ก/คำขอฟีเจอร์ — การเขียนทำงานออฟไลน์ได้ทั้งหมด
@@ -100,8 +116,8 @@ K2 ทำงานบน **Windows, macOS และ Linux**
 | | |
 |---|---|
 | **รุ่นของ macOS** | macOS 12 Monterey ขึ้นไป (ขั้นต่ำที่ Electron 43 รองรับ) ทดสอบบน macOS 15.7 (Sequoia) |
-| **หน่วยประมวลผล** | ตัว build เป็น Intel (x64) · Mac ชิป Apple Silicon (ตระกูล M) รันตัวเดียวกันผ่าน Rosetta 2 · ยังไม่มีตัว build แบบ ARM |
-| **ขนาดไฟล์ / ขนาดหลังติดตั้ง** | `.dmg` ~143 MB · `Killian 2.app` ~330 MB ใน Applications |
+| **หน่วยประมวลผล** | มีตัว build แยกสำหรับ Intel (`mac-x64.dmg`) และ Apple Silicon ตระกูล M (`mac-arm64.dmg`) — เลือกให้ตรงกับเครื่อง · ตัวเลขด้านล่างวัดจากตัว Intel |
+| **ขนาดไฟล์ / ขนาดหลังติดตั้ง** | ตัว Intel: `.dmg` ~143 MB · `Killian 2.app` ~330 MB ใน Applications |
 | **หน่วยความจำที่ใช้** | ~400 MB ขณะเปิดโปรเจกต์ขนาดเล็ก (4 โปรเซส · วัดด้วย `footprint` หลังเปิดทิ้งไว้ 25 วินาที) |
 | **เวลาเปิดโปรแกรม** | ราว 2 วินาทีตั้งแต่สั่งเปิดจนโปรเจกต์พร้อมใช้ (ครั้งแรกสุดราว 5 วินาที) บนเครื่องทดสอบ |
 | **ข้อมูลของคุณ** | การตั้งค่าและ log อยู่ที่ `~/Library/Application Support/Killian 2/` · งานเขียนอยู่ในโฟลเดอร์โปรเจกต์ที่คุณเลือก |

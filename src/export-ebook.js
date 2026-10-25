@@ -8,6 +8,7 @@
 import { mdBlocks, parseInline, stripMentions } from './md.js';
 
 import { t } from './i18n.js';   // [alpha.162 · W6 ข้อ 4]
+import { splitMarks, stripMarks, commentMarkXml, commentsParts } from './comments/docx-comments.js';   // [alpha.170] คอมเมนต์ไปกลับกับ Word
 // ═══════════════════════ ตัวช่วยร่วม ═══════════════════════
 /** XML 1.0 ห้ามอักขระควบคุม (ยกเว้น tab/LF/CR) — เจอในข้อความที่วางมาจากเว็บบ่อย */
 const clean = (s) => String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '');
@@ -308,6 +309,8 @@ function runXml(text, marks, fontPt) {
  */
 export function buildDocx(md, opts = {}) {
   const font = String(opts.font || 'Tahoma').replace(/["<>&]/g, '');
+  // [trial 2026-10-25 ข้อ 20] อักษรไทย (complex script ของ Word) ใช้ช่อง w:cs — ต้องเป็นฟอนต์ที่มีกลีฟไทยจริง
+  const csFont = String(opts.thaiFont || font).replace(/["<>&]/g, '');
   const fontPt = Number.isFinite(+opts.fontPt) && +opts.fontPt > 0 ? +opts.fontPt : 14;
   const lang = String(opts.language || 'th-TH');
   const paper = opts.paper || { width: 8.27, height: 11.69 };
@@ -315,7 +318,8 @@ export function buildDocx(md, opts = {}) {
   const contentIn = Math.max(1, (+paper.width || 8.27) - (+mg.left || 1) - (+mg.right || 1));
   const imgData = opts.images instanceof Map ? opts.images : new Map();
   const media = new Map();                                // src → {rid,name,type,w,h,data,n}
-  const imgRun = (src, alt) => {
+  const contentHIn = Math.max(1, (+paper.height || 11.69) - (+mg.top || 1) - (+mg.bottom || 1));
+  const imgRun = (src, alt, fitPage = false) => {
     const data = imgData.get(src);
     if (!data) return '';
     const sz = imageSize(data);
@@ -325,7 +329,9 @@ export function buildDocx(md, opts = {}) {
       media.set(src, { rid: 'rIdImg' + n, name: `image${n}.${sz.type === 'jpeg' ? 'jpeg' : sz.type}`, type: sz.type, data, n });
     }
     const m = media.get(src);
-    const wIn = Math.min(contentIn, sz.w / 96), hIn = wIn * (sz.h / sz.w);
+    let wIn = fitPage ? contentIn : Math.min(contentIn, sz.w / 96), hIn = wIn * (sz.h / sz.w);
+    // [trial 2026-10-25 ข้อ 6ง] รูปปก = เต็มพื้นที่พิมพ์ (ไม่เกินความสูงหน้า — เกินแล้ว Word ดันไปหน้าถัดไปเปล่า ๆ)
+    if (fitPage && hIn > contentHIn) { hIn = contentHIn; wIn = hIn * (sz.w / sz.h); }
     const cx = Math.round(wIn * 914400), cy = Math.round(hIn * 914400);
     const id = 1000 + m.n;
     return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/>` +
@@ -336,16 +342,22 @@ export function buildDocx(md, opts = {}) {
       `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>` +
       '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
   };
+  // [alpha.170 · คอมเมนต์ไปกลับกับ Word] `opts.comments` = เธรดที่ markSceneComments ใส่เครื่องหมายไว้ในเนื้อ
+  // → เครื่องหมายใน run ไหนก็แปลงเป็นช่วงคอมเมนต์ของ Word ตรงนั้น · ไม่มีเธรด = ทางเดิมทุกไบต์
+  const cmt = opts.comments && opts.comments.length ? commentsParts(opts.comments, { defaultAuthor: opts.author }) : null;
+  const rx = cmt
+    ? (text, marks, sz) => splitMarks(text).map((p) => (p.text != null ? runXml(p.text, marks, sz) : commentMarkXml(cmt.flat, p))).join('')
+    : runXml;
   const runsOf = (text, extraMarks = []) => segsOf(text).map((seg) => {
     const marks = [...(seg.marks || []), ...extraMarks];
     // รูปกลางย่อหน้า: แยกข้อความรอบ ๆ ออกเป็น run แล้ววางรูปตรงกลาง
     let out = '', last = 0;
     for (const m of seg.text.matchAll(RE_INLINE_IMG)) {
-      out += runXml(seg.text.slice(last, m.index), marks, 0);
-      out += imgRun(m[2], m[1]) || runXml(m[1], marks, 0);
+      out += rx(seg.text.slice(last, m.index), marks, 0);
+      out += imgRun(m[2], m[1]) || rx(m[1], marks, 0);
       last = m.index + m[0].length;
     }
-    return out + runXml(seg.text.slice(last), marks, 0);
+    return out + rx(seg.text.slice(last), marks, 0);
   }).join('');
 
   const body = [];
@@ -355,6 +367,27 @@ export function buildDocx(md, opts = {}) {
     `<w:pPr>${style ? `<w:pStyle w:val="${style}"/>` : ''}${extra}${JC[align] ? `<w:jc w:val="${JC[align]}"/>` : ''}</w:pPr>`;
   let paragraphs = 0;
   const push = (xml) => { body.push(xml); paragraphs++; };
+  // [trial 2026-10-25 ข้อ 6ง] หน้าหน้าเล่ม (ปก · หน้าปกที่แต่งเอง · รายชื่อตัวละคร) — ชุดเดียวกับ PDF ของนิยาย
+  // (`proseFront()` ของ export-hub) · เดิม DOCX ของนิยายเริ่มที่เนื้อเรื่องเลย ไม่มีปกเลยสักหน้า
+  const fm = opts.front || null;
+  if (fm) {
+    let any = false;
+    const pageBreak = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+    const next = () => { if (any) push(pageBreak); any = true; };
+    if (fm.cover) {
+      next();
+      const r = fm.cover.src ? imgRun(fm.cover.src, '', true) : '';
+      if (r) push(`<w:p>${pPr('Figure', 'center')}${r}</w:p>`);
+      if (!fm.cover.full || !r) {
+        push(`<w:p>${pPr('Title', 'center')}${rx(fm.cover.title || '', [], 0)}</w:p>`);
+        if (fm.cover.book) push(`<w:p>${pPr('Subtitle', 'center')}${rx(fm.cover.book, [], 0)}</w:p>`);
+        if (fm.cover.author) push(`<w:p>${pPr('Subtitle', 'center')}${rx(fm.cover.author, [], 0)}</w:p>`);
+      }
+    }
+    if (fm.titleParas && fm.titleParas.length) { next(); for (const x of fm.titleParas) push(x); }
+    if (fm.roster) { next(); for (const line of String(fm.roster).split('\n')) push(`<w:p>${pPr(null, null)}${rx(line, [], 0)}</w:p>`); }
+    if (any) push(pageBreak);
+  }
   for (const b of mdBlocks(md, { breakMarker: opts.breakMarker || '' })) {
     if (b.kind !== 'li') curList = null;
     switch (b.kind) {
@@ -369,15 +402,15 @@ export function buildDocx(md, opts = {}) {
         break;
       }
       case 'quote': push(`<w:p>${pPr('Quote', b.align)}${runsOf(b.text)}</w:p>`); break;
-      case 'hr': if (b.text) { push(`<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t xml:space="preserve">${xmlEsc(b.text)}</w:t></w:r></w:p>`); break; }
+      case 'hr': if (b.text) { push(`<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t xml:space="preserve">${xmlEsc(stripMarks(b.text))}</w:t></w:r></w:p>`); break; }
         push('<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="999999"/></w:pBdr></w:pPr></w:p>'); break;
       case 'code':
-        for (const line of String(b.text).split('\n')) push(`<w:p>${pPr('Code', null)}${runXml(line, [], 0)}</w:p>`);
+        for (const line of String(b.text).split('\n')) push(`<w:p>${pPr('Code', null)}${rx(line, [], 0)}</w:p>`);
         break;
       case 'figure': {
         const r = imgRun(b.src, b.alt);
         if (r) push(`<w:p>${pPr('Figure', b.align || 'center')}${r}</w:p>`);
-        else if (b.alt) push(`<w:p>${pPr('Figure', b.align || 'center')}${runXml(b.alt, ['em'], 0)}</w:p>`);
+        else if (b.alt) push(`<w:p>${pPr('Figure', b.align || 'center')}${rx(b.alt, ['em'], 0)}</w:p>`);
         break;
       }
       default: {
@@ -396,7 +429,7 @@ ${body.join('\n')}
 ${sectPr}
 </w:body></w:document>`;
 
-  const fonts = `<w:rFonts w:ascii="${font}" w:hAnsi="${font}" w:eastAsia="${font}" w:cs="${font}"/>`;
+  const fonts = `<w:rFonts w:ascii="${font}" w:hAnsi="${font}" w:eastAsia="${font}" w:cs="${csFont}"/>`;
   const hs = [0, 2, 1.6, 1.35, 1.2, 1.1, 1];
   const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
@@ -408,6 +441,10 @@ ${[1, 2, 3, 4, 5, 6].map((n) => `<w:style w:type="paragraph" w:styleId="Heading$
 <w:style w:type="paragraph" w:styleId="Quote"><w:name w:val="Quote"/><w:basedOn w:val="Normal"/><w:pPr><w:ind w:left="720" w:right="720"/></w:pPr><w:rPr><w:i/><w:iCs/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="0"/></w:pPr><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="${font}"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Figure"><w:name w:val="Figure"/><w:basedOn w:val="Normal"/><w:pPr><w:jc w:val="center"/></w:pPr></w:style>
+<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:before="480" w:after="240"/><w:jc w:val="center"/></w:pPr><w:rPr><w:b/><w:bCs/><w:sz w:val="${Math.round(fontPt * 2 * 2.1)}"/><w:szCs w:val="${Math.round(fontPt * 2 * 2.1)}"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Subtitle"><w:name w:val="Subtitle"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:jc w:val="center"/></w:pPr><w:rPr><w:sz w:val="${Math.round(fontPt * 2 * 1.25)}"/><w:szCs w:val="${Math.round(fontPt * 2 * 1.25)}"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="CommentText"><w:name w:val="annotation text"/><w:basedOn w:val="Normal"/><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
+<w:style w:type="character" w:styleId="CommentReference"><w:name w:val="annotation reference"/><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:style>
 </w:styles>`;
 
   const numberingXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -426,6 +463,7 @@ ${[...exts].map((e) => `<Default Extension="${e}" ContentType="image/${e}"/>`).j
 <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
 <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
 <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+${cmt ? cmt.types : ''}
 <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
 </Types>`;
   const created = String(opts.created || new Date().toISOString()).replace(/\.\d+Z$/, 'Z');
@@ -439,10 +477,12 @@ ${[...exts].map((e) => `<Default Extension="${e}" ContentType="image/${e}"/>`).j
     { path: 'word/document.xml', data: documentXml },
     { path: 'word/styles.xml', data: stylesXml },
     { path: 'word/numbering.xml', data: numberingXml },
+    ...(cmt ? cmt.files : []),
     { path: 'word/_rels/document.xml.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 <Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+${cmt ? cmt.rels : ''}
 ${[...media.values()].map((m) => `<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${m.name}"/>`).join('\n')}
 </Relationships>` },
     { path: 'docProps/core.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -453,5 +493,5 @@ ${[...media.values()].map((m) => `<Relationship Id="${m.rid}" Type="http://schem
 </cp:coreProperties>` },
     ...[...media.values()].map((m) => ({ path: 'word/media/' + m.name, data: m.data })),
   ];
-  return { files, paragraphs, images: media.size };
+  return { files, paragraphs, images: media.size, comments: cmt ? cmt.count : 0 };
 }

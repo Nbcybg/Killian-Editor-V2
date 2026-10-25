@@ -372,7 +372,8 @@ export function isBuiltinWorkspace(name) { return BUILTIN_WORKSPACES.some((w) =>
 
 /** รายชื่อเวิร์กสเปซทั้งหมด — ชุดสำเร็จรูปก่อน แล้วตามด้วยของผู้ใช้ */
 export function listWorkspaces() {
-  const mine = getPanelManager().listWorkspaces();
+  // [alpha.170 · ข้อ 8] เวิร์กสเปซภายในของโปรแกรม (เลย์เอาต์ที่จดไว้ก่อนเข้าโหมดเรียบง่าย) ไม่ใช่ของผู้ใช้
+  const mine = getPanelManager().listWorkspaces().filter((n) => !String(n).startsWith('__k2'));
   return [
     ...BUILTIN_WORKSPACES.map((w) => ({ name: w.id, label: w.label, builtIn: true })),
     ...mine.map((n) => ({ name: n, label: n, builtIn: false })),
@@ -384,6 +385,26 @@ export function saveWorkspace(name) {
   if (!n || isBuiltinWorkspace(n)) return false;
   rememberOpenPanels();                       // ให้ homes/สัดส่วนล่าสุดติดไปกับ snapshot ด้วย
   return getPanelManager().saveWorkspace(n, { homes: Object.fromEntries(homes) });
+}
+/**
+ * [alpha.170 · ข้อ 8] โหมดเรียบง่าย: จดเลย์เอาต์ตอนนี้ไว้ (ครั้งเดียว) แล้วเหลือ Explorer + เอกสาร
+ * @param {string} keep ชื่อเวิร์กสเปซภายในที่ใช้จด
+ */
+export function enterSimpleLayout(keep) {
+  const m = getPanelManager();
+  if (!m.getWorkspace(keep)) {
+    rememberOpenPanels();
+    m.saveWorkspace(keep, { homes: Object.fromEntries(homes) });
+  }
+  return applyWorkspace('writing');
+}
+/** ออกจากโหมดเรียบง่าย: คืนเลย์เอาต์ที่จดไว้ (ไม่มี = คงเลย์เอาต์ปัจจุบัน) แล้วลบที่จด */
+export function leaveSimpleLayout(keep) {
+  const m = getPanelManager();
+  if (!m.getWorkspace(keep)) return false;
+  const ok = applyWorkspace(keep);
+  m.removeWorkspace(keep);
+  return ok;
 }
 export function deleteWorkspace(name) {
   if (isBuiltinWorkspace(name)) return false;

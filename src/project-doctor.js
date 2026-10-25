@@ -11,6 +11,7 @@
 // ไฟล์นี้ **บริสุทธิ์**: รับ "ภาพถ่าย" ของฉบับร่างที่ UI อ่านมาจากดิสก์ → คืนรายการปัญหา + วิธีซ่อม
 // ตัวลงมือซ่อมจริงอยู่ที่ project-doctor-ui.js
 import { parseMdFile, repairFrontmatter } from './md.js';
+import { syncCopyOf } from './project-lock.js';   // [alpha.170 · ใช้หลายเครื่อง] สำเนาที่ตัวซิงก์คลาวด์สร้างเมื่อไฟล์ชนกัน
 
 /** ลำดับความรุนแรง (น้อย = ร้ายแรงกว่า) — ใช้เรียงรายการในกล่อง */
 export const DOCTOR_TYPES = ['bad-json', 'missing-file', 'duplicate-ref', 'rows-without-chapter',
@@ -84,8 +85,11 @@ export function diagnoseDraft(s) {
       if (seen.has(f)) continue;
       let title = '';
       try { title = parseMdFile((s.texts || {})[c.folderName + '/' + f] || '').meta.title || ''; } catch {}
+      // [alpha.170] ไฟล์ที่ไม่มีใครอ้างซึ่งชื่อเป็นรูปสำเนาของตัวซิงก์ ("ฉาก (conflicted copy).md" ข้าง "ฉาก.md")
+      // = สองเครื่องแก้ไฟล์เดียวกันพร้อมกัน — บอกผู้ใช้ว่าคืออะไร (ผูกกลับแล้วเทียบ/รวมเองได้ ไม่เดาว่าฉบับไหนถูก)
+      const sync = syncCopyOf(f, seen.keys());
       add({ type: 'orphan-file', chGuid: c.guid, folder: c.folderName, file: f,
-            title: String(title || f.replace(/\.md$/i, '')), fix: { kind: 'attach-row' } });
+            title: String(title || f.replace(/\.md$/i, '')), fix: { kind: 'attach-row' }, ...(sync ? { syncOf: sync.of, syncApp: sync.app } : {}) });
     }
   }
 

@@ -1,6 +1,6 @@
 // project.js — สร้างโปรเจกต์จาก template (นิยาย, บทหนัง, แฟนตาซี, สืบสวน)
-import { t } from './i18n.js';
-import { el, setStatus, log, DEFAULT_SETTINGS, DEFAULT_GOALS, CAT_ICON } from './core.js';
+import { t, tf } from './i18n.js';
+import { el, setStatus, log, PROJECT_DEFAULTS, DEFAULT_GOALS, CAT_ICON, i18n } from './core.js';
 import { gi } from './icons.js';
 import { diskBase, freeName, defaultBookName } from './disk-names.js';   // [alpha.170] ชื่อบนดิสก์ = ชื่อเรื่อง
 
@@ -10,35 +10,55 @@ const CAT_LABEL = {
   lore: t('ui.common.legend2'), factions: t('ui.project.group'),
 };
 
+// [alpha.170 · ข้อ 8] ชื่อ/คำอธิบายเป็น getter (อ่านตอนวาดกล่อง — ไม่ค้างภาษาตอน import) · โครงบทอ่านตอนสร้างโปรเจกต์
 const TEMPLATES = {
   novel: {
-    name: t('ui.common.novel'),
-    desc: t('ui.project.structureNovelChapterScene'),
+    get name() { return t('ui.common.novel'); },
+    get desc() { return t('ui.project.structureNovelChapterScene'); },
     sections: [{ chapters: [t('ui.common.chapterOne2'), t('ui.project.chapterTwo')] }],
     wikiCats: ['characters', 'locations', 'lore'],
     templates: 'default',
   },
   screenplay: {
-    name: t('ui.project.screenplay'),
-    desc: t('ui.project.structureChapterFilmAct'),
+    get name() { return t('ui.project.screenplay'); },
+    get desc() { return t('ui.project.structureChapterFilmAct'); },
     sections: [{ title: t('ui.common.chapterFilm'), chapters: [t('ui.project.act'), t('ui.project.act2'), t('ui.project.act3')] }],
     wikiCats: ['characters', 'locations'],
     templates: 'screenplay',
     format: 'screenplay',
   },
   fantasy: {
-    name: t('ui.project.fantasy'),
-    desc: t('ui.project.novelFantasyWorldbuilding'),
+    get name() { return t('ui.project.fantasy'); },
+    get desc() { return t('ui.project.novelFantasyWorldbuilding'); },
     sections: [{ chapters: [t('ui.project.chapter'), t('ui.common.chapterOne2')] }],
     wikiCats: ['characters', 'locations', 'items', 'lore', 'factions'],
     templates: 'fantasy',
   },
   mystery: {
-    name: t('ui.project.investigateBack'),
-    desc: t('ui.project.novelInvestigateCharacterSuspect'),
+    get name() { return t('ui.project.investigateBack'); },
+    get desc() { return t('ui.project.novelInvestigateCharacterSuspect'); },
     sections: [{ chapters: [t('ui.project.start'), t('ui.project.investigation'), t('ui.project.chapterSummary')] }],
     wikiCats: ['characters', 'locations', 'items', 'lore'],
     templates: 'mystery',
+  },
+  // [alpha.170 · ข้อ 8] ผลสำรวจผู้ใช้: เทมเพลตตามประเภทงาน — นิยายเว็บ (ลงทีละตอน) · นิยายภาพ (VN · มีเส้นทางแยก)
+  webnovel: {
+    get name() { return t('ui.project.tplWebnovel'); },
+    get desc() { return t('ui.project.tplWebnovelDesc'); },
+    get sections() { return [{ chapters: [1, 2, 3].map((n) => tf('ui.project.episodeF', n)) }]; },
+    wikiCats: ['characters', 'locations', 'lore'],
+    templates: 'default',
+  },
+  vn: {
+    get name() { return t('ui.project.tplVn'); },
+    get desc() { return t('ui.project.tplVnDesc'); },
+    // เส้นทางหลัก (ทุกคนเห็น) + เส้นทางแยกของตัวละคร — เล่มละเส้นทาง · ทางเลือกต่อกันด้วยผังแตกสาย
+    get sections() { return [
+      { title: t('ui.project.vnCommon'), chapters: [t('ui.project.vnPrologue'), t('ui.common.chapterOne2')] },
+      { title: tf('ui.project.vnRouteF', 'A'), chapters: [t('ui.common.chapterOne2')] },
+    ]; },
+    wikiCats: ['characters', 'locations', 'items', 'lore'],
+    templates: 'default',
   },
 };
 
@@ -62,7 +82,10 @@ export async function createProjectFromTemplate(parentDir, projectName, tplKey) 
     title: projectName, type: 'killian-project', version: '2.0',
     created: new Date().toISOString(),
     template: tplKey,
-    settings: { ...DEFAULT_SETTINGS },
+    // [trial 2026-10-25 ข้อ 8] เฉพาะค่าของ "ผลงาน" — ค่าระดับผู้ใช้ (ซูมพอดีความกว้าง ฯลฯ) มาจากไฟล์ผู้ใช้ตอนเปิด
+    // (เดิมสำเนา DEFAULT_SETTINGS ทั้งก้อน → ไฟล์ผลงานชนะ แล้วค่าที่ผู้ใช้เปิดไว้ถูกปิดในทุกโปรเจกต์ใหม่)
+    // [trial 2026-10-25 ข้อ 18] นิยายในหน้าจอภาษาไทย = กระดาษ A4 (บทภาพยนตร์คง Letter ตามมาตรฐานบท)
+    settings: { ...PROJECT_DEFAULTS, ...(format !== 'screenplay' && i18n.lang === 'th' ? { paperSize: 'a4' } : {}) },
     goals: { ...DEFAULT_GOALS },
     // หมวดที่ไม่ใช่หมวดมาตรฐานเท่านั้นที่ต้องประกาศ (BUILTIN_CATS มีอยู่แล้วในตัวโปรแกรม)
     wikiCats: tpl.wikiCats

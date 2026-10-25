@@ -221,7 +221,17 @@ Leave remarks attached to a piece of text — for an editor, a beta reader, or a
 - Hover over a comment = the text is highlighted in the scene · click = scroll to it
 - Filter: **All / Open only**
 - If the anchored text is edited or deleted, the comment stays but says the anchored text could not be found.
-- Comments are stored **in the scene's own `.md` file** (a block at the end of the file), so they always travel with the file. They are not exported with the manuscript.
+- Comments are stored **in the scene's own `.md` file** (a block at the end of the file), so they always travel with the file. They are not exported with the manuscript — except to Word when you ask for it (below).
+
+### Working with an editor in Word
+
+1. **Export → Export Hub…** · choose **DOCX (Word)** · tick **Include comments**. Open comments (with their replies) appear in Word's comment pane, anchored to the same text. Resolved threads are not sent.
+2. Send the `.docx` to your editor. They reply, add new comments and press **Resolve** in Word as usual.
+3. Back in the app: **File → Import Comments from Word File…** and choose the returned file. A summary shows what will happen — new comments, new replies, threads resolved in Word — before anything is written.
+
+- Each comment is matched to the scene whose text contains the commented words (and the surrounding paragraph). Comments already in the scene are recognised and not added twice, so importing the same file again changes nothing.
+- A comment whose text can no longer be found (for example, the editor rewrote that paragraph) is listed after the import instead of being guessed into a scene.
+- Only comments are imported. Text changes made in Word (tracked or not) are **not** copied into the scenes — read them in Word and edit the scenes yourself.
 
 ## 4.13 Shortcodes and Wiki variables
 

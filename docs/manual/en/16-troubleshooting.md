@@ -20,7 +20,7 @@
 
 | Symptom | Cause and fix |
 |---|---|
-| Windows warns that the publisher is unknown | Choose More info → Run anyway (when you downloaded it from the official Releases page) |
+| Windows warns that the publisher is unknown | Choose More info → Run anyway (when you downloaded it from the official Releases page) · why it happens and how to check the file: [1.2](01-getting-started.md#why-windows-or-macos-warns-you--and-how-to-check-the-file) |
 | macOS says it cannot be opened because the developer is unidentified | The app is not signed yet — right-click the icon → Open → Open |
 | Slow to start the first time | The portable build unpacks itself into a temporary folder every time (~380 MB) — check the free space on the drive that holds `%TEMP%` |
 | A project shows **Cannot open** on Home | The folder was moved/deleted, or its drive is not connected — open it with **Open project…** from its new location, then **Remove from list** for the old entry |
@@ -98,7 +98,7 @@ In the project folder on your own machine, as `.md` and `.json` files. No accoun
 Open the `.md` files in any text editor — or export to DOCX / EPUB / PDF / Markdown first.
 
 **Can I use it with Dropbox / OneDrive / Google Drive / iCloud?**
-Yes — put the project folder inside the synced folder, but open it on one machine at a time and wait for syncing to finish before opening it on another.
+Yes — put the project folder inside the synced folder, but open it on one machine at a time and wait for syncing to finish before opening it on another. Step by step: [17. Using several computers](17-several-computers.md).
 
 **Can several people work on it at the same time?**
 There is no real-time co-editing. What does work is Git (the files are text and merge well), or passing the project/ZIP back and forth and using comments and version history.

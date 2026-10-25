@@ -79,7 +79,9 @@ Everything you can trigger in the app (menu items, buttons, shortcuts, the float
 | `export-rtf` |  | Exports the screenplay as an RTF file that opens in Word and most word processors. |
 | `export-watermark` |  | Sets a watermark printed across every page of exported files — a recipient’s name, or the word DRAFT. |
 | `export-zip` |  | Packs the whole project folder into one ZIP file, for backup or sharing. |
+| `import-docx-comments` |  | Bring the comments and replies an editor wrote in a Word file (.docx) back into your scenes, merged with existing comments without duplicates; threads resolved in Word are closed. Scene text is not changed. |
 | `import-language-csv` |  | Imports translations from an edited CSV file, merging them into the project’s language files with immediate effect. |
+| `import-manuscript` |  | Bring existing work from Word (.docx), Markdown (.md) or pasted text into the project as a new book. Chapters and scenes are split from headings or chapter lines, and you see the structure before importing. |
 | `import-script` |  | Imports a screenplay from Fountain, Final Draft (FDX), Celtx, Fade In or Adobe Story, with a preview first. |
 
 ## Edit · search · navigate
@@ -105,8 +107,8 @@ Everything you can trigger in the app (menu items, buttons, shortcuts, the float
 | `all-notes` |  | Lists the quick notes from every scene in one place; click one to go to its scene. |
 | `char-map` |  | Insert special characters that aren’t on your keyboard, such as typographic punctuation or symbols. |
 | `comments` |  | Opens comments for the current scene — attach notes to text, reply, and resolve them. |
-| `goto-page:1` |  | Jumps back to the first page of the document. |
 | `goto:page` |  | Opens a box to type a page number, then jumps to that page. |
+| `goto-page:1` |  | Jumps back to the first page of the document. |
 | `goto:scene` |  | Opens a box to type a scene number, then jumps to that scene. |
 | `insert-shortcode` |  | Inserts a shortcode that is replaced by a real value on export — the title, chapter name or date. |
 | `smart-manage` |  | Review and remove words SmartType has learned — like a misspelled character name it picked up. |
@@ -224,9 +226,9 @@ Everything you can trigger in the app (menu items, buttons, shortcuts, the float
 | `reading-mode` | `Ctrl+Shift+H` | Enters full-screen reading mode — hides every toolbar and panel, leaving only the page. |
 | `split-view` | `Ctrl+Shift+\` | Splits the writing area in two, to compare two documents or view two places in the same scene. |
 | `typewriter` | `Ctrl+Shift+T` | Keeps the line you are typing pinned to the middle of the screen — the page scrolls up to meet it, so your eyes stay in one place. |
-| `zoom:-1` | `Ctrl+-` | Zooms the page out one step. The actual font size in your file does not change. |
 | `zoom:0` | `Ctrl+Shift+0` | Resets page zoom to 100%. |
 | `zoom:1` | `Ctrl+=` | Zooms the page in one step. The actual font size in your file does not change. |
+| `zoom:-1` | `Ctrl+-` | Zooms the page out one step. The actual font size in your file does not change. |
 | `auto-fit-width` |  | Turns automatic fitting on or off: the page shrinks to fit when the document panel is narrower than the page, and grows back when it widens (never above the zoom you set yourself). |
 | `markdown-codes` |  | Shows or hides the leading markdown codes (# > . @). Hidden reads cleaner; shown reveals the real structure stored in the file. |
 | `page-guides` |  | Shows dashed margin guides on all four sides, so you can see where text will sit on the printed page. |
@@ -239,11 +241,11 @@ Everything you can trigger in the app (menu items, buttons, shortcuts, the float
 | `toggle-open-last` |  | Opens your most recent project straight away when the app starts, skipping the home screen. |
 | `toggle-theme` |  | Changes the app colour theme for bars, panels and dialogs — not the page or exported files. |
 | `toolbar-config` |  | Choose which buttons appear on the toolbar; changes take effect as you tick. |
+| `ui:filter-archive-toggle` |  | Hides or shows archived scenes in the project tree. They are still there, just out of the way. |
 | `ui-scale` |  | Changes the size of toolbars, panels and dialogs, without affecting the page. |
-| `ui-scale:-1` |  | Makes toolbars, panels and dialogs one step smaller, leaving more room to write. |
 | `ui-scale:0` |  | Resets toolbars, panels and dialogs to their normal 100% size. |
 | `ui-scale:1` |  | Makes toolbars, panels and dialogs one step larger — helpful on high-resolution screens. |
-| `ui:filter-archive-toggle` |  | Hides or shows archived scenes in the project tree. They are still there, just out of the way. |
+| `ui-scale:-1` |  | Makes toolbars, panels and dialogs one step smaller, leaving more room to write. |
 | `zoom` |  | Page zoom — in, out, reset, or fit to width. |
 | `zoom:fit` |  | Zooms so the page width exactly fits the writing area. |
 
@@ -291,8 +293,8 @@ Everything you can trigger in the app (menu items, buttons, shortcuts, the float
 | `panels-hide-right` | `Ctrl+Shift+]` | Temporarily hides the panels on the right; press again to restore them. |
 | `workspace-menu` | `Ctrl+Shift+Y` | Switch between saved panel layouts, or save the current one as a new set — say, one for writing and one for planning. |
 | `books` |  | Manage books and drafts — covers, blurbs, status, and drag to reorder. |
-| `branch-sync` |  | Reads the choices written in this scene as [text] in square brackets and turns them into paths on the branch map. |
 | `branching` |  | Opens the branching story map, showing where each scene’s choices lead — for visual novels and story games. |
+| `branch-sync` |  | Reads the choices written in this scene as [text] in square brackets and turns them into paths on the branch map. |
 | `chapters` |  | Opens the chapter manager — chapter covers, order, and statistics for every chapter in the book. |
 | `dashboard` |  | Opens the project dashboard — word count against your goal, scene status, and chapter lengths. |
 | `floorplan` |  | Opens the floor plan — a top-down set plan: place characters, set up cameras/lenses and lights, then block beats against the scene's lines |
@@ -303,11 +305,11 @@ Everything you can trigger in the app (menu items, buttons, shortcuts, the float
 | `gallery-unused` |  | Shows images in the library that aren’t used anywhere yet. |
 | `maps` |  | Opens your story-world maps: pin characters and places, and nest maps from world down to city and room. |
 | `network` |  | Opens the Story Network — a relationship map of characters, places and items, in 2D or 3D. |
-| `panel-system` |  | Choose which panels to show or hide, and see what each one is for. |
 | `panels-side-bottom` |  | Hide panels docked below the writing area; press again to bring them back |
 | `panels-side-left` |  | Hide every panel docked left of the writing area; press again to bring them back |
 | `panels-side-right` |  | Hide every panel docked right of the writing area; press again to bring them back |
 | `panels-side-top` |  | Hide panels docked above the writing area; press again to bring them back |
+| `panel-system` |  | Choose which panels to show or hide, and see what each one is for. |
 | `planner` |  | Opens the free-form planning board — lay out scene cards, notes and images, and connect them. |
 | `planner-align` |  | Aligns text inside planner cards left, centre or right. |
 | `planner-valign` |  | Aligns text inside planner cards to the top, middle or bottom. |
@@ -369,6 +371,8 @@ Everything you can trigger in the app (menu items, buttons, shortcuts, the float
 | `quick-start` |  | A short tour of the basics: projects, writing, the Wiki, panels and exporting |
 | `show-log` |  | Opens the app’s activity log, to look into errors or attach to a bug report. |
 | `support` |  | Opens the project's support page in your browser, where you can buy the developer a coffee. |
+| `sync-guide` |  | Opens the manual chapter on keeping a project in a synced folder (Google Drive, iCloud, Dropbox, OneDrive) so you can write on several computers, and on handling the copies a sync service makes when files clash. |
+| `toggle-simple-mode` |  | Turns simple mode on or off: only the Explorer, the editor and the basic writing buttons stay on screen. Every other feature is still in the menus; turning it off brings your toolbar and panels back as they were. |
 | `ui:tb-plug` |  | Commands added by plugins; click to pick one. |
 | `ui:tb-visual` |  | Opens this scene’s storyboard, to tell it through a sequence of images. |
 | `user-manual` |  | Opens the full user manual inside the app — every chapter, in English or Thai, with no internet needed. |

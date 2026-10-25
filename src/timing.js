@@ -36,3 +36,7 @@ export function retryBackoff(n) {
   const k = Number.isFinite(+n) && +n > 0 ? Math.floor(+n) : 0;
   return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * Math.pow(2, k));
 }
+// [alpha.170 · ใช้หลายเครื่อง] ตัวล็อกโปรเจกต์ (`.k2lock.json` ในโฟลเดอร์โปรเจกต์ — ตัวซิงก์คลาวด์พาไปอีกเครื่อง):
+// เขียน "ยังเปิดอยู่" ทุก BEAT · ไม่ถูกเขียนนานเกิน STALE = ถือว่าเครื่องนั้นปิดไปแล้ว (ดับ/หลับ/ตัวซิงก์ช้า)
+export const PROJECT_LOCK_BEAT_MS = 2 * 60 * 1000;
+export const PROJECT_LOCK_STALE_MS = 10 * 60 * 1000;

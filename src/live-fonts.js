@@ -33,6 +33,23 @@ export function liveProseFonts(doc = globalThis.document) {
  * (`K2 Lang`/`K2 SP`/`K2 …` = วงศ์ที่ `@font-face` ประกอบขึ้นบนจอเท่านั้น · Word ไม่มี แล้วแทนฟอนต์เอง)
  * @returns {string} '' = ไม่มีตัวที่ใช้ได้
  */
+/**
+ * [trial 2026-10-25 ข้อ 20] ฟอนต์สำหรับ "อักษรไทย" ในไฟล์ Word (`w:rFonts w:cs`) — Word จัดอักษรไทยเป็น
+ * complex script แล้วใช้ฟอนต์ช่อง cs · เดิมใส่ฟอนต์ตัวแรกของสแตก (Garamond ฯลฯ ไม่มีกลีฟไทย) ทุกช่อง
+ * = ไทยไปขึ้นกับฟอนต์สำรองของ Word แต่ละเครื่อง · เลือกตัวที่มีไทยจริงตัวแรกในสแตก ไม่มี = Tahoma (มีทั้ง Windows/macOS)
+ */
+const THAI_FAMILIES = /^(Leelawadee( UI)?|Thonburi|TH Sarabun( New| PSK)?|Sarabun|Noto (Sans|Serif) Thai( Looped)?|Tahoma|Cordia(New|UPC| New)|Angsana( New|UPC)|Browallia( New|UPC)|Ayuthaya|Sathu|Silom|Krungthep|Sukhumvit Set|Kanit|Prompt|Mitr|Pridi|Taviraj|Trirong|Chakra Petch|Bai Jamjuree|K2D|Niramit|Charm|Chonburi|IBM Plex Sans Thai( Looped)?|Anuphan|Krub|Mali|Itim|Athiti|Maitree|Pattaya|Sriracha|Thasadith|Kodchasan|KoHo|Fahkwang|Srisakdi|Charmonman|Chakra|Garuda|Loma|Norasi|Kinnari|Umpush|Waree|Purisa|Sawasdee|Tlwg[\w ]*)$/i;
+export function thaiFontOf(stack) {
+  for (const raw of String(stack || '').split(',')) {
+    const f = raw.replace(/["']/g, '').trim();
+    // ตาข่ายไทยของโปรแกรม (`--thai-net` ขึ้นต้นด้วย Thonburi) เป็นของ "เครื่องนี้" — Thonburi มีแต่ macOS ·
+    // Leelawadee มีแต่ Windows · ไฟล์ Word ถูกเปิดที่เครื่องอื่น → ถึงตาข่ายแล้วยังไม่เจอตัวที่ผู้ใช้เลือก = Tahoma
+    if (/^Thonburi$/i.test(f)) break;
+    if (f && THAI_FAMILIES.test(f)) return f;
+  }
+  return 'Tahoma';
+}
+
 export function firstRealFont(stack) {
   for (const raw of String(stack || '').split(',')) {
     const f = raw.replace(/["']/g, '').trim();

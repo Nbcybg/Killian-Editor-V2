@@ -18,7 +18,7 @@ import {
 } from './ai-providers.js';
 import { SEND_KEYS, DEFAULT_SEND_KEY, estimateTokens } from './ai-session.js';
 // [alpha.145] คำอธิบายความล้มเหลวที่ผู้ใช้ทำอะไรต่อได้ (โมดูลบริสุทธิ์ · unit test แยก)
-import { describeHttpError, shortError, redactSecrets } from './ai-error.js';
+import { describeHttpError, shortError, redactSecrets, clip } from './ai-error.js';
 import { gi } from '../icons.js';
 import { withUserSystem, listAgents, upsertAgent, removeAgent, moveAgent } from './ai-agents.js';
 import { fmtNum } from '../locale.js';
@@ -80,9 +80,38 @@ export function recordAiUsage({ usage, cost, provider = '', model = '', feature 
 
 /** ผู้ให้บริการที่เลือกใช้อยู่ พร้อมคีย์จริง (null = ยังไม่ได้ตั้งค่าอะไรเลย) */
 export async function currentProvider() {
-  const p = activeProvider(aiMeta());
+  let p = activeProvider(aiMeta());
+  if (!p && await adoptMyDefaults()) p = activeProvider(aiMeta());
   if (!p) return null;
   return withSecrets(p, await loadKeys());
+}
+
+/**
+ * [trial 2026-10-25 ข้อ 11] โปรเจกต์ที่ยังไม่มีผู้ให้บริการเลย → ใช้ชุด "ของฉัน" ที่ผู้ใช้บันทึกไว้ให้เอง (ครั้งเดียวต่อโปรเจกต์)
+ * ผู้ใช้เจอ: ตั้งผู้ให้บริการในโปรเจกต์แรกแล้ว เปิดโปรเจกต์ใหม่ส่งแชท = เงียบ (ทะเบียนผูกกับโปรเจกต์ · ปุ่ม "บันทึกเป็นของฉัน"/
+ * "นำเข้า" มีอยู่แต่ผู้ใช้ใหม่ไม่รู้) · ชุดของฉันเก็บเข้ารหัสใน userData (main) → คีย์ลงไฟล์คีย์ของโปรเจกต์เหมือนกดนำเข้าเอง
+ * โหมดเทส: ไม่แตะ (userData ของเทสไม่มีชุดของฉันอยู่แล้ว แต่กันไว้ให้แน่)
+ * @returns {Promise<boolean>} true = รับชุดของฉันเข้ามาแล้ว
+ */
+const _adopted = new Set();
+async function adoptMyDefaults() {
+  const root = state.root;
+  if (!root || !state.meta || _adopted.has(root) || !kapi.aiDefaultsLoad) return false;
+  if (listProviders(aiMeta()).length) return false;           // ผู้ใช้ตั้งเองแล้ว (แค่ยังไม่ได้เลือกตัวใช้งาน) — ไม่ยุ่ง
+  _adopted.add(root);
+  let defaults = null;
+  try { defaults = await kapi.aiDefaultsLoad(); } catch { defaults = null; }
+  if (!defaults || !Array.isArray(defaults.providers) || !defaults.providers.length) return false;
+  if (state.root !== root) return false;
+  const m = mergeDefaults([], defaults);
+  if (!m.added) return false;
+  const active = defaults.activeProviderId && m.rows.some((x) => x.id === defaults.activeProviderId)
+    ? defaults.activeProviderId : m.rows[0].id;
+  if (Object.keys(m.keys).length) { const keys = await loadKeys(); Object.assign(keys, m.keys); await saveKeys(keys); }
+  await persist(m.rows, active);
+  log('info', 'ai: defaults adopted for new project', { added: m.added, withKeys: Object.keys(m.keys).length });
+  try { const { toast } = await import('../ui.js'); toast(tf('ui.aiProvider.defaultsAdopted', m.added), { level: 'ok' }); } catch {}
+  return true;
 }
 /** provider ตาม id (เซสชันแชท override ได้) */
 export async function providerById(id) {
@@ -175,6 +204,7 @@ function failure(provider, req, e) {
   log(info.code === 'aborted' ? 'info' : 'error', 'ai: ' + shortError(info), info.detail);
   return { ok: false, status: info.status, aborted: !!e.aborted, timedOut: !!e.timedOut,
            error: info.title, detail: info.detail, hints: info.hints, code: info.code,
+           serverMessage: info.serverMessage || '',   // [trial 2026-10-25 ข้อ 12] ข้อความของเซิร์ฟเวอร์ตรง ๆ (ปุ่มทดสอบโชว์)
            body: redactSecrets(String(e.body || '')) };
 }
 
@@ -235,7 +265,8 @@ export async function testCredential(provider, opts = {}) {
   return chatOk
     ? { ok: true, msg: tf('ui.aiProvider.testChatOk', r.models.length, model), models: r.models, chat: { ok: true, model } }
     : { ok: false, msg: tf('ui.aiProvider.testChatFail', r.models.length, model, c.error || ''), models: r.models,
-        chat: { ok: false, model, error: c.error || '', code: c.code || '', hints: c.hints || [] } };
+        chat: { ok: false, model, error: c.error || '', code: c.code || '', hints: c.hints || [],
+                serverMessage: c.serverMessage || '' } };
 }
 
 // ══ [alpha.170 · บั๊ก 2] โมเดลที่คิดก่อนตอบ: จำว่าเคยใช้คิดเท่าไร แล้วเผื่อที่ให้ล่วงหน้า ══
@@ -933,7 +964,9 @@ export function providerDialog(existing) {
       const r = await testCredential(p, { model: modelSel.value });
       setBusy(false);
       say(credMsg, r.ok, (r.ok ? gi('check-circle') + ' ' : gi('fail') + ' ') + r.msg
-        + (r.chat && !r.ok && r.chat.hints && r.chat.hints[0] ? ' — ' + r.chat.hints[0] : ''));
+        + (r.chat && !r.ok && r.chat.hints && r.chat.hints[0] ? ' — ' + r.chat.hints[0] : '')
+        // [trial 2026-10-25 ข้อ 12] ข้อความจริงของเซิร์ฟเวอร์ (เช่น ชื่อ header ที่ขาด) — ผู้ใช้ต้องเห็นเพื่อแก้เองได้
+        + (r.chat && !r.ok && r.chat.serverMessage ? ' · ' + t('ui.aiError.reply') + clip(r.chat.serverMessage, 240) : ''));
       if (r.models.length) fillModels(r.models, modelSel.value);
     };
     loadModelsBtn.onclick = async () => {

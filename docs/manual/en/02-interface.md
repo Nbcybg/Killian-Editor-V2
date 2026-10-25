@@ -229,6 +229,13 @@ Open two documents side by side, or the same scene at two different places.
 
 **Auto-fit page width** (off by default): when the document pane is narrower than the page, the app shrinks the page to fit, and enlarges it again when the pane widens — never beyond the zoom you set yourself.
 
+## 2.12 Simple mode
+
+**View → Simple Mode** keeps only what you need to write: the Project panel (Explorer), the document, and the basic writing buttons (undo/redo, headings, bold/italic/underline, lists, find). Every other feature is still in the menus, and the **»** menu at the end of the toolbar lists the hidden buttons.
+
+- Leave it with the **All tools** button on the toolbar, or the same menu item. Your toolbar, format bar and panel layout come back exactly as they were — simple mode never changes your own settings.
+- On a brand-new installation the app starts in simple mode. Existing users keep their screen as it was after updating.
+
 ---
 
 Next: [3. Projects, books, chapters, scenes →](03-project-structure.md)

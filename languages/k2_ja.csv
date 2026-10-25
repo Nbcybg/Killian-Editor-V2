@@ -715,6 +715,7 @@ ui.aiChatPanel.notHasFilePress,スキルファイルはまだありません —
 ui.aiChatPanel.notHasSessionPress,セッションはまだありません — 「新しいセッション」を押してチャットを始めましょう
 ui.aiChatPanel.notHasText,メッセージはまだありません
 ui.aiChatPanel.open,有効なスキル： 
+ui.aiChatPanel.openAiSettings,AI 設定
 ui.aiChatPanel.openFolder,スキルフォルダーを開く
 ui.aiChatPanel.openProjectBeforeDone,先にプロジェクトを開いてください。チャットセッションはそのプロジェクトの Sessions/ フォルダーに保存されます
 ui.aiChatPanel.partialNote,返答が途中で止まりました — ここまでに受信したテキストを保持しています
@@ -836,6 +837,8 @@ ui.aiError.itemTLSToUse,サーバーのセキュリティ証明書（TLS）が�
 ui.aiError.keyBindOutlineCheck,プロバイダーによっては、キーが組織/プロジェクトに紐づいています — このキーがこのベース URL で使えるか確認してください
 ui.aiError.missingHeader,プロバイダーが必要とするヘッダーがリクエストにありません
 ui.aiError.missingHeaderHint,サーバーのメッセージにあるヘッダーを、プロバイダーの Custom Headers に追加してください（1 行に「名前: 値」）
+ui.aiError.missingHeaderNamed,プロバイダーが必要とするヘッダー {0} がリクエストにありません
+ui.aiError.missingHeaderNamedHint,プロバイダーの Custom Headers に「{0}: 値」の行を追加してください（値はプロバイダーのドキュメントを参照）
 ui.aiError.model,モデル： 
 ui.aiError.modelOllamaLMStudio,ローカルモデル（Ollama / LM Studio / llama.cpp）の場合は、まずそのプログラムが起動していることを確認してください
 ui.aiError.modelThinkReasoningUse,推論モデルは時間がかかります — 推論の強度を下げるか、返答を短くしてください
@@ -966,6 +969,7 @@ ui.aiProvider.cantPickModel,モデルがまだ選択されていません
 ui.aiProvider.cantSettingsProviderAI,AI プロバイダーがまだ設定されていません（メニュー AI → AI 設定）
 ui.aiProvider.connectOkFoundModel,接続しました — {0} 個のモデルが見つかりました
 ui.aiProvider.credNameHint,空欄 = プロバイダー名を使用
+ui.aiProvider.defaultsAdopted,保存済みの AI プロバイダーをこのプロジェクトに設定しました（{0}）
 ui.aiProvider.defaultsFail,このコンピューターにプロバイダーを保存できませんでした
 ui.aiProvider.defaultsHave,このコンピューターに {0} 件保存済み
 ui.aiProvider.defaultsImport,自分のプロバイダーを使う
@@ -3318,6 +3322,7 @@ ui.doctor.tMissingFile,シーン「{0}」は存在しない {1} を指してい�
 ui.doctor.tMissingFolder,章「{0}」にはフォルダー {1} がありません
 ui.doctor.tOrphanFile,ファイル {0}（「{1}」）はどのシーンからも使われていません
 ui.doctor.tRowsWithoutChapter,インデックス内の {0} 件のシーンがどの章にも属していません
+ui.doctor.tSyncCopy,{0} は同期サービスが作成した {1} のコピーです（2台で同じファイルを変更）。元に戻してから原本と比べてください。
 ui.drafts.delCantDraftMain,削除できません — これはメインの下書きです
 ui.drafts.delDraft,下書きを削除
 ui.drafts.delDraftDraft,下書き「{0}」全体を削除しますか？
@@ -3336,6 +3341,24 @@ ui.drop.hintText,ドロップ = ここに名前を挿入
 ui.drop.hintTimeline,カードの上 = 参照 · 空白部分 = 新しいイベント
 ui.drop.netNotFound,「{0}」は図にありません（フィルターで非表示になっている可能性があります）
 ui.drop.opened,{0} を開きました
+ui.dxc.apply,取り込む
+ui.dxc.doneF,{1} シーンにコメント {0} 件を取り込みました
+ui.dxc.intro,本文が一致するシーンにコメントを追加します。既存のコメントは重複せず、本文は変更されません。
+ui.dxc.needProject,先にプロジェクトを開いてから、コメントを取り込んでください。
+ui.dxc.none,このファイルにはコメントがありません。
+ui.dxc.nothingNew,新しいコメントはありません。すべて既存か、一致するシーンが見つかりません。
+ui.dxc.readFailF,Word ファイルを読み込めません：{0}
+ui.dxc.reading,Word ファイルのコメントを読み込み中…
+ui.dxc.scenesF,コメントが追加されるシーン（{0}）
+ui.dxc.sumNewF,新しいコメント {0} 件
+ui.dxc.sumRepliesF,新しい返信 {0} 件
+ui.dxc.sumResolvedF,Word で解決済みのスレッド {0} 件を閉じます
+ui.dxc.sumSameF,既存 {0} 件
+ui.dxc.sumUnmatchedF,シーンが見つからないもの {0} 件（取り込み後に一覧表示）
+ui.dxc.taskName,Word コメントの取り込み
+ui.dxc.title,Word からコメントを取り込む
+ui.dxc.unmatchedTitleF,コメント {0} 件は一致するシーンが見つかりません（本文が変更された可能性があります）
+ui.dxc.writeFailF,コメントを保存できません：{0}
 ui.editor.ctrlClickOpenWiki,Ctrl+クリックで Wiki で開く
 ui.editor.hasCommentBindText,このテキストにはコメントが付いています
 ui.editor.pageBreak,改ページ
@@ -4383,6 +4406,12 @@ ui.lib.statWords,語数
 ui.lib.viewGrid,表紙表示
 ui.lib.viewList,リスト表示
 ui.locations,か所
+ui.lock.heldF,このプロジェクトはまだ {0} で開かれています（最終確認 {1}）。
+ui.lock.heldSameF,このプロジェクトはこのコンピューターの別のアプリで開かれています（最終確認 {0}）。
+ui.lock.heldWhy,同期フォルダー経由で2か所で開くと、片方の変更がもう片方を上書きすることがあります。そのコンピューターでアプリを終了して同期の完了を待つか、すでに電源が切れていると分かっている場合はこのまま開いてください。
+ui.lock.lastOtherF,このプロジェクトは最後に {0} で開かれていました（{1}）。そちらで作業したばかりなら、同期が完了しているか確認してください。
+ui.lock.openAnyway,このまま開く
+ui.lock.unknownMachine,別のコンピューター
 ui.log.dayEmpty,その日のログファイルは空か、読み取れません
 ui.log.dayOption,{0} · {1} KB
 ui.log.dayPick,過去のログを確認 — 日付を選んでログファイルを開きます
@@ -4411,9 +4440,49 @@ ui.logline.saved,ログラインを保存しました
 ui.logline.stakes,賭けられているもの
 ui.logline.title,ログライン
 ui.logline.why,AI はこれをコンパスとして使い、物語が軌道から外れないようにします
+ui.main.manuscriptFilter,原稿（Word・Markdown・テキスト）
 ui.main.pickFolderBtn,このフォルダーを選択
+ui.main.pickManuscript,原稿ファイルを選択（複数選択可）
 ui.main.pickNewProjectFolder,新しいプロジェクトの保存場所を選択 — プロジェクトのフォルダーはその中に作成されます
 ui.main.pickProjectFolder,開くプロジェクトのフォルダーを選択
+ui.manuscript.bookName,巻の名前
+ui.manuscript.bookPh,空欄なら「Book」＋番号
+ui.manuscript.chapterF,第{0}章
+ui.manuscript.detect,「Chapter 1」「Prologue」など通常の文字で打たれた章の行を検出（見出しスタイルがない場合）
+ui.manuscript.doneF,「{0}」をインポートしました：{1} 章、{2} シーン
+ui.manuscript.filesF,{0} 個のファイル（名前順）
+ui.manuscript.imagesF,画像 {0} 枚
+ui.manuscript.intro,このプロジェクトに新しい巻として追加します。Word（.docx）、Markdown（.md）、テキスト（.txt）に対応。元のファイルは変更されません。
+ui.manuscript.modeAuto,自動
+ui.manuscript.modeFileChapter,1ファイル＝1章（ファイル内の見出しはシーン）
+ui.manuscript.modeFileScene,1ファイル＝1シーン（すべて1つの章に）
+ui.manuscript.modeHeadings,見出しで分割（最上位＝章、次の階層＝シーン）
+ui.manuscript.moreChF,…ほか {0} 章
+ui.manuscript.moreF,…ほか {0} 件
+ui.manuscript.needProject,先にプロジェクトを開くか作成してから、原稿を新しい巻としてインポートしてください。
+ui.manuscript.newProject,新規プロジェクト
+ui.manuscript.noSource,ファイルが選択されていません
+ui.manuscript.nothing,取り込める内容が見つかりません
+ui.manuscript.pastePh,物語全体をここに貼り付けてください。「Chapter 1」「Prologue」のような行が章になります。
+ui.manuscript.pasteSource,貼り付けたテキスト
+ui.manuscript.pasteText,テキストを貼り付け
+ui.manuscript.pickFiles,ファイルを選択…
+ui.manuscript.pickFolder,フォルダーを選択…
+ui.manuscript.reading,原稿を読み込み中…
+ui.manuscript.sceneCountF,{0} シーン
+ui.manuscript.sceneMoreF,ほか {0}
+ui.manuscript.splitLabel,分割方法
+ui.manuscript.summaryF,{0} 章・{1} シーン・約 {2} 語
+ui.manuscript.taskName,原稿のインポート
+ui.manuscript.title,原稿をインポート
+ui.manuscript.warnEmpty,内容がありません：{0}
+ui.manuscript.warnImagesSkipped,表示できない画像 {0} 枚をスキップします（EMF/WMF）
+ui.manuscript.warnNoHeadings,{0} に見出しや章の行がないため、全体が1つのシーンになります。Word の見出しスタイルを使うか、「Chapter 1」を独立した行に書いてください。
+ui.manuscript.warnOldDoc,古い .doc ファイル：{0}。Word で開いて .docx として保存してください。
+ui.manuscript.warnReadFail,読み込めません：{0}
+ui.manuscript.warnUnsupported,未対応のファイル：{0}
+ui.manuscript.writeFailF,インポートに失敗しました：{0}
+ui.manuscript.writing,新しい巻を作成中…
 ui.mapAi.aroundHead,周辺（近い順）：
 ui.mapAi.cut,（長さの都合で残りは省略しました — 特定の名前についてはコマンド map.where で問い合わせてください）
 ui.mapAi.head,## マップ上の位置（作者のマップパネルより）
@@ -4815,7 +4884,9 @@ ui.menu.imageCaseChangeCase,大文字/小文字を変更
 ui.menu.imageNotUse,未使用の画像
 ui.menu.imagePNG,PNG 画像
 ui.menu.imageSVG,SVG ベクター画像
+ui.menu.importDocxComments,Word ファイルからコメントを取り込む…
 ui.menu.importLangCSV,CSV から言語をインポート…
+ui.menu.importManuscript,原稿をインポート（Word・Markdown・テキスト）…
 ui.menu.importScreenplayFountainFDX,脚本をインポート…（Fountain · FDX · Celtx · Fade In · Adobe Story）
 ui.menu.importScrivenerScrivI,Scrivener からインポート（.scriv）…
 ui.menu.insertImage,画像を挿入…
@@ -4915,6 +4986,7 @@ ui.menu.settingsGroup,設定
 ui.menu.settingsProject,プロジェクト設定…
 ui.menu.showFormatLineMargin,書式を表示（要素の枠線 + 行末マーク）
 ui.menu.showNumLineLeft,行番号を表示（パネルの左レール）
+ui.menu.simpleMode,シンプルモード
 ui.menu.sizeUIBarTool,UI のサイズ（ツールバー/パネル/ダイアログ）
 ui.menu.sizeUINormal,標準の UI サイズ（100%）
 ui.menu.soundTypewriterPrint,入力中のタイプライター音
@@ -4928,6 +5000,7 @@ ui.menu.storyYoursDialogPrev,物語と会話（旧ダイアログ）…
 ui.menu.suggestTitle,タイトルを提案…
 ui.menu.summaryBodyProject,プロジェクトを要約…
 ui.menu.support,プロジェクトを支援
+ui.menu.syncGuide,複数のコンピューターで使う（Google Drive・iCloud・Dropbox・OneDrive）
 ui.menu.tableCSV,CSV 表
 ui.menu.textCaseCycleU,大文字/小文字を順に切り替え
 ui.menu.textContCONTINUEDMORE,継続テキスト（CONTINUED · MORE · cont'd）
@@ -6045,6 +6118,7 @@ ui.project.blankName,空のプロジェクト
 ui.project.chapter,プロローグ
 ui.project.chapterSummary,結末
 ui.project.chapterTwo,第二章
+ui.project.episodeF,第{0}話
 ui.project.fantasy,ファンタジー
 ui.project.group,集団/勢力
 ui.project.hasProject,このプロジェクトはすでに存在します
@@ -6060,6 +6134,13 @@ ui.project.screenplay,脚本
 ui.project.start,事件の始まり
 ui.project.structureChapterFilmAct,脚本の構成 — 3 幕、シーンは脚本形式で執筆
 ui.project.structureNovelChapterScene,一般的な小説の構成 — 章 + シーン + キャラクター + 場所
+ui.project.tplVn,ビジュアルノベル（VN）
+ui.project.tplVnDesc,共通ルートとキャラクター別ルート（ルートごとに1巻）・分岐チャートで選択肢を作成・登場人物・場所・アイテムのWiki
+ui.project.tplWebnovel,ウェブ小説
+ui.project.tplWebnovelDesc,1話ずつ投稿する連載形式（第1話・第2話・第3話…）・登場人物・場所・設定のWiki
+ui.project.vnCommon,共通ルート
+ui.project.vnPrologue,プロローグ
+ui.project.vnRouteF,ルート{0}
 ui.props.act,幕
 ui.props.actHint,例：第 1 幕
 ui.props.actSaved,章の幕を設定しました：{0}
@@ -6826,6 +6907,10 @@ ui.shortcuts.zoomIn,ページのズーム：拡大
 ui.shortcuts.zoomOut,ページのズーム：縮小
 ui.shortcuts.zoomReset,ページのズーム：リセット
 ui.shortcuts.zoomWheel,ページをズーム
+ui.simple.exitLabel,すべてのツール
+ui.simple.exitTip,シンプルモードを終了し、ツールバーとパネルをすべて表示
+ui.simple.offStatus,すべてのツールを表示しました
+ui.simple.onToast,シンプルモード：エクスプローラーとエディターだけを表示します。ほかの機能は上のメニューにあります。
 ui.smart.acceptHint,Tab = この単語を使う · ↑↓ = 選択 · Esc = 閉じる · 右クリック = この単語を忘れる
 ui.spCompare.compare,比較
 ui.spCompare.edition,古いバージョン
@@ -6834,6 +6919,7 @@ ui.spCompare.text,（{0} 件が同一 ·
 ui.spContinued.contNotHas,継続：なし
 ui.spContinued.contSceneDialogue,継続：シーン {0} · セリフ {1}
 ui.spFormat.a4Inch,A4（8.27 × 11.69 インチ）
+ui.spFormat.castTitle,登場人物
 ui.spFormat.define,カスタム
 ui.spFormat.legalInch,Legal（8.5 × 14 インチ）
 ui.spFormat.letterInch,Letter（8.5 × 11 インチ）
@@ -6846,6 +6932,8 @@ ui.spFormat.paperNovella,コンパクト / 中編小説（5 × 8 インチ）
 ui.spFormat.paperPocket,ポケットブック（14.5 × 21 cm）
 ui.spFormat.paperTankobon,単行本（5 × 7.5 インチ）
 ui.spFormat.paperTrade,US トレード判（6 × 9 インチ）
+ui.spFormat.rosterScene,シーン
+ui.spFormat.rosterTime,時間
 ui.spFormatGuide.cutLineSoftWrap,手動の改行（ソフトラップ）
 ui.spFormatGuide.endLineBlockNew,行が新しいブロックで終わる（ハード）
 ui.spHeaders.countPage,ページ数
@@ -6907,6 +6995,7 @@ ui.sprint.title,執筆スプリント
 ui.sprint.wpm,{0} 語/分
 ui.sprint.written,{0} 語
 ui.sprint.writtenGoal,{0} / {1} 語
+ui.spTitlePages.byNovel,著
 ui.spTitlePages.chapter,脚本：
 ui.spTitlePages.new,原作： 
 ui.spTitlePages.notNamedStory,無題
@@ -7667,7 +7756,9 @@ ui.tip.goto-scene,シーン番号を指定してそのシーンへ移動しま�
 ui.tip.goto:page,ページ番号を入力するボックスを開き、そのページへ移動します。
 ui.tip.goto:scene,シーン番号を入力するボックスを開き、そのシーンへ移動します。
 ui.tip.home,ホーム画面を開きます — 最近使ったプロジェクトの表示、別のプロジェクトの作成や読み込み。
+ui.tip.import-docx-comments,編集者が Word ファイル（.docx）に書いたコメントと返信をシーンに戻します。既存のコメントと重複なく統合し、Word で解決済みのスレッドは閉じます。本文は変更されません。
 ui.tip.import-language-csv,編集した CSV ファイルから翻訳を取り込み、プロジェクトの言語ファイルに統合します。すぐに反映されます。
+ui.tip.import-manuscript,Word（.docx）、Markdown（.md）、貼り付けたテキストから既存の原稿を新しい巻としてプロジェクトに取り込みます。見出しや章の行で章とシーンに分け、取り込む前に構成を確認できます。
 ui.tip.import-script,Fountain、Final Draft（FDX）、Celtx、Fade In、Adobe Story から脚本をインポートします。先にプレビューが表示されます。
 ui.tip.import-scrivener,Scrivener（.scriv）プロジェクトを Killian のプロジェクトとして取り込み、章とシーンを保持します。
 ui.tip.insert-image,カーソル位置に画像を挿入します。ファイルは自動的にプロジェクトの Images フォルダーにコピーされます。
@@ -7826,6 +7917,7 @@ ui.tip.sprint,執筆スプリントの時間を計り、その間に書いた語
 ui.tip.story-starter,ストーリースターターを開きます。物語、キャラクター、冒頭のシーンを順を追って設定し、AI とエピソード形式でプレイします。
 ui.tip.story-starter-toggle,ストーリースターターを開閉します — 物語を順を追って設定し、AI とプレイします。もう一度押すと閉じます。
 ui.tip.support,プロジェクトの支援ページをブラウザーで開きます。開発者にコーヒーをおごることができます。
+ui.tip.sync-guide,プロジェクトを同期フォルダー（Google Drive、iCloud、Dropbox、OneDrive）に置いて複数のコンピューターで書く方法と、ファイルが競合したときに同期サービスが作るコピーの扱い方を説明するマニュアルの章を開きます。
 ui.tip.sync-scene-meta,シーンのプロパティを .md ファイルのヘッダーから読み込み直します — 別のプログラムでファイルを編集した後に使います。
 ui.tip.test-run,アプリのセルフテスト一式を実行します（開発者向け）。
 ui.tip.text-case,選択したテキストを指定の大文字/小文字の形式に変更します。ラテン文字が対象です。
@@ -7880,6 +7972,7 @@ ui.tip.toggle-panel:statusbar,開いている作品の概要 — 語数/ペー�
 ui.tip.toggle-panel:timeline,「物語内の時間」順に並んだイベント — カード表示とガント表示を切り替えられます · storyDate を持つシーンは自動的に表示されます
 ui.tip.toggle-panel:toolbar,すべての書式ボタンとモード切り替え — 太字/斜体 · 配置 · 閲覧/集中モード · 他のパネルの表示/非表示
 ui.tip.toggle-panel:tree,作品全体の目次 — 巻 → 章 → シーン、さらに Wiki、画像ライブラリ、ごみ箱 · ドラッグで並べ替え · 上部の検索ボックスで名前、タグ、ステータスによる絞り込みができます
+ui.tip.toggle-simple-mode,シンプルモードのオン／オフ：エクスプローラー、エディター、基本の書式ボタンだけを表示します。ほかの機能はすべてメニューにあり、オフにするとツールバーとパネルが元に戻ります。
 ui.tip.toggle-theme,バー、パネル、ダイアログのアプリのカラーテーマを変更します。ページや書き出したファイルには影響しません。
 ui.tip.toolbar-config,ツールバーに表示するボタンを選びます。チェックを入れるたびに反映されます。
 ui.tip.type-sound,キーを押すたびにタイプライターの音を鳴らし、本物の機械のような感触を出します。
@@ -8359,8 +8452,11 @@ ui.xhub.buildFail,出力を生成できませんでした
 ui.xhub.building,プレビューを作成しています…
 ui.xhub.content,内容
 ui.xhub.docKind,ドキュメントの種類
+ui.xhub.docxComments,コメントを含める
+ui.xhub.docxCommentsHint,未解決のコメントが Word のコメント欄に表示され、編集者が返信できます · 返信は「ファイル → Word ファイルからコメントを取り込む」で戻せます
 ui.xhub.docxHint,画面と同じ用紙サイズ、余白、フォントを使います · 見出しには Word の見出しスタイルを使用します（Word で目次を作成できます）
 ui.xhub.doneDocx,{0} 段落 · 画像 {1} 点を埋め込み
+ui.xhub.doneDocxComments,コメント {0} 件
 ui.xhub.doneEpub,{0} 章 · 画像 {1} 点を埋め込み
 ui.xhub.donePdf,{0} ページ · しおり {1} 件
 ui.xhub.donePdfPages,{0} ページ（番号なしの前付けページ {1} 枚）
@@ -8378,6 +8474,7 @@ ui.xhub.fFdx,Final Draft（FDX）
 ui.xhub.fFdxDesc,脚本向け — Final Draft で開きます
 ui.xhub.fHtml,ウェブページ（HTML）
 ui.xhub.fHtmlDesc,スタイルを内蔵した、自己完結型の 1 ファイル
+ui.xhub.firstPageHint,オフ = 本文の最初のページに番号を付けない（ハリウッド脚本の慣例）· プロジェクト設定（設定 → {0}と同じ）
 ui.xhub.fJson,プロジェクト全体（.json）
 ui.xhub.fJsonDesc,プロジェクトの構造のみ。他のツール向け
 ui.xhub.fMd,Markdown
@@ -8397,6 +8494,7 @@ ui.xhub.htmlWysiwyg,画面と同じページ書式を使う
 ui.xhub.kindAuto,元のファイルに合わせる
 ui.xhub.kindProse,小説（散文）
 ui.xhub.kindScript,脚本
+ui.xhub.monoGreyImages,白黒：本文中の画像はグレースケールで印刷されます — カラーのままにするには「カラー」を選択
 ui.xhub.needProject,エクスポートする前にプロジェクトを開いてください
 ui.xhub.needScriptHint,別の形式を選ぶか、脚本になっている範囲を選んでください
 ui.xhub.needScriptOnly,この形式は脚本でのみ使えます

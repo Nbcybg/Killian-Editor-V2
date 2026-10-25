@@ -223,6 +223,7 @@ const toggles = {
   // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด — ค่าเริ่มต้น "เปิด" (ตรงกับ DEFAULT_SETTINGS)
   markdownCodes: true,
   autoFitWidth: false,                  // [alpha.164 · รอบต่อ 3] ซูมพอดีความกว้างอัตโนมัติ (ค่าระดับผู้ใช้)
+  simpleMode: false,                    // [alpha.170 · ข้อ 8] โหมดเรียบง่าย
   keyEcho: false, lineBand: false,      // [alpha.169 · a11y] แสดงปุ่มที่กด · แถบสีบรรทัดเคอร์เซอร์
   // [alpha.61 ข้อ 1] ลำดับเปิดโปรแกรม — ทั้งคู่ปิดเป็นค่าเริ่มต้น = เข้าหน้าแรกก่อน
   openLastProject: false, showHomeAlways: false,
@@ -280,6 +281,10 @@ function buildMenu() {
       // [alpha.167] ทางส่งออกทั้งหมดย้ายไปเมนู "ส่งออก" ระดับบนสุด (ผู้ใช้: "ทำเป็น export หัวข้อ ไปเลย")
       { type: 'separator' },
       { label: tt('ui.menu.newProjectTemplate'), click: cmd('new-from-template') },
+      // [alpha.170 · นำเข้าต้นฉบับ] Word · Markdown · ข้อความ → เล่มใหม่ในโปรเจกต์ที่เปิดอยู่
+      { label: tt('ui.menu.importManuscript'), click: cmd('import-manuscript') },
+      // [alpha.170 · คอมเมนต์ไปกลับกับ Word] คำตอบ/คอมเมนต์ของ บก. จากไฟล์ .docx → กลับเข้าฉาก
+      { label: tt('ui.menu.importDocxComments'), click: cmd('import-docx-comments') },
       { label: tt('ui.menu.importScrivenerScrivI'), click: cmd('import-scrivener') },
       { label: tt('ui.menu.importScreenplayFountainFDX'), click: cmd('import-script') }, // [alpha.60 ข้อ 62-66]
       { label: tt('ui.menu.project'), click: cmd('backup-now') },
@@ -482,6 +487,9 @@ function buildMenu() {
       { label: tt('ui.menu.importLangCSV'), click: cmd('import-language-csv') },
     ] },
     { id: 'View', label: tt('ui.common.view'), submenu: [
+      // [alpha.170 · ข้อ 8] โหมดเรียบง่าย — บนสุดของเมนู มุมมอง (ผู้ใช้ใหม่หาเจอเป็นอย่างแรก)
+      { id: 'view-simple-mode', ...chk(tt('ui.menu.simpleMode'), toggles.simpleMode, cmd('toggle-simple-mode')) },
+      { type: 'separator' },
       // [alpha.61 ข้อ 1] หน้าแรก — เปิดเดี๋ยวนี้ + สวิตช์ "แสดงเสมอตอนเริ่มโปรแกรม"
       { label: tt('ui.menu.pageFirstHome'), click: cmd('home') },
       { type: 'separator' },
@@ -642,6 +650,8 @@ function buildMenu() {
       // [alpha.170] คู่มือฉบับเต็มมากับตัวโปรแกรม (docs/manual · docs/extension ใน build.files) — อ่านในโปรแกรม ไม่ต้องต่อเน็ต
       { id: 'user-manual', label: tt('ui.menu.userManual'), click: cmd('user-manual') },
       { id: 'extension-guide', label: tt('ui.menu.extensionGuide'), click: cmd('extension-guide') },
+      // [alpha.170 · ใช้หลายเครื่อง] ทางลัดถึงบทที่ผู้ใช้ถามบ่อยที่สุดข้อหนึ่ง (ผลสำรวจ: ไม่มีซิงก์ข้ามเครื่อง)
+      { id: 'sync-guide', label: tt('ui.menu.syncGuide'), click: cmd('sync-guide') },
       { label: tt('ui.menu.cheatsheet'), click: cmd('cheatsheet') },
       { label: tt('ui.menu.saveChangeChangelog'), click: cmd('changelog') },
       { type: 'separator' },
@@ -1244,6 +1254,48 @@ app.on('will-quit', () => logMain('info', 'quit'));
 const { isJunkName, writeFileAtomic } = require('./fs-safe.cjs');
 H('fs:readFile', (p) => fs.readFileSync(p, 'utf-8'));
 H('fs:writeFile', (p, data) => withHistory('write', [p], () => writeFileAtomic(p, data, 'utf-8')));
+// ══ [alpha.170 · ใช้หลายเครื่อง] ตัวล็อกโปรเจกต์ `.k2lock.json` (ตรรกะ: src/project-lock.js) ══
+// เขียนตรง ๆ ไม่ผ่าน withHistory — ยืนยันทุกสองนาที ไม่ใช่งานของผู้ใช้ (ประวัติเวอร์ชันต้องไม่เต็มไปด้วยไฟล์นี้)
+// เขียนได้เฉพาะในโฟลเดอร์ที่เป็นโปรเจกต์จริง และชื่อไฟล์ตายตัว (renderer/ปลั๊กอินส่งทางมาได้แค่โฟลเดอร์)
+// ปิดโปรแกรม = ลบล็อกของเซสชันนี้เองที่ main (renderer อาจไม่ทันส่งตอนปิดหน้าต่าง) — ของเครื่องอื่นห้ามลบ
+const LOCK_NAME = '.k2lock.json';
+const LOCK_SESSION = require('crypto').randomBytes(8).toString('hex');   // หนึ่งเซสชัน = หนึ่งครั้งที่เปิดโปรแกรม (โหลดหน้าใหม่ไม่เปลี่ยน)
+let ownLock = null;                                                        // ทางไฟล์ล็อกที่เซสชันนี้ถืออยู่
+const lockPathOf = (root) => {
+  const dir = String(root || '');
+  if (!dir || !fs.existsSync(path.join(dir, 'project.khn.json'))) return null;
+  return path.join(dir, LOCK_NAME);
+};
+function readLockFile(f) {
+  try { return JSON.parse(fs.readFileSync(f, 'utf-8').replace(/^\uFEFF/, '')); } catch { return null; }
+}
+function releaseOwnLock() {
+  if (!ownLock) return false;
+  const f = ownLock; ownLock = null;
+  const cur = readLockFile(f);
+  if (cur && cur.session === LOCK_SESSION) { try { fs.unlinkSync(f); } catch { return false; } return true; }
+  return false;
+}
+H('lock:me', () => ({ machine: require('os').hostname(), user: (() => { try { return require('os').userInfo().username; } catch { return ''; } })(),
+                      session: LOCK_SESSION, app: app.getVersion(), pid: process.pid }));
+// อ่านล็อก + (เครื่องเดียวกัน) โปรเซสที่ถือยังรันอยู่ไหม — ไม่ใช่ = โปรแกรมล่มทิ้งล็อกไว้
+const pidAlive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return !!(e && e.code === 'EPERM'); } };
+H('lock:read', (root) => {
+  const f = lockPathOf(root);
+  const lk = f ? readLockFile(f) : null;
+  if (lk && lk.pid && lk.machine === require('os').hostname() && lk.session !== LOCK_SESSION) lk.alive = pidAlive(Number(lk.pid));
+  return lk;
+});
+H('lock:write', (root, data) => {
+  const f = lockPathOf(root);
+  if (!f || !data || data.session !== LOCK_SESSION) return false;
+  if (ownLock && ownLock !== f) releaseOwnLock();                          // เปลี่ยนโปรเจกต์ = ปล่อยของเดิม
+  writeFileAtomic(f, JSON.stringify(data, null, 1), 'utf-8');
+  ownLock = f;
+  return true;
+});
+H('lock:release', () => releaseOwnLock());
+app.on('will-quit', () => { try { releaseOwnLock(); } catch {} });
 // [alpha.168 · bug hunt] ตัด BOM ก่อน parse — ไฟล์ที่ผู้ใช้แก้นอกโปรแกรมแล้วบันทึกเป็น "UTF-8 with BOM" (Notepad)
 // เดิม JSON.parse โยน error → ผู้เรียกบางตัวถือว่า "ไฟล์ว่าง" แล้วเขียนทับของเดิมทั้งไฟล์ (maps.json · timeline.json)
 H('fs:readJson', (p) => JSON.parse(fs.readFileSync(p, 'utf-8').replace(/^\uFEFF/, '')));
@@ -1602,6 +1654,12 @@ H('dialog:openImage', async () => {
     { name: tt('ui.common.image'), extensions: ['png', 'jpg', 'jpeg', 'jfif', 'gif', 'webp', 'svg', 'avif', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'heif', 'apng'] }] });
   return r.canceled ? null : r.filePaths[0];
 });
+// [trial 2026-10-25 ข้อ 22] คลังรูป "เพิ่มรูปใหม่…" รับหลายไฟล์ (เดิมเลือกสองไฟล์แล้วได้แค่ไฟล์แรก)
+H('dialog:openImages', async () => {
+  const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [
+    { name: tt('ui.common.image'), extensions: ['png', 'jpg', 'jpeg', 'jfif', 'gif', 'webp', 'svg', 'avif', 'bmp', 'ico', 'tif', 'tiff', 'heic', 'heif', 'apng'] }] });
+  return r.canceled ? [] : r.filePaths;
+});
 // ฟิลเตอร์ตามนามสกุลของชื่อไฟล์ที่เสนอ — เดิมบังคับ Markdown ทุกกรณี (ส่งออก HTML/JSON แล้วได้ .md)
 // [alpha.168 · bug hunt 2] ชื่อชนิดไฟล์ที่ต้องแปลเป็น getter — ตารางนี้ถูกสร้างตอนโหลดไฟล์ (ก่อน loadLangTable)
 // เดิม `name: tt(…)` ตรง ๆ = กล่องบันทึก/เปิดไฟล์ของระบบโชว์คีย์ดิบ ("ui.menu.imagePNG (*.png)") · ใช้ผ่าน saveFilter() เสมอ
@@ -1647,6 +1705,15 @@ H('dialog:openFile', async (kind) => {
   const r = await dialog.showOpenDialog(win, { properties: ['openFile'],
     filters: [f, { name: tt('ui.menu.allFile'), extensions: ['*'] }] });
   return r.canceled ? null : r.filePaths[0];
+});
+// [alpha.170 · นำเข้าต้นฉบับ] เลือกต้นฉบับได้หลายไฟล์ (Word · Markdown · ข้อความ) — คืนอาร์เรย์ทางไฟล์ (ยกเลิก = [])
+H('dialog:openManuscript', async () => {
+  const r = await dialog.showOpenDialog(win, { title: tt('ui.main.pickManuscript'), properties: ['openFile', 'multiSelections'],
+    filters: [
+      { name: tt('ui.main.manuscriptFilter'), extensions: ['docx', 'md', 'markdown', 'txt'] },
+      { name: tt('ui.menu.allFile'), extensions: ['*'] },
+    ] });
+  return r.canceled ? [] : r.filePaths;
 });
 // [alpha.60 ข้อ 62-66] เปิดไฟล์บทภาพยนตร์ — แสดงทุกรูปแบบพร้อมกัน
 H('dialog:openScreenplay', async () => {

@@ -30,9 +30,15 @@ export const SP_SEVERITY = {
   [SP_ERRORS.UNCLOSED_PARENTHETICAL]: 'error',
 };
 
-// ความยาวสูงสุดต่อบรรทัด (ตัวอักษร) — Courier 12pt 10 ตัว/นิ้ว: บทพูดกว้าง 3.5" ≈ 35 ตัว/บรรทัด
-// ค่าเริ่มต้นเผื่อไว้ให้ 1 บรรทัดครึ่ง–2 บรรทัด ตามธรรมเนียมที่บรรณาธิการบทใช้เตือน
-export const DEFAULT_LIMITS = { dialogue: 60, action: 70, scene: 70, character: 40 };
+// ความยาวสูงสุดของ "ย่อหน้า" (ตัวอักษรที่มองเห็น) — Courier 12pt 10 ตัว/นิ้ว
+// [trial 2026-10-25 ข้อ 15] ★ เดิมบรรยาย 70 / บทพูด 60 = ความยาว "หนึ่งบรรทัดกว่า ๆ" แต่ตรวจกับ **ทั้งย่อหน้า**
+//   → ย่อหน้าบรรยายปกติแทบทุกย่อหน้าโดนเตือน (เจอ 15–23 ข้อต่อฉาก) จนรายการไม่มีความหมาย
+//   ตอนนี้: บรรยายเกิน ~4 บรรทัด (6" × 10 ตัว) · บทพูดเกิน ~5 บรรทัด (3.5" × 10 ตัว) = ควรแบ่งย่อหน้า
+//   ตามธรรมเนียมที่บรรณาธิการบทใช้ · หัวฉาก/ชื่อตัวละครยังเป็นบรรทัดเดียวเหมือนเดิม
+export const DEFAULT_LIMITS = { dialogue: 175, action: 240, scene: 70, character: 40 };
+
+// สระบน/ล่าง วรรณยุกต์ (combining mark) ไม่กินช่องบนกระดาษ — นับเฉพาะตัวที่ "เห็นเป็นช่อง"
+const visLen = (s) => String(s || '').replace(/\p{M}/gu, '').length;
 
 // element ที่ "ว่างแล้วผิด" (action ว่าง = บรรทัดเว้นวรรค ปกติของบท จึงไม่นับ)
 const NEED_TEXT = ['scene', 'character', 'dialogue', 'parenthetical', 'transition', 'shot', 'act-break'];
@@ -126,9 +132,10 @@ export function validateScreenplay(blocks, opts = {}) {
 
     // 5. บรรทัดยาวเกิน
     const lim = L[el];
-    if (lim && text.length > lim) {
+    const n = visLen(text);
+    if (lim && n > lim) {
       add(SP_ERRORS.OVERLONG_LINE, i, el,
-          tf('ui.spValidator.longChar', elLabel(el), text.length, lim));
+          tf('ui.spValidator.longChar', elLabel(el), n, lim));
     }
   }
 

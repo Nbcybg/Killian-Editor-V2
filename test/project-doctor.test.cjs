@@ -89,6 +89,17 @@ const base = () => ({
   s.texts['01 - บท 1/scene-03.md'] = '---\ntitle: ฉากกำพร้า\n---\nเนื้อ';
   const o = D.diagnoseDraft(s).find((x) => x.type === 'orphan-file');
   check('ไฟล์ไม่มีแถวอ้าง = orphan-file + ชื่อจาก frontmatter', o && o.file === 'scene-03.md' && o.title === 'ฉากกำพร้า' && o.chGuid === 'c1' && o.fix.kind === 'attach-row', JSON.stringify(o));
+  check('[alpha.170] ไฟล์กำพร้าธรรมดาไม่ถูกเรียกว่าสำเนาจากตัวซิงก์', o && !o.syncOf);
+}
+{
+  // [alpha.170 · ใช้หลายเครื่อง] สองเครื่องแก้ไฟล์เดียวกัน → ตัวซิงก์สร้างสำเนาข้างไฟล์จริง
+  const s = base();
+  s.files['01 - บท 1'] = ['scene-01.md', 'scene-02.md', 'scene-02 (conflicted copy).md', 'scene-01 (1).md'];
+  const os2 = D.diagnoseDraft(s).filter((x) => x.type === 'orphan-file');
+  const dbx = os2.find((x) => x.file === 'scene-02 (conflicted copy).md');
+  const gd = os2.find((x) => x.file === 'scene-01 (1).md');
+  check('[alpha.170] สำเนาของ Dropbox = orphan-file + syncOf ชี้ไฟล์ต้นทาง', dbx && dbx.syncOf === 'scene-02.md' && dbx.syncApp === 'dropbox' && dbx.fix.kind === 'attach-row', JSON.stringify(dbx));
+  check('[alpha.170] สำเนาของ Google Drive', gd && gd.syncOf === 'scene-01.md' && gd.syncApp === 'gdrive', JSON.stringify(gd));
 }
 {
   const s = base();

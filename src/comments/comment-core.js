@@ -163,7 +163,10 @@ export function quoteAt(text, start, end) { return String(text || '').slice(star
 export async function writeMdKeepingComments(io, path, fullText, fromPath = null) {
   // [alpha.160 · P0-1] `fromPath` = ย้าย/คัดลอกไฟล์ (โน้ต↔บท · สำเนาโน้ต) — เธรดมาจากไฟล์ต้นทาง ไม่ใช่ปลายทาง
   let raw = '';
-  try { raw = (await io.readFile(fromPath || path)) || ''; } catch { raw = ''; }
+  const src = fromPath || path;
+  // [trial 2026-10-25 ข้อ 9] ไฟล์ใหม่ (ฉากที่เพิ่งสร้าง) ยังไม่มีบนดิสก์ — ถามก่อน ไม่งั้นทุกฉากใหม่ได้ ENOENT หนึ่งบรรทัดใน log
+  const there = typeof io.exists === 'function' ? await Promise.resolve().then(() => io.exists(src)).catch(() => true) : true;
+  if (there) { try { raw = (await io.readFile(src)) || ''; } catch { raw = ''; } }
   const comments = parseComments(raw);
   // ไม่มีคอมเมนต์ = เขียนตัวต่อตัว (ไม่แตะท้ายไฟล์) — พฤติกรรมเดิมของ writeKeepingComments ทุกไบต์
   if (!comments.length) { await io.writeFile(path, fullText); return false; }

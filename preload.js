@@ -63,9 +63,13 @@ contextBridge.exposeInMainWorld('kapi', {
   resolve: call('path:resolve'),
   relative: call('path:relative'), toFileURL: call('path:toFileURL'),
   openProjectDialog: call('dialog:openProject'), openImageDialog: call('dialog:openImage'),
+  openImagesDialog: call('dialog:openImages'),   // [trial 2026-10-25 ข้อ 22] เลือกหลายรูปในครั้งเดียว
   saveAsDialog: call('dialog:saveAs'), savePdfDialog: call('dialog:savePdf'),
   openFileDialog: call('dialog:openFile'),   // เลือกไฟล์เดียว (นำเข้าสถานะฉาก ฯลฯ)
   openDirDialog: call('dialog:openDir'),     // [70] เลือกโฟลเดอร์ปลายทางของ PDF ลายน้ำ
+  openManuscriptFiles: call('dialog:openManuscript'), // [alpha.170] เลือกต้นฉบับหลายไฟล์ (docx/md/txt)
+  // [alpha.170 · ใช้หลายเครื่อง] ตัวล็อกโปรเจกต์ (.k2lock.json) — ตรรกะอยู่ src/project-lock.js
+  lockMe: call('lock:me'), lockRead: call('lock:read'), lockWrite: call('lock:write'), lockRelease: call('lock:release'),
   openScreenplayFile: call('dialog:openScreenplay'), // [alpha.60 ข้อ 62-66] เลือกไฟล์บททุกฟอร์แมต
   // [alpha.60r3 ข้อ 7] ปลั๊กอินระดับผู้ใช้ (%APPDATA%/Killian2/Plugins/) — คืน path ให้ใช้ fs:* ต่อ
   globalPluginsDir: call('plugins:globalDir'),

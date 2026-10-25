@@ -36,7 +36,7 @@ export function describeIssue(it) {
     case 'duplicate-ref': return tf(k, it.title, it.other, it.file);
     case 'rows-without-chapter': return tf(k, it.count);
     case 'ghost-folder': return tf(k, it.folder, it.count);
-    case 'orphan-file': return tf(k, it.file, it.title);
+    case 'orphan-file': return it.syncOf ? tf('ui.doctor.tSyncCopy', it.file, it.syncOf) : tf(k, it.file, it.title);
     case 'frontmatter': return tf(k, it.file, (it.keys || []).join(', '));
     case 'missing-folder': return tf(k, it.title, it.folder);
     default: return String(it.type);

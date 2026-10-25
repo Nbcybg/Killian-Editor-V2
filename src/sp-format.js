@@ -241,9 +241,11 @@ export const SP_STRINGS = {
   dialogueMore: '(MORE)',
   dialogueContd: "(cont'd)",
   sceneContinued: t('ui.spFormat.next'),
-  castTitle: 'Cast of Characters',
-  sceneTitle: 'Scene',
-  timeTitle: 'Time',
+  // [trial 2026-10-25 ข้อ 18] หัวข้อหน้ารายชื่อตัวละครมาจากไฟล์ภาษา (getter = อ่านตอนใช้ ไม่ค้างภาษาตอน import)
+  // (เดิมอังกฤษตายตัวทั้งในแอปและ PDF · CONTINUED/MORE ยังเป็นอังกฤษตามธรรมเนียมบทถ่ายทำ)
+  get castTitle() { return t('ui.spFormat.castTitle'); },
+  get sceneTitle() { return t('ui.spFormat.rosterScene'); },
+  get timeTitle() { return t('ui.spFormat.rosterTime'); },
 };
 
 // ───────── alpha.57a ข้อ 2 · เลขฉาก + เลขหน้า ─────────

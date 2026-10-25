@@ -603,6 +603,19 @@ export async function deleteAlbum(api, root, id, { recycleDir = 'Recycle' } = {}
 // ───────────────────────── CRUD รูป (แตะไฟล์จริง) ─────────────────────────
 
 /** เพิ่มไฟล์จากนอกโปรเจกต์เข้าอัลบั้ม → คืนชื่อไฟล์จริงที่ได้ (อาจถูกเติมเลขกันชน) */
+/** [trial 2026-10-25 ข้อ 22] `dir/name` มีอยู่แล้วและเป็นไฟล์เดียวกับ `srcPath` ทุกไบต์ไหม (io ไม่มี readBytes = ถือว่าไม่ใช่) */
+async function sameFileIn(api, dir, name, srcPath) {
+  if (typeof api.readBytes !== 'function' || !name) return false;
+  try {
+    const dst = await J(api, dir, name);
+    if (!(await api.exists(dst))) return false;
+    const [a, b] = await Promise.all([api.readBytes(dst), api.readBytes(srcPath)]);
+    if (!a || !b || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  } catch { return false; }
+}
+
 export async function addImageFile(api, root, id, srcPath) {
   const dir = await albumDir(api, root, id);
   await api.mkdir(dir);
@@ -611,7 +624,11 @@ export async function addImageFile(api, root, id, srcPath) {
   const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '');
   const src = norm(srcPath);
   const same = src.slice(0, src.lastIndexOf('/')) === norm(dir);
-  const name = same ? src.slice(src.lastIndexOf('/') + 1) : await api.copyInto(srcPath, dir);
+  // [trial 2026-10-25 ข้อ 22] ไฟล์ชื่อเดียวกันที่ "ไบต์ตรงกันทุกตัว" อยู่ในอัลบั้มแล้ว = ใช้ตัวเดิม
+  // (เดิมเพิ่มรูปเดิมซ้ำจากที่อื่นได้ `lantern-1.jpg`, `cafecover1-1.jpg` ทุกครั้ง · ชื่อเดียวกันแต่คนละรูป = ยังต่อเลขเหมือนเดิม)
+  const base = src.slice(src.lastIndexOf('/') + 1);
+  const dup = !same && await sameFileIn(api, dir, base, srcPath);
+  const name = same ? base : dup ? base : await api.copyInto(srcPath, dir);
   let doc = await readAlbumDoc(api, root, id);
   doc = syncAlbumDoc(doc, [...Object.keys(doc.images), name]);
   await writeAlbumDoc(api, root, id, doc);

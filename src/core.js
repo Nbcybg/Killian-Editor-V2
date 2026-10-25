@@ -467,6 +467,9 @@ export const GLOBAL_DEFAULTS = {
   //   ทั้งคู่ปิด (ค่าเริ่มต้น) → เข้าหน้าแรกก่อน แล้วผู้ใช้เลือกโปรเจกต์เอง
   openLastProject: false,
   showHomeOnStartup: false,
+  // [alpha.170 · ข้อ 8] โหมดเรียบง่าย (Explorer + ตัวแก้ไข + ปุ่มพื้นฐาน) — ผู้ใช้ใหม่เปิดเป็นค่าเริ่มต้น (simple-mode.js)
+  // simpleLayoutPending = ยังไม่ได้จัดแผงให้ตามโหมด (ผู้ใช้ใหม่ยังไม่เคยเปิดโปรเจกต์ตอนที่โหมดถูกเปิดให้)
+  simpleMode: false, simpleLayoutPending: false,
   // [alpha.60r3 ข้อ 6] ซ่อนรหัสนำหน้าบรรทัด (. @ > $shot # …) ในตัวแก้ไขนิยาย — เปิดไว้เป็นค่าเริ่มต้น
   showMarkdownCodes: true,
   // [alpha.135] อัปเดตโปรแกรม (ระดับผู้ใช้ — ไม่ผูกกับผลงานชิ้นไหน)

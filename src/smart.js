@@ -5,6 +5,7 @@
 // กฎข้อ 26 ของ AGENTS.md: ไฟล์นี้ใช้ `t` เป็นชื่อพารามิเตอร์อยู่แล้ว (บรรทัด startsWith)
 // → นำเข้าฟังก์ชันแปลภาษาในชื่อ `tr` เท่านั้น ห้ามใช้ `t`
 import { t as tr } from './i18n.js';
+import { impliedNames } from './wiki-names.js';   // [trial 2026-10-25 ข้อ 7]
 
 export class SmartType {
   constructor() {
@@ -54,6 +55,12 @@ export class SmartType {
               names.add(n);
               fileOf[n] = p;
               (byCat[cat] = byCat[cat] || []).push(n);
+            }
+            // [trial 2026-10-25 ข้อ 7] ชื่อต้นที่ชื่อเรียกนำหน้า ("ลลิ" → "ลลิตา") — ไฮไลต์ทั้งคำ ไม่ใช่แค่ "ลลิ"
+            // ชื่อที่ผู้ใช้ตั้งเองของเอนทิตี้อื่นชนะเสมอ (ไม่ทับ fileOf)
+            for (const n of impliedNames(e.name, extra)) {
+              names.add(n);
+              if (!fileOf[n]) fileOf[n] = p;
             }
           } catch {}
         }

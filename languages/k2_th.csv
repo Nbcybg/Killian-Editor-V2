@@ -715,6 +715,7 @@ ui.aiChatPanel.notHasFilePress,ยังไม่มีไฟล์ทักษ�
 ui.aiChatPanel.notHasSessionPress,"ยังไม่มีเซสชัน — กด ""เซสชันใหม่"" เพื่อเริ่มคุย"
 ui.aiChatPanel.notHasText,ยังไม่มีข้อความ
 ui.aiChatPanel.open,ทักษะที่เปิดอยู่: 
+ui.aiChatPanel.openAiSettings,ตั้งค่า AI
 ui.aiChatPanel.openFolder,เปิดโฟลเดอร์ทักษะ
 ui.aiChatPanel.openProjectBeforeDone,เปิดโปรเจกต์ก่อน แล้วเซสชันแชทจะถูกเก็บใน Sessions/ ของโปรเจกต์นั้น
 ui.aiChatPanel.partialNote,คำตอบหยุดกลางทาง — เก็บข้อความที่ได้มาแล้วไว้ให้
@@ -836,6 +837,8 @@ ui.aiError.itemTLSToUse,ใบรับรองความปลอดภั�
 ui.aiError.keyBindOutlineCheck,คีย์บางเจ้าผูกกับองค์กร/โครงการ — ตรวจว่าคีย์นี้ใช้กับ Base URL นี้ได้จริง
 ui.aiError.missingHeader,คำขอขาดส่วนหัว (header) ที่ผู้ให้บริการต้องการ
 ui.aiError.missingHeaderHint,เพิ่มส่วนหัวที่ข้อความของเซิร์ฟเวอร์ระบุ ลงในช่อง Custom Headers ของผู้ให้บริการ (บรรทัดละ ชื่อ: ค่า)
+ui.aiError.missingHeaderNamed,คำขอขาดส่วนหัว (header) {0} ที่ผู้ให้บริการต้องการ
+ui.aiError.missingHeaderNamedHint,เพิ่มบรรทัด “{0}: ค่า” ลงในช่อง Custom Headers ของผู้ให้บริการ (ค่าดูจากเอกสารของผู้ให้บริการ)
 ui.aiError.model,โมเดล: 
 ui.aiError.modelOllamaLMStudio,ถ้าเป็นโมเดลในเครื่อง (Ollama / LM Studio / llama.cpp) — เปิดโปรแกรมนั้นให้ทำงานอยู่ก่อน
 ui.aiError.modelThinkReasoningUse,โมเดลที่คิดเยอะ (reasoning) ใช้เวลานาน — ลดระดับการใช้ความคิด หรือลดความยาวคำตอบ
@@ -966,6 +969,7 @@ ui.aiProvider.cantPickModel,ยังไม่ได้เลือกโมเ�
 ui.aiProvider.cantSettingsProviderAI,ยังไม่ได้ตั้งค่าผู้ให้บริการ AI (เมนู AI → ตั้งค่า AI)
 ui.aiProvider.connectOkFoundModel,เชื่อมต่อสำเร็จ — พบ {0} โมเดล
 ui.aiProvider.credNameHint,เว้นว่าง = ใช้ชื่อผู้ให้บริการ
+ui.aiProvider.defaultsAdopted,ใช้ผู้ให้บริการ AI ของฉันกับโปรเจกต์นี้แล้ว ({0} รายการ)
 ui.aiProvider.defaultsFail,บันทึกชุดผู้ให้บริการไว้ในเครื่องไม่สำเร็จ
 ui.aiProvider.defaultsHave,ในเครื่องนี้มี {0} ราย
 ui.aiProvider.defaultsImport,ใช้ผู้ให้บริการของฉัน
@@ -3318,6 +3322,7 @@ ui.doctor.tMissingFile,"ฉาก ""{0}"" ชี้ไปที่ไฟล์ {
 ui.doctor.tMissingFolder,"บท ""{0}"" ไม่มีโฟลเดอร์ {1}"
 ui.doctor.tOrphanFile,"ไฟล์ {0} (""{1}"") ไม่มีฉากไหนอ้างถึง"
 ui.doctor.tRowsWithoutChapter,มี {0} ฉากในทะเบียนที่ไม่มีบทรองรับ
+ui.doctor.tSyncCopy,{0} เป็นสำเนาของ {1} ที่บริการซิงก์สร้างไว้ (สองเครื่องแก้ไฟล์เดียวกัน) ผูกกลับแล้วเทียบกับต้นฉบับ
 ui.drafts.delCantDraftMain,ลบไม่ได้ — นี่คือร่างหลัก
 ui.drafts.delDraft,ลบร่าง
 ui.drafts.delDraftDraft,ลบร่าง “{0}” ทั้งร่าง ?
@@ -3336,6 +3341,24 @@ ui.drop.hintText,วาง = ใส่ชื่อลงช่องนี้
 ui.drop.hintTimeline,วางบนการ์ด = อ้างอิง · ที่ว่าง = เหตุการณ์ใหม่
 ui.drop.netNotFound,"ไม่พบ ""{0}"" บนผัง (อาจถูกตัวกรองซ่อนอยู่)"
 ui.drop.opened,เปิด {0}
+ui.dxc.apply,รับคอมเมนต์
+ui.dxc.doneF,รับคอมเมนต์แล้ว {0} รายการ ใน {1} ฉาก
+ui.dxc.intro,คอมเมนต์จะถูกเพิ่มลงฉากที่มีข้อความตรงกัน คอมเมนต์ที่มีอยู่แล้วจะไม่ซ้ำ เนื้อฉากไม่ถูกแก้
+ui.dxc.needProject,เปิดโปรเจกต์ก่อน แล้วค่อยรับคอมเมนต์จากไฟล์ Word
+ui.dxc.none,ไฟล์นี้ไม่มีคอมเมนต์
+ui.dxc.nothingNew,ไม่มีคอมเมนต์ใหม่ ทุกรายการมีอยู่ในฉากแล้ว หรือหาฉากที่ตรงกันไม่เจอ
+ui.dxc.readFailF,อ่านไฟล์ Word ไม่ได้: {0}
+ui.dxc.reading,กำลังอ่านคอมเมนต์จากไฟล์ Word…
+ui.dxc.scenesF,ฉากที่จะได้คอมเมนต์ ({0})
+ui.dxc.sumNewF,คอมเมนต์ใหม่ {0} รายการ
+ui.dxc.sumRepliesF,คำตอบใหม่ {0} รายการ
+ui.dxc.sumResolvedF,ปิดเธรดที่ถูก Resolve ใน Word {0} เธรด
+ui.dxc.sumSameF,มีอยู่แล้ว {0} รายการ
+ui.dxc.sumUnmatchedF,หาฉากไม่เจอ {0} รายการ (จะแสดงให้ดูหลังนำเข้า)
+ui.dxc.taskName,รับคอมเมนต์จาก Word
+ui.dxc.title,รับคอมเมนต์จากไฟล์ Word
+ui.dxc.unmatchedTitleF,คอมเมนต์ {0} รายการหาฉากที่ตรงกันไม่เจอ (ข้อความอาจถูกแก้ไปแล้ว)
+ui.dxc.writeFailF,บันทึกคอมเมนต์ไม่สำเร็จ: {0}
 ui.editor.ctrlClickOpenWiki,Ctrl+คลิก เปิดใน Wiki
 ui.editor.hasCommentBindText,มีคอมเมนต์ผูกกับข้อความนี้
 ui.editor.pageBreak,ขึ้นหน้าใหม่
@@ -4383,6 +4406,12 @@ ui.lib.statWords,คำ
 ui.lib.viewGrid,มุมมองปก
 ui.lib.viewList,มุมมองรายการ
 ui.locations,ที่
+ui.lock.heldF,โปรเจกต์นี้ยังเปิดอยู่ที่เครื่อง {0} (ยืนยันล่าสุด {1})
+ui.lock.heldSameF,โปรเจกต์นี้เปิดอยู่ในโปรแกรมอีกตัวบนเครื่องนี้ (ยืนยันล่าสุด {0})
+ui.lock.heldWhy,ถ้าเปิดพร้อมกันสองที่ผ่านโฟลเดอร์ที่ซิงก์ งานที่แก้ฝั่งหนึ่งอาจถูกอีกฝั่งเขียนทับ ปิดโปรแกรมที่เครื่องนั้นแล้วรอให้ซิงก์เสร็จก่อน หรือเปิดต่อถ้ารู้ว่าเครื่องนั้นปิดไปแล้ว
+ui.lock.lastOtherF,ครั้งล่าสุดโปรเจกต์นี้เปิดอยู่ที่เครื่อง {0} ({1}) ถ้าเพิ่งเขียนที่นั่น ตรวจว่าซิงก์ครบแล้ว
+ui.lock.openAnyway,เปิดต่อที่นี่
+ui.lock.unknownMachine,อีกเครื่องหนึ่ง
 ui.log.dayEmpty,ไฟล์ของวันนี้ว่างหรืออ่านไม่ได้
 ui.log.dayOption,{0} · {1} KB
 ui.log.dayPick,ดูบันทึกย้อนหลัง — เลือกไฟล์ของวันที่ต้องการ
@@ -4411,9 +4440,49 @@ ui.logline.saved,บันทึก Logline แล้ว
 ui.logline.stakes,เดิมพัน (Stakes)
 ui.logline.title,Logline
 ui.logline.why,AI ใช้เป็นเข็มทิศ ช่วยให้เนื้อเรื่องไม่หลุดแกน
+ui.main.manuscriptFilter,ต้นฉบับ (Word · Markdown · ข้อความ)
 ui.main.pickFolderBtn,เลือกโฟลเดอร์นี้
+ui.main.pickManuscript,เลือกไฟล์ต้นฉบับ (เลือกได้หลายไฟล์)
 ui.main.pickNewProjectFolder,เลือกที่เก็บโปรเจกต์ใหม่ — โฟลเดอร์ของโปรเจกต์จะถูกสร้างไว้ข้างใน
 ui.main.pickProjectFolder,เลือกโฟลเดอร์ของโปรเจกต์ที่จะเปิด
+ui.manuscript.bookName,ชื่อเล่ม
+ui.manuscript.bookPh,เว้นว่าง = Book ตามด้วยเลข
+ui.manuscript.chapterF,บทที่ {0}
+ui.manuscript.detect,จับหัวตอนที่พิมพ์เป็นข้อความธรรมดา เช่น “ตอนที่ 1” หรือ “บทนำ” (ใช้เมื่อไม่มีสไตล์หัวข้อ)
+ui.manuscript.doneF,นำเข้าแล้ว: {0} ({1} บท {2} ฉาก)
+ui.manuscript.filesF,{0} ไฟล์ (เรียงตามชื่อ)
+ui.manuscript.imagesF,รูป {0} รูป
+ui.manuscript.intro,"เพิ่มเป็นเล่มใหม่ในโปรเจกต์นี้ รองรับ Word (.docx), Markdown (.md) และข้อความ (.txt) ไฟล์ต้นฉบับจะไม่ถูกแก้ไข"
+ui.manuscript.modeAuto,อัตโนมัติ
+ui.manuscript.modeFileChapter,แต่ละไฟล์เป็นหนึ่งบท (หัวข้อในไฟล์เป็นฉาก)
+ui.manuscript.modeFileScene,แต่ละไฟล์เป็นหนึ่งฉาก (รวมไว้ในบทเดียว)
+ui.manuscript.modeHeadings,แบ่งตามหัวข้อ (หัวข้อใหญ่สุดเป็นบท ถัดลงไปเป็นฉาก)
+ui.manuscript.moreChF,…และอีก {0} บท
+ui.manuscript.moreF,…และอีก {0} ไฟล์
+ui.manuscript.needProject,เปิดหรือสร้างโปรเจกต์ก่อน แล้วค่อยนำเข้าต้นฉบับเป็นเล่มใหม่
+ui.manuscript.newProject,สร้างโปรเจกต์ใหม่
+ui.manuscript.noSource,ยังไม่ได้เลือกไฟล์
+ui.manuscript.nothing,ไม่พบเนื้อหาที่นำเข้าได้
+ui.manuscript.pastePh,วางนิยายทั้งเรื่องที่นี่ บรรทัดอย่าง “ตอนที่ 1” หรือ “บทนำ” จะถูกแบ่งเป็นบทให้
+ui.manuscript.pasteSource,ข้อความที่วาง
+ui.manuscript.pasteText,วางข้อความ
+ui.manuscript.pickFiles,เลือกไฟล์…
+ui.manuscript.pickFolder,เลือกโฟลเดอร์…
+ui.manuscript.reading,กำลังอ่านต้นฉบับ…
+ui.manuscript.sceneCountF,{0} ฉาก
+ui.manuscript.sceneMoreF,อีก {0} ฉาก
+ui.manuscript.splitLabel,แบ่งบทและฉาก
+ui.manuscript.summaryF,{0} บท · {1} ฉาก · ประมาณ {2} คำ
+ui.manuscript.taskName,นำเข้าต้นฉบับ
+ui.manuscript.title,นำเข้าต้นฉบับ
+ui.manuscript.warnEmpty,ไม่มีเนื้อหา: {0}
+ui.manuscript.warnImagesSkipped,ข้ามรูปที่โปรแกรมแสดงไม่ได้ {0} รูป (EMF/WMF)
+ui.manuscript.warnNoHeadings,ไม่พบหัวข้อหรือหัวตอนใน {0} ทั้งเรื่องจะเป็นฉากเดียว ลองใช้สไตล์หัวข้อใน Word หรือพิมพ์ “ตอนที่ 1” ขึ้นบรรทัดใหม่
+ui.manuscript.warnOldDoc,ไฟล์ .doc รุ่นเก่า: {0} เปิดใน Word แล้วบันทึกเป็น .docx ก่อน
+ui.manuscript.warnReadFail,อ่านไฟล์ไม่ได้: {0}
+ui.manuscript.warnUnsupported,ยังไม่รองรับไฟล์นี้: {0}
+ui.manuscript.writeFailF,นำเข้าไม่สำเร็จ: {0}
+ui.manuscript.writing,กำลังสร้างเล่มใหม่…
 ui.mapAi.aroundHead,รอบตัว (ใกล้ไปไกล):
 ui.mapAi.cut,(ตัดส่วนที่เหลือเพราะยาวเกิน — ใช้คำสั่ง map.where ถามทีละชื่อได้)
 ui.mapAi.head,## ตำแหน่งบนแผนที่ (จากแผง แผนที่ ของผู้เขียน)
@@ -4815,7 +4884,9 @@ ui.menu.imageCaseChangeCase,รูปตัวพิมพ์ (Change Case)
 ui.menu.imageNotUse,รูปที่ยังไม่ถูกใช้
 ui.menu.imagePNG,รูปภาพ PNG
 ui.menu.imageSVG,ภาพเวกเตอร์ SVG
+ui.menu.importDocxComments,รับคอมเมนต์จากไฟล์ Word…
 ui.menu.importLangCSV,นำเข้าภาษาจาก CSV…
+ui.menu.importManuscript,นำเข้าต้นฉบับ (Word · Markdown · ข้อความ)…
 ui.menu.importScreenplayFountainFDX,นำเข้าบทภาพยนตร์… (Fountain · FDX · Celtx · Fade In · Adobe Story)
 ui.menu.importScrivenerScrivI,นำเข้าจาก Scrivener (.scriv)…
 ui.menu.insertImage,แทรกรูป…
@@ -4915,6 +4986,7 @@ ui.menu.settingsGroup,ตั้งค่า
 ui.menu.settingsProject,ตั้งค่าโปรเจกต์…
 ui.menu.showFormatLineMargin,แสดงรูปแบบ (เส้นขอบ element + เครื่องหมายจบบรรทัด)
 ui.menu.showNumLineLeft,แสดงเลขบรรทัด (รางซ้ายของแผง)
+ui.menu.simpleMode,โหมดเรียบง่าย
 ui.menu.sizeUIBarTool,ขนาด UI (แถบเครื่องมือ/แผง/กล่อง)
 ui.menu.sizeUINormal,ขนาด UI ปกติ (100%)
 ui.menu.soundTypewriterPrint,เสียงเครื่องพิมพ์ดีดขณะพิมพ์
@@ -4928,6 +5000,7 @@ ui.menu.storyYoursDialogPrev,แชทกับเรื่องของคุ
 ui.menu.suggestTitle,แนะนำชื่อเรื่อง…
 ui.menu.summaryBodyProject,สรุปเนื้อหาโปรเจกต์…
 ui.menu.support,สนับสนุนโปรเจกต์
+ui.menu.syncGuide,ใช้หลายเครื่อง (Google Drive · iCloud · Dropbox · OneDrive)
 ui.menu.tableCSV,ตาราง CSV
 ui.menu.textCaseCycleU,วนรูปตัวพิมพ์
 ui.menu.textContCONTINUEDMORE,ข้อความต่อเนื่อง (CONTINUED · MORE · cont'd)
@@ -6045,6 +6118,7 @@ ui.project.blankName,โปรเจกต์ว่าง
 ui.project.chapter,บทนำ
 ui.project.chapterSummary,บทสรุป
 ui.project.chapterTwo,บทที่สอง
+ui.project.episodeF,ตอนที่ {0}
 ui.project.fantasy,แฟนตาซี
 ui.project.group,กลุ่ม/ฝ่าย
 ui.project.hasProject,มีโปรเจกต์นี้อยู่แล้ว
@@ -6060,6 +6134,13 @@ ui.project.screenplay,บทภาพยนตร์
 ui.project.start,คดีเริ่มต้น
 ui.project.structureChapterFilmAct,โครงสร้างบทภาพยนตร์ — 3 องก์ ฉากเขียนแบบบทภาพยนตร์
 ui.project.structureNovelChapterScene,โครงสร้างนิยายทั่วไป — บท+ฉาก+ตัวละคร+สถานที่
+ui.project.tplVn,นิยายภาพ (VN)
+ui.project.tplVnDesc,เส้นทางหลักกับเส้นทางแยกของตัวละคร (เล่มละเส้นทาง) · ทำทางเลือกด้วยผังแตกสาย · Wiki ตัวละคร สถานที่ สิ่งของ
+ui.project.tplWebnovel,นิยายเว็บ
+ui.project.tplWebnovelDesc,"ตอนต่อเนื่อง (ตอนที่ 1, 2, 3 …) สำหรับลงเว็บทีละตอน · Wiki ตัวละคร สถานที่ ตำนาน"
+ui.project.vnCommon,เส้นทางหลัก
+ui.project.vnPrologue,บทนำ
+ui.project.vnRouteF,เส้นทาง {0}
 ui.props.act,องก์ (Act)
 ui.props.actHint,เช่น องก์ 1
 ui.props.actSaved,ตั้งองก์ของบทแล้ว: {0}
@@ -6180,8 +6261,8 @@ ui.roster.pickBookOpenPage,เลือกเล่มที่จะเปิ�
 ui.roster.putActPrintExport,ใส่ตอนพิมพ์/ส่งออก
 ui.roster.readPageListCharacter,อ่านหน้ารายชื่อตัวละครไม่สำเร็จ
 ui.roster.savePageListCharacter,บันทึกหน้ารายชื่อตัวละครแล้ว
-ui.roster.showHeadingScene,แสดงหัวข้อ Scene
-ui.roster.showHeadingTime,แสดงหัวข้อ Time
+ui.roster.showHeadingScene,แสดงหัวข้อ “ฉาก”
+ui.roster.showHeadingTime,แสดงหัวข้อ “เวลา”
 ui.sb.autoFit,ซูมพอดีความกว้างอัตโนมัติ
 ui.sb.autosave,บันทึกอัตโนมัติ
 ui.sb.bugReport,รายงานบั๊กหรือขอฟีเจอร์
@@ -6826,6 +6907,10 @@ ui.shortcuts.zoomIn,ซูมหน้ากระดาษ: ขยาย
 ui.shortcuts.zoomOut,ซูมหน้ากระดาษ: ย่อ
 ui.shortcuts.zoomReset,ซูมหน้ากระดาษ: รีเซ็ต
 ui.shortcuts.zoomWheel,ซูมหน้ากระดาษ
+ui.simple.exitLabel,เครื่องมือทั้งหมด
+ui.simple.exitTip,ออกจากโหมดเรียบง่าย แสดงแถบเครื่องมือและแผงตามที่ตั้งไว้
+ui.simple.offStatus,แสดงเครื่องมือทั้งหมดแล้ว
+ui.simple.onToast,โหมดเรียบง่าย: เหลือแค่ Explorer กับตัวแก้ไข ความสามารถอื่นอยู่ในเมนูด้านบน
 ui.smart.acceptHint,Tab = ใช้คำนี้ · ↑↓ = เลือก · Esc = ปิด · คลิกขวา = ไม่จำคำนี้
 ui.spCompare.compare,เปรียบเทียบ
 ui.spCompare.edition,ฉบับเก่า
@@ -6834,6 +6919,7 @@ ui.spCompare.text,({0} เท่ากัน ·
 ui.spContinued.contNotHas,ต่อเนื่อง: ไม่มี
 ui.spContinued.contSceneDialogue,ต่อเนื่อง: ฉาก {0} · บทพูด {1}
 ui.spFormat.a4Inch,A4 (8.27 × 11.69 นิ้ว)
+ui.spFormat.castTitle,รายชื่อตัวละคร
 ui.spFormat.define,กำหนดเอง
 ui.spFormat.legalInch,Legal (8.5 × 14 นิ้ว)
 ui.spFormat.letterInch,Letter (8.5 × 11 นิ้ว)
@@ -6846,6 +6932,8 @@ ui.spFormat.paperNovella,Compact / Novella (5 × 8 นิ้ว)
 ui.spFormat.paperPocket,Pocket Book (14.5 × 21 ซม.)
 ui.spFormat.paperTankobon,Tankōbon (5 × 7.5 นิ้ว)
 ui.spFormat.paperTrade,US Trade (6 × 9 นิ้ว)
+ui.spFormat.rosterScene,ฉาก
+ui.spFormat.rosterTime,เวลา
 ui.spFormatGuide.cutLineSoftWrap,ตัดบรรทัดเอง (soft wrap)
 ui.spFormatGuide.endLineBlockNew,จบบรรทัดด้วยการขึ้นบล็อกใหม่ (hard)
 ui.spHeaders.countPage,จำนวนหน้า
@@ -6907,6 +6995,7 @@ ui.sprint.title,สปรินต์การเขียน
 ui.sprint.wpm,{0} คำ/นาที
 ui.sprint.written,{0} คำ
 ui.sprint.writtenGoal,{0} / {1} คำ
+ui.spTitlePages.byNovel,โดย
 ui.spTitlePages.chapter,บทภาพยนตร์โดย
 ui.spTitlePages.new,สร้างจาก 
 ui.spTitlePages.notNamedStory,ไม่มีชื่อเรื่อง
@@ -7667,7 +7756,9 @@ ui.tip.goto-scene,กระโดดไปยังฉากที่ระบ�
 ui.tip.goto:page,เปิดกล่องให้พิมพ์เลขหน้าที่ต้องการ แล้วกระโดดไปหน้านั้น
 ui.tip.goto:scene,เปิดกล่องให้พิมพ์เลขฉาก แล้วกระโดดไปฉากนั้น
 ui.tip.home,เปิดหน้าแรก ดูโปรเจกต์ล่าสุด สร้างหรือเปิดโปรเจกต์อื่น
+ui.tip.import-docx-comments,นำคอมเมนต์และคำตอบที่บรรณาธิการเขียนในไฟล์ Word (.docx) กลับเข้าฉาก รวมกับคอมเมนต์เดิมโดยไม่ซ้ำ และปิดเธรดที่ถูก Resolve ใน Word เนื้อฉากไม่ถูกแก้
 ui.tip.import-language-csv,นำเข้าคำแปลจากไฟล์ CSV ที่แก้แล้ว รวมเข้ากับไฟล์ภาษาของโปรเจกต์และเห็นผลทันที
+ui.tip.import-manuscript,"นำงานเก่าจาก Word (.docx), Markdown (.md) หรือข้อความที่วางมา เข้าเป็นเล่มใหม่ในโปรเจกต์ โปรแกรมแบ่งบทและฉากให้ตามหัวข้อหรือหัวตอน และให้ดูโครงก่อนนำเข้า"
 ui.tip.import-script,"นำเข้าบทภาพยนตร์จาก Fountain, Final Draft (FDX), Celtx, Fade In หรือ Adobe Story พร้อมดูตัวอย่างก่อนนำเข้า"
 ui.tip.import-scrivener,นำเข้าโปรเจกต์จาก Scrivener (.scriv) มาเป็นโปรเจกต์ Killian พร้อมโครงบทและฉาก
 ui.tip.insert-image,แทรกรูปลงในเนื้อฉากตรงตำแหน่งเคอร์เซอร์ รูปถูกคัดลอกเข้าโฟลเดอร์ Images ของโปรเจกต์ให้เอง
@@ -7826,6 +7917,7 @@ ui.tip.sprint,จับเวลาเขียนแบบสปรินต์
 ui.tip.story-starter,เปิด Story Starter ตั้งต้นเรื่อง ตัวละคร และฉากแรกทีละขั้น แล้วเล่นต่อเป็นตอนกับ AI
 ui.tip.story-starter-toggle,เปิดหรือปิด Story Starter ตั้งต้นเรื่องทีละขั้นแล้วเล่นต่อเป็นตอนกับ AI กดซ้ำเพื่อปิด
 ui.tip.support,เปิดหน้าสนับสนุนโปรเจกต์ในเบราว์เซอร์ สำหรับผู้ที่อยากเลี้ยงกาแฟผู้พัฒนา
+ui.tip.sync-guide,"เปิดคู่มือบทวิธีเก็บโปรเจกต์ในโฟลเดอร์ซิงก์ (Google Drive, iCloud, Dropbox, OneDrive) เพื่อเขียนต่อได้หลายเครื่อง และวิธีจัดการสำเนาที่บริการซิงก์สร้างเมื่อไฟล์ชนกัน"
 ui.tip.sync-scene-meta,อ่านคุณสมบัติฉากจากส่วนหัวของไฟล์ .md กลับเข้าโปรแกรม ใช้หลังแก้ไฟล์ด้วยโปรแกรมอื่น
 ui.tip.test-run,รันชุดทดสอบของโปรแกรม สำหรับนักพัฒนา
 ui.tip.text-case,เปลี่ยนรูปตัวพิมพ์ของข้อความที่เลือกเป็นแบบที่ระบุ มีผลกับตัวอักษรละติน
@@ -7880,6 +7972,7 @@ ui.tip.toggle-panel:statusbar,ข้อมูลย่อของงานท�
 ui.tip.toggle-panel:timeline,"ลำดับเหตุการณ์ตาม ""เวลาในเรื่อง"" — สลับมุมมองการ์ด/Gantt ได้ · ฉากที่ตั้ง storyDate ไว้จะขึ้นเอง"
 ui.tip.toggle-panel:toolbar,ปุ่มจัดรูปแบบและสวิตช์โหมดทั้งหมด — ตัวหนา/เอียง · จัดหน้า · โหมดอ่าน/โฟกัส · เปิด-ปิดแผงอื่น
 ui.tip.toggle-panel:tree,สารบัญของผลงานทั้งเล่ม — เล่ม → บท → ฉาก พร้อม Wiki คลังรูป และถังขยะ · ลากสลับลำดับได้ · ช่องค้นหาด้านบนกรองได้ทั้งชื่อ แท็ก และสถานะ
+ui.tip.toggle-simple-mode,เปิดหรือปิดโหมดเรียบง่าย: เหลือแค่ Explorer ตัวแก้ไข และปุ่มเขียนพื้นฐาน ความสามารถอื่นยังอยู่ในเมนูครบ ปิดโหมดแล้วแถบเครื่องมือและแผงกลับมาเหมือนเดิม
 ui.tip.toggle-theme,เปลี่ยนธีมสีของโปรแกรม มีผลกับแถบ แผง และกล่อง ไม่แตะหน้ากระดาษและไฟล์ที่ส่งออก
 ui.tip.toolbar-config,เลือกว่าปุ่มไหนจะแสดงบนแถบเครื่องมือ เห็นผลทันทีที่ติ๊ก
 ui.tip.type-sound,เล่นเสียงเครื่องพิมพ์ดีดทุกครั้งที่กดแป้น ให้ความรู้สึกเหมือนเขียนบนเครื่องจริง
@@ -8359,8 +8452,11 @@ ui.xhub.buildFail,สร้างผลลัพธ์ไม่สำเร็�
 ui.xhub.building,กำลังสร้างตัวอย่าง…
 ui.xhub.content,เนื้อหา
 ui.xhub.docKind,ชนิดเอกสาร
+ui.xhub.docxComments,แนบคอมเมนต์
+ui.xhub.docxCommentsHint,คอมเมนต์ที่ยังเปิดอยู่ไปอยู่ในช่องคอมเมนต์ของ Word ให้บรรณาธิการตอบ · นำคำตอบกลับด้วย ไฟล์ → รับคอมเมนต์จากไฟล์ Word
 ui.xhub.docxHint,ใช้ขนาดกระดาษ ระยะขอบ และแบบอักษรเดียวกับหน้าจอ · หัวข้อใช้สไตล์ Heading ของ Word (สร้างสารบัญใน Word ได้)
 ui.xhub.doneDocx,{0} ย่อหน้า · ฝังรูป {1} รูป
+ui.xhub.doneDocxComments,คอมเมนต์ {0} รายการ
 ui.xhub.doneEpub,{0} บท · ฝังรูป {1} รูป
 ui.xhub.donePdf,{0} หน้า · สารบัญ {1} รายการ
 ui.xhub.donePdfPages,{0} หน้า (หน้าหน้าเล่ม {1} หน้า ไม่นับเลข)
@@ -8378,6 +8474,7 @@ ui.xhub.fFdx,Final Draft (FDX)
 ui.xhub.fFdxDesc,สำหรับบทภาพยนตร์ — เปิดใน Final Draft
 ui.xhub.fHtml,หน้าเว็บ (HTML)
 ui.xhub.fHtmlDesc,ไฟล์เดียวจบ ฝังรูปแบบไว้ในตัว
+ui.xhub.firstPageHint,ปิด = หน้าแรกของเนื้อเรื่องไม่มีเลข (ธรรมเนียมบทภาพยนตร์ฮอลลีวูด) · เป็นค่าของโปรเจกต์ ตัวเดียวกับ ตั้งค่า → {0}
 ui.xhub.fJson,ทั้งโปรเจกต์ (.json)
 ui.xhub.fJsonDesc,โครงสร้างโปรเจกต์ล้วน สำหรับเครื่องมืออื่น
 ui.xhub.fMd,Markdown
@@ -8397,6 +8494,7 @@ ui.xhub.htmlWysiwyg,ใช้รูปแบบหน้ากระดาษเ
 ui.xhub.kindAuto,ตามไฟล์ต้นทาง
 ui.xhub.kindProse,นิยาย (ร้อยแก้ว)
 ui.xhub.kindScript,บทภาพยนตร์
+ui.xhub.monoGreyImages,ขาวดำ: รูปประกอบในเนื้อเรื่องจะพิมพ์เป็นโทนเทา — เลือก “สี” ถ้าต้องการรูปสี
 ui.xhub.needProject,เปิดโปรเจกต์ก่อนจึงจะส่งออกได้
 ui.xhub.needScriptHint,เลือกปลายทางอื่น หรือเลือกช่วงที่เป็นบทภาพยนตร์
 ui.xhub.needScriptOnly,ปลายทางนี้ใช้ได้เฉพาะเอกสารที่เป็นบทภาพยนตร์

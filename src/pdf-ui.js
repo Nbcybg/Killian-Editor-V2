@@ -211,7 +211,9 @@ export async function openTitlePageDialog() {
   if (!state.root) { setStatus(tt('ui.common.openProjectBefore')); return null; }
   const fmt = spFormat();
   const ed = new TitlePageEditor(projectTitlePages());
-  if (!ed.count) ed.pages = defaultTitlePages(pdfMeta(), fmt);
+  // [trial 2026-10-25 ข้อ 6ข] งานนิยาย: หน้าปกตั้งต้นเขียน "โดย" ไม่ใช่ "บทภาพยนตร์โดย" (หน้าปกนี้ไปถึง PDF/DOCX ของนิยายแล้ว)
+  const novel = !(state.active && state.active.sp) && (state.meta || {}).template !== 'screenplay';
+  if (!ed.count) ed.pages = defaultTitlePages(novel ? { ...pdfMeta(), screenplayBy: tt('ui.spTitlePages.byNovel') } : pdfMeta(), fmt);
   let pageIdx = 0, strIdx = -1;
 
   const { ov, box } = overlay('k-tp-dlg');

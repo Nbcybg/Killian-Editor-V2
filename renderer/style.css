@@ -696,7 +696,7 @@ body:not(.k-fab-off) #k-toasts { bottom:calc(36px + 52px * var(--uis, 1) + 12px)
 
 /* ---------- พิมพ์: เหลือเฉพาะหน้ากระดาษ ---------- */
 @media print {
-  #toolbar,#tabs,#statusbar,.k-tab-bar,.k-panel-head { display:none !important; }
+  #toolbar,#tabs,#statusbar,#findbar,.k-tab-bar,.k-panel-head { display:none !important; }
   .k-panel:not(.k-holds-docs), .k-tab-group:not(.k-holds-docs), .k-dock:not(.k-holds-docs),
   .k-resize-handle, .k-float-panel { display:none !important; }
   /* [alpha.146] กระดาษที่พิมพ์ออกมาไม่ต้องมีขอบการ์ดของหน้าจอ */
@@ -712,8 +712,13 @@ body.printing #toolbar,
 body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 
 /* ---------- ค้นหา/แทนที่ ---------- */
-#findbar { display:none; align-items:center; gap:6px; padding:6px 12px;
-  background:var(--side); border-bottom:1px solid var(--border); }
+/* [trial 2026-10-25 ข้อ 21] ลอยเหนือเอกสาร มุมขวาใต้แถบเครื่องมือ — ไม่กินที่ในเลย์เอาต์ (เดิมดันทุกอย่างลง 44px)
+   z-index ใต้กล่องโต้ตอบ (80) · เหนือแผงลอย (66–75) · `top` ตั้งตอนเปิด (openFind) */
+#findbar { display:none; align-items:center; gap:6px; padding:6px 10px;
+  position:fixed; right:16px; top:80px; z-index:76; max-width:calc(100vw - 32px); flex-wrap:wrap;
+  background:var(--side); border:1px solid var(--border); border-radius:var(--r-md, 8px);
+  box-shadow:0 8px 24px rgba(0,0,0,.35); -webkit-app-region:no-drag; }
+#findbar * { -webkit-app-region:no-drag; }
 #findbar.on { display:flex; }
 #findbar input { background:var(--bg); color:var(--fg); border:1px solid var(--border);
   border-radius:var(--r-sm); padding:4px 10px; width:200px; }
@@ -1008,6 +1013,11 @@ body.printing #tabs, body.printing #statusbar { visibility:hidden; }
 .xhub-front-title { font-size:2.1em; font-weight:700; line-height:1.25; color:var(--paper-ink); }
 .sp-page.xhub-front-cast { justify-content:flex-start; align-items:stretch; text-align:left; }
 .xhub-front-cast-body { margin:0; white-space:pre-wrap; font:inherit; color:var(--paper-ink); }
+/* [trial 2026-10-25 ข้อ 6] ปกเต็มหน้า (ชนขอบกระดาษ) · บรรทัดเล่ม · หน้าปกที่ผู้ใช้แต่งเอง (x/y จากขอบกระดาษ) */
+.sp-page.xhub-front-bleed { padding:0; overflow:hidden; }
+.xhub-front-bleed-img { display:block; width:100%; height:100%; object-fit:cover; }
+.xhub-front-book { font-size:1.35em; margin-top:.18in; color:var(--paper-ink); }
+.sp-page.xhub-front-tp { display:block; position:relative; padding:0; text-align:start; color:var(--paper-ink); }
 .xhub-warn { flex:1; text-align:start; font-size:calc(12.5px * var(--ui-scale, 1));
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 @media (max-width:900px) { .xhub-body { grid-template-columns:1fr; height:auto; } }
@@ -1796,7 +1806,8 @@ body.printing .k-onset-line { background:none !important; box-shadow:none !impor
 .wiki-head { display:flex; align-items:center; justify-content:space-between; gap:8px;
   flex-wrap:wrap; }   /* [alpha.164 · รอบต่อ 3] ช่องแคบ (อังกฤษยาวกว่า) = ปุ่มขึ้นแถวใหม่ ไม่ดันหน้ากว้างจนเนื้อหลุดซ้าย */
 .wiki-head > button { white-space:nowrap; }
-.wiki-head > span:first-child { flex:1; }
+/* [trial 2026-10-25 ข้อ 24] ป้ายหมวดห้ามถูกบีบจนพับกลางคำ ("ตัว/ละคร") — ปุ่มขึ้นแถวใหม่แทน (flex-wrap ของแถบ) */
+.wiki-head > span:first-child { flex:1 0 auto; white-space:nowrap; }
 .wiki-save { -webkit-app-region:no-drag; }
 /* ปุ่มประวัติ/บันทึกเวอร์ชันของหน้า Wiki (ข้อ 10) · [alpha.121] .wiki-sc-btn = ปุ่มแทรกโค้ดสั้น
    (คลาสแยกจาก .wiki-ver-btn เพราะเทสเดิมนับกลุ่มปุ่มประวัติ/เวอร์ชัน/หาในดิสก์ตายตัวไว้ที่ 3 ตัว
@@ -4193,7 +4204,9 @@ body.paper-mode .roster-page { background:var(--paper); color:var(--paper-ink); 
   padding-left:var(--roster-tab); text-indent:calc(var(--roster-tab) * -1); }
 /* ชื่อ + ":" กินความกว้างเท่า "1 tab" เสมอ → รายละเอียดเริ่มที่คอลัมน์เดียวกันทุกคน
    (ชื่อยาวเกิน tab ก็ดันรายละเอียดไปเอง เหมือนแท็บจริงในเครื่องพิมพ์ดีด) */
-.roster-name { display:inline-block; min-width:calc(var(--roster-tab) - 1.2em);
+/* [trial 2026-10-25 ข้อ 2] ★ `text-indent:0` — inline-block **รับ text-indent ติดลบของแถวไปด้วย** (สืบทอดได้)
+   บรรทัดแรกในกล่องชื่อจึงถูกดันออกไปทางซ้าย 2.5 นิ้ว = ชื่อไปอยู่นอกกระดาษ เหลือแต่ ":" บนหน้า */
+.roster-name { display:inline-block; min-width:calc(var(--roster-tab) - 1.2em); text-indent:0;
   text-decoration:underline; text-underline-offset:2px; white-space:pre-wrap; }
 .roster-colon { display:inline; }
 .roster-detail { display:inline; white-space:pre-wrap; margin-left:.5em; }
@@ -5047,7 +5060,10 @@ body.paper-mode .k-paper .sp-cont-page { color:var(--paper-dim); }
 .k-tp-body { display:grid; grid-template-columns:170px 1fr 300px; gap:12px;
   margin-top:10px; align-items:start; }
 @media (max-width:900px){ .k-tp-body { grid-template-columns:1fr; } }
-.k-tp-pages, .k-tp-props { max-height:62vh; overflow:auto; }
+/* [trial 2026-10-25 ข้อ 16] ความสูง "คงที่" ไม่ใช่แค่เพดาน — เลือกชิ้นอื่นแล้วแผงคุณสมบัติสูง/เตี้ยลง
+   กล่องที่จัดกึ่งกลางจอจึงขยับขึ้นลงตาม = ช่องกรอกเลื่อนหนีเมาส์ */
+.k-tp-pages, .k-tp-props { height:62vh; max-height:62vh; overflow:auto; }
+@media (max-width:900px){ .k-tp-pages, .k-tp-props { height:auto; } }
 .k-tp-page-row { display:flex; justify-content:space-between; gap:6px; align-items:center;
   padding:5px 8px; border:1px solid var(--border); border-radius:6px; margin-bottom:4px;
   cursor:default; }
@@ -5355,6 +5371,9 @@ body.paper-mode .k-paper .k-manual-page-break::after { background:var(--paper); 
 .ai-chat-filex { cursor:default; margin-left:6px; color:var(--dim); }
 .ai-chat-filex:hover { color:#e06c62; }
 .ai-chat-inputrow { display:flex; gap:6px; align-items:flex-end; }
+/* [trial 2026-10-25 ข้อ 11] ยังไม่ได้ตั้งผู้ให้บริการ — บอกเหนือช่องพิมพ์ (ไม่ใช่แถบสถานะอย่างเดียว) */
+.ai-chat-noprov { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 6px; padding:6px 10px;
+  border:1px solid var(--st-warn); border-radius:var(--r-sm); color:var(--fg); font-size:calc(12.5px * var(--ui-scale, 1)); }
 .ai-chat-input { flex:1; min-width:0; resize:vertical; background:var(--bar);
   border:1px solid var(--border); border-radius:8px; color:var(--fg); padding:7px 9px;
   font:inherit; font-size:calc(12.5px * var(--ui-scale, 1)); line-height:1.5; }
@@ -6655,6 +6674,45 @@ body.k-ln .wiki-pane .wiki-ln-no { position:absolute; right:0; }
   background:var(--bar); border:1px solid var(--border); border-radius:8px; padding:10px 12px;
   font-size:calc(12px * var(--ui-scale, 1)); line-height:1.7; color:var(--fg); }
 .imp-sp-warn { margin-top:8px; color:var(--warn, #d9b757); line-height:1.6; }
+
+/* [alpha.170 · นำเข้าต้นฉบับ] กล่องนำเข้า Word/Markdown/ข้อความ — กล่องเป็นคอลัมน์ flex: ตัวอย่างหดได้ ปุ่มล่างไม่ตกขอบ */
+.k-dialog.k-msimp { display:flex; flex-direction:column; max-height:86vh; width:min(760px, 92vw); }
+.k-dialog.k-msimp > * { flex:none; }
+.k-msimp-src { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 6px; }
+.k-msimp-files { font-size:calc(12.5px * var(--ui-scale, 1)); color:var(--dim); }
+.k-msimp-list { max-height:calc(96px * var(--ui-scale, 1)); overflow:auto; margin:4px 0 0; padding-inline-start:22px; }
+.k-msimp-paste { flex:none; width:100%; min-height:calc(120px * var(--ui-scale, 1)); resize:vertical; }
+.k-msimp-opts { flex-wrap:wrap; justify-content:flex-start; }
+.k-msimp-opts .k-msimp-book { flex:1 1 160px; min-width:120px; width:auto; }
+.k-msimp-opts .k-msimp-mode { flex:2 1 220px; min-width:0; width:auto; }
+.k-msimp-lbl { flex:none; color:var(--dim); }
+.k-msimp-det { display:flex; align-items:flex-start; gap:6px; color:var(--dim); font-size:calc(12.5px * var(--ui-scale, 1)); line-height:1.5; }
+.k-msimp-det input { margin-top:3px; flex:none; }
+.k-dialog.k-msimp > .k-msimp-preview { flex:1 1 auto; min-height:calc(80px * var(--ui-scale, 1)); overflow:auto; margin-top:10px;
+  background:var(--bar); border:1px solid var(--border); border-radius:8px; padding:10px 12px;
+  font-size:calc(12.5px * var(--ui-scale, 1)); line-height:1.7; }
+.k-msimp-sum { font-weight:600; margin-bottom:4px; }
+.k-msimp-tree { margin:0; padding-inline-start:20px; }
+.k-msimp-ch { color:var(--fg); }
+.k-msimp-sc { color:var(--dim); }
+.k-msimp-warn { color:var(--st-warn); margin-top:4px; }
+
+/* [alpha.170 · ใช้หลายเครื่อง] กล่องถาม "โปรเจกต์ยังเปิดอยู่ที่เครื่องอื่น" */
+.k-dialog.k-lockdlg { width:min(520px, 92vw); }
+.k-lockdlg-why { margin-top:6px; line-height:1.6; }
+
+/* [alpha.170 · ข้อ 8] โหมดเรียบง่าย: ปุ่ม "เครื่องมือทั้งหมด" มีข้อความกำกับ (ทางออกต้องอ่านออก ไม่ใช่ไอคอนล้วน) */
+#toolbar > .k-simple-exit { display:inline-flex; align-items:center; gap:6px; width:auto; padding:0 10px;
+  border:1px solid var(--border); border-radius:6px; color:var(--fg); white-space:nowrap; }
+#toolbar > .k-simple-exit[hidden] { display:none; }
+#toolbar > .k-simple-exit:hover { border-color:var(--accent-hi); }
+.k-simple-exit-lbl { font-size:calc(12.5px * var(--ui-scale, 1)); }
+
+/* [alpha.170 · คอมเมนต์ไปกลับกับ Word] สรุปก่อนรับคอมเมนต์จากไฟล์ Word */
+.k-dialog.k-dxc { width:min(560px, 92vw); }
+.k-dxc-sum { margin:8px 0; padding-inline-start:20px; line-height:1.7; }
+.k-dxc-scenes { max-height:calc(160px * var(--ui-scale, 1)); overflow:auto; font-size:calc(12.5px * var(--ui-scale, 1));
+  color:var(--dim); border:1px solid var(--border); border-radius:8px; padding:6px 10px; line-height:1.6; }
 
 /* [alpha.124 ข้อ 27] พรีวิวหน้าเว็บของ "ส่งออกเป็นบล็อก" */
 .k-blog-pv { display:flex; flex-direction:column; gap:8px; }
@@ -8053,12 +8111,15 @@ body.lib-reordering, body.lib-reordering * { cursor:grabbing !important; user-se
 .k-codex2 .k-codex-card .k-codex-name { font:700 calc(13.5px * var(--ui-scale, 1)) / 1.2 Georgia, "Sarabun", serif, var(--thai-net); font-variant:small-caps; letter-spacing:.03em;
   color:rgba(255,255,255,.96); text-shadow:0 1px 4px rgba(0,0,0,.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .k-codex2 .k-codex-card .k-codex-cat-pill { font-size:10.5px; margin-top:3px; color:rgba(255,255,255,.8); border-color:rgba(255,255,255,.3); padding:0 6px; }
+/* [trial 2026-10-25 ข้อ 3] ★ แผงแคบ: แถวของกริดต้อง "สูงเท่าเนื้อ" (`max-content`) + ลูกห้ามหดต่ำกว่าเนื้อ
+   เดิมแถว `auto` ในกล่องที่สูงจำกัด + `min-height:0` ของลูก = แถวถูกบีบให้พอดีกล่อง แล้วเนื้อ (ภาพใหญ่ ·
+   การ์ดที่มีรูป) ล้นทับแถวถัดไป — ภาพทับช่องค้นหา การ์ดทับการ์ด (เคสเดียวกับกริดการ์ดในกฎ alpha.168 รอบต่อ 3) */
 @container codex (max-width: 700px) {
-  .k-codex2 .k-codex-main { grid-template-columns:minmax(0, 1fr); overflow:auto; }
-  .k-codex-left { overflow:visible; }
+  .k-codex2 .k-codex-main { grid-template-columns:minmax(0, 1fr); grid-auto-rows:max-content; align-content:start; overflow:auto; }
+  .k-codex-left { overflow:visible; min-height:auto; }
   .k-codex-hero { aspect-ratio:16 / 10; }
   .k-codex-right { min-height:auto; }
-  .k-codex2 .k-codex-grid { overflow:visible; }
+  .k-codex2 .k-codex-grid { overflow:visible; flex:none; min-height:auto; }
 }
 /* [alpha.168] กล่อง "แผนที่" ในหน้า Wiki (ภาพอ้างอิง 4): แผนที่ย่อ เลื่อน/ซูมได้ กึ่งกลางที่หมุดของเอนทิตี้ */
 .wiki-map { margin-top:22px; padding-top:14px; border-top:1px solid var(--border); }

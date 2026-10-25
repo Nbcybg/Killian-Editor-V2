@@ -715,6 +715,7 @@ ui.aiChatPanel.notHasFilePress,"Noch keine Skill-Dateien — klicken Sie, um {0}
 ui.aiChatPanel.notHasSessionPress,"Noch keine Sitzungen — klicken Sie auf „Neue Sitzung“, um zu chatten"
 ui.aiChatPanel.notHasText,Noch keine Nachrichten
 ui.aiChatPanel.open,Aktive Skills: 
+ui.aiChatPanel.openAiSettings,KI-Einstellungen
 ui.aiChatPanel.openFolder,Skills-Ordner öffnen
 ui.aiChatPanel.openProjectBeforeDone,Öffnen Sie zuerst ein Projekt; die Chat-Sitzungen werden dann im Ordner Sessions/ dieses Projekts abgelegt
 ui.aiChatPanel.partialNote,Die Antwort ist mittendrin abgebrochen — der bis dahin empfangene Text wurde beibehalten
@@ -836,6 +837,8 @@ ui.aiError.itemTLSToUse,Das Sicherheitszertifikat (TLS) des Servers ist ungülti
 ui.aiError.keyBindOutlineCheck,"Manche Anbieter binden Schlüssel an eine Organisation/ein Projekt — prüfen Sie, ob dieser Schlüssel mit dieser Basis-URL funktioniert"
 ui.aiError.missingHeader,"In der Anfrage fehlt ein Header, den der Anbieter verlangt"
 ui.aiError.missingHeaderHint,Tragen Sie den in der Servermeldung genannten Header unter „Custom Headers“ des Anbieters ein (pro Zeile „Name: Wert“)
+ui.aiError.missingHeaderNamed,Der Anfrage fehlt der vom Anbieter verlangte Header {0}
+ui.aiError.missingHeaderNamedHint,Füge unter „Custom Headers“ des Anbieters eine Zeile „{0}: Wert“ hinzu (den Wert findest du in der Dokumentation des Anbieters)
 ui.aiError.model,Modell: 
 ui.aiError.modelOllamaLMStudio,"Bei einem lokalen Modell (Ollama / LM Studio / llama.cpp) — stellen Sie zuerst sicher, dass dieses Programm läuft"
 ui.aiError.modelThinkReasoningUse,Reasoning-Modelle brauchen länger — senken Sie den Reasoning-Aufwand oder kürzen Sie die Antwort
@@ -966,6 +969,7 @@ ui.aiProvider.cantPickModel,Noch kein Modell ausgewählt
 ui.aiProvider.cantSettingsProviderAI,Noch kein KI-Anbieter eingerichtet (Menü KI → KI-Einstellungen)
 ui.aiProvider.connectOkFoundModel,Verbunden — {0} {0|Modell|Modelle} gefunden
 ui.aiProvider.credNameHint,Leer lassen = Name des Anbieters
+ui.aiProvider.defaultsAdopted,Deine gespeicherten KI-Anbieter sind jetzt für dieses Projekt eingerichtet ({0})
 ui.aiProvider.defaultsFail,Die Anbieter konnten auf diesem Computer nicht gespeichert werden
 ui.aiProvider.defaultsHave,{0} auf diesem Computer gespeichert
 ui.aiProvider.defaultsImport,Meine Anbieter verwenden
@@ -3318,6 +3322,7 @@ ui.doctor.tMissingFile,"Die Szene „{0}“ verweist auf {1}, das nicht existier
 ui.doctor.tMissingFolder,Das Kapitel „{0}“ hat keinen Ordner {1}
 ui.doctor.tOrphanFile,Die Datei {0} („{1}“) wird von keiner Szene verwendet
 ui.doctor.tRowsWithoutChapter,{0} {0|Szene|Szenen} im Index {0|gehört|gehören} zu keinem Kapitel
+ui.doctor.tSyncCopy,"{0} ist eine Kopie von {1}, die Ihr Synchronisierungsdienst angelegt hat (beide Computer haben dieselbe Datei geändert). Wieder einbinden und mit dem Original vergleichen."
 ui.drafts.delCantDraftMain,Löschen nicht möglich — dies ist der Hauptentwurf
 ui.drafts.delDraft,Entwurf löschen
 ui.drafts.delDraftDraft,Den gesamten Entwurf „{0}“ löschen?
@@ -3336,6 +3341,24 @@ ui.drop.hintText,Ablegen = Namen hier einfügen
 ui.drop.hintTimeline,Auf eine Karte = Verweis · auf leere Fläche = neues Ereignis
 ui.drop.netNotFound,„{0}“ ist nicht im Diagramm (möglicherweise blendet ein Filter es aus)
 ui.drop.opened,{0} geöffnet
+ui.dxc.apply,Kommentare übernehmen
+ui.dxc.doneF,{0} {0|Kommentar|Kommentare} in {1} {1|Szene|Szenen} übernommen
+ui.dxc.intro,"Kommentare werden den Szenen mit passendem Text hinzugefügt. Vorhandene Kommentare werden nicht doppelt angelegt, der Szenentext bleibt unverändert."
+ui.dxc.needProject,Öffnen Sie zuerst ein Projekt und übernehmen Sie dann die Kommentare.
+ui.dxc.none,Diese Datei enthält keine Kommentare.
+ui.dxc.nothingNew,Nichts Neues: Alle Kommentare sind bereits vorhanden oder keiner Szene zuzuordnen.
+ui.dxc.readFailF,Word-Datei konnte nicht gelesen werden: {0}
+ui.dxc.reading,Kommentare werden aus der Word-Datei gelesen…
+ui.dxc.scenesF,Szenen mit neuen Kommentaren ({0})
+ui.dxc.sumNewF,{0} {0|neuer Kommentar|neue Kommentare}
+ui.dxc.sumRepliesF,{0} {0|neue Antwort|neue Antworten}
+ui.dxc.sumResolvedF,{0} in Word {0|erledigter Thread wird|erledigte Threads werden} geschlossen
+ui.dxc.sumSameF,{0} bereits vorhanden
+ui.dxc.sumUnmatchedF,{0} keiner Szene zuzuordnen (Liste nach dem Import)
+ui.dxc.taskName,Word-Kommentarimport
+ui.dxc.title,Kommentare aus Word übernehmen
+ui.dxc.unmatchedTitleF,{0} {0|Kommentar|Kommentare} ohne passende Szene (der Text wurde evtl. geändert)
+ui.dxc.writeFailF,Kommentare konnten nicht gespeichert werden: {0}
 ui.editor.ctrlClickOpenWiki,Strg+Klick zum Öffnen im Wiki
 ui.editor.hasCommentBindText,An diesem Text hängt ein Kommentar
 ui.editor.pageBreak,Seitenumbruch
@@ -4383,6 +4406,12 @@ ui.lib.statWords,Wörter
 ui.lib.viewGrid,Titelbildansicht
 ui.lib.viewList,Listenansicht
 ui.locations,Orte
+ui.lock.heldF,Dieses Projekt ist noch auf {0} geöffnet (zuletzt bestätigt {1}).
+ui.lock.heldSameF,Dieses Projekt ist in einer anderen Instanz der App auf diesem Computer geöffnet (zuletzt bestätigt {0}).
+ui.lock.heldWhy,"Ist es über einen synchronisierten Ordner an zwei Orten geöffnet, können Änderungen der einen Seite die andere überschreiben. Beenden Sie die App auf dem anderen Computer und warten Sie die Synchronisierung ab – oder öffnen Sie trotzdem, wenn Sie wissen, dass er aus ist."
+ui.lock.lastOtherF,"Dieses Projekt war zuletzt auf {0} geöffnet ({1}). Wenn Sie dort gerade gearbeitet haben, prüfen Sie, ob alles synchronisiert ist."
+ui.lock.openAnyway,Trotzdem öffnen
+ui.lock.unknownMachine,einem anderen Computer
 ui.log.dayEmpty,Die Protokolldatei dieses Tages ist leer oder nicht lesbar
 ui.log.dayOption,{0} · {1} KB
 ui.log.dayPick,Frühere Protokolle ansehen — Protokolldatei eines Tages auswählen
@@ -4411,9 +4440,49 @@ ui.logline.saved,Logline gespeichert
 ui.logline.stakes,Einsatz
 ui.logline.title,Logline
 ui.logline.why,"Die KI nutzt dies als Kompass, damit die Geschichte auf Kurs bleibt"
+ui.main.manuscriptFilter,Manuskripte (Word · Markdown · Text)
 ui.main.pickFolderBtn,Diesen Ordner wählen
+ui.main.pickManuscript,Manuskriptdateien wählen (Mehrfachauswahl möglich)
 ui.main.pickNewProjectFolder,Speicherort für das neue Projekt wählen — der Projektordner wird darin angelegt
 ui.main.pickProjectFolder,Projektordner zum Öffnen auswählen
+ui.manuscript.bookName,Buchname
+ui.manuscript.bookPh,Leer lassen für „Book“ mit Nummer
+ui.manuscript.chapterF,Kapitel {0}
+ui.manuscript.detect,Als normaler Text getippte Kapitelzeilen wie „Chapter 1“ oder „Prologue“ erkennen (wenn keine Überschriftformate vorhanden sind)
+ui.manuscript.doneF,"„{0}“ importiert: {1} Kapitel, {2} {2|Szene|Szenen}"
+ui.manuscript.filesF,{0} {0|Datei|Dateien} (nach Name sortiert)
+ui.manuscript.imagesF,{0} {0|Bild|Bilder}
+ui.manuscript.intro,"Fügt diesem Projekt ein neues Buch hinzu. Unterstützt Word (.docx), Markdown (.md) und Text (.txt). Die Originaldateien bleiben unverändert."
+ui.manuscript.modeAuto,Automatisch
+ui.manuscript.modeFileChapter,Ein Kapitel pro Datei (Überschriften darin werden Szenen)
+ui.manuscript.modeFileScene,Eine Szene pro Datei (alle in einem Kapitel)
+ui.manuscript.modeHeadings,"Nach Überschriften (oberste Ebene = Kapitel, nächste = Szene)"
+ui.manuscript.moreChF,…und {0} weitere Kapitel
+ui.manuscript.moreF,…und {0} weitere
+ui.manuscript.needProject,Öffnen oder erstellen Sie zuerst ein Projekt und importieren Sie dann das Manuskript als neues Buch.
+ui.manuscript.newProject,Neues Projekt
+ui.manuscript.noSource,Noch keine Dateien gewählt
+ui.manuscript.nothing,Nichts Importierbares gefunden
+ui.manuscript.pastePh,Die ganze Geschichte hier einfügen. Zeilen wie „Chapter 1“ oder „Prologue“ werden zu Kapiteln.
+ui.manuscript.pasteSource,Eingefügter Text
+ui.manuscript.pasteText,Text einfügen
+ui.manuscript.pickFiles,Dateien wählen…
+ui.manuscript.pickFolder,Ordner wählen…
+ui.manuscript.reading,Manuskript wird gelesen…
+ui.manuscript.sceneCountF,{0} {0|Szene|Szenen}
+ui.manuscript.sceneMoreF,{0} weitere
+ui.manuscript.splitLabel,Aufteilen in
+ui.manuscript.summaryF,{0} {0|Kapitel|Kapitel} · {1} {1|Szene|Szenen} · etwa {2} {2|Wort|Wörter}
+ui.manuscript.taskName,Manuskriptimport
+ui.manuscript.title,Manuskript importieren
+ui.manuscript.warnEmpty,Kein Inhalt: {0}
+ui.manuscript.warnImagesSkipped,{0} nicht darstellbare {0|Bild|Bilder} werden übersprungen (EMF/WMF)
+ui.manuscript.warnNoHeadings,Keine Überschriften oder Kapitelzeilen in {0} gefunden – alles wird eine Szene. Nutzen Sie Überschriftformate in Word oder setzen Sie „Chapter 1“ in eine eigene Zeile.
+ui.manuscript.warnOldDoc,Alte .doc-Datei: {0}. Zuerst in Word öffnen und als .docx speichern.
+ui.manuscript.warnReadFail,Konnte nicht gelesen werden: {0}
+ui.manuscript.warnUnsupported,Nicht unterstützt: {0}
+ui.manuscript.writeFailF,Import fehlgeschlagen: {0}
+ui.manuscript.writing,Neues Buch wird erstellt…
 ui.mapAi.aroundHead,In der Umgebung (nächste zuerst):
 ui.mapAi.cut,(Der Rest wurde aus Längengründen gekürzt — fragen Sie mit dem Befehl map.where nach einem Namen)
 ui.mapAi.head,## Kartenpositionen (aus dem Karten-Bereich des Autors)
@@ -4815,7 +4884,9 @@ ui.menu.imageCaseChangeCase,Groß-/Kleinschreibung ändern
 ui.menu.imageNotUse,Unbenutzte Bilder
 ui.menu.imagePNG,PNG-Bild
 ui.menu.imageSVG,SVG-Vektorbild
+ui.menu.importDocxComments,Kommentare aus Word-Datei übernehmen…
 ui.menu.importLangCSV,Sprache aus CSV importieren …
+ui.menu.importManuscript,Manuskript importieren (Word · Markdown · Text)…
 ui.menu.importScreenplayFountainFDX,Drehbuch importieren … (Fountain · FDX · Celtx · Fade In · Adobe Story)
 ui.menu.importScrivenerScrivI,Aus Scrivener importieren (.scriv) …
 ui.menu.insertImage,Bild einfügen …
@@ -4915,6 +4986,7 @@ ui.menu.settingsGroup,Einstellungen
 ui.menu.settingsProject,Projekteinstellungen …
 ui.menu.showFormatLineMargin,Formatierung anzeigen (Elementumrisse + Zeilenendmarken)
 ui.menu.showNumLineLeft,Zeilennummern anzeigen (linke Leiste des Bereichs)
+ui.menu.simpleMode,Einfacher Modus
 ui.menu.sizeUIBarTool,Größe der Oberfläche (Symbolleisten/Bereiche/Dialoge)
 ui.menu.sizeUINormal,Normale Oberflächengröße (100 %)
 ui.menu.soundTypewriterPrint,Schreibmaschinenton beim Tippen
@@ -4928,6 +5000,7 @@ ui.menu.storyYoursDialogPrev,Mit Ihrer Geschichte chatten (alter Dialog) …
 ui.menu.suggestTitle,Titel vorschlagen …
 ui.menu.summaryBodyProject,Projekt zusammenfassen …
 ui.menu.support,Projekt unterstützen
+ui.menu.syncGuide,Mehrere Computer nutzen (Google Drive · iCloud · Dropbox · OneDrive)
 ui.menu.tableCSV,CSV-Tabelle
 ui.menu.textCaseCycleU,Groß-/Kleinschreibung durchschalten
 ui.menu.textContCONTINUEDMORE,Fortsetzungstext (CONTINUED · MORE · cont'd)
@@ -6045,6 +6118,7 @@ ui.project.blankName,Leeres Projekt
 ui.project.chapter,Prolog
 ui.project.chapterSummary,Schluss
 ui.project.chapterTwo,Kapitel Zwei
+ui.project.episodeF,Episode {0}
 ui.project.fantasy,Fantasy
 ui.project.group,Gruppen/Fraktionen
 ui.project.hasProject,Dieses Projekt existiert bereits
@@ -6060,6 +6134,13 @@ ui.project.screenplay,Drehbuch
 ui.project.start,Der Fall beginnt
 ui.project.structureChapterFilmAct,"Drehbuchstruktur — 3 Akte, Szenen im Drehbuchformat geschrieben"
 ui.project.structureNovelChapterScene,Allgemeine Romanstruktur — Kapitel + Szenen + Figuren + Orte
+ui.project.tplVn,Visual Novel (VN)
+ui.project.tplVnDesc,"Gemeinsame Route plus Figurenrouten (ein Buch pro Route) · Entscheidungen im Verzweigungsdiagramm · Wiki für Figuren, Orte und Gegenstände"
+ui.project.tplWebnovel,Webroman
+ui.project.tplWebnovelDesc,"Fortlaufende Episoden (Episode 1, 2, 3 …) zum einzelnen Veröffentlichen · Wiki für Figuren, Orte und Hintergrund"
+ui.project.vnCommon,Gemeinsame Route
+ui.project.vnPrologue,Prolog
+ui.project.vnRouteF,Route {0}
 ui.props.act,Akt
 ui.props.actHint,z. B. Akt 1
 ui.props.actSaved,Akt des Kapitels festgelegt: {0}
@@ -6826,6 +6907,10 @@ ui.shortcuts.zoomIn,Seitenzoom: vergrößern
 ui.shortcuts.zoomOut,Seitenzoom: verkleinern
 ui.shortcuts.zoomReset,Seitenzoom: zurücksetzen
 ui.shortcuts.zoomWheel,Seite zoomen
+ui.simple.exitLabel,Alle Werkzeuge
+ui.simple.exitTip,Einfachen Modus verlassen und vollständige Werkzeugleiste und Bereiche anzeigen
+ui.simple.offStatus,Alle Werkzeuge werden angezeigt
+ui.simple.onToast,Einfacher Modus: nur Explorer und Editor. Alles andere finden Sie in den Menüs oben.
 ui.smart.acceptHint,Tab = dieses Wort verwenden · ↑↓ = auswählen · Esc = schließen · Rechtsklick = dieses Wort vergessen
 ui.spCompare.compare,Vergleichen
 ui.spCompare.edition,Alte Version
@@ -6834,6 +6919,7 @@ ui.spCompare.text,({0} identisch ·
 ui.spContinued.contNotHas,Fortsetzung: keine
 ui.spContinued.contSceneDialogue,Fortsetzung: Szenen {0} · Dialog {1}
 ui.spFormat.a4Inch,"A4 (8,27 × 11,69 Zoll)"
+ui.spFormat.castTitle,Personen
 ui.spFormat.define,Benutzerdefiniert
 ui.spFormat.legalInch,"Legal (8,5 × 14 Zoll)"
 ui.spFormat.letterInch,"Letter (8,5 × 11 Zoll)"
@@ -6846,6 +6932,8 @@ ui.spFormat.paperNovella,Kompakt / Novelle (5 × 8 Zoll)
 ui.spFormat.paperPocket,"Taschenbuch (14,5 × 21 cm)"
 ui.spFormat.paperTankobon,"Tankōbon (5 × 7,5 Zoll)"
 ui.spFormat.paperTrade,US Trade (6 × 9 Zoll)
+ui.spFormat.rosterScene,Szene
+ui.spFormat.rosterTime,Zeit
 ui.spFormatGuide.cutLineSoftWrap,Manueller Zeilenumbruch (weicher Umbruch)
 ui.spFormatGuide.endLineBlockNew,Die Zeile endet mit einem neuen Block (hart)
 ui.spHeaders.countPage,Seitenanzahl
@@ -6907,6 +6995,7 @@ ui.sprint.title,Schreib-Sprint
 ui.sprint.wpm,{0} {0|Wort|Wörter}/Min.
 ui.sprint.written,{0} {0|Wort|Wörter}
 ui.sprint.writtenGoal,{0} / {1} {1|Wort|Wörter}
+ui.spTitlePages.byNovel,von
 ui.spTitlePages.chapter,Geschrieben von
 ui.spTitlePages.new,Basierend auf 
 ui.spTitlePages.notNamedStory,Ohne Titel
@@ -7667,7 +7756,9 @@ ui.tip.goto-scene,Springt anhand der Nummer zu einer bestimmten Szene — nützl
 ui.tip.goto:page,Öffnet ein Feld zur Eingabe einer Seitenzahl und springt dann zu dieser Seite.
 ui.tip.goto:scene,Öffnet ein Feld zur Eingabe einer Szenennummer und springt dann zu dieser Szene.
 ui.tip.home,Öffnet den Startbildschirm — zuletzt verwendete Projekte sowie das Erstellen oder Öffnen eines anderen Projekts.
+ui.tip.import-docx-comments,"Kommentare und Antworten, die ein Lektorat in einer Word-Datei (.docx) geschrieben hat, zurück in die Szenen holen – ohne Duplikate mit bestehenden Kommentaren zusammengeführt; in Word erledigte Threads werden geschlossen. Der Szenentext bleibt unverändert."
 ui.tip.import-language-csv,Importiert Übersetzungen aus einer bearbeiteten CSV-Datei und führt sie mit sofortiger Wirkung in die Sprachdateien des Projekts ein.
+ui.tip.import-manuscript,"Bestehende Texte aus Word (.docx), Markdown (.md) oder eingefügtem Text als neues Buch ins Projekt holen. Kapitel und Szenen werden anhand von Überschriften oder Kapitelzeilen getrennt; die Struktur wird vor dem Import angezeigt."
 ui.tip.import-script,"Importiert ein Drehbuch aus Fountain, Final Draft (FDX), Celtx, Fade In oder Adobe Story, zunächst mit Vorschau."
 ui.tip.import-scrivener,Importiert ein Scrivener-Projekt (.scriv) als Killian-Projekt und behält dabei Kapitel und Szenen bei.
 ui.tip.insert-image,Fügt am Cursor ein Bild ein. Die Datei wird für Sie in den Ordner „Images“ des Projekts kopiert.
@@ -7826,6 +7917,7 @@ ui.tip.sprint,"Stoppt einen Schreib-Sprint, zählt die währenddessen geschriebe
 ui.tip.story-starter,"Öffnet den Story-Starter: Richten Sie Schritt für Schritt eine Geschichte, Figuren und die Eröffnungsszene ein und spielen Sie sie dann in Episoden mit der KI durch."
 ui.tip.story-starter-toggle,Öffnet oder schließt den Story-Starter — richten Sie eine Geschichte Schritt für Schritt ein und spielen Sie sie mit der KI durch. Erneut drücken zum Schließen.
 ui.tip.support,"Öffnet die Unterstützungsseite des Projekts im Browser, auf der Sie dem Entwickler einen Kaffee spendieren können."
+ui.tip.sync-guide,"Öffnet das Handbuchkapitel zum Speichern eines Projekts in einem synchronisierten Ordner (Google Drive, iCloud, Dropbox, OneDrive), um auf mehreren Computern zu schreiben, und zum Umgang mit Konfliktkopien."
 ui.tip.sync-scene-meta,Liest die Szeneneigenschaften erneut aus den Köpfen der .md-Dateien — nach dem Bearbeiten von Dateien in einem anderen Programm verwenden.
 ui.tip.test-run,Führt die Selbsttestsuite der App aus (für Entwickler).
 ui.tip.text-case,Wandelt den markierten Text in eine bestimmte Groß-/Kleinschreibung um. Betrifft lateinische Buchstaben.
@@ -7880,6 +7972,7 @@ ui.tip.toggle-panel:statusbar,Zusammenfassung des geöffneten Werks — Wort-/Se
 ui.tip.toggle-panel:timeline,Ereignisse in der Reihenfolge der „Geschichtszeit“ — zwischen Karten- und Gantt-Ansicht wechseln · Szenen mit einem storyDate erscheinen von selbst
 ui.tip.toggle-panel:toolbar,Alle Formatierungsschaltflächen und Modusschalter — Fett/Kursiv · Ausrichtung · Lese-/Fokusmodus · andere Bereiche ein-/ausblenden
 ui.tip.toggle-panel:tree,"Inhaltsverzeichnis des gesamten Werks — Buch → Kapitel → Szene, dazu Wiki, Bildbibliothek und Papierkorb · per Ziehen neu anordnen · das Suchfeld oben filtert nach Name, Tag und Status"
+ui.tip.toggle-simple-mode,"Schaltet den einfachen Modus ein oder aus: Nur Explorer, Editor und die wichtigsten Schreibknöpfe bleiben sichtbar. Alle anderen Funktionen bleiben in den Menüs; beim Ausschalten kehren Werkzeugleiste und Bereiche wie zuvor zurück."
 ui.tip.toggle-theme,"Ändert das Farbdesign der App für Leisten, Bereiche und Dialoge — nicht die Seite oder exportierte Dateien."
 ui.tip.toolbar-config,"Wählen Sie, welche Schaltflächen in der Symbolleiste erscheinen; Änderungen wirken sich beim Anhaken sofort aus."
 ui.tip.type-sound,"Spielt bei jedem Tastenanschlag ein Schreibmaschinengeräusch ab, für das Gefühl einer echten Maschine."
@@ -8359,8 +8452,11 @@ ui.xhub.buildFail,Die Ausgabe konnte nicht erstellt werden
 ui.xhub.building,Vorschau wird erstellt …
 ui.xhub.content,Inhalt
 ui.xhub.docKind,Dokumenttyp
+ui.xhub.docxComments,Kommentare beifügen
+ui.xhub.docxCommentsHint,Offene Kommentare erscheinen im Kommentarbereich von Word zur Beantwortung · Antworten holen Sie mit Datei → Kommentare aus Word-Datei übernehmen zurück
 ui.xhub.docxHint,"Verwendet dasselbe Papierformat, dieselben Ränder und dieselbe Schriftart wie auf dem Bildschirm · Überschriften nutzen die Überschriftenformate von Word (damit Word ein Inhaltsverzeichnis erstellen kann)"
 ui.xhub.doneDocx,{0} {0|Absatz|Absätze} · {1} {1|Bild|Bilder} eingebettet
+ui.xhub.doneDocxComments,{0} {0|Kommentar|Kommentare}
 ui.xhub.doneEpub,{0} {0|Kapitel|Kapitel} · {1} {1|Bild|Bilder} eingebettet
 ui.xhub.donePdf,{0} {0|Seite|Seiten} · {1} {1|Lesezeichen|Lesezeichen}
 ui.xhub.donePdfPages,{0} {0|Seite|Seiten} ({1} Vorspannseiten ohne Nummerierung)
@@ -8378,6 +8474,7 @@ ui.xhub.fFdx,Final Draft (FDX)
 ui.xhub.fFdxDesc,Für Drehbücher — öffnet sich in Final Draft
 ui.xhub.fHtml,Webseite (HTML)
 ui.xhub.fHtmlDesc,Eine eigenständige Datei mit eingebetteten Stilen
+ui.xhub.firstPageHint,"Aus = die erste Textseite trägt keine Nummer (Hollywood-Drehbuchkonvention) · Projekteinstellung, dieselbe wie Einstellungen → {0}"
 ui.xhub.fJson,Gesamtes Projekt (.json)
 ui.xhub.fJsonDesc,"Nur die Projektstruktur, für andere Werkzeuge"
 ui.xhub.fMd,Markdown
@@ -8397,6 +8494,7 @@ ui.xhub.htmlWysiwyg,Dasselbe Seitenformat wie auf dem Bildschirm verwenden
 ui.xhub.kindAuto,An die Quelldateien anpassen
 ui.xhub.kindProse,Roman (Prosa)
 ui.xhub.kindScript,Drehbuch
+ui.xhub.monoGreyImages,"Schwarzweiß: Abbildungen im Text werden in Graustufen gedruckt — „Farbe“ wählen, um sie farbig zu behalten"
 ui.xhub.needProject,Öffnen Sie vor dem Export ein Projekt
 ui.xhub.needScriptHint,"Wähle ein anderes Format oder einen Bereich, der ein Drehbuch ist"
 ui.xhub.needScriptOnly,Dieses Format funktioniert nur mit Drehbüchern

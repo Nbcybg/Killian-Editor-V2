@@ -23,6 +23,8 @@ __export(timing_exports, {
   BUG_CACHE_MS: () => BUG_CACHE_MS,
   BUG_FETCH_TIMEOUT_MS: () => BUG_FETCH_TIMEOUT_MS,
   OSK_SPAWN_WAIT_MS: () => OSK_SPAWN_WAIT_MS,
+  PROJECT_LOCK_BEAT_MS: () => PROJECT_LOCK_BEAT_MS,
+  PROJECT_LOCK_STALE_MS: () => PROJECT_LOCK_STALE_MS,
   RETRY_BASE_MS: () => RETRY_BASE_MS,
   RETRY_MAX_MS: () => RETRY_MAX_MS,
   SCRATCH_SAVE_DELAY_MS: () => SCRATCH_SAVE_DELAY_MS,
@@ -48,12 +50,16 @@ function retryBackoff(n) {
   const k = Number.isFinite(+n) && +n > 0 ? Math.floor(+n) : 0;
   return Math.min(RETRY_MAX_MS, RETRY_BASE_MS * Math.pow(2, k));
 }
+var PROJECT_LOCK_BEAT_MS = 2 * 60 * 1e3;
+var PROJECT_LOCK_STALE_MS = 10 * 60 * 1e3;
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   ATTENTION_MIN_MS,
   BUG_CACHE_MS,
   BUG_FETCH_TIMEOUT_MS,
   OSK_SPAWN_WAIT_MS,
+  PROJECT_LOCK_BEAT_MS,
+  PROJECT_LOCK_STALE_MS,
   RETRY_BASE_MS,
   RETRY_MAX_MS,
   SCRATCH_SAVE_DELAY_MS,

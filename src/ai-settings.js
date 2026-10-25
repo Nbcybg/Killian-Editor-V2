@@ -60,7 +60,13 @@ export function clearKeyCache() { _keyCache = null; }
  */
 export async function aiConfigured() {
   if (!state.root) return { ok: false, code: 'noProject', why: t('ui.common.cantOpenProject') };
-  const ai = getAISettings();
+  let ai = getAISettings();
+  // [trial 2026-10-25 ข้อ 11] ยังไม่มีผู้ให้บริการ + ไม่มีค่าแบบเก่า = ลองรับชุด "ของฉัน" ก่อนบอกว่ายังไม่ได้ตั้งค่า
+  if (!(Array.isArray(ai.providers) && ai.providers.length) && (ai.provider || 'openai') !== 'ollama' && !(await loadApiKey())) {
+    const { currentProvider } = await import('./ai/ai-provider-ui.js');
+    await currentProvider();
+    ai = getAISettings();
+  }
   // ทะเบียนใหม่ (alpha.61) มาก่อนเสมอ
   if (Array.isArray(ai.providers) && ai.providers.length) {
     const { currentProvider } = await import('./ai/ai-provider-ui.js');

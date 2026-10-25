@@ -15,8 +15,9 @@ Killian 2 (K2) is a portable writing app for **game stories, novels and screenpl
 |---|---|
 | have just opened the app for the first time | [1. Getting started](01-getting-started.md), then [2. The interface](02-interface.md) |
 | just want to write | [4. Writing a novel](04-writing-novel.md) or [5. Writing a screenplay](05-writing-screenplay.md) |
-| are moving from Scrivener / Final Draft / Celtx | [9. Export, import and print](09-export-import-print.md#import) |
+| are moving from Word / Google Docs / Scrivener / Final Draft / Celtx | [9. Export, import and print](09-export-import-print.md#import) |
 | are worried about losing work | [10. Saving, history, backup and recovery](10-history-backup.md) |
+| want to work on more than one computer | [17. Using several computers](17-several-computers.md) |
 | cannot find a button or a shortcut | [Appendix A — Menus](A-menus.md) · [B — Shortcuts](B-shortcuts.md) · [C — Every command](C-commands.md) |
 | want to write a plugin | [Extension Guide](../../extension/en/README.md) |
 
@@ -49,6 +50,7 @@ Conventions: **bold** = the name of a menu or button on screen · `Ctrl+S` = a s
 14. [Plugins (for users)](14-plugins.md) — installing · allowing · disabling · removing · safety
 15. [Updates, bug reports and the activity log](15-update-bug-log.md)
 16. [Troubleshooting and FAQ](16-troubleshooting.md)
+17. [Using several computers](17-several-computers.md) — Google Drive · iCloud · Dropbox · OneDrive · the "open on another computer" warning · copies made by the sync service · phones
 
 ### Appendices
 - [A — Every menu](A-menus.md)
@@ -68,5 +70,5 @@ Conventions: **bold** = the name of a menu or button on screen · `Ctrl+S` = a s
 ## About this documentation
 
 - Appendices A–C are generated straight from the app's own registries (the real menu, the shortcut dialog, `icons/commands.csv` plus the language file), so they match the stated version.
-- Chapters 1–16 describe the behaviour of alpha.170. Where a feature is very new or has not been tested on every operating system, the manual says so at that point.
+- Chapters 1–17 describe the behaviour of alpha.170. Where a feature is very new or has not been tested on every operating system, the manual says so at that point.
 - Found something wrong or missing in the manual? Report it from inside the app (**Help → Report a bug…**).

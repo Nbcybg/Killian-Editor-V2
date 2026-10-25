@@ -715,6 +715,7 @@ ui.aiChatPanel.notHasFilePress,暂无技能文件 — 点击以创建 {0}/ 及�
 ui.aiChatPanel.notHasSessionPress,暂无会话 — 点击“新建会话”开始聊天
 ui.aiChatPanel.notHasText,暂无消息
 ui.aiChatPanel.open,已启用的技能： 
+ui.aiChatPanel.openAiSettings,AI 设置
 ui.aiChatPanel.openFolder,打开技能文件夹
 ui.aiChatPanel.openProjectBeforeDone,请先打开项目；聊天会话随后会保存在该项目的 Sessions/ 文件夹中
 ui.aiChatPanel.partialNote,回复中途停止 — 已保留目前收到的文本
@@ -836,6 +837,8 @@ ui.aiError.itemTLSToUse,服务器的安全证书（TLS）无效
 ui.aiError.keyBindOutlineCheck,部分提供商会将密钥绑定到组织/项目 — 请检查此密钥是否适用于该基础 URL
 ui.aiError.missingHeader,请求缺少提供方要求的请求头
 ui.aiError.missingHeaderHint,把服务器消息中指出的请求头加到该提供方的 Custom Headers 中（每行一个“名称: 值”）
+ui.aiError.missingHeaderNamed,请求缺少服务商要求的请求头 {0}
+ui.aiError.missingHeaderNamedHint,在服务商的 Custom Headers 中添加一行“{0}: 值”（值见服务商文档）
 ui.aiError.model,模型： 
 ui.aiError.modelOllamaLMStudio,使用本地模型（Ollama / LM Studio / llama.cpp）时 — 请先确认该程序正在运行
 ui.aiError.modelThinkReasoningUse,推理模型耗时更长 — 请降低推理强度或缩短回复
@@ -966,6 +969,7 @@ ui.aiProvider.cantPickModel,尚未选择模型
 ui.aiProvider.cantSettingsProviderAI,尚未设置 AI 提供商（菜单 AI → AI 设置）
 ui.aiProvider.connectOkFoundModel,已连接 — 找到 {0} 个模型
 ui.aiProvider.credNameHint,留空 = 使用提供方名称
+ui.aiProvider.defaultsAdopted,已为此项目设置你保存的 AI 服务商（{0}）
 ui.aiProvider.defaultsFail,无法在此电脑上保存提供商
 ui.aiProvider.defaultsHave,此电脑上已保存 {0} 个
 ui.aiProvider.defaultsImport,使用我的提供商
@@ -3318,6 +3322,7 @@ ui.doctor.tMissingFile,场景“{0}”指向不存在的 {1}
 ui.doctor.tMissingFolder,章节“{0}”没有文件夹 {1}
 ui.doctor.tOrphanFile,文件 {0}（“{1}”）未被任何场景使用
 ui.doctor.tRowsWithoutChapter,索引中有 {0} 个场景不属于任何章节
+ui.doctor.tSyncCopy,{0} 是同步服务生成的 {1} 的副本（两台电脑修改了同一文件）。请重新挂接后与原文件对比。
 ui.drafts.delCantDraftMain,无法删除 — 这是主草稿
 ui.drafts.delDraft,删除草稿
 ui.drafts.delDraftDraft,删除整份草稿“{0}”？
@@ -3336,6 +3341,24 @@ ui.drop.hintText,放下 = 在此插入名称
 ui.drop.hintTimeline,放在卡片上 = 引用 · 放在空白处 = 新事件
 ui.drop.netNotFound,“{0}”不在图表中（可能被筛选条件隐藏了）
 ui.drop.opened,已打开 {0}
+ui.dxc.apply,导入批注
+ui.dxc.doneF,已向 {1} 个场景导入 {0} 条批注
+ui.dxc.intro,批注会添加到文字相符的场景。已有批注不会重复，场景正文不变。
+ui.dxc.needProject,请先打开项目，再导入批注。
+ui.dxc.none,此文件没有批注。
+ui.dxc.nothingNew,没有新内容：所有批注已存在，或找不到对应的场景。
+ui.dxc.readFailF,无法读取 Word 文件：{0}
+ui.dxc.reading,正在读取 Word 文件中的批注…
+ui.dxc.scenesF,将添加批注的场景（{0}）
+ui.dxc.sumNewF,新批注 {0} 条
+ui.dxc.sumRepliesF,新回复 {0} 条
+ui.dxc.sumResolvedF,将关闭在 Word 中已解决的 {0} 个讨论
+ui.dxc.sumSameF,已存在 {0} 条
+ui.dxc.sumUnmatchedF,{0} 条找不到对应场景（导入后列出）
+ui.dxc.taskName,Word 批注导入
+ui.dxc.title,从 Word 导入批注
+ui.dxc.unmatchedTitleF,{0} 条批注找不到对应场景（文字可能已更改）
+ui.dxc.writeFailF,无法保存批注：{0}
 ui.editor.ctrlClickOpenWiki,按住 Ctrl 点击以在 Wiki 中打开
 ui.editor.hasCommentBindText,此文本附有批注
 ui.editor.pageBreak,分页符
@@ -4383,6 +4406,12 @@ ui.lib.statWords,词数
 ui.lib.viewGrid,封面视图
 ui.lib.viewList,列表视图
 ui.locations,个地点
+ui.lock.heldF,此项目仍在 {0} 上打开（最后确认 {1}）。
+ui.lock.heldSameF,此项目在这台电脑上的另一个应用实例中打开（最后确认 {0}）。
+ui.lock.heldWhy,如果通过同步文件夹在两处同时打开，一方的修改可能会覆盖另一方。请先在那台电脑上退出应用并等待同步完成；如果确定那台电脑已关闭，也可以继续打开。
+ui.lock.lastOtherF,此项目上次在 {0} 上打开（{1}）。如果刚在那里写过，请确认已全部同步。
+ui.lock.openAnyway,仍然打开
+ui.lock.unknownMachine,另一台电脑
 ui.log.dayEmpty,该日的日志文件为空或无法读取
 ui.log.dayOption,{0} · {1} KB
 ui.log.dayPick,查看过往日志 — 选择某一天的日志文件
@@ -4411,9 +4440,49 @@ ui.logline.saved,一句话梗概已保存
 ui.logline.stakes,利害关系
 ui.logline.title,一句话梗概
 ui.logline.why,AI 会把它当作罗盘，使故事不偏离正轨
+ui.main.manuscriptFilter,原稿（Word · Markdown · 文本）
 ui.main.pickFolderBtn,选择此文件夹
+ui.main.pickManuscript,选择原稿文件（可多选）
 ui.main.pickNewProjectFolder,选择新项目的存放位置 — 项目文件夹将创建在其中
 ui.main.pickProjectFolder,选择要打开的项目文件夹
+ui.manuscript.bookName,书名
+ui.manuscript.bookPh,留空则为“Book”加编号
+ui.manuscript.chapterF,第{0}章
+ui.manuscript.detect,识别以普通文字输入的章节行，如“Chapter 1”或“Prologue”（没有标题样式时）
+ui.manuscript.doneF,已导入“{0}”：{1} 章，{2} 个场景
+ui.manuscript.filesF,{0} 个文件（按名称排序）
+ui.manuscript.imagesF,{0} 张图片
+ui.manuscript.intro,作为新书添加到此项目。支持 Word（.docx）、Markdown（.md）和纯文本（.txt）。原始文件不会被修改。
+ui.manuscript.modeAuto,自动
+ui.manuscript.modeFileChapter,每个文件一章（文件内标题为场景）
+ui.manuscript.modeFileScene,每个文件一个场景（全部放在一章）
+ui.manuscript.modeHeadings,按标题拆分（最高级为章，下一级为场景）
+ui.manuscript.moreChF,…另有 {0} 章
+ui.manuscript.moreF,…另有 {0} 个
+ui.manuscript.needProject,请先打开或创建项目，再将原稿作为新书导入。
+ui.manuscript.newProject,新建项目
+ui.manuscript.noSource,尚未选择文件
+ui.manuscript.nothing,没有找到可导入的内容
+ui.manuscript.pastePh,在此粘贴整个故事。“Chapter 1”或“Prologue”这样的行会成为章节。
+ui.manuscript.pasteSource,粘贴的文本
+ui.manuscript.pasteText,粘贴文本
+ui.manuscript.pickFiles,选择文件…
+ui.manuscript.pickFolder,选择文件夹…
+ui.manuscript.reading,正在读取原稿…
+ui.manuscript.sceneCountF,{0} 个场景
+ui.manuscript.sceneMoreF,另有 {0} 个
+ui.manuscript.splitLabel,拆分方式
+ui.manuscript.summaryF,{0} 章 · {1} 个场景 · 约 {2} 词
+ui.manuscript.taskName,原稿导入
+ui.manuscript.title,导入原稿
+ui.manuscript.warnEmpty,没有内容：{0}
+ui.manuscript.warnImagesSkipped,跳过 {0} 张无法显示的图片（EMF/WMF）
+ui.manuscript.warnNoHeadings,{0} 中没有标题或章节行，全部内容将成为一个场景。请在 Word 中使用标题样式，或将“Chapter 1”单独成行。
+ui.manuscript.warnOldDoc,旧版 .doc 文件：{0}。请先在 Word 中打开并另存为 .docx。
+ui.manuscript.warnReadFail,无法读取：{0}
+ui.manuscript.warnUnsupported,不支持：{0}
+ui.manuscript.writeFailF,导入失败：{0}
+ui.manuscript.writing,正在创建新书…
 ui.mapAi.aroundHead,周边（由近及远）：
 ui.mapAi.cut,（其余内容因篇幅被截断 — 如需查询某个名称，请使用 map.where 命令）
 ui.mapAi.head,## 地图位置（来自作者的地图面板）
@@ -4815,7 +4884,9 @@ ui.menu.imageCaseChangeCase,更改大小写
 ui.menu.imageNotUse,未使用的图片
 ui.menu.imagePNG,PNG 图片
 ui.menu.imageSVG,SVG 矢量图
+ui.menu.importDocxComments,从 Word 文件导入批注…
 ui.menu.importLangCSV,从 CSV 导入语言……
+ui.menu.importManuscript,导入原稿（Word · Markdown · 文本）…
 ui.menu.importScreenplayFountainFDX,导入剧本……（Fountain · FDX · Celtx · Fade In · Adobe Story）
 ui.menu.importScrivenerScrivI,从 Scrivener 导入（.scriv）……
 ui.menu.insertImage,插入图片……
@@ -4915,6 +4986,7 @@ ui.menu.settingsGroup,设置
 ui.menu.settingsProject,项目设置……
 ui.menu.showFormatLineMargin,显示格式（元素轮廓 + 行尾标记）
 ui.menu.showNumLineLeft,显示行号（面板左侧栏）
+ui.menu.simpleMode,简洁模式
 ui.menu.sizeUIBarTool,界面大小（工具栏/面板/对话框）
 ui.menu.sizeUINormal,标准界面大小（100%）
 ui.menu.soundTypewriterPrint,输入时的打字机声音
@@ -4928,6 +5000,7 @@ ui.menu.storyYoursDialogPrev,与你的故事对话（旧对话框）……
 ui.menu.suggestTitle,建议标题……
 ui.menu.summaryBodyProject,总结项目……
 ui.menu.support,支持本项目
+ui.menu.syncGuide,在多台电脑上使用（Google Drive · iCloud · Dropbox · OneDrive）
 ui.menu.tableCSV,CSV 表格
 ui.menu.textCaseCycleU,循环切换大小写
 ui.menu.textContCONTINUEDMORE,续接文字（CONTINUED · MORE · cont'd）
@@ -6045,6 +6118,7 @@ ui.project.blankName,空白项目
 ui.project.chapter,序章
 ui.project.chapterSummary,结语
 ui.project.chapterTwo,第二章
+ui.project.episodeF,第{0}话
 ui.project.fantasy,奇幻
 ui.project.group,团体/派系
 ui.project.hasProject,此项目已存在
@@ -6060,6 +6134,13 @@ ui.project.screenplay,剧本
 ui.project.start,案件开始
 ui.project.structureChapterFilmAct,剧本结构 — 三幕，场景按剧本格式书写
 ui.project.structureNovelChapterScene,通用小说结构 — 章节 + 场景 + 角色 + 地点
+ui.project.tplVn,视觉小说（VN）
+ui.project.tplVnDesc,共通线与角色线（每条线一本书）· 用分支图制作选项 · 角色、地点、物品 Wiki
+ui.project.tplWebnovel,网络小说
+ui.project.tplWebnovelDesc,连载章节（第1话、第2话、第3话……），逐话发布 · 角色、地点、设定 Wiki
+ui.project.vnCommon,共通线
+ui.project.vnPrologue,序章
+ui.project.vnRouteF,{0}线
 ui.props.act,幕
 ui.props.actHint,例如：第一幕
 ui.props.actSaved,已设置章节的幕：{0}
@@ -6826,6 +6907,10 @@ ui.shortcuts.zoomIn,页面缩放：放大
 ui.shortcuts.zoomOut,页面缩放：缩小
 ui.shortcuts.zoomReset,页面缩放：重置
 ui.shortcuts.zoomWheel,缩放页面
+ui.simple.exitLabel,全部工具
+ui.simple.exitTip,退出简洁模式，显示完整的工具栏和面板
+ui.simple.offStatus,已显示全部工具
+ui.simple.onToast,简洁模式：只显示资源管理器和编辑器。其他功能都在顶部菜单中。
 ui.smart.acceptHint,Tab = 使用此词 · ↑↓ = 选择 · Esc = 关闭 · 右键 = 忘记此词
 ui.spCompare.compare,对比
 ui.spCompare.edition,旧版本
@@ -6834,6 +6919,7 @@ ui.spCompare.text,（{0} 处相同 ·
 ui.spContinued.contNotHas,续接：无
 ui.spContinued.contSceneDialogue,续接：场景 {0} · 对白 {1}
 ui.spFormat.a4Inch,A4（8.27 × 11.69 英寸）
+ui.spFormat.castTitle,人物表
 ui.spFormat.define,自定义
 ui.spFormat.legalInch,Legal（8.5 × 14 英寸）
 ui.spFormat.letterInch,Letter（8.5 × 11 英寸）
@@ -6846,6 +6932,8 @@ ui.spFormat.paperNovella,紧凑 / 中篇小说（5 × 8 英寸）
 ui.spFormat.paperPocket,口袋本（14.5 × 21 厘米）
 ui.spFormat.paperTankobon,单行本（5 × 7.5 英寸）
 ui.spFormat.paperTrade,US Trade（6 × 9 英寸）
+ui.spFormat.rosterScene,场景
+ui.spFormat.rosterTime,时间
 ui.spFormatGuide.cutLineSoftWrap,手动换行（软换行）
 ui.spFormatGuide.endLineBlockNew,该行以新块结束（硬换行）
 ui.spHeaders.countPage,页数
@@ -6907,6 +6995,7 @@ ui.sprint.title,写作冲刺
 ui.sprint.wpm,{0} 词/分钟
 ui.sprint.written,{0} 词
 ui.sprint.writtenGoal,{0} / {1} 词
+ui.spTitlePages.byNovel,作者
 ui.spTitlePages.chapter,编剧
 ui.spTitlePages.new,改编自 
 ui.spTitlePages.notNamedStory,无标题
@@ -7667,7 +7756,9 @@ ui.tip.goto-scene,按编号跳转到指定场景 — 适用于单个文件中含
 ui.tip.goto:page,打开输入框，输入页码后跳转到该页。
 ui.tip.goto:scene,打开输入框，输入场景编号后跳转到该场景。
 ui.tip.home,打开主页 — 最近的项目，以及创建或打开其他项目。
+ui.tip.import-docx-comments,将编辑在 Word 文件（.docx）中写的批注和回复带回场景，与已有批注合并且不重复；在 Word 中已解决的讨论会被关闭。场景正文不变。
 ui.tip.import-language-csv,从编辑过的 CSV 文件导入翻译，并合并到项目的语言文件中，立即生效。
+ui.tip.import-manuscript,将 Word（.docx）、Markdown（.md）或粘贴的文本中的旧作品作为新书导入项目。按标题或章节行拆分章节和场景，导入前可预览结构。
 ui.tip.import-script,从 Fountain、Final Draft（FDX）、Celtx、Fade In 或 Adobe Story 导入剧本，并先显示预览。
 ui.tip.import-scrivener,将 Scrivener（.scriv）项目导入为 Killian 项目，保留其章节和场景。
 ui.tip.insert-image,在光标处插入图片。文件会自动复制到项目的 Images 文件夹。
@@ -7826,6 +7917,7 @@ ui.tip.sprint,为写作冲刺计时，统计冲刺期间写下的词数，支持
 ui.tip.story-starter,打开故事启动器：逐步设置故事、角色和开场场景，然后与 AI 以篇章形式展开游玩。
 ui.tip.story-starter-toggle,打开或关闭故事启动器 — 逐步设置故事并与 AI 一起游玩。再次点击即可关闭。
 ui.tip.support,在浏览器中打开本项目的支持页面，可以请开发者喝杯咖啡。
+ui.tip.sync-guide,打开手册中关于把项目放在同步文件夹（Google Drive、iCloud、Dropbox、OneDrive）以便在多台电脑上写作，以及处理文件冲突时同步服务生成的副本的章节。
 ui.tip.sync-scene-meta,从 .md 文件头重新读取场景属性 — 在其他程序中编辑过文件后使用。
 ui.tip.test-run,运行应用的自检测试套件（面向开发者）。
 ui.tip.text-case,将选中的文本转换为指定的大小写形式。仅影响拉丁字母。
@@ -7880,6 +7972,7 @@ ui.tip.toggle-panel:statusbar,当前作品的摘要 — 词数/页数 · 剧本�
 ui.tip.toggle-panel:timeline,按“故事时间”顺序排列的事件 — 可在卡片视图与甘特视图间切换 · 带有 storyDate 的场景会自动出现
 ui.tip.toggle-panel:toolbar,所有格式按钮和模式开关 — 加粗/斜体 · 对齐 · 阅读/专注模式 · 显示/隐藏其他面板
 ui.tip.toggle-panel:tree,整部作品的目录 — 卷 → 章节 → 场景，另有 Wiki、图库和回收站 · 拖动可重新排序 · 顶部搜索框可按名称、标签和状态筛选
+ui.tip.toggle-simple-mode,开启或关闭简洁模式：只保留资源管理器、编辑器和基本写作按钮。其他功能都还在菜单中；关闭后工具栏和面板恢复原样。
 ui.tip.toggle-theme,更改应用中工具栏、面板和对话框的配色主题 — 不影响页面和导出的文件。
 ui.tip.toolbar-config,选择工具栏上显示哪些按钮；勾选后立即生效。
 ui.tip.type-sound,每次按键都播放打字机声音，营造真实机器的手感。
@@ -8359,8 +8452,11 @@ ui.xhub.buildFail,无法生成输出
 ui.xhub.building,正在生成预览……
 ui.xhub.content,内容
 ui.xhub.docKind,文档类型
+ui.xhub.docxComments,附带批注
+ui.xhub.docxCommentsHint,未解决的批注会显示在 Word 的批注窗格中供编辑回复 · 回复可通过“文件 → 从 Word 文件导入批注”带回
 ui.xhub.docxHint,使用与屏幕相同的纸张大小、页边距和字体 · 标题使用 Word 的标题样式（这样 Word 就能生成目录）
 ui.xhub.doneDocx,{0} 个段落 · 已嵌入 {1} 张图片
+ui.xhub.doneDocxComments,{0} 条批注
 ui.xhub.doneEpub,{0} 个章节 · 已嵌入 {1} 张图片
 ui.xhub.donePdf,{0} 页 · {1} 个书签
 ui.xhub.donePdfPages,{0} 页（含 {1} 页未编号的前置页）
@@ -8378,6 +8474,7 @@ ui.xhub.fFdx,Final Draft（FDX）
 ui.xhub.fFdxDesc,适用于剧本 — 可在 Final Draft 中打开
 ui.xhub.fHtml,网页（HTML）
 ui.xhub.fHtmlDesc,单个自包含文件，样式已内嵌
+ui.xhub.firstPageHint,关闭 = 正文第一页不显示页码（好莱坞剧本惯例）· 项目设置，与“设置 → {0}”相同
 ui.xhub.fJson,整个项目（.json）
 ui.xhub.fJsonDesc,仅项目结构，供其他工具使用
 ui.xhub.fMd,Markdown
@@ -8397,6 +8494,7 @@ ui.xhub.htmlWysiwyg,使用与屏幕相同的页面格式
 ui.xhub.kindAuto,与源文件保持一致
 ui.xhub.kindProse,小说（叙述文）
 ui.xhub.kindScript,剧本
+ui.xhub.monoGreyImages,黑白：正文中的插图将以灰度打印 — 选择“彩色”以保留颜色
 ui.xhub.needProject,导出前请先打开一个项目
 ui.xhub.needScriptHint,请选择其他格式，或选择属于剧本的范围
 ui.xhub.needScriptOnly,此格式仅适用于剧本

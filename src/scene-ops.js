@@ -26,6 +26,7 @@ import { SCENE_HEAVY_KEYS, writeSceneMeta } from './scene-meta.js';
 import { visFileName } from './visual/vis-core.js';
 import { gi } from './icons.js';
 import { mutateJson } from './json-store.js';
+import { defaultSceneFormat } from './scene-format-default.js';   // [trial 2026-10-25 ข้อ 4]
 
 // [alpha.159] ย้ายไป scene-file-name.js (ai-actions ใช้ตัวเดียวกันได้โดยไม่ลาก app.js) — ส่งต่อชื่อเดิม
 export { freeSceneFileName } from './scene-file-name.js';
@@ -37,6 +38,23 @@ import { movePathWithTabs } from './tab-bridge.js';
 const baseName = (p) => String(p || '').split(/[\\/]/).pop() || '';
 
 const rowsOf = (d, guid0) => ((d && d.chapters) || {})[guid0] || [];
+
+/**
+ * [trial 2026-10-25 ข้อ 4] ชนิดของฉากใหม่ในบทนี้ — อ่าน frontmatter ของฉากที่มีอยู่ (กติกาใน scene-format-default.js)
+ * บทว่าง/ปนกัน = ตามเทมเพลตที่ใช้สร้างโปรเจกต์ (`project.khn.json → template`)
+ */
+async function siblingFormat(dPath, ch, list) {
+  const seen = [];
+  for (const row of list || []) {
+    try {
+      const f = await kapi.join(dPath, 'Chapters', ch.folderName, row.fileName);
+      const { meta } = parseMdFile(await kapi.readFile(f));
+      seen.push(meta && meta.format === 'screenplay' ? 'screenplay' : 'prose');
+    } catch { /* ไฟล์หาย/อ่านไม่ได้ — ข้าม */ }
+    if (new Set(seen).size > 1) break;                // ปนกันแล้ว — อ่านต่อก็ไม่เปลี่ยนผล
+  }
+  return defaultSceneFormat(seen, state.meta && state.meta.template);
+}
 const nextOrder = (list) => Math.max(0, ...(list || []).map((x) => x.order || 0)) + 1;
 
 export async function renameScene(dPath, ch, sc) {
@@ -334,7 +352,9 @@ export async function addScene(dPath, ch, preset, opts = {}) {
     sc = { id: guid(), title, order, fileName,
            chapterGuid: ch.guid, date: '', isFavorite: false, wordCount: 0, synopsis: '' };
     file = await kapi.join(dPath, 'Chapters', ch.folderName, fileName);
-    const meta = { title, type: 'scene', format: 'prose', pov: '', tags: [], ...(opts.meta || {}) };
+    // [trial 2026-10-25 ข้อ 4] ชนิดของฉากใหม่ = ชนิดของฉากล่าสุดในบทนี้ (ไม่มี = ตามเทมเพลตของโปรเจกต์)
+    const format = (opts.meta && opts.meta.format) || await siblingFormat(dPath, ch, list);
+    const meta = { title, type: 'scene', format, pov: '', tags: [], ...(opts.meta || {}) };
     // [alpha.161 · D1] opts.commentsFrom = สร้างจากไฟล์อื่น (วางสำเนา) → เธรดคอมเมนต์ของต้นฉบับตามมาด้วย
     await writeMdKeepingComments(kapi, file, dumpMdFile(meta, opts.body || ''), opts.commentsFrom || null);
     d.chapters[ch.guid] = [...list, sc];

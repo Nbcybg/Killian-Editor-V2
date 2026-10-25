@@ -67,7 +67,8 @@ export async function renderCodexPanel(host) {
   h.append(panelEmpty(t('ui.codex.busyRead')));
   const ents = (await listEntities(state.root)).sort((a, b) => cmpText(String(a.name), String(b.name)));
   s.ents = ents;
-  const { resolveImg } = await import('../app.js');
+  const { resolveImg, fieldLabels } = await import('../app.js');
+  const fieldLabel = (k, ent) => (fieldLabels(ent && ent.templateId) || {})[k] || '';   // [trial 2026-10-25] ป้ายไทยของช่องข้อมูล
   const imgOf = (e) => { const p = entityPortrait(e.entity); return p && p.file ? resolveImg(state.root, 'Images/' + p.file) : ''; };
   let maps = [];
   try { const { loadMaps } = await import('../app.js'); maps = ((await loadMaps()).maps || []); } catch {}
@@ -168,7 +169,9 @@ export async function renderCodexPanel(host) {
 
   function showHero(e, carousel) {
     hero.replaceChildren(); prev.replaceChildren();
-    if (!e) { hero.append(panelEmpty(t('ui.codex.notHasWikiNew'))); return; }
+    // [trial 2026-10-25 ข้อ 24] ไม่มีเอนทิตีเลย = บอกที่กริดที่เดียว (เดิมขึ้นสองที่พร้อมกัน) · ซ่อนกรอบภาพใหญ่
+    hero.hidden = !e;
+    if (!e) return;
     const bg = el('div', 'k-codex-hero-bg');
     tileBg(bg, e);
     hero.append(bg);
@@ -193,7 +196,7 @@ export async function renderCodexPanel(host) {
     }
     // ข้อมูลย่อใต้ภาพ: กล่องข้อมูล + คำอธิบาย + ปุ่มเปิดหน้า Wiki
     const ent = e.entity || {};
-    const rows = CB.infoRows(ent);
+    const rows = CB.infoRows(ent, fieldLabel);
     if (rows.length) {
       const tb = el('table', 'k-codex-info');
       for (const [k, v] of rows) { const tr = el('tr'); tr.append(el('th', null, k), el('td', null, v)); tb.append(tr); }
@@ -213,7 +216,7 @@ export async function renderCodexPanel(host) {
     setStatus(t('ui.codex.busyNewWebCodex'));
     try {
       const mentions = await collectMentions(ents);
-      const files = CB.buildCodexSite(ents, { siteTitle: state.title || 'Codex', labels, mentions });
+      const files = CB.buildCodexSite(ents, { siteTitle: state.title || 'Codex', labels, mentions, fieldLabel });
       const out = await kapi.join(dir, 'codex');
       await kapi.mkdir(out);
       for (const f of files) await kapi.writeFile(await kapi.join(out, f.name), f.text);

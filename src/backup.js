@@ -7,7 +7,7 @@ import { localDay } from './local-date.js';
 
 const SKIP_DIRS = ['Recycle', 'Snapshots', '.k2history', 'Backups', 'Research'];
 // [alpha.148] คีย์ AI เป็นของเครื่องนี้ ไม่ใช่ของผลงาน — ห้ามติดไปกับชุดสำรอง (ซึ่งมักถูกก๊อปไปแชร์ต่อ)
-const SKIP_ROOT_FILES = ['ai-key.json'];
+const SKIP_ROOT_FILES = ['ai-key.json', '.k2lock.json'];   // [alpha.170] ตัวล็อกเป็นของเซสชันที่กำลังเปิด ไม่ใช่ของงาน
 const MAX_KEEP = 7;
 // [alpha.148] ป้าย "สำรองวันนี้ครบแล้ว" อยู่ **ในโฟลเดอร์สำรองของโปรเจกต์นั้นเอง**
 // เดิมจำไว้ใน localStorage คีย์เดียวใช้ร่วมทุกโปรเจกต์ → เปิดโปรเจกต์ A (สำรองแล้ว) แล้วเปิด B

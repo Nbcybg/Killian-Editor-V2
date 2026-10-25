@@ -283,7 +283,8 @@ check('paginate ใช้ข้อความที่ผู้ใช้ตั�
 
 // ── 97 หน้ารายชื่อตัวละคร ──
 const r0 = SF.newRoster();
-check('newRoster: หัวเรื่องเป็น Cast of Characters', r0.title === 'Cast of Characters');
+// [trial 2026-10-25 ข้อ 18] หัวเรื่องมาจากไฟล์ภาษา (ไทย = "รายชื่อตัวละคร") ไม่ใช่อังกฤษตายตัว
+check('newRoster: หัวเรื่องมาจากไฟล์ภาษา', r0.title === SF.SP_STRINGS.castTitle && !/^ui\./.test(r0.title) && r0.title !== 'Cast of Characters');
 check('newRoster: แสดง Scene/Time เป็นค่าเริ่มต้น', r0.showScene === true && r0.showTime === true);
 check('normalizeRoster: ข้อมูลพังกลับเป็นค่าตั้งต้น', SF.normalizeRoster(null).characters.length === 0);
 check('normalizeRoster: กรองตัวละครให้เป็น {name,detail} เสมอ',
@@ -294,13 +295,13 @@ const rTxt = SF.rosterToText({
   scene: 'กรุงเทพฯ ปี 2025', time: 'ฤดูฝน',
 });
 check('rosterToText: บรรทัดแรกเป็นหัวเรื่องจัดกลาง',
-  rTxt.split('\n')[0].trim() === 'Cast of Characters' && rTxt.split('\n')[0].startsWith(' '));
+  rTxt.split('\n')[0].trim() === SF.SP_STRINGS.castTitle && rTxt.split('\n')[0].startsWith(' '));
 check('rosterToText: ชื่อตัวละครตามด้วย :', rTxt.includes('Donald Bradleyson:'));
 check('rosterToText: รายละเอียดคั่นด้วย tab', rTxt.includes('Donald Bradleyson:\tนักสืบวัย 40'));
 check('rosterToText: เว้นบรรทัดระหว่างตัวละคร', /Donald Bradleyson:[^\n]*\n\nTora:/.test(rTxt));
-check('rosterToText: มีหัวข้อ Scene และ Time', rTxt.includes('Scene') && rTxt.includes('Time'));
+check('rosterToText: มีหัวข้อ Scene และ Time (ตามไฟล์ภาษา)', rTxt.includes(SF.SP_STRINGS.sceneTitle) && rTxt.includes(SF.SP_STRINGS.timeTitle));
 check('rosterToText: ปิด Scene แล้วไม่มีหัวข้อ Scene',
-  !SF.rosterToText({ scene: 'x', showScene: false }).includes('Scene'));
+  !SF.rosterToText({ scene: 'x', showScene: false }).includes(SF.SP_STRINGS.sceneTitle));
 check('rosterToText: ไม่มีเลขหน้า', !/^\s*\d+\s*$/m.test(rTxt));
 
 // ═══════ alpha.57a ข้อ 2 — เลขฉาก · เลขหน้า · element ใหม่ ═══════

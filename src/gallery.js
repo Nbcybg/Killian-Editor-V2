@@ -1231,16 +1231,19 @@ export function pickImage(root, { album = null } = {}) {
     };
     search.oninput = () => drawGrid();
     addB.onclick = async () => {
-      const src = await kapi.openImageDialog();
-      if (!src) return;
+      // [trial 2026-10-25 ข้อ 22] เลือกได้หลายรูปในครั้งเดียว (เดิมกล่องคืนสองไฟล์แต่ใช้แค่ไฟล์แรก)
+      const picked = kapi.openImagesDialog ? await kapi.openImagesDialog() : [await kapi.openImageDialog()];
+      const srcs = (Array.isArray(picked) ? picked : [picked]).filter(Boolean);
+      if (!srcs.length) return;
       const target = cur === ALL_ALBUM ? ROOT_ALBUM : cur;
-      const name = await AC.addImageFile(kapi, root, target, src);
+      const names = [];
+      for (const src of srcs) names.push(await AC.addImageFile(kapi, root, target, src));
       await AC.syncFlatIndex(kapi, root);
       urlCache.clear();
       albums = await AC.listAlbums(kapi, root);
       await loadItems();
       drawSide(); drawGrid();
-      setStatus(tt('ui.gallery.addImageDone') + name);
+      setStatus(tt('ui.gallery.addImageDone') + names.join(', '));
     };
 
     await loadItems();

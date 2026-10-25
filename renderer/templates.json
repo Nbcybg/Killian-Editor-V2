@@ -91,19 +91,19 @@
       "customPropertyDefs": [],
       "sections": [
         {
-          "title": "ภูมิหลัง / Backstory",
+          "title": "ภูมิหลัง",
           "defaultContent": ""
         },
         {
-          "title": "บุคลิก-น้ำเสียง / Voice",
+          "title": "บุคลิก-น้ำเสียง",
           "defaultContent": ""
         },
         {
-          "title": "เป้าหมาย / Goals",
+          "title": "เป้าหมาย",
           "defaultContent": ""
         },
         {
-          "title": "ปม / Conflict",
+          "title": "ปม",
           "defaultContent": ""
         }
       ],
@@ -237,9 +237,9 @@
           "type": "Enum",
           "defaultValue": "",
           "options": [
-            "Light",
-            "Dark",
-            "Neutral"
+            "ฝ่ายแสง",
+            "ฝ่ายมืด",
+            "เป็นกลาง"
           ]
         },
         {
@@ -248,11 +248,11 @@
           "type": "Enum",
           "defaultValue": "",
           "options": [
-            "Fire",
-            "Water",
-            "Earth",
-            "Air",
-            "None"
+            "ไฟ",
+            "น้ำ",
+            "ดิน",
+            "ลม",
+            "ไม่มี"
           ]
         },
         {
@@ -264,15 +264,15 @@
       ],
       "sections": [
         {
-          "title": "ภูมิหลัง / Backstory",
+          "title": "ภูมิหลัง",
           "defaultContent": ""
         },
         {
-          "title": "พลัง / Powers",
+          "title": "พลัง",
           "defaultContent": ""
         },
         {
-          "title": "เป้าหมาย / Goals",
+          "title": "เป้าหมาย",
           "defaultContent": ""
         }
       ],
@@ -412,23 +412,23 @@
           "type": "Enum",
           "defaultValue": "",
           "options": [
-            "Low",
-            "Medium",
-            "High"
+            "ต่ำ",
+            "ปานกลาง",
+            "สูง"
           ]
         }
       ],
       "sections": [
         {
-          "title": "ประวัติ / History",
+          "title": "ประวัติ",
           "defaultContent": ""
         },
         {
-          "title": "แรงจูงใจ / Motive",
+          "title": "แรงจูงใจ",
           "defaultContent": ""
         },
         {
-          "title": "ข้อพิรุธ / Alibi",
+          "title": "ข้อพิรุธ",
           "defaultContent": ""
         }
       ],
@@ -498,15 +498,15 @@
       "customPropertyDefs": [],
       "sections": [
         {
-          "title": "บรรยากาศ / Atmosphere",
+          "title": "บรรยากาศ",
           "defaultContent": ""
         },
         {
-          "title": "ประวัติ / History",
+          "title": "ประวัติ",
           "defaultContent": ""
         },
         {
-          "title": "ผู้อยู่อาศัย / Inhabitants",
+          "title": "ผู้อยู่อาศัย",
           "defaultContent": ""
         }
       ],
@@ -557,11 +557,11 @@
       "customPropertyDefs": [],
       "sections": [
         {
-          "title": "ความสามารถ / Powers",
+          "title": "ความสามารถ",
           "defaultContent": ""
         },
         {
-          "title": "ประวัติ / History",
+          "title": "ประวัติ",
           "defaultContent": ""
         }
       ],
@@ -606,7 +606,7 @@
       "customPropertyDefs": [],
       "sections": [
         {
-          "title": "รายละเอียด / Details",
+          "title": "รายละเอียด",
           "defaultContent": ""
         }
       ],
@@ -644,15 +644,15 @@
       "customPropertyDefs": [],
       "sections": [
         {
-          "title": "กฎ / Rules",
+          "title": "กฎ",
           "defaultContent": ""
         },
         {
-          "title": "ข้อจำกัด / Limits",
+          "title": "ข้อจำกัด",
           "defaultContent": ""
         },
         {
-          "title": "ราคาที่ต้องจ่าย / Cost",
+          "title": "ราคาที่ต้องจ่าย",
           "defaultContent": ""
         }
       ],

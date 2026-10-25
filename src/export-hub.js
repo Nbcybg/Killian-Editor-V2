@@ -20,16 +20,18 @@
 // ส่วนบริสุทธิ์ (ตารางรูปแบบ · การเลือกตัวสร้าง · การรวมค่าที่จำไว้) แยกไว้บนสุด — unit test ได้ตรง ๆ
 
 import { t as tt, tf as ttf } from './i18n.js';
-import { liveProseFonts, firstRealFont } from './live-fonts.js';   // [alpha.160 · P1-7/P1-10]
+import { liveProseFonts, firstRealFont, thaiFontOf } from './live-fonts.js';   // [alpha.160 · P1-7/P1-10]
 import { $, el, state, setStatus, setStatusError, log, withBusy } from './core.js';
 import { runWorkflow, mdToHtml } from './compile.js';
 import { num } from './num.js';
 import { withThaiFallback } from './lang-fonts.js';   // [alpha.145] ตาข่ายรองอักษรไทย
 // ตรรกะล้วน (ตารางรูปแบบ · เลือกตัวสร้าง · ค่าที่จำไว้) อยู่ใน export-formats.js — ทดสอบด้วย node ได้
 import { EXPORT_FORMATS, formatDef, docKind, pdfEngine, normalizeHub, exportPageNumberFmt,
-         defaultWorkflowFor, workflowForFormat, suggestName, proseNumberFont } from './export-formats.js';
+         defaultWorkflowFor, workflowForFormat, suggestName, proseNumberFont,
+         coverBookLine, pdfColorMode, exportNameFields } from './export-formats.js';
 import { escClose, toast } from './ui.js';        // toast = [alpha.162 · W5 ข้อ 1]
 import { projectImageUrl } from './file-url.js';
+import { normalizeTitlePages, titlePageInnerHtml } from './sp-title-pages.js';   // [trial 2026-10-25 ข้อ 6ข]
 import { gi } from './icons.js';
 
 /**
@@ -42,7 +44,8 @@ const projectImg = (src) => projectImageUrl(state.root, src);
 import { exportNameRow } from './export-name-ui.js';
 import { errText, failText } from './err-text.js';        // [alpha.162 · W4] ข้อความผิดพลาดที่ผู้ใช้อ่านรู้เรื่อง
 export { EXPORT_FORMATS, formatDef, docKind, pdfEngine, defaultHubSettings, normalizeHub,
-         exportPageNumberFmt, defaultWorkflowFor, workflowForFormat, suggestName, proseNumberFont } from './export-formats.js';
+         exportPageNumberFmt, defaultWorkflowFor, workflowForFormat, suggestName, proseNumberFont,
+         coverBookLine, pdfColorMode } from './export-formats.js';
 
 // ═══════════════════════ ส่วน UI ═══════════════════════
 
@@ -82,8 +85,12 @@ async function buildModel(A, cfg, drafts) {
   const model = await A.buildDraftModel(d.dPath);
   // [alpha.81r2] "หน้าปกของนิยาย = รูปปกที่เลือกใน จัดการเล่ม" — เก็บไว้ที่ section.json → cover
   // (เก็บเป็น path สัมพัทธ์กับโฟลเดอร์เล่ม เช่น `../Images/ปก.png`)
+  // [trial 2026-10-25 ข้อ 6] + สวิตช์ "ใช้ภาพเต็มหน้า"/"มีหน้าปก" + บรรทัดบอกเล่ม (ปกเดิมมีแต่ชื่อโปรเจกต์)
+  const cover = await A.sectionCoverInfo(d.dPath);
+  const books = new Set(drafts.map((x) => String(x.dPath || '').replace(/[\\/]Draft[\\/][^\\/]+[\\/]?$/, ''))).size;
   return { model, kind: forced || docKind(model), dPath: d.dPath,
-           coverUrl: await A.sectionCoverUrl(d.dPath) };
+           coverUrl: cover.url, coverFull: !!(cover.full && cover.url), coverOn: cover.on !== false,
+           bookLine: coverBookLine(model.book, model.title, books), books };
 }
 
 /** ประกอบเนื้อหาผ่านเวิร์กโฟลว์ — คืนผลของ runWorkflow (มี text / ext / warnings) */
@@ -131,16 +138,35 @@ async function withFontCss(A, html) {
 }
 
 /**
+ * [trial 2026-10-25 ข้อ 6] รายการ "หน้าหน้าเล่ม" ของนิยาย — ชุดเดียวที่ PDF · DOCX · ช่องตัวอย่างอ่าน
+ * (กฎถาวรข้อ 5: ตัวอย่างกับไฟล์ต้องมาจากแหล่งเดียวกัน)
+ * @returns {{cover:null|{url:string,full:boolean,title:string,book:string,author:string},
+ *           titlePages:Array, roster:string}}
+ */
+function proseFront(cfg, built) {
+  const b = built || {};
+  const want = cfg.pdf.titlePages !== false;
+  const cover = want && b.coverOn !== false
+    ? { url: b.coverUrl || '', full: !!(b.coverFull && b.coverUrl), title: b.title || '',
+        book: b.bookLine || '', author: b.author || '' }
+    : null;
+  // หน้าปกที่ผู้ใช้ "บันทึกไว้" ในกล่องหน้าปกเท่านั้น (ค่าตั้งต้นของกล่องเป็นของบทภาพยนตร์ ไม่ใช่ของนิยาย)
+  const titlePages = want ? normalizeTitlePages((state.meta || {}).titlePages)
+    .filter((p) => p.strings.some((s) => String(s.text ?? '').trim() !== '')) : [];
+  const roster = cfg.pdf.roster !== false ? String(b.roster || '').trim() : '';
+  return { cover, titlePages, roster };
+}
+
+/**
  * [alpha.81r2] หน้าหน้าเล่มของ "นิยาย" — หน้าปก + หน้ารายชื่อตัวละคร
  *
  * ผู้ใช้สั่งไว้ชัด: **หน้าปกของนิยาย = รูปปกที่เลือกไว้ใน "จัดการเล่ม"** (บทภาพยนตร์ใช้หน้าปกของบท
  * ซึ่ง `buildScriptPdf` วาดให้อยู่แล้ว) · ทั้งสองหน้านี้เป็น "หน้าหน้าเล่ม" — ไม่นับเลขหน้า
  * @returns {Promise<string>} HTML (ว่าง = ไม่มีหน้าหน้าเล่มให้ทำ)
  */
-async function frontMatterHtml(A, cfg, model, coverUrl) {
-  const wantCover = cfg.pdf.titlePages !== false;
-  const roster = cfg.pdf.roster !== false ? String(model.roster || '').trim() : '';
-  if (!wantCover && !roster) return '';
+async function frontMatterHtml(A, cfg, model, built) {
+  const fr = proseFront(cfg, built);
+  if (!fr.cover && !fr.titlePages.length && !fr.roster) return '';
   const spf = A.spFormat();
   // [alpha.159 · M11] เครื่องหมายคำพูดต้องถูก escape ด้วย — ใช้ในแอตทริบิวต์ `src="…"` ของรูปปก
   // (ชื่อไฟล์รูป/ชื่อโฟลเดอร์ที่มี `"` เคยทำแท็กพัง → แทรกแอตทริบิวต์ลงหน้าปกได้)
@@ -148,12 +174,22 @@ async function frontMatterHtml(A, cfg, model, coverUrl) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const pages = [];
-  if (wantCover) {
+  const roster = fr.roster;
+  if (fr.cover && fr.cover.full) {
+    // [trial 2026-10-25 ข้อ 6ค] "ใช้ภาพเต็มหน้า" = รูปล้วนชนขอบกระดาษ (named page ไม่มีระยะขอบ — กฎ alpha.143)
+    pages.push(`<section class="k-front-bleed"><img class="k-cover-bleed" src="${esc(fr.cover.url)}" alt=""></section>`);
+  } else if (fr.cover) {
     pages.push('<section class="k-front k-cover">' +
-      (coverUrl ? `<img class="k-cover-img" src="${esc(coverUrl)}" alt="">` : '') +
-      `<div class="k-cover-title">${esc(model.title || '')}</div>` +
-      (model.author ? `<div class="k-cover-author">${esc(model.author)}</div>` : '') +
+      (fr.cover.url ? `<img class="k-cover-img" src="${esc(fr.cover.url)}" alt="">` : '') +
+      `<div class="k-cover-title">${esc(fr.cover.title)}</div>` +
+      (fr.cover.book ? `<div class="k-cover-book">${esc(fr.cover.book)}</div>` : '') +
+      (fr.cover.author ? `<div class="k-cover-author">${esc(fr.cover.author)}</div>` : '') +
       '</section>');
+  }
+  // [trial 2026-10-25 ข้อ 6ข] หน้าปกที่ผู้ใช้แต่งเองในกล่อง "หน้าปก (Title Pages)" — เดิมใช้ได้แต่บทภาพยนตร์
+  // (ชื่อผู้เขียนที่พิมพ์ในกล่องนั้นจึงไม่ไปถึง PDF ของนิยายเลย) · x/y เป็นนิ้วจากขอบกระดาษ → หน้าไม่มีระยะขอบ
+  if (fr.titlePages.length) {
+    for (const tp of fr.titlePages) pages.push(`<section class="k-front-tp">${titlePageInnerHtml(tp, spf)}</section>`);
   }
   if (roster) {
     pages.push('<section class="k-front k-cast"><pre class="k-cast-body">' +
@@ -178,6 +214,14 @@ async function frontMatterHtml(A, cfg, model, coverUrl) {
     '.k-cover-img{max-width:100%;max-height:62%;object-fit:contain;margin-bottom:.5in}',
     '.k-cover-title{font-size:2.1em;font-weight:700;line-height:1.25}',
     '.k-cover-author{font-size:1.15em;margin-top:.28in;opacity:.85}',
+    '.k-cover-book{font-size:1.35em;margin-top:.18in}',
+    // หน้าที่วางตามขอบกระดาษ (ปกเต็มหน้า · หน้าปกที่แต่งเอง) = named page ไม่มีระยะขอบ
+    '@page k-bleed{margin:0}',
+    `.k-front-bleed,.k-front-tp{page:k-bleed;position:relative;width:${spf.paper.width}in;height:${spf.paper.height}in;` +
+      'overflow:hidden;break-after:page;page-break-after:always}',
+    '.k-front-bleed:last-child,.k-front-tp:last-child{break-after:auto;page-break-after:auto}',
+    '.k-cover-bleed{display:block;width:100%;height:100%;object-fit:cover}',
+    '.k-front-tp .sp-tp-str{line-height:1.2}',
     '.k-cast{justify-content:flex-start;text-align:left;align-items:stretch}',
     '.k-cast-body{font-family:inherit;white-space:pre-wrap;margin:0;font-size:1em;line-height:1.6}',
   ].join('\n');
@@ -228,7 +272,7 @@ async function writeOut(A, cfg, built, nameOpts) {
         opts: { toc: o.toc, titlePages: titles.length > 0, headers: o.headers,
                 pageNumbers: o.pageNumbers !== false,
                 sceneNumbers: o.sceneNumbers !== false,
-                colorMode: o.colorMode === 'color' ? 'color' : 'mono',
+                colorMode: pdfColorMode(o, 'screenplay'),       // [trial 2026-10-25 ข้อ 13]
                 watermark: o.watermark, openPage: 0,
                 startPage: built.startPage || 1 },   // [alpha.159 · M9] ขอบเขตแท็บ = เลขหน้าของฉากนั้น
       });
@@ -284,6 +328,26 @@ async function buildEbookBytes(A, cfg, built) {
   const E = await import('./export-ebook.js');
   const { PAGE_BREAK } = await import('./compile.js');
   const JSZip = (await import('jszip')).default;
+  const lang0 = String((state.settings && state.settings.language) || 'th');
+  // [trial 2026-10-25 ข้อ 5] บทภาพยนตร์ → รูปแบบบทจริง (Courier · เยื้องตาม element · เลขหน้าแบบเดียวกับ PDF · หน้าปก)
+  if (cfg.format === 'docx' && built.kind === 'screenplay' && built.blocks) {
+    const { buildScreenplayDocx } = await import('./export-sp-docx.js');
+    const fmtS = exportPageNumberFmt(A.spFormat());
+    const spStack = String((state.settings && state.settings.spFontFamily) || '');
+    const pkgS = buildScreenplayDocx(built.blocks, {
+      title: built.title || '', author: (state.meta && state.meta.author) || '', fmt: fmtS,
+      titlePages: await scriptTitlePages(cfg, built, fmtS),
+      fontPt: num((state.settings || {}).spFontPt, 12),
+      font: firstRealFont(spStack) || 'Courier Prime', thaiFont: thaiFontOf(spStack),
+      language: lang0 === 'th' ? 'th-TH' : lang0,
+      pageNumbers: cfg.pdf.pageNumbers !== false, firstPageNumber: fmtS.pageNumbers.firstPage !== false,
+      suffix: fmtS.pageNumbers.suffix, startPage: built.startPage || 1,
+    });
+    const zipS = new JSZip();
+    for (const f of pkgS.files) zipS.file(f.path, f.data);
+    const bytesS = await zipS.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+    return { bytes: bytesS, note: ttf('ui.xhub.doneDocx', pkgS.paragraphs, 0), pkg: pkgS };
+  }
   const md = built.md || '';
   const images = new Map();
   for (const src of E.collectImageSrcs(md, { breakMarker: PAGE_BREAK })) {
@@ -294,6 +358,21 @@ async function buildEbookBytes(A, cfg, built) {
   }
   const lang = String((state.settings && state.settings.language) || 'th');
   const common = { title: built.title || '', author: built.author || '', breakMarker: PAGE_BREAK, images };
+  if (cfg.format === 'docx' && built.commentThreads && built.commentThreads.length) common.comments = built.commentThreads;
+  // [trial 2026-10-25 ข้อ 6ง] หน้าหน้าเล่มของ DOCX = ชุดเดียวกับ PDF ของนิยาย (ปก · หน้าปกที่แต่งเอง · รายชื่อตัวละคร)
+  if (cfg.format === 'docx') {
+    const fr = proseFront(cfg, built);
+    if (fr.cover || fr.titlePages.length || fr.roster) {
+      const { titlePageParas } = await import('./export-sp-docx.js');
+      if (fr.cover && fr.cover.url) {
+        const p = pathFromFileUrl(fr.cover.url);
+        try { if (p) images.set(fr.cover.url, new Uint8Array(await kapi.readBytes(p))); }
+        catch (e) { log('warn', tt('ui.xhub.ebookImgFail') + fr.cover.url, e); }
+      }
+      common.front = { cover: fr.cover ? { ...fr.cover, src: fr.cover.url } : null, roster: fr.roster,
+                       titleParas: fr.titlePages.length ? titlePageParas(fr.titlePages, A.spFormat()) : [] };
+    }
+  }
   let pkg;
   if (cfg.format === 'epub') {
     const uuid = (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID()
@@ -304,7 +383,7 @@ async function buildEbookBytes(A, cfg, built) {
     // [alpha.160 · P1-10] ตัวแรกของสแตกคือวงศ์สังเคราะห์ `K2 Lang` (withLangFamily ใส่นำ) ที่ Word ไม่มี
     // → Word แทนฟอนต์เอง · ข้ามวงศ์ของโปรแกรม/ตระกูลทั่วไปของ CSS ไปหาชื่อฟอนต์จริงตัวแรก
     const font = firstRealFont(liveProseFonts().fontStack) || 'Tahoma';
-    pkg = E.buildDocx(md, { ...common, font, fontPt: num(A.proseFormat().fontPt, 16),
+    pkg = E.buildDocx(md, { ...common, font, thaiFont: thaiFontOf(liveProseFonts().fontStack), fontPt: num(A.proseFormat().fontPt, 16),
                             paper: spf.paper, margins: spf.margins,
                             language: lang === 'th' ? 'th-TH' : lang });
   }
@@ -312,7 +391,8 @@ async function buildEbookBytes(A, cfg, built) {
   for (const f of pkg.files) zip.file(f.path, f.data, f.store ? { compression: 'STORE' } : {});
   const bytes = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
   const note = cfg.format === 'epub' ? ttf('ui.xhub.doneEpub', pkg.sections, pkg.images)
-                                     : ttf('ui.xhub.doneDocx', pkg.paragraphs, pkg.images);
+                                     : ttf('ui.xhub.doneDocx', pkg.paragraphs, pkg.images)
+                                       + (pkg.comments ? ' · ' + ttf('ui.xhub.doneDocxComments', pkg.comments) : '');
   return { bytes, note, pkg };
 }
 
@@ -324,6 +404,25 @@ async function buildAll(A, cfg, drafts) {
   const mk = await buildModel(A, cfg, drafts);
   if (!mk) return null;
   const { model, kind } = mk;
+  // [alpha.170 · คอมเมนต์ไปกลับกับ Word] DOCX + "แนบคอมเมนต์": ล้อมข้อความที่คอมเมนต์ผูกไว้ด้วยเครื่องหมาย
+  // ก่อนเข้าเวิร์กโฟลว์ → buildDocx แปลงเป็นช่วงคอมเมนต์ของ Word · ไฟล์ฉากไม่ถูกแตะ (แก้แค่สำเนาในโมเดล)
+  const commentThreads = [];
+  // [trial 2026-10-25 ข้อ 5] DOCX ของบทภาพยนตร์ประกอบจากบล็อกของตัวอ่านบท (export-sp-docx.js) ไม่ใช่จากมาร์กดาวน์
+  const spDocx = cfg.format === 'docx' && kind === 'screenplay';
+  if (cfg.format === 'docx' && !spDocx && cfg.docx && cfg.docx.comments) {
+    const { markSceneComments } = await import('./comments/docx-comments.js');
+    const { parseComments, stripComments } = await import('./comments/comment-core.js');
+    for (const ch of model.chapters || []) {
+      for (const sc of ch.scenes || []) {
+        let raw = sc.body || '';
+        // ขอบเขต "แท็บที่เปิด" ได้เนื้อจากตัวแก้ไข (ไม่มีบล็อกคอมเมนต์) → อ่านเธรดจากไฟล์
+        let list = parseComments(raw);
+        if (!list.length && sc.file) { try { list = parseComments(await kapi.readFile(sc.file)); } catch { list = []; } }
+        if (!list.length) continue;
+        sc.body = markSceneComments(stripComments(raw), list, commentThreads, { scene: sc.file || '' });
+      }
+    }
+  }
   const wf = A.allWorkflows().find((w) => w.id === cfg.workflow)
           || defaultWorkflowFor(cfg.format, A.allWorkflows(), kind);
   // [alpha.81r2] หน้าปก/หน้ารายชื่อ คุมจาก "ตัวเลือก PDF" ในกล่องนี้ — ไม่ใช่จากเวิร์กโฟลว์
@@ -335,7 +434,7 @@ async function buildAll(A, cfg, drafts) {
   // [alpha.133 · Y-3] PDF ของนิยาย = md → HTML → PDF · ผลของเวิร์กโฟลว์จึงยังเป็นมาร์กดาวน์
   // ที่ต้องถูกตีความต่ออีกก้าว (ต่างจาก .md/.txt/.rtf ที่จบเป็นข้อความแบนตรงนั้นเลย)
   // [alpha.156] EPUB/DOCX ก็ตีความมาร์กดาวน์ต่ออีกก้าว (md.js) — ต้องเก็บคอมเมนต์จัดหน้า/ตัวคั่นหน้าไว้เหมือนกัน
-  const isEbook = cfg.format === 'epub' || cfg.format === 'docx';
+  const isEbook = cfg.format === 'epub' || (cfg.format === 'docx' && !spDocx);
   // [alpha.169 · bug hunt] RTF ของ "นิยาย" ประกอบจากมาร์กดาวน์ (generateProseRtf) เหมือน DOCX —
   // เดิมนิยายถูกส่งเข้าตัวอ่านบทภาพยนตร์ → ย่อหน้าสั้น ๆ กลายเป็นชื่อตัวละคร/บทพูด รูปแบบตัวอักษรหายหมด
   const proseRtf = cfg.format === 'rtf' && kind !== 'screenplay';
@@ -346,12 +445,15 @@ async function buildAll(A, cfg, drafts) {
   // [alpha.81r ข้อ 4] ทางที่ผ่าน `parseScript` (PDF บทหนัง · rtf · fdx) พาร์เซอร์กินรหัสไปแล้ว
   // ทางที่เหลือเป็น Markdown ล้วน ๆ ต้องตัดรหัส fountain (`@ชื่อ` `.หัวฉาก` `((โน้ต))`) เองที่นี่
   // ไม่งั้นมันติดไปในไฟล์ที่ส่งให้คนอ่าน ทั้งที่บนจอถูกซ่อนไว้ตลอด
-  const viaScript = (cfg.format === 'rtf' && !proseRtf) || cfg.format === 'fdx' ||
+  const viaScript = (cfg.format === 'rtf' && !proseRtf) || cfg.format === 'fdx' || spDocx ||
                     (cfg.format === 'pdf' && engine === 'pdflib');
   const text = (viaScript || r.ext === 'html') ? r.text : stripFountainCodes(r.text);
   const out = { title: model.title, kind, warnings: r.warnings || [],
                 text, html: '', frontHtml: '', roster: model.roster || '',
-                coverUrl: mk.coverUrl || '', engine, blocks: null, startPage: mk.startPage || 1 };
+                coverUrl: mk.coverUrl || '', coverFull: !!mk.coverFull, coverOn: mk.coverOn !== false,
+                bookLine: mk.bookLine || '', author: model.author || '',
+                book: model.book || '', books: mk.books || 1, scope: cfg.scope,
+                engine, blocks: null, startPage: mk.startPage || 1 };
 
   // == [alpha.132] * ปลายทาง HTML ถูกแปลง **สองรอบ** มาตลอด ==
   //
@@ -373,23 +475,25 @@ async function buildAll(A, cfg, drafts) {
   }
   if (cfg.format === 'pdf' && engine === 'html') {
     // [alpha.132r] นิยายเคย **ไม่สนโหมดสีเลย** (ตัวเลือกมีให้กด แต่ไม่มีใครอ่านค่า)
-    out.html = await proseHtml(A, text, model.title, true, cfg.pdf.colorMode !== 'color');
-    out.frontHtml = await frontMatterHtml(A, cfg, model, mk.coverUrl || '');
+    out.html = await proseHtml(A, text, model.title, true, pdfColorMode(cfg.pdf, 'prose') !== 'color');
+    out.frontHtml = await frontMatterHtml(A, cfg, model, out);
   }
   // [alpha.160 · P1-6] RTF/FDX: ตัวขึ้นหน้าใหม่ (form-feed) → องค์ประกอบ "ขึ้นหน้าใหม่" ของบท (`---`)
   // เดิม `parseScript` เห็นบรรทัด form-feed เป็นบรรทัดว่าง (trim แล้วว่าง) → เส้นขึ้นหน้าหายตั้งแต่ก่อนถึงตัวสร้างไฟล์
-  const scriptSrc = (cfg.format === 'rtf' || cfg.format === 'fdx')
+  const scriptSrc = (cfg.format === 'rtf' || cfg.format === 'fdx' || spDocx)
     ? r.text.replace(/[ \t]*\f[ \t]*/g, '\n\n---\n\n') : r.text;
   if (viaScript) out.blocks = parseScript(scriptSrc);
   // [alpha.124 ข้อ 26] ช่องตัวอย่างต้องอ่านออก — RTF/FDX เป็น markup ของเครื่อง (`{\\rtf1…`,
   // `<Paragraph Type=…>`) ที่ผู้ใช้อ่านไม่รู้เรื่องเลยว่าเนื้อในถูกไหม · เก็บ "บทฉบับข้อความ"
   // ไว้ต่างหากให้ตัววาดพรีวิวใช้ ส่วน `out.text` ยังเป็นตัวจริงที่เขียนลงไฟล์เหมือนเดิม
-  if (cfg.format === 'rtf' || cfg.format === 'fdx') out.preview = proseRtf ? text.replace(/<!--[\s\S]*?-->/g, '') : text;
+  if (cfg.format === 'rtf' || cfg.format === 'fdx' || spDocx) out.preview = proseRtf ? text.replace(/<!--[\s\S]*?-->/g, '') : text;
   if (isEbook) {
     // ตัวจริงของไฟล์คือแพ็กเกจซิปที่ประกอบตอนบันทึก (writeOut) · ช่องตัวอย่างโชว์เนื้อที่จะเข้าไปในเล่ม
     out.md = text;
     out.author = model.author || '';
-    out.preview = text.replace(/<!--[\s\S]*?-->/g, '');
+    out.commentThreads = commentThreads;
+    const { stripMarks } = await import('./comments/docx-comments.js');
+    out.preview = stripMarks(text).replace(/<!--[\s\S]*?-->/g, '');
   }
   if (proseRtf) {
     const { generateProseRtf } = await import('./export-rtf.js');
@@ -463,9 +567,9 @@ function renderScriptTitlePreview(box, titles, fmtS, scale, innerHtml) {
 }
 
 function renderFrontPreview(box, built, cfg, paper, scale, look = {}) {
-  const wantCover = cfg.pdf.titlePages !== false;
-  const roster = cfg.pdf.roster !== false ? String(built.roster || '').trim() : '';
-  if (!wantCover && !roster) return 0;
+  const fr = proseFront(cfg, built);                // [trial 2026-10-25 ข้อ 6] ชุดเดียวกับ frontMatterHtml()
+  const roster = fr.roster;
+  if (!fr.cover && !fr.titlePages.length && !roster) return 0;
   // ตัววาดหน้าเนื้อเรื่อง (`renderPageView`) ล้าง host ทิ้งก่อนเสมอ → ต้องเรียกตัวนี้ **ทีหลัง**
   // แล้วแทรกไว้ข้างหน้า ไม่งั้นหน้าหน้าเล่มถูกล้างหายไปทุกครั้ง
   const frag = document.createDocumentFragment();
@@ -485,11 +589,22 @@ function renderFrontPreview(box, built, cfg, paper, scale, look = {}) {
     return page;
   };
   let n = 0;
-  if (wantCover) {
+  if (fr.cover && fr.cover.full) {
+    const p = mkPage('xhub-front-cover xhub-front-bleed');
+    const img = el('img', 'xhub-front-bleed-img'); img.src = fr.cover.url; p.append(img);
+    n++;
+  } else if (fr.cover) {
     const p = mkPage('xhub-front-cover');
-    if (built.coverUrl) { const img = el('img', 'xhub-front-img'); img.src = built.coverUrl; p.append(img); }
-    p.append(el('div', 'xhub-front-title', built.title || ''));
-    if (built.author) p.append(el('div', 'xhub-front-author', built.author));
+    if (fr.cover.url) { const img = el('img', 'xhub-front-img'); img.src = fr.cover.url; p.append(img); }
+    p.append(el('div', 'xhub-front-title', fr.cover.title));
+    if (fr.cover.book) p.append(el('div', 'xhub-front-book', fr.cover.book));
+    if (fr.cover.author) p.append(el('div', 'xhub-front-author', fr.cover.author));
+    n++;
+  }
+  for (const tp of fr.titlePages) {
+    const p = mkPage('xhub-front-tp');
+    p.style.padding = '0';
+    p.innerHTML = titlePageInnerHtml(tp, look.fmt);   // ข้อความ escape แล้วใน sp-title-pages (ตัวเดียวกับไฟล์จริง)
     n++;
   }
   if (roster) { mkPage('xhub-front-cast').append(el('pre', 'xhub-front-cast-body', roster)); n++; }
@@ -564,7 +679,7 @@ async function renderPreview(host, A, cfg, built) {
       // ตัวอย่างยังขาวดำอยู่ ผู้ใช้เลยไม่มีทางรู้ว่าสวิตช์ทำงานหรือเปล่า
       const { pdfElementColor } = await import('./pdf-generator.js');
       const colorOf = (elName) => {
-        const c = pdfElementColor(elName, cfg.pdf.colorMode);
+        const c = pdfElementColor(elName, pdfColorMode(cfg.pdf, 'screenplay'));
         return c ? 'rgb(' + c.map((x) => Math.round(x * 255)).join(',') + ')' : '';
       };
       const { projectHeaders, pdfMeta } = await import('./pdf-ui.js');
@@ -600,7 +715,7 @@ async function renderPreview(host, A, cfg, built) {
       const { mdToHtmlBody } = await import('./compile.js');
       const { proseExportCss, mergeProseFormat } = await import('./prose-format.js');
       const pf = A.proseFormat();
-      const mono = cfg.pdf.colorMode !== 'color';
+      const mono = pdfColorMode(cfg.pdf, 'prose') !== 'color';
       const css = proseExportCss(mergeProseFormat(pf), fmt.paper, fmt.margins,
                                  liveProseFonts())
         // โหมดขาวดำ — กฎชุดเดียวกับที่ `mdToHtml()` ต่อท้ายให้ไฟล์จริง
@@ -628,7 +743,7 @@ async function renderPreview(host, A, cfg, built) {
       const pf2 = A.proseFormat();
       const { proseFontStack } = await import('./prose-format.js');
       renderFrontPreview(box, built, cfg, fmt.paper, fs.scale,
-                         { stack: withThaiFallback(liveProseFonts().fontStack || proseFontStack(pf2)), pt: num(pf2.fontPt, 12) });
+                         { stack: withThaiFallback(liveProseFonts().fontStack || proseFontStack(pf2)), pt: num(pf2.fontPt, 12), fmt });
     }
     return 'page';
   }
@@ -687,7 +802,11 @@ export async function openExportHub() {
   });
   box.append(nameRow.node);
   // บริบทของโค้ดสั้นต้องอ่านสถิติจากดิสก์ — โหลดทีหลังแล้วค่อยรีเฟรชช่องตัวอย่าง
-  A.liveShortcodeContext().then((c) => nameRow.setCtx(c))
+  // [trial 2026-10-25 ข้อ 19] [title]/[book] ตามของที่ส่งออกจริง (ฉาก · เล่ม) — ทับบริบททุกครั้งที่ประกอบใหม่
+  let baseCtx = {};
+  const syncNameCtx = () => nameRow.setCtx(built ? { ...baseCtx, ...exportNameFields(built.scope, {
+    title: built.title, project: state.title || '', book: built.book, books: built.books }) } : baseCtx);
+  A.liveShortcodeContext().then((c) => { baseCtx = c || {}; syncNameCtx(); })
     .catch((e) => log('warn', tt('ui.xname.ctxFail'), e));
 
   const foot = el('div', 'k-dlg-btns');
@@ -742,6 +861,14 @@ export async function openExportHub() {
     r.append(node, el('span', 'xhub-row-lbl', label));
     if (hint) r.append(el('span', 'dim xhub-row-hint', hint));
     return r;
+  };
+  // [trial 2026-10-25 ข้อ 25] "ใส่เลขบนหน้าแรกด้วย" — ค่าเดียวของโปรเจกต์ (ตัวเดียวกับ ตั้งค่า → เลขหน้า)
+  // ไม่ใช่ค่าของกล่องนี้ จึงไม่มีสองค่าให้ซิงก์กัน · ปิด = หน้าที่เลขจริงเป็น 1 ไม่มีเลข (ธรรมเนียมฮอลลีวูด)
+  const firstPageRow = () => {
+    const c = chk(exportPageNumberFmt(A.spFormat()).pageNumbers.firstPage !== false);
+    c.id = 'xhub-first-page';
+    c.onchange = () => { A.setFirstPageNumber(c.checked); refresh(); };
+    return optRow(tt('ui.setTpl.putNumTopPage'), c, ttf('ui.xhub.firstPageHint', tt('ui.setTpl.tabPageNum')));
   };
 
   // [alpha.164 ข้อ A5] ชนิดที่ "ตามไฟล์ต้นทาง" ตัดสินได้จริง (รู้หลังสร้างตัวอย่างรอบแรก) — ตัวเลือกเฉพาะบทต้องดูค่านี้
@@ -817,6 +944,7 @@ export async function openExportHub() {
       if (kind0 !== 'prose' || hasRoster) mk('roster', 'ui.xhub.pdfRoster');
       if (kind0 !== 'prose') mk('headers', 'ui.xhub.pdfHeaders');
       mk('pageNumbers', 'ui.xhub.pdfNums');
+      colOpt.append(firstPageRow());
       // [alpha.132 ข้อ 3] เลขฉากเป็นของบทภาพยนตร์เท่านั้น — บังคับชนิดเป็นนิยายแล้วซ่อนไป
       // [alpha.164 ข้อ A5] "ตามไฟล์ต้นทาง" ที่ตัดสินได้เป็นนิยาย ก็ต้องซ่อนด้วย (เดิมเช็คแค่ค่าที่บังคับ)
       const kindNow = cfg.kind === 'auto' ? autoKind : cfg.kind;
@@ -827,10 +955,11 @@ export async function openExportHub() {
       for (const [v, lb] of [['mono', tt('ui.pdf.colorModeMono')], ['color', tt('ui.pdf.colorModeColor')]]) {
         const o2 = el('option', null, lb); o2.value = v; selCol.append(o2);
       }
-      selCol.value = cfg.pdf.colorMode === 'color' ? 'color' : 'mono';
+      selCol.value = pdfColorMode(cfg.pdf, kindNow);    // [trial 2026-10-25 ข้อ 13] ยังไม่เลือกเอง = ตามชนิดเอกสาร
       selCol.onchange = () => { cfg.pdf.colorMode = selCol.value; saveCfg(); refresh(); };
       colOpt.append(el('div', 'xhub-row-lbl', tt('ui.pdf.colorMode')), selCol);
       if (kindNow !== 'prose') colOpt.append(el('div', 'k-hint', tt('ui.pdf.colorModeHint')));
+      else if (selCol.value === 'mono') colOpt.append(el('div', 'k-hint', tt('ui.xhub.monoGreyImages')));
       const wm = el('input', 'k-dlg-input'); wm.id = 'xhub-wm';
       wm.value = cfg.pdf.watermark; wm.placeholder = tt('ui.xhub.pdfWmHint');
       wm.onchange = () => { cfg.pdf.watermark = wm.value.trim(); saveCfg(); refresh(); };
@@ -845,6 +974,15 @@ export async function openExportHub() {
     }
     if (cfg.format === 'epub' || cfg.format === 'docx') {
       colOpt.append(el('div', 'k-hint', tt(cfg.format === 'epub' ? 'ui.xhub.epubHint' : 'ui.xhub.docxHint')));
+    }
+    // DOCX ของบทภาพยนตร์มีเลขหน้า (export-sp-docx) — สวิตช์หน้าแรกตัวเดียวกับ PDF
+    if (cfg.format === 'docx' && (cfg.kind === 'auto' ? autoKind : cfg.kind) === 'screenplay') colOpt.append(firstPageRow());
+    // [alpha.170 · คอมเมนต์ไปกลับกับ Word] ส่งไฟล์ให้ บก. พร้อมคอมเมนต์ · คำตอบนำกลับด้วย "รับคอมเมนต์จากไฟล์ Word"
+    if (cfg.format === 'docx') {
+      const c = chk(cfg.docx && cfg.docx.comments);
+      c.id = 'xhub-docx-comments';
+      c.onchange = () => { cfg.docx = { ...(cfg.docx || {}), comments: c.checked }; saveCfg(); refresh(); };
+      colOpt.append(optRow(tt('ui.xhub.docxComments'), c, tt('ui.xhub.docxCommentsHint')));
     }
     if (cfg.format === 'rtf') {
       colOpt.append(el('div', 'cmp-sub', tt('ui.xhub.rtfOpts')));
@@ -870,6 +1008,7 @@ export async function openExportHub() {
       const r = await buildAll(A, cfg, drafts);
       if (gen !== job) return;                       // มีรอบใหม่แซงแล้ว — ทิ้งผลรอบนี้
       built = r;
+      syncNameCtx();
       const hr = !!(r && String(r.roster || '').trim());
       if ((cfg.kind === 'auto' && r && r.kind !== autoKind) || hr !== hasRoster) {
         if (cfg.kind === 'auto' && r) autoKind = r.kind;

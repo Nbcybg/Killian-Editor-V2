@@ -155,8 +155,10 @@ export function describeHttpError(e = {}) {
     const kind = badRequestKind(srvMsg || rawBody);
     if (kind === 'header') {
       code = 'http-' + status + '-header';
-      reason = t('ui.aiError.missingHeader');
-      hints = [t('ui.aiError.missingHeaderHint')];
+      // [trial 2026-10-25 ข้อ 12] บอกชื่อ header ที่เซิร์ฟเวอร์ขอ (เดิมบอกแค่ "ขาด header" — ผู้ใช้ไม่มีทางรู้ว่าต้องใส่อะไร)
+      const hn = headerNameOf(srvMsg || rawBody);
+      reason = hn ? tf('ui.aiError.missingHeaderNamed', hn) : t('ui.aiError.missingHeader');
+      hints = [hn ? tf('ui.aiError.missingHeaderNamedHint', hn) : t('ui.aiError.missingHeaderHint')];
     } else if (kind === 'protocol') {
       code = 'http-' + status + '-protocol';
       reason = t('ui.aiError.wrongProtocol');
@@ -200,6 +202,18 @@ export function badRequestKind(message) {
   if (/\bmissing\b[^.]*\b(header|x-[a-z0-9-]+)\b|\b(header|x-[a-z0-9-]+)\b[^.]*\b(missing|required)\b/i.test(s)) return 'header';
   if (/does not support (this )?(protocol|endpoint|api)|unsupported (protocol|endpoint)|not supported (on|by|for) (this|the) (endpoint|protocol|api)|use the (messages|responses|chat) api/i.test(s)) return 'protocol';
   return '';
+}
+
+/**
+ * [trial 2026-10-25 ข้อ 12] ชื่อ header ในข้อความของเซิร์ฟเวอร์ (`MissingSessionID: x-opencode-session` → x-opencode-session)
+ * @returns {string} '' = หาไม่เจอ
+ */
+export function headerNameOf(message) {
+  const s = String(message || '');
+  const m = /\b(x-[a-z0-9][a-z0-9-]*[a-z0-9])\b/i.exec(s)
+         || /["'`]([A-Za-z][A-Za-z0-9-]{2,})["'`]\s+header/i.exec(s)
+         || /header\s+["'`]?([A-Za-z][A-Za-z0-9-]*-[A-Za-z0-9-]+)/i.exec(s);
+  return m ? m[1] : '';
 }
 
 /** บรรทัดเดียวสำหรับแถบสถานะ/บันทึก (ไม่มีขึ้นบรรทัดใหม่) */

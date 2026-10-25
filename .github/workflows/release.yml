@@ -9,7 +9,8 @@
 #   ชื่อไฟล์มาจาก build.*.artifactName ใน package.json — ปุ่มดาวน์โหลดใน README ชี้ชื่อเหล่านี้ตรง ๆ
 #   ตัวอัปเดตในโปรแกรมเลือกไฟล์จากชื่อเดียวกัน (src/update/update-check.js → pickAsset)
 #
-# ยังไม่เซ็น/ไม่ notarize (ไม่มีใบรับรอง) — README บอกวิธีเปิดครั้งแรกของแต่ละระบบไว้แล้ว
+# [alpha.170 · ข้อ 4] ลงนาม/notarize อัตโนมัติ **เมื่อรีโปมี secrets** (macOS: Developer ID · Windows: SignPath หรือ Azure Artifact Signing)
+#   ไม่มี secrets = ไม่ลงนามเหมือนเดิม — วิธีตั้งค่าทั้งหมดอยู่ docs/signing.md · แนบ SHA256SUMS-<ระบบ>.txt ทุกรอบ
 # ไม่มีข้อความจากผู้ใช้ถูกนำไปรันเป็นคำสั่ง — ใช้แค่ชื่อ tag ของรีโปเอง
 name: release
 
@@ -58,13 +59,19 @@ jobs:
           - os: windows-latest
             target: --win portable --x64
             files: dist/*.exe
+            pattern: '*.exe'
           - os: macos-latest
             target: --mac dmg --x64 --arm64
             files: dist/*.dmg
+            pattern: '*.dmg'
           - os: ubuntu-latest
             target: --linux AppImage --x64
             files: dist/*.AppImage
+            pattern: '*.AppImage'
     runs-on: ${{ matrix.os }}
+    env:
+      # [alpha.170 · ข้อ 4] ลงนาม Windows ทาง SignPath เมื่อมี secret เท่านั้น (ไม่มี = ไม่ลงนาม เหมือนเดิม)
+      HAS_SIGNPATH: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -80,12 +87,80 @@ jobs:
       - name: Package
         shell: bash
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npx electron-builder ${{ matrix.target }} --publish never
+          # [alpha.170 · ข้อ 4] ค่าการลงนามทุกตัวมาจาก secrets/vars ของรีโป — ตัวไหนไม่ได้ตั้ง = สตริงว่าง
+          # = build/electron-builder.config.cjs ไม่เปิดการลงนามของระบบนั้น (docs/signing.md)
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ (runner.os == 'macOS' && secrets.MAC_CERT_P12_BASE64 != '') && 'true' || 'false' }}
+          CSC_LINK: ${{ runner.os == 'macOS' && secrets.MAC_CERT_P12_BASE64 || '' }}
+          CSC_KEY_PASSWORD: ${{ runner.os == 'macOS' && secrets.MAC_CERT_PASSWORD || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          AZURE_TENANT_ID: ${{ runner.os == 'Windows' && secrets.AZURE_TENANT_ID || '' }}
+          AZURE_CLIENT_ID: ${{ runner.os == 'Windows' && secrets.AZURE_CLIENT_ID || '' }}
+          AZURE_CLIENT_SECRET: ${{ runner.os == 'Windows' && secrets.AZURE_CLIENT_SECRET || '' }}
+          K2_AZURE_ENDPOINT: ${{ vars.K2_AZURE_ENDPOINT }}
+          K2_AZURE_ACCOUNT: ${{ vars.K2_AZURE_ACCOUNT }}
+          K2_AZURE_PROFILE: ${{ vars.K2_AZURE_PROFILE }}
+          K2_AZURE_PUBLISHER: ${{ vars.K2_AZURE_PUBLISHER }}
+        run: npx electron-builder ${{ matrix.target }} --publish never --config build/electron-builder.config.cjs
+      # ── [alpha.170 · ข้อ 4] Windows ทาง SignPath Foundation (ฟรีสำหรับโอเพนซอร์ส) — ลงนามไฟล์ที่ build แล้ว ──
+      - name: Upload the unsigned exe for SignPath
+        if: runner.os == 'Windows' && env.HAS_SIGNPATH == 'true'
+        id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-windows
+          path: dist/*.exe
+          if-no-files-found: error
+      - name: Sign with SignPath
+        if: runner.os == 'Windows' && env.HAS_SIGNPATH == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: dist-signed
+      - name: Use the signed exe
+        if: runner.os == 'Windows' && env.HAS_SIGNPATH == 'true'
+        shell: bash
+        run: |
+          ls -la dist-signed
+          cp -f dist-signed/*.exe dist/
+      # ── บอกสถานะลายเซ็นในบันทึกของ Actions (ไม่ลงนาม = เห็นว่า NotSigned · ไม่ทำให้ล้ม) ──
+      - name: Signature status (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Get-ChildItem dist/*.exe | ForEach-Object {
+            $s = Get-AuthenticodeSignature $_.FullName
+            "{0} -> {1} {2}" -f $_.Name, $s.Status, $s.SignerCertificate.Subject
+          }
+      - name: Signature status (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          for a in dist/mac*/*.app; do
+            echo "== $a"
+            codesign -dv --verbose=2 "$a" 2>&1 | grep -E 'Authority|TeamIdentifier|Signature' || echo 'not signed'
+            spctl -a -vv "$a" 2>&1 || true
+          done
+      # ── [alpha.170 · ข้อ 4] SHA-256 ของทุกไฟล์ — ผู้ใช้ตรวจได้ว่าไฟล์ที่โหลดมาตรงกับที่ Actions สร้าง ──
+      - name: Checksums
+        shell: bash
+        run: |
+          cd dist
+          for f in ${{ matrix.pattern }}; do
+            if command -v sha256sum >/dev/null 2>&1; then sha256sum "$f"; else shasum -a 256 "$f"; fi
+          done > "SHA256SUMS-${RUNNER_OS}.txt"
+          cat "SHA256SUMS-${RUNNER_OS}.txt"
       - name: Attach to the release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ls -la dist
-          gh release upload "$TAG" ${{ matrix.files }} --clobber
+          gh release upload "$TAG" ${{ matrix.files }} dist/SHA256SUMS-*.txt --clobber

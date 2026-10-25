@@ -518,9 +518,25 @@ export function createProjectCard(project, onOpen) {
  *   ทั้งโปรแกรมข้างหลังถูกซ่อน (`body.k-home-only`) · ปิดหน้าแรกทางไหนก็ตาม (เปิดโปรเจกต์ · สร้างใหม่ ·
  *   ปุ่มปิด · Esc) = โปรแกรมโผล่ · เปิดหน้าแรกจากเมนูทีหลัง = กล่องทับโปรแกรมแบบเดิม
  */
+/**
+ * [alpha.170] หน้าแรกที่เปิดเป็นกล่องอยู่ตอนนี้ — `closeHomeDialogs()` ปิดทุกใบเมื่อโปรเจกต์ถูกเปิด "จากทางไหนก็ตาม"
+ * (เดิมปิดเฉพาะเมื่อเปิดจากปุ่มบนหน้าแรกเอง · เปิดจากเมนู ไฟล์ → เปิดโปรเจกต์ / ลากโฟลเดอร์ใส่ / โปรเจกต์ล่าสุด
+ * = หน้าแรกค้างทับ แล้วกล่องที่เปิดตามมา (นำเข้า · ส่งออก …) ไปอยู่ใต้หน้าแรกจนมองไม่เห็น — เจอตอนลองแอปจริง)
+ */
+const HOME_OVS = new Set();
+export function closeHomeDialogs() {
+  let n = 0;
+  for (const ov of [...HOME_OVS]) { try { ov.remove(); n++; } catch {} }
+  HOME_OVS.clear();
+  return n;
+}
+
 export async function showHomeDialog(opts = {}) {
   const ov = el('div', 'k-overlay' + (opts.startup ? ' k-home-startup' : ''));
-  ov.style.zIndex = '90';
+  // [trial 2026-10-25 ข้อ 1] ★ ชั้นเดียวกับกล่องอื่น (80) — ลำดับใน DOM ตัดสินว่าใบไหนอยู่บน
+  // เดิม 90 ตายตัว: กล่องที่เปิดจากหน้าแรก (เลือกแบบตั้งต้น · ถามชื่อโปรเจกต์) ไปอยู่ "หลัง" หน้าแรก
+  // มองไม่เห็นเลย = ผู้ใช้ใหม่กด "สร้างโปรเจกต์ใหม่" แล้วเหมือนปุ่มไม่ทำงาน
+  ov.classList.add('k-home-ov');
   if (opts.startup) {
     document.body.classList.add('k-home-only');
     const rawRemove = ov.remove.bind(ov);
@@ -558,7 +574,8 @@ export async function showHomeDialog(opts = {}) {
   document.addEventListener('keydown', onEsc);
   const offEsc = () => document.removeEventListener('keydown', onEsc);
   const removeOv = ov.remove.bind(ov);
-  ov.remove = () => { try { offEsc(); } catch {} removeOv(); };
+  ov.remove = () => { try { offEsc(); } catch {} HOME_OVS.delete(ov); removeOv(); };
+  HOME_OVS.add(ov);
 
   // บั๊ก #12: ขนาดต้อง "นิ่ง" — มุมมองที่เลือกไว้ถูกคืนสถานะโดย buildHomeActions แล้ว
   const thumb = Math.max(120, Math.min(400, parseInt(state.settings?.homeThumb, 10) || 190));

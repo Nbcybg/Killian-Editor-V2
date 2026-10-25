@@ -10,7 +10,7 @@
 
 | | Minimum | Recommended |
 |---|---|---|
-| Operating system | Windows 10 64-bit · macOS 12 Monterey (Intel x64, or Apple Silicon through Rosetta 2) · Linux x64 | Windows 10/11 64-bit · macOS 14 or later · a current Linux |
+| Operating system | Windows 10 64-bit · macOS 12 Monterey (Intel x64 or Apple Silicon) · Linux x64 | Windows 10/11 64-bit · macOS 14 or later · a current Linux |
 | CPU | 2 cores, ~2 GHz | 4 cores or more |
 | RAM | 4 GB | 8 GB (large projects · many panels open at once) |
 | Disk space | ~500 MB free on Windows, ~600 MB on macOS, plus room for your work | SSD · 2 GB free or more |
@@ -37,11 +37,11 @@ Things to know about the portable build:
 - **Your user settings are not kept next to the `.exe`.** They live in `%APPDATA%\Killian 2\` (see [1.7](#17-where-the-app-keeps-its-data)). Moving the `.exe` to another machine therefore gives you a clean app — while **your writing lives in the project folder**, which you can move anywhere.
 - To uninstall, delete the `.exe` (and delete `%APPDATA%\Killian 2\` if you also want to clear your settings).
 
-### macOS — `.dmg` (Intel x64)
+### macOS — `.dmg` (Intel x64 · Apple Silicon arm64)
 
-1. Open the `.dmg` (about 143 MB) and drag the app icon into Applications. The app takes about 330 MB there.
+1. Download the `.dmg` that matches your Mac — `mac-arm64` for Apple Silicon (M1 and later), `mac-x64` for Intel (**Apple menu → About This Mac** tells you which). Open it and drag the app icon into Applications. The Intel `.dmg` is about 143 MB and the app takes about 330 MB in Applications.
 2. The app is **not code-signed yet**. The first time, right-click the icon → **Open** → **Open** again. If macOS still refuses, run `xattr -cr "/Applications/Killian 2.app"` once in Terminal.
-3. Apple Silicon machines (M1 and later) run it through Rosetta 2 — there is no ARM build yet.
+3. The figures in the table below were measured with the Intel build.
 
 | macOS | |
 |---|---|
@@ -54,7 +54,9 @@ Things to know about the portable build:
 
 ### Linux
 
-There is no packaged build yet — run it from source:
+Download the `linux-x64.AppImage`, make it executable with `chmod +x`, and run it. Some distributions need `libfuse2` for AppImages.
+
+Or run it from source:
 
 ```bash
 git clone https://github.com/Nbcybg/Killian-Editor-V2.git
@@ -63,6 +65,22 @@ npm install
 npm run build
 npm start
 ```
+
+### Why Windows or macOS warns you — and how to check the file
+
+The warning appears because the app is **not code-signed yet**: Windows and macOS have no publisher certificate to show, so they say "unknown publisher" (Windows SmartScreen) or that the app "cannot be checked" (macOS Gatekeeper). It is not a virus report. Signing is being prepared — the release pipeline signs automatically once the certificates are in place — and these steps will no longer be needed then.
+
+Until then, you can confirm that your download is exactly the file the project published:
+
+1. Download only from the official Releases page: <https://github.com/Nbcybg/Killian-Editor-V2/releases>
+2. On the same release, open `SHA256SUMS-Windows.txt`, `SHA256SUMS-macOS.txt` or `SHA256SUMS-Linux.txt` (releases from this version on).
+3. Compute the checksum of your file and compare it with the line for that file name:
+
+```bash
+certutil -hashfile Killian2-<version>-win-x64-portable.exe SHA256
+```
+
+(Windows, in Command Prompt or PowerShell) — on macOS / Linux: `shasum -a 256 <file>`. If the two values are identical, the file has not been changed since it was built.
 
 ## 1.3 First launch: the Home screen
 
@@ -110,6 +128,8 @@ If that folder already contains a project with the same name, the app **opens th
 | **Fantasy** | Fantasy novel — worldbuilding · races · magic |
 | **Mystery/detective** | Mystery novel — suspects · clues · timeline |
 | **Screenplay** | Three-act screenplay structure; scenes are written as screenplay |
+| **Web novel** | Running episodes (Episode 1, 2, 3 …) for posting one at a time · characters, places, lore |
+| **Visual novel (VN)** | A *Common route* book plus a *Route A* book (one book per route) · characters, places, items, lore · build the choices with the branching chart ([7](07-planning.md)) |
 
 A template is only a starting point — everything can be edited, added to or deleted afterwards.
 

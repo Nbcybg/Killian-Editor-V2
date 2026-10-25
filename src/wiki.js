@@ -467,7 +467,7 @@ export class WikiEditor {
     };
     ch.appendChild(addP); wrap.appendChild(ch);
     for (const k of Object.keys(this.e.customProperties || {})) {
-      const r = linkedField(k, String(this.e.customProperties[k] ?? ''),
+      const r = linkedField((this.labels && this.labels[k]) || k, String(this.e.customProperties[k] ?? ''),
                             (v) => { this.e.customProperties[k] = v; });
       const del = document.createElement('span'); del.className = 'row-add';
       del.innerHTML = iconHtml('x', 14); del.title = tt('ui.wiki.delField');

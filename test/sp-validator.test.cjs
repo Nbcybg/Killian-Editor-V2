@@ -87,16 +87,19 @@ check('บทที่ถูกกติกา → ไม่มีข้อผ�
 
 // ── 5. บรรทัดยาวเกิน ──
 {
-  const long = 'ก'.repeat(80);
+  // [trial 2026-10-25 ข้อ 15] เกณฑ์เป็นความยาวของย่อหน้า (บทพูด ~5 บรรทัด = 175 · บรรยาย ~4 บรรทัด = 240)
+  const long = 'ก'.repeat(200);
   const e = V.validateScreenplay([B('scene', 'INT. ห้อง - วัน'), B('character', 'ทอร่า'), B('dialogue', long)]);
-  check('บทพูดยาวเกิน 60 → OVERLONG_LINE', has(e, V.SP_ERRORS.OVERLONG_LINE));
+  check('บทพูดยาวเกิน 175 → OVERLONG_LINE', has(e, V.SP_ERRORS.OVERLONG_LINE));
   check('ข้อความบอกจำนวนตัวอักษรจริง',
-    e.find((x) => x.type === V.SP_ERRORS.OVERLONG_LINE).msg.includes('80/60'),
+    e.find((x) => x.type === V.SP_ERRORS.OVERLONG_LINE).msg.includes('200/175'),
     e.find((x) => x.type === V.SP_ERRORS.OVERLONG_LINE).msg);
-  const e2 = V.validateScreenplay([B('scene', 'INT. ห้อง - วัน'), B('action', 'ก'.repeat(65))]);
-  check('บรรยาย 65 ตัว ยังไม่เกิน 70', !has(e2, V.SP_ERRORS.OVERLONG_LINE));
+  const e2 = V.validateScreenplay([B('scene', 'INT. ห้อง - วัน'), B('action', 'ก'.repeat(117))]);
+  check('★ บรรยาย 117 ตัว (ย่อหน้าปกติสองบรรทัด) ไม่ถูกเตือน', !has(e2, V.SP_ERRORS.OVERLONG_LINE));
+  const e2b = V.validateScreenplay([B('scene', 'INT. ห้อง - วัน'), B('action', 'กิ่'.repeat(200))]);
+  check('★ สระ/วรรณยุกต์ไม่นับเป็นช่อง (200 ช่อง ไม่ใช่ 600 ตัวอักษร)', !has(e2b, V.SP_ERRORS.OVERLONG_LINE));
   const e3 = V.validateScreenplay([B('scene', 'INT. ห้อง - วัน'), B('character', 'ทอร่า'), B('dialogue', long)],
-                                  { limits: { dialogue: 200 } });
+                                  { limits: { dialogue: 250 } });
   check('ปรับ limits เองแล้วไม่เตือน', !has(e3, V.SP_ERRORS.OVERLONG_LINE));
 }
 

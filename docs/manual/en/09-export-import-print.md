@@ -175,6 +175,29 @@ The import dialog shows **a preview of the script to be imported** with a summar
 - Standard Fountain files are converted to Killian's syntax (for instance, Fountain's `[[…]]` notes are not mistaken for Wiki links).
 - Older Celtx files that store raw XML may not be readable.
 
+### Manuscripts from Word, Markdown or plain text
+
+**File → Import Manuscript (Word · Markdown · Text)…** — brings existing work into the open project **as a new book**. Your original files are never changed.
+
+1. Choose the source: **Choose files…** (several `.docx` / `.md` / `.txt` files at once) · **Choose folder…** (every supported file in the folder, sorted by name so "Chapter 2" comes before "Chapter 10") · **Paste text** (for a story copied from a web novel site).
+2. Pick how to split it:
+
+| Option | Result |
+|---|---|
+| Automatic | One file → split by headings · several files → one chapter per file |
+| One chapter per file | Headings inside a file become its scenes |
+| By headings | The top heading level becomes chapters, the next level becomes scenes |
+| One scene per file | All files become scenes of a single chapter |
+
+3. Check the preview (chapters, scenes, approximate word count, images, warnings), name the book, then press **Import**. The first scene opens straight away.
+
+- **Headings** are read from Word's heading styles (also custom styles based on them, and Word in any language). If a document has no heading styles, lines typed as plain text such as "Chapter 1", "Prologue", "ตอนที่ 1" or "บทนำ" are used as chapter breaks (turn this off with the checkbox).
+- Bold, italic, underline, strikethrough, centred paragraphs, lists, quotes, line breaks and page breaks are kept. Hand-typed scene breaks (`***`, `---`, `◇◇◇`) become the standard `* * *`.
+- Images are copied into the image library in an album named after the book. EMF/WMF drawings are skipped (a warning tells you how many).
+- Empty paragraphs that Word users add between *every* paragraph for spacing are removed; a deliberate gap of several empty lines is kept as one.
+- Tables become plain paragraphs, cell by cell. Old `.doc` files must be saved as `.docx` in Word first. Comments and tracked deletions are not imported (to bring an editor's comments back into existing scenes, see [Working with an editor in Word](04-writing-novel.md#working-with-an-editor-in-word)).
+- Markdown front matter is removed (its `title:` becomes the chapter name) and `[[links]]` from Obsidian stay as Wiki links.
+
 ### Scrivener projects
 
 **File → Import from Scrivener (.scriv)…** (`Ctrl+Alt+Shift+I`) — choose the `.scriv` folder, then a destination folder. The app reads the Binder structure and the text, and converts them into a Killian project with chapters and scenes. A summary dialog tells you how many chapters/scenes/files will be created. Warnings raised during the import are in the Log.

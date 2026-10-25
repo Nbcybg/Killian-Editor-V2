@@ -715,6 +715,7 @@ ui.aiChatPanel.notHasFilePress,No skill files yet — click to create {0}/ with 
 ui.aiChatPanel.notHasSessionPress,"No sessions yet — press ""New session"" to start chatting"
 ui.aiChatPanel.notHasText,No messages yet
 ui.aiChatPanel.open,Active skills: 
+ui.aiChatPanel.openAiSettings,AI settings
 ui.aiChatPanel.openFolder,Open skills folder
 ui.aiChatPanel.openProjectBeforeDone,Open a project first; chat sessions are then kept in that project's Sessions/ folder
 ui.aiChatPanel.partialNote,Reply stopped midway — the text received so far was kept
@@ -836,6 +837,8 @@ ui.aiError.itemTLSToUse,The server's security certificate (TLS) is not valid
 ui.aiError.keyBindOutlineCheck,Some providers tie keys to an organization/project — check that this key works with this Base URL
 ui.aiError.missingHeader,The request is missing a header the provider requires
 ui.aiError.missingHeaderHint,"Add the header named in the server message to the provider's Custom Headers (one ""name: value"" per line)"
+ui.aiError.missingHeaderNamed,The request is missing the {0} header the provider requires
+ui.aiError.missingHeaderNamedHint,Add a line “{0}: value” to the provider's Custom Headers (see the provider's documentation for the value)
 ui.aiError.model,Model: 
 ui.aiError.modelOllamaLMStudio,For a local model (Ollama / LM Studio / llama.cpp) — make sure that program is running first
 ui.aiError.modelThinkReasoningUse,Reasoning models take longer — lower the reasoning effort or shorten the reply
@@ -966,6 +969,7 @@ ui.aiProvider.cantPickModel,No model selected yet
 ui.aiProvider.cantSettingsProviderAI,No AI provider set up yet (menu AI → AI settings)
 ui.aiProvider.connectOkFoundModel,Connected — found {0} {0|model|models}
 ui.aiProvider.credNameHint,Leave empty to use the provider name
+ui.aiProvider.defaultsAdopted,Your saved AI providers are now set up for this project ({0})
 ui.aiProvider.defaultsFail,Could not save the providers on this computer
 ui.aiProvider.defaultsHave,{0} saved on this computer
 ui.aiProvider.defaultsImport,Use my providers
@@ -3318,6 +3322,7 @@ ui.doctor.tMissingFile,"Scene ""{0}"" points to {1}, which doesn't exist"
 ui.doctor.tMissingFolder,"Chapter ""{0}"" has no folder {1}"
 ui.doctor.tOrphanFile,"File {0} (""{1}"") isn't used by any scene"
 ui.doctor.tRowsWithoutChapter,{0} {0|scene|scenes} in the index belong to no chapter
+ui.doctor.tSyncCopy,"{0} is a copy of {1} made by your sync service (both computers changed the same file). Attach it, then compare it with the original."
 ui.drafts.delCantDraftMain,Cannot delete — this is the main draft
 ui.drafts.delDraft,Delete draft
 ui.drafts.delDraftDraft,Delete the whole draft “{0}”?
@@ -3336,6 +3341,24 @@ ui.drop.hintText,Drop = insert the name here
 ui.drop.hintTimeline,On a card = reference · on empty space = new event
 ui.drop.netNotFound,"""{0}"" is not on the graph (a filter may be hiding it)"
 ui.drop.opened,Opened {0}
+ui.dxc.apply,Import comments
+ui.dxc.doneF,Imported {0} {0|comment|comments} into {1} {1|scene|scenes}
+ui.dxc.intro,"Comments are added to the scenes whose text matches. Existing comments are not duplicated, and scene text is not changed."
+ui.dxc.needProject,"Open a project first, then import comments from the Word file."
+ui.dxc.none,This file has no comments.
+ui.dxc.nothingNew,"Nothing new: every comment is already in a scene, or no matching scene was found."
+ui.dxc.readFailF,Could not read the Word file: {0}
+ui.dxc.reading,Reading comments from the Word file…
+ui.dxc.scenesF,Scenes that get comments ({0})
+ui.dxc.sumNewF,{0} new {0|comment|comments}
+ui.dxc.sumRepliesF,{0} new {0|reply|replies}
+ui.dxc.sumResolvedF,{0} {0|thread|threads} resolved in Word will be closed
+ui.dxc.sumSameF,{0} already here
+ui.dxc.sumUnmatchedF,{0} could not be matched to a scene (listed after import)
+ui.dxc.taskName,Word comment import
+ui.dxc.title,Import comments from Word
+ui.dxc.unmatchedTitleF,{0} {0|comment|comments} could not be matched to a scene (the text may have changed)
+ui.dxc.writeFailF,Could not save the comments: {0}
 ui.editor.ctrlClickOpenWiki,Ctrl+click to open in the Wiki
 ui.editor.hasCommentBindText,This text has a comment attached
 ui.editor.pageBreak,Page break
@@ -4383,6 +4406,12 @@ ui.lib.statWords,Words
 ui.lib.viewGrid,Cover view
 ui.lib.viewList,List view
 ui.locations,locations
+ui.lock.heldF,This project is still open on {0} (last confirmed {1}).
+ui.lock.heldSameF,This project is open in another copy of the app on this computer (last confirmed {0}).
+ui.lock.heldWhy,"If it is open in two places through a synced folder, changes on one side can overwrite the other. Quit the app on that computer and let the sync finish first, or open it anyway if you know that computer is already off."
+ui.lock.lastOtherF,"This project was last open on {0} ({1}). If you just worked there, check that everything has synced."
+ui.lock.openAnyway,Open anyway
+ui.lock.unknownMachine,another computer
 ui.log.dayEmpty,That day's log file is empty or can't be read
 ui.log.dayOption,{0} · {1} KB
 ui.log.dayPick,Review past logs — pick a day's log file
@@ -4411,9 +4440,49 @@ ui.logline.saved,Logline saved
 ui.logline.stakes,Stakes
 ui.logline.title,Logline
 ui.logline.why,AI uses this as a compass so the story stays on track
+ui.main.manuscriptFilter,Manuscripts (Word · Markdown · Text)
 ui.main.pickFolderBtn,Choose this folder
+ui.main.pickManuscript,Choose manuscript files (you can select several)
 ui.main.pickNewProjectFolder,Choose where to keep the new project — its folder is created inside
 ui.main.pickProjectFolder,Choose the project folder to open
+ui.manuscript.bookName,Book name
+ui.manuscript.bookPh,Leave empty for “Book” and a number
+ui.manuscript.chapterF,Chapter {0}
+ui.manuscript.detect,"Detect chapter lines typed as plain text, such as “Chapter 1” or “Prologue” (when there are no heading styles)"
+ui.manuscript.doneF,"Imported “{0}”: {1} {1|chapter|chapters}, {2} {2|scene|scenes}"
+ui.manuscript.filesF,{0} {0|file|files} (sorted by name)
+ui.manuscript.imagesF,{0} {0|image|images}
+ui.manuscript.intro,"Adds a new book to this project. Supports Word (.docx), Markdown (.md) and plain text (.txt). Your original files are not changed."
+ui.manuscript.modeAuto,Automatic
+ui.manuscript.modeFileChapter,One chapter per file (headings inside become scenes)
+ui.manuscript.modeFileScene,One scene per file (all in one chapter)
+ui.manuscript.modeHeadings,"By headings (top level = chapter, next level = scene)"
+ui.manuscript.moreChF,…and {0} more {0|chapter|chapters}
+ui.manuscript.moreF,…and {0} more
+ui.manuscript.needProject,"Open or create a project first, then import the manuscript as a new book."
+ui.manuscript.newProject,New project
+ui.manuscript.noSource,No files chosen yet
+ui.manuscript.nothing,Nothing to import was found
+ui.manuscript.pastePh,Paste the whole story here. Lines such as “Chapter 1” or “Prologue” become chapters.
+ui.manuscript.pasteSource,Pasted text
+ui.manuscript.pasteText,Paste text
+ui.manuscript.pickFiles,Choose files…
+ui.manuscript.pickFolder,Choose folder…
+ui.manuscript.reading,Reading manuscript…
+ui.manuscript.sceneCountF,{0} {0|scene|scenes}
+ui.manuscript.sceneMoreF,{0} more
+ui.manuscript.splitLabel,Split into
+ui.manuscript.summaryF,{0} {0|chapter|chapters} · {1} {1|scene|scenes} · about {2} {2|word|words}
+ui.manuscript.taskName,Manuscript import
+ui.manuscript.title,Import manuscript
+ui.manuscript.warnEmpty,No content: {0}
+ui.manuscript.warnImagesSkipped,Skipping {0} {0|image|images} the app cannot show (EMF/WMF)
+ui.manuscript.warnNoHeadings,"No headings or chapter lines found in {0}, so everything becomes one scene. Use heading styles in Word, or put “Chapter 1” on its own line."
+ui.manuscript.warnOldDoc,Old .doc file: {0}. Open it in Word and save it as .docx first.
+ui.manuscript.warnReadFail,Could not read: {0}
+ui.manuscript.warnUnsupported,Not supported: {0}
+ui.manuscript.writeFailF,Import failed: {0}
+ui.manuscript.writing,Creating the new book…
 ui.mapAi.aroundHead,Around it (nearest first):
 ui.mapAi.cut,(The rest was cut for length — use the map.where command to ask about one name)
 ui.mapAi.head,## Map positions (from the author's Maps panel)
@@ -4815,7 +4884,9 @@ ui.menu.imageCaseChangeCase,Change Case
 ui.menu.imageNotUse,Unused images
 ui.menu.imagePNG,PNG image
 ui.menu.imageSVG,SVG vector image
+ui.menu.importDocxComments,Import Comments from Word File…
 ui.menu.importLangCSV,Import language from CSV…
+ui.menu.importManuscript,Import Manuscript (Word · Markdown · Text)…
 ui.menu.importScreenplayFountainFDX,Import screenplay… (Fountain · FDX · Celtx · Fade In · Adobe Story)
 ui.menu.importScrivenerScrivI,Import from Scrivener (.scriv)…
 ui.menu.insertImage,Insert image…
@@ -4915,6 +4986,7 @@ ui.menu.settingsGroup,Settings
 ui.menu.settingsProject,Project settings…
 ui.menu.showFormatLineMargin,Show formatting (element outlines + end-of-line marks)
 ui.menu.showNumLineLeft,Show line numbers (left rail of the panel)
+ui.menu.simpleMode,Simple Mode
 ui.menu.sizeUIBarTool,UI size (toolbars/panels/dialogs)
 ui.menu.sizeUINormal,Normal UI size (100%)
 ui.menu.soundTypewriterPrint,Typewriter sound while typing
@@ -4928,6 +5000,7 @@ ui.menu.storyYoursDialogPrev,Chat with your story (old dialog)…
 ui.menu.suggestTitle,Suggest a title…
 ui.menu.summaryBodyProject,Summarise the project…
 ui.menu.support,Support the Project
+ui.menu.syncGuide,Using Several Computers (Google Drive · iCloud · Dropbox · OneDrive)
 ui.menu.tableCSV,CSV table
 ui.menu.textCaseCycleU,Cycle letter case
 ui.menu.textContCONTINUEDMORE,Continuation text (CONTINUED · MORE · cont'd)
@@ -6045,6 +6118,7 @@ ui.project.blankName,Blank project
 ui.project.chapter,Prologue
 ui.project.chapterSummary,Conclusion
 ui.project.chapterTwo,Chapter Two
+ui.project.episodeF,Episode {0}
 ui.project.fantasy,Fantasy
 ui.project.group,Groups/factions
 ui.project.hasProject,This project already exists
@@ -6060,6 +6134,13 @@ ui.project.screenplay,Screenplay
 ui.project.start,The case begins
 ui.project.structureChapterFilmAct,"Screenplay structure — 3 acts, scenes written as screenplay"
 ui.project.structureNovelChapterScene,General novel structure — chapters + scenes + characters + locations
+ui.project.tplVn,Visual novel (VN)
+ui.project.tplVnDesc,"A common route plus character routes (one book per route) · build choices with the branching chart · Wiki for characters, places and items"
+ui.project.tplWebnovel,Web novel
+ui.project.tplWebnovelDesc,"Running episodes (Episode 1, 2, 3 …) for posting one at a time · Wiki for characters, places and lore"
+ui.project.vnCommon,Common route
+ui.project.vnPrologue,Prologue
+ui.project.vnRouteF,Route {0}
 ui.props.act,Act
 ui.props.actHint,e.g. Act 1
 ui.props.actSaved,Chapter act set: {0}
@@ -6826,6 +6907,10 @@ ui.shortcuts.zoomIn,Page zoom: in
 ui.shortcuts.zoomOut,Page zoom: out
 ui.shortcuts.zoomReset,Page zoom: reset
 ui.shortcuts.zoomWheel,Zoom page
+ui.simple.exitLabel,All tools
+ui.simple.exitTip,Leave simple mode and show your full toolbar and panels
+ui.simple.offStatus,All tools are shown
+ui.simple.onToast,Simple mode: just the Explorer and the editor. Everything else is in the menus at the top.
 ui.smart.acceptHint,Tab = use this word · ↑↓ = choose · Esc = close · right-click = forget this word
 ui.spCompare.compare,Compare
 ui.spCompare.edition,Old version
@@ -6834,6 +6919,7 @@ ui.spCompare.text,({0} identical ·
 ui.spContinued.contNotHas,Continuation: none
 ui.spContinued.contSceneDialogue,Continuation: scenes {0} · dialogue {1}
 ui.spFormat.a4Inch,A4 (8.27 × 11.69 in)
+ui.spFormat.castTitle,Cast of Characters
 ui.spFormat.define,Custom
 ui.spFormat.legalInch,Legal (8.5 × 14 in)
 ui.spFormat.letterInch,Letter (8.5 × 11 in)
@@ -6846,6 +6932,8 @@ ui.spFormat.paperNovella,Compact / Novella (5 × 8 in)
 ui.spFormat.paperPocket,Pocket Book (14.5 × 21 cm)
 ui.spFormat.paperTankobon,Tankōbon (5 × 7.5 in)
 ui.spFormat.paperTrade,US Trade (6 × 9 in)
+ui.spFormat.rosterScene,Scene
+ui.spFormat.rosterTime,Time
 ui.spFormatGuide.cutLineSoftWrap,Manual line break (soft wrap)
 ui.spFormatGuide.endLineBlockNew,Line ends with a new block (hard)
 ui.spHeaders.countPage,Page count
@@ -6907,6 +6995,7 @@ ui.sprint.title,Writing sprint
 ui.sprint.wpm,{0} {0|word|words}/min
 ui.sprint.written,{0} {0|word|words}
 ui.sprint.writtenGoal,{0} / {1} {1|word|words}
+ui.spTitlePages.byNovel,by
 ui.spTitlePages.chapter,Written by
 ui.spTitlePages.new,Based on 
 ui.spTitlePages.notNamedStory,Untitled
@@ -7667,7 +7756,9 @@ ui.tip.goto-scene,Jumps to a given scene by its number — useful in screenplays
 ui.tip.goto:page,"Opens a box to type a page number, then jumps to that page."
 ui.tip.goto:scene,"Opens a box to type a scene number, then jumps to that scene."
 ui.tip.home,"Opens the home screen — recent projects, and creating or opening another project."
+ui.tip.import-docx-comments,"Bring the comments and replies an editor wrote in a Word file (.docx) back into your scenes, merged with existing comments without duplicates; threads resolved in Word are closed. Scene text is not changed."
 ui.tip.import-language-csv,"Imports translations from an edited CSV file, merging them into the project’s language files with immediate effect."
+ui.tip.import-manuscript,"Bring existing work from Word (.docx), Markdown (.md) or pasted text into the project as a new book. Chapters and scenes are split from headings or chapter lines, and you see the structure before importing."
 ui.tip.import-script,"Imports a screenplay from Fountain, Final Draft (FDX), Celtx, Fade In or Adobe Story, with a preview first."
 ui.tip.import-scrivener,"Imports a Scrivener (.scriv) project as a Killian project, keeping its chapters and scenes."
 ui.tip.insert-image,Inserts a picture at the cursor. The file is copied into the project's Images folder for you.
@@ -7826,6 +7917,7 @@ ui.tip.sprint,"Times a writing sprint, counts the words you write during it, sup
 ui.tip.story-starter,"Opens Story Starter: set up a story, characters and opening scene step by step, then play it out in episodes with AI."
 ui.tip.story-starter-toggle,Opens or closes Story Starter — set a story up step by step and play it out with AI. Press again to close.
 ui.tip.support,"Opens the project's support page in your browser, where you can buy the developer a coffee."
+ui.tip.sync-guide,"Opens the manual chapter on keeping a project in a synced folder (Google Drive, iCloud, Dropbox, OneDrive) so you can write on several computers, and on handling the copies a sync service makes when files clash."
 ui.tip.sync-scene-meta,Reads scene properties back from the .md file headers — use after editing files in another program.
 ui.tip.test-run,Runs the app’s self-test suite (for developers).
 ui.tip.text-case,Changes the selected text to a given letter case. Affects Latin letters.
@@ -7880,6 +7972,7 @@ ui.tip.toggle-panel:statusbar,Summary of the open work — word/page counts · s
 ui.tip.toggle-panel:timeline,"Events in ""story time"" order — switch between card and Gantt views · scenes with a storyDate appear on their own"
 ui.tip.toggle-panel:toolbar,All formatting buttons and mode switches — bold/italic · alignment · reading/focus modes · show/hide other panels
 ui.tip.toggle-panel:tree,"Table of contents for the whole work — book → chapter → scene, plus the Wiki, image library and trash · drag to reorder · the search box at the top filters by name, tag and status"
+ui.tip.toggle-simple-mode,"Turns simple mode on or off: only the Explorer, the editor and the basic writing buttons stay on screen. Every other feature is still in the menus; turning it off brings your toolbar and panels back as they were."
 ui.tip.toggle-theme,"Changes the app colour theme for bars, panels and dialogs — not the page or exported files."
 ui.tip.toolbar-config,Choose which buttons appear on the toolbar; changes take effect as you tick.
 ui.tip.type-sound,"Plays a typewriter sound with every keystroke, for the feel of a real machine."
@@ -8359,8 +8452,11 @@ ui.xhub.buildFail,Could not build the output
 ui.xhub.building,Building preview…
 ui.xhub.content,Content
 ui.xhub.docKind,Document type
+ui.xhub.docxComments,Include comments
+ui.xhub.docxCommentsHint,Open comments appear in Word's comment pane for an editor to answer · bring the replies back with File → Import Comments from Word File
 ui.xhub.docxHint,"Uses the same paper size, margins and font as the screen · headings use Word's Heading styles (so Word can build a table of contents)"
 ui.xhub.doneDocx,{0} {0|paragraph|paragraphs} · {1} {1|image|images} embedded
+ui.xhub.doneDocxComments,{0} {0|comment|comments}
 ui.xhub.doneEpub,{0} {0|chapter|chapters} · {1} {1|image|images} embedded
 ui.xhub.donePdf,{0} {0|page|pages} · {1} {1|bookmark|bookmarks}
 ui.xhub.donePdfPages,{0} {0|page|pages} ({1} unnumbered front pages)
@@ -8378,6 +8474,7 @@ ui.xhub.fFdx,Final Draft (FDX)
 ui.xhub.fFdxDesc,For screenplays — opens in Final Draft
 ui.xhub.fHtml,Web page (HTML)
 ui.xhub.fHtmlDesc,One self-contained file with styles inside
+ui.xhub.firstPageHint,"Off = the first page of the text has no number (Hollywood screenplay convention) · a project setting, same as Settings → {0}"
 ui.xhub.fJson,Whole project (.json)
 ui.xhub.fJsonDesc,"Project structure only, for other tools"
 ui.xhub.fMd,Markdown
@@ -8397,6 +8494,7 @@ ui.xhub.htmlWysiwyg,Use the same page format as on screen
 ui.xhub.kindAuto,Match the source files
 ui.xhub.kindProse,Novel (prose)
 ui.xhub.kindScript,Screenplay
+ui.xhub.monoGreyImages,Black & white: illustrations in the text will print in greyscale — choose “Color” to keep them in color
 ui.xhub.needProject,Open a project before exporting
 ui.xhub.needScriptHint,"Pick another format, or choose a range that is a screenplay"
 ui.xhub.needScriptOnly,This format only works with screenplays

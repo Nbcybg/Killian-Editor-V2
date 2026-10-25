@@ -57,13 +57,14 @@ export function assignPages(entities) {
 }
 
 /** ค่าที่ควรโชว์ใน infobox — ตัดค่าว่างทิ้ง (ช่องว่างเปล่าในกล่องข้อมูลดูเหมือนของพัง) */
-export function infoRows(entity) {
+/** @param {(key:string, entity:object)=>string} [labelOf] ป้ายของช่อง (เทมเพลตของเอนทิตี้) — [trial 2026-10-25] เดิมโชว์คีย์อังกฤษ (Gender · EyeColor) */
+export function infoRows(entity, labelOf = null) {
   const f = (entity && entity.fields) || {};
   const rows = [];
   for (const k of Object.keys(f)) {
     const v = f[k];
     const text = Array.isArray(v) ? v.filter(Boolean).join(', ') : String(v == null ? '' : v);
-    if (text.trim()) rows.push([k, text]);
+    if (text.trim()) rows.push([(labelOf && labelOf(k, entity)) || k, text]);
   }
   return rows;
 }
@@ -146,7 +147,7 @@ export function paragraphs(text) {
 export function entityPage(e, ctx) {
   const { pages, siteTitle, nav, labels, mentions } = ctx;
   const ent = e.entity || {};
-  const rows = infoRows(ent);
+  const rows = infoRows(ent, ctx.fieldLabel || null);
   const rels = relationRows(ent, pages);
   const seen = (mentions && mentions[e.path]) || [];
   const img = ent.image || ent.portrait || (Array.isArray(ent.images) && ent.images[0]) || '';
@@ -218,7 +219,8 @@ export function buildCodexSite(entities, opts = {}) {
   const labels = opts.labels || {};
   const nav = [{ href: 'index.html', label: tt('ui.common.pageFirst') },
                ...cats.map((c) => ({ href: 'cat-' + slug(c) + '.html', label: catLabel(c, labels) }))];
-  const ctx = { pages, siteTitle: opts.siteTitle || 'Codex', nav, labels, mentions: opts.mentions || {} };
+  const ctx = { pages, siteTitle: opts.siteTitle || 'Codex', nav, labels, mentions: opts.mentions || {},
+                fieldLabel: typeof opts.fieldLabel === 'function' ? opts.fieldLabel : null };
 
   const files = [{ name: 'index.html', text: indexPage(list, ctx) }];
   for (const c of cats) {

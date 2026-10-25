@@ -1120,6 +1120,25 @@ function lastUserText(sess) {
   return u ? u.text : '';
 }
 
+/**
+ * [trial 2026-10-25 ข้อ 11] ยังไม่มีผู้ให้บริการ = บอก **ในช่องแชท** พร้อมปุ่มไปตั้งค่า (เดิมขึ้นแค่แถบสถานะ
+ * ที่อยู่คนละมุมจอ ผู้ใช้เห็นว่ากดส่งแล้วเงียบ) · ข้อความที่พิมพ์ยังอยู่ในช่องเหมือนเดิม
+ */
+function showNoProvider(ta) {
+  const row = ta && ta.parentElement;
+  if (!row || !row.parentElement) return;
+  let box = row.parentElement.querySelector(':scope > .ai-chat-noprov');
+  if (!box) {
+    box = el('div', 'ai-chat-noprov k-hint');
+    box.setAttribute('role', 'alert');
+    row.parentElement.insertBefore(box, row);
+  }
+  box.replaceChildren(document.createTextNode(tt('ui.aiChatPanel.cantSettingsProviderAI') + ' '));
+  const go = el('button', 'cmp-mini', tt('ui.aiChatPanel.openAiSettings'));
+  go.onclick = async () => { const { showAISettingsDialog } = await import('./ai-provider-ui.js'); showAISettingsDialog(); };
+  box.append(go);
+}
+
 async function send(s0, ta, sendBtn) {
   // ก้อนที่ปิดทับไว้ตอนวาดหน้าเป็นของเก่าทันทีที่คุยไปหนึ่งรอบ — ยึด `S.cur` เสมอ (ดู `live()`)
   const s = live(s0);
@@ -1128,8 +1147,12 @@ async function send(s0, ta, sendBtn) {
   const prov = s.providerId ? await providerById(s.providerId) : await currentProvider();
   if (!prov) {
     setStatus(tt('ui.aiChatPanel.cantSettingsProviderAI'));
+    showNoProvider(ta);
     return;
   }
+  const np = ta.parentElement && ta.parentElement.parentElement
+    && ta.parentElement.parentElement.querySelector(':scope > .ai-chat-noprov');
+  if (np) np.remove();
   ta.value = '';
   const userMsg = newMessage('user', text, { files: (s.files || []).slice() });
   S.cur = addMessage(s, userMsg);
